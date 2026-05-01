@@ -33,6 +33,7 @@
 - `dist/`, `node_modules/` und gespeicherte Nutzdaten unter `spielstaende/` nicht manuell bearbeiten, ausser die Aufgabe verlangt es explizit.
 - Bestehende deutsche UI-Texte beibehalten, sofern kein ausdrueckliches Rewriting gewuenscht ist.
 - Bevorzuge kleine, lokale Fixes statt breiter Refactors.
+- Nach abgeschlossenen Codeaenderungen den Nutzer fragen, ob die Aenderungen nach GitHub gepusht werden sollen; wenn der Nutzer bereits ausdruecklich Push/Upload verlangt hat, committen und pushen.
 
 ## Befehle
 - Installieren: `npm install`
