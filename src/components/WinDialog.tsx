@@ -1,4 +1,5 @@
-import { useCallback, useId, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useId, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Medal, MousePointer2, Route, Sparkles, Timer, Trophy } from 'lucide-react'
 import AnimatedButton from '../motion/AnimatedButton.tsx'
 import AnimatedDialog from '../motion/AnimatedDialog.tsx'
 import AnimatedReveal from '../motion/AnimatedReveal.tsx'
@@ -269,6 +270,11 @@ export default function WinDialog({
     completionStatsError,
     isRecordingStats
   )
+  const finalBoardTileCount = config.rows * config.cols
+  const finalBoardStyle = {
+    '--win-board-rows': config.rows,
+    '--win-board-cols': config.cols,
+  } as CSSProperties
   const isStatusError = Boolean(!isRecordingStats && completionStatsError)
   const isStatusPending = Boolean(isRecordingStats)
   const achievementBadges = [
@@ -276,6 +282,7 @@ export default function WinDialog({
     completionResult?.isNewBestMoves ? 'Zug-Rekord' : null,
     completionResult?.isNewBestCleanMoves ? 'Clean-Rekord' : null,
   ].filter((badge): badge is string => badge !== null)
+  const hasAchievement = achievementBadges.length > 0
   const timeComparison = compareLowerIsBetterMetric(currentRun.time, previousRun?.time ?? null)
   const movesComparison = compareLowerIsBetterMetric(currentRun.moves, previousRun?.moves ?? null)
   const timeGapComparison = compareGapToBest(
@@ -409,9 +416,14 @@ export default function WinDialog({
     >
       <AnimatedStaggerGroup level="medium">
         <AnimatedReveal className="win-hero" interaction="surface" level="medium">
+          <div className="win-hero-aura" aria-hidden="true" />
           <div className="win-hero-row">
             <div className="win-icon-shell" aria-hidden="true">
-              <span className="win-icon-mark">WIN</span>
+              {hasAchievement ? (
+                <Trophy className="win-icon-symbol" strokeWidth={2.4} absoluteStrokeWidth />
+              ) : (
+                <Sparkles className="win-icon-symbol" strokeWidth={2.4} absoluteStrokeWidth />
+              )}
             </div>
             <div className="win-hero-copy">
               <span className="win-kicker">Puzzle geloest</span>
@@ -429,24 +441,45 @@ export default function WinDialog({
                 ))}
               </div>
             </div>
+            <div
+              className={`win-final-board${Math.max(config.rows, config.cols) >= 5 ? ' is-dense' : ''}`}
+              style={finalBoardStyle}
+              aria-hidden="true"
+            >
+              {Array.from({ length: finalBoardTileCount }, (_, index) => (
+                <span key={index} style={{ '--win-tile-index': index } as CSSProperties} />
+              ))}
+            </div>
           </div>
         </AnimatedReveal>
 
         <AnimatedStaggerGroup className="stats-display" level="subtle">
           <AnimatedReveal className="stat-item" interaction="surface" level="subtle">
-            <span className="stat-label">Netto-Zuege</span>
+            <span className="stat-label">
+              <Route className="stat-icon" strokeWidth={2.2} absoluteStrokeWidth />
+              <span>Netto-Zuege</span>
+            </span>
             <span className="stat-value">{stats.moves}</span>
           </AnimatedReveal>
           <AnimatedReveal className="stat-item" interaction="surface" level="subtle">
-            <span className="stat-label">Zeit</span>
+            <span className="stat-label">
+              <Timer className="stat-icon" strokeWidth={2.2} absoluteStrokeWidth />
+              <span>Zeit</span>
+            </span>
             <span className="stat-value">{formatTime(stats.time)}</span>
           </AnimatedReveal>
           <AnimatedReveal className="stat-item" interaction="surface" level="subtle">
-            <span className="stat-label">Aktionen</span>
+            <span className="stat-label">
+              <MousePointer2 className="stat-icon" strokeWidth={2.2} absoluteStrokeWidth />
+              <span>Aktionen</span>
+            </span>
             <span className="stat-value">{stats.actionMoves}</span>
           </AnimatedReveal>
           <AnimatedReveal className="stat-item" interaction="surface" level="subtle">
-            <span className="stat-label">Umwege</span>
+            <span className="stat-label">
+              <Medal className="stat-icon" strokeWidth={2.2} absoluteStrokeWidth />
+              <span>Umwege</span>
+            </span>
             <span className="stat-value">{extraMoves}</span>
           </AnimatedReveal>
         </AnimatedStaggerGroup>

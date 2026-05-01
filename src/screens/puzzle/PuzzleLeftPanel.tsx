@@ -261,7 +261,7 @@ export default function PuzzleLeftPanel({
         </AnimatePresence>
 
         <AnimatedReveal
-          className={`puzzle-hint-panel${hintPreview ? ' is-active' : ''}`}
+          className={`puzzle-hint-panel${hintPreview ? ' is-active' : ''}${isComputingSuggestion ? ' is-computing' : ''}`}
           interaction="surface"
           level="medium"
         >
@@ -290,11 +290,21 @@ export default function PuzzleLeftPanel({
                   <span>{hintPreview.description}</span>
                 </div>
               </div>
+              <div className="puzzle-hint-route" aria-hidden="true">
+                <span>{hintPreview.tileLabel}</span>
+                <span className="puzzle-hint-route-line" />
+                <span>{hintPreview.directionLabel}</span>
+              </div>
               <div className="puzzle-hint-meta">
                 <span className="puzzle-hint-chip">Bewege {hintPreview.directionLabel}</span>
                 <span className="puzzle-hint-chip">{hintPreview.sourceLabel}</span>
               </div>
             </>
+          ) : isComputingSuggestion ? (
+            <div className="puzzle-hint-empty puzzle-hint-empty--computing" aria-live="polite">
+              <span className="puzzle-hint-spinner" aria-hidden="true" />
+              <span>Berechne den naechsten Zug ...</span>
+            </div>
           ) : (
             <p className="puzzle-hint-empty">
               <span>Markiert die beste Kachel direkt auf dem Brett. Nutze den Hinweis, wenn du kurz festhaengst.</span>

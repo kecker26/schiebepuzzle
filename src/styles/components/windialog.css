@@ -63,13 +63,30 @@
 }
 
 .win-hero {
+  overflow: hidden;
   padding: 18px;
 }
 
+.win-hero-aura {
+  position: absolute;
+  inset: -48px -36px auto auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(251, 191, 36, 0.22) 0%, transparent 58%),
+    radial-gradient(circle at 38% 42%, rgba(251, 113, 133, 0.18), transparent 64%);
+  filter: blur(1px);
+  pointer-events: none;
+  animation: win-aura-drift 4.8s ease-in-out infinite;
+}
+
 .win-hero-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
+  z-index: 1;
 }
 
 .win-icon-shell {
@@ -83,14 +100,59 @@
   border: 1px solid rgba(255, 255, 255, 0.24);
   box-shadow: 0 14px 28px rgba(244, 63, 94, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.16);
   transform: rotate(-5deg);
+  animation: win-badge-pop 0.68s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.win-icon-symbol,
+.win-icon-mark {
+  color: #fff9fb;
+}
+
+.win-icon-symbol {
+  width: 34px;
+  height: 34px;
+  filter: drop-shadow(0 5px 10px rgba(127, 29, 29, 0.26));
 }
 
 .win-icon-mark {
-  color: #fff9fb;
   font-size: 18px;
   font-weight: 900;
   letter-spacing: 0.16em;
   text-indent: 0.16em;
+}
+
+.win-final-board {
+  margin-left: auto;
+  flex: 0 0 82px;
+  width: 82px;
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--win-board-cols, 3), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--win-board-rows, 3), minmax(0, 1fr));
+  gap: 5px;
+  padding: 7px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(circle at top left, rgba(251, 191, 36, 0.18), transparent 52%),
+    rgba(15, 23, 42, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 24px rgba(2, 6, 23, 0.16);
+}
+
+.win-final-board.is-dense {
+  gap: 4px;
+}
+
+.win-final-board span {
+  border-radius: clamp(4px, 1.3vw, 7px);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent),
+    color-mix(in srgb, #fb7185 72%, var(--image-accent-solid));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  animation: win-tile-settle 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--win-tile-index) * 42ms);
 }
 
 .win-hero-copy {
@@ -243,15 +305,19 @@
 
 .win-comparison-value {
   color: #f8fafc;
-  font-size: clamp(20px, 3vw, 28px);
-  line-height: 1;
+  font-size: clamp(18px, 2.5vw, 26px);
+  line-height: 1.06;
   font-weight: 900;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .win-comparison-badges {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
 }
 
 .win-comparison-badge {
@@ -314,11 +380,20 @@
 }
 
 .stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: rgba(148, 163, 184, 0.96);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.stat-icon {
+  width: 13px;
+  height: 13px;
+  color: color-mix(in srgb, #fb7185 70%, #f8fafc);
 }
 
 .stat-value {
@@ -529,6 +604,14 @@
     font-size: 15px;
   }
 
+  .win-final-board {
+    flex-basis: 66px;
+    width: 66px;
+    gap: 4px;
+    padding: 6px;
+    border-radius: 15px;
+  }
+
   .win-status {
     flex-direction: column;
     align-items: stretch;
@@ -546,6 +629,11 @@
 @media (max-width: 420px) {
   .win-hero-row {
     flex-direction: column;
+  }
+
+  .win-final-board {
+    margin-left: 0;
+    align-self: flex-start;
   }
 
   .win-dialog h2 {
@@ -626,7 +714,61 @@
   border-left: 1px solid rgba(148, 163, 184, 0.18);
 }
 
+.win-comparison-badge + .win-comparison-badge {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: 0;
+}
+
 .stat-item,
 .win-comparison-item {
   text-align: left;
+}
+
+@keyframes win-badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.72) rotate(-12deg);
+  }
+
+  64% {
+    opacity: 1;
+    transform: scale(1.08) rotate(-3deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-5deg);
+  }
+}
+
+@keyframes win-tile-settle {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.82);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes win-aura-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.88;
+  }
+
+  50% {
+    transform: translate3d(-8px, 8px, 0) scale(1.04);
+    opacity: 1;
+  }
+}
+
+[data-motion="reduced"] .win-hero-aura,
+[data-motion="reduced"] .win-icon-shell,
+[data-motion="reduced"] .win-final-board span {
+  animation: none;
 }
