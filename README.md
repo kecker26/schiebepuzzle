@@ -140,6 +140,12 @@ Wichtige Einstiegspunkte:
 - Fuer groessere oder riskantere Aenderungen vorab klaeren, ob ein eigener Git-Branch sinnvoll ist.
 - Bei Struktur-, Workflow-, Befehls-, Persistenz- oder Architektur-Aenderungen auch `AGENTS.md` pruefen und bei Bedarf aktualisieren.
 
+## Feedback und Mitmachen
+
+Verbesserungsvorschlaege sind willkommen. Wenn du einen Bug findest, eine Idee hast oder Feedback zu Bedienung, Design, Barrierefreiheit, Performance oder Code-Struktur geben moechtest, erstelle am besten ein GitHub Issue.
+
+Konkrete Code-Aenderungen koennen ueber einen Pull Request vorgeschlagen werden. Bitte beschreibe kurz, was geaendert wurde und warum die Aenderung hilfreich ist.
+
 ## Verifikation
 
 Fuer reine Dokumentationsaenderungen ist normalerweise kein Build noetig. Fuer Codeaenderungen gilt:
