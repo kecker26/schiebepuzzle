@@ -101,6 +101,7 @@ type BoardToolHelpTopic =
   | 'tile-numbers'
 
 const DEFAULT_BOARD_CAPTION = 'Das markierte Leerfeld ist dein Anker fuer schnelle, saubere Zugfolgen.'
+const BOARD_INTRO_ANIMATION_MS = 1180
 
 const BOARD_TOOL_HELP_MESSAGES: Record<BoardToolHelpTopic, string> = {
   hint: 'Der Hinweis markiert dir die beste naechste Kachel direkt auf dem Brett, ohne den Zug selbst auszufuehren.',
@@ -249,6 +250,7 @@ export default function PuzzleScreen({
   const correctTilePulseFrameRef = useRef<number | null>(null)
   const invalidTileFeedbackFrameRef = useRef<number | null>(null)
   const tileNumberCorrectnessPulseFrameRef = useRef<number | null>(null)
+  const boardIntroTimeoutRef = useRef<number | null>(null)
   const winSequenceStartedRef = useRef(false)
   const solutionQueueRef = useRef<string[]>([])
   const lastSuggestionMoveRef = useRef<string | null>(null)
@@ -306,6 +308,7 @@ export default function PuzzleScreen({
   const [correctTilePulse, setCorrectTilePulse] = useState<CorrectTilePulseAnimation | null>(null)
   const [invalidTileFeedback, setInvalidTileFeedback] = useState<InvalidTileFeedbackAnimation | null>(null)
   const [isCelebratingWin, setIsCelebratingWin] = useState(false)
+  const [isBoardIntroActive, setIsBoardIntroActive] = useState(false)
   const [isComputingSuggestion, setIsComputingSuggestion] = useState(false)
   const [hintPreview, setHintPreview] = useState<SuggestedHintPreview | null>(null)
   const [isRestartConfirmOpen, setIsRestartConfirmOpen] = useState(false)
@@ -737,6 +740,26 @@ export default function PuzzleScreen({
     setInvalidTileFeedback(null)
   }, [stopInvalidTileFeedback])
 
+  const stopBoardIntro = useCallback(() => {
+    if (boardIntroTimeoutRef.current !== null) {
+      window.clearTimeout(boardIntroTimeoutRef.current)
+      boardIntroTimeoutRef.current = null
+    }
+    setIsBoardIntroActive(false)
+  }, [])
+
+  const startBoardIntro = useCallback(() => {
+    if (boardIntroTimeoutRef.current !== null) {
+      window.clearTimeout(boardIntroTimeoutRef.current)
+    }
+
+    setIsBoardIntroActive(true)
+    boardIntroTimeoutRef.current = window.setTimeout(() => {
+      boardIntroTimeoutRef.current = null
+      setIsBoardIntroActive(false)
+    }, BOARD_INTRO_ANIMATION_MS)
+  }, [])
+
   const startInvalidTileFeedback = useCallback((tileId: string) => {
     stopInvalidTileFeedback()
     audioService.activate()
@@ -824,10 +847,11 @@ export default function PuzzleScreen({
       stopCelebrationFrame()
       stopCorrectTilePulse()
       stopInvalidTileFeedback()
+      stopBoardIntro()
       suggestionSequenceRef.current += 1
       setSuggestionComputingState(false)
     }
-  }, [clearHintAutoHideTimeout, clearTileNumbersTimeout, stopCelebrationFrame, stopCorrectTilePulse, stopInvalidTileFeedback, stopTileNumberCorrectnessPulse])
+  }, [clearHintAutoHideTimeout, clearTileNumbersTimeout, stopBoardIntro, stopCelebrationFrame, stopCorrectTilePulse, stopInvalidTileFeedback, stopTileNumberCorrectnessPulse])
 
   useEffect(() => {
     let isCancelled = false
@@ -851,6 +875,7 @@ export default function PuzzleScreen({
     setHoveredSearchTileId(null)
     setMoveAnimation(null)
     setInvalidTileFeedback(null)
+    stopBoardIntro()
     clearWinCelebration()
     clearCorrectTilePulse()
     stopInvalidTileFeedback()
@@ -1017,6 +1042,7 @@ export default function PuzzleScreen({
         const restoredMoveCount = Math.max(0, restoredProgress.moveCount)
         const restoredStartState = restoreTrackedPath(restoredState, restoredProgress.solverProgress)
         setPuzzleState(restoredState)
+        startBoardIntro()
         setMoveCount(restoredMoveCount)
         setElapsedTime(Math.max(0, restoredProgress.elapsedTime))
         setRunMetrics(normalizeRunMetrics(restoredProgress.runMetrics, restoredMoveCount))
@@ -1045,6 +1071,7 @@ export default function PuzzleScreen({
       const shuffledState = normalizePuzzleState(shuffledResult.state, config)
       initializeTrackedPath(shuffledState, shuffledResult.moves)
       setPuzzleState(shuffledState)
+      startBoardIntro()
       setMoveCount(0)
       setElapsedTime(0)
       setKnownStartSolutionMoveCount(shuffledResult.moves.length > 0 ? shuffledResult.moves.length : null)
@@ -1082,6 +1109,7 @@ export default function PuzzleScreen({
       setCanvasDisplaySize(null)
       setMoveAnimation(null)
       setInvalidTileFeedback(null)
+      stopBoardIntro()
       clearWinCelebration()
       clearCorrectTilePulse()
       stopInvalidTileFeedback()
@@ -1106,6 +1134,8 @@ export default function PuzzleScreen({
     requestExactStartMoveCount,
     requestSolutionValues,
     restoreTrackedPath,
+    startBoardIntro,
+    stopBoardIntro,
     stopInvalidTileFeedback,
   ])
 
@@ -2026,7 +2056,7 @@ export default function PuzzleScreen({
               <div className={`puzzle-board-frame${isBoardFocused ? ' is-focused' : ''}`}>
                 <div className="puzzle-board-viewport" ref={boardViewportRef}>
                   <div
-                    className={`puzzle-board-canvas-stack${isCelebratingWin ? ' is-celebrating' : ''}`}
+                    className={`puzzle-board-canvas-stack${isBoardIntroActive ? ' is-intro' : ''}${isCelebratingWin ? ' is-celebrating' : ''}`}
                     style={canvasDisplaySize ? { width: `${canvasDisplaySize.width}px`, height: `${canvasDisplaySize.height}px` } : undefined}
                   >
                     <canvas

@@ -304,27 +304,75 @@ export default class PuzzleRenderer {
     const tile = state.tiles.find((entry) => entry.id === moveAnimation.tileId)
     if (!tile || tile.isEmpty) return
 
-    const easedProgress = this.easeOutQuart(moveAnimation.progress)
+    const progress = Math.max(0, Math.min(1, moveAnimation.progress))
+    const easedProgress = this.easeOutQuart(progress)
     const startX = moveAnimation.fromCol * this.tileWidth
     const startY = moveAnimation.fromRow * this.tileHeight
     const targetX = moveAnimation.toCol * this.tileWidth
     const targetY = moveAnimation.toRow * this.tileHeight
     const x = startX + (targetX - startX) * easedProgress
     const y = startY + (targetY - startY) * easedProgress
+    const lift = Math.sin(progress * Math.PI)
+    const settleProgress = Math.max(0, Math.min(1, (progress - 0.7) / 0.3))
+    const settleSnap = Math.sin(settleProgress * Math.PI) * 0.024
+    const scale = 1 + lift * 0.05 - settleSnap
+    const centerX = x + this.tileWidth / 2
+    const centerY = y + this.tileHeight / 2
 
+    this.renderMoveTargetGlow(targetX, targetY, progress)
     this.ctx.save()
-    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.2)'
-    this.ctx.shadowBlur = 12
-    this.drawTileImage(tile, x, y)
-    this.ctx.restore()
+    this.ctx.translate(centerX, centerY)
+    this.ctx.scale(scale, scale)
+    this.ctx.shadowColor = `rgba(15, 23, 42, ${0.26 + lift * 0.24})`
+    this.ctx.shadowBlur = Math.max(14, Math.round(Math.min(this.tileWidth, this.tileHeight) * (0.14 + lift * 0.2)))
+    this.ctx.shadowOffsetY = Math.max(5, Math.round(Math.min(this.tileWidth, this.tileHeight) * (0.045 + lift * 0.065)))
+    this.drawTileImage(tile, -this.tileWidth / 2, -this.tileHeight / 2)
 
-    this.ctx.strokeStyle = '#444'
-    this.ctx.lineWidth = 2
-    this.ctx.strokeRect(x, y, this.tileWidth, this.tileHeight)
+    this.ctx.shadowBlur = 0
+    this.ctx.shadowOffsetY = 0
+    this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.82)'
+    this.ctx.lineWidth = Math.max(2, Math.round(Math.min(this.tileWidth, this.tileHeight) * 0.018))
+    this.ctx.strokeRect(-this.tileWidth / 2, -this.tileHeight / 2, this.tileWidth, this.tileHeight)
+    this.ctx.strokeStyle = `rgba(248, 250, 252, ${0.26 + lift * 0.26})`
+    this.ctx.lineWidth = Math.max(1, Math.round(Math.min(this.tileWidth, this.tileHeight) * 0.01))
+    this.ctx.strokeRect(
+      -this.tileWidth / 2 + 2,
+      -this.tileHeight / 2 + 2,
+      this.tileWidth - 4,
+      this.tileHeight - 4
+    )
 
     if (showTileNumbers) {
-      this.renderTileNumberCorrectnessOverlay(tile, x, y, tileNumberCorrectnessPulseProgress)
+      this.renderTileNumberCorrectnessOverlay(
+        tile,
+        -this.tileWidth / 2,
+        -this.tileHeight / 2,
+        tileNumberCorrectnessPulseProgress
+      )
     }
+    this.ctx.restore()
+  }
+
+  private renderMoveTargetGlow(x: number, y: number, progress: number): void {
+    const shortEdge = Math.min(this.tileWidth, this.tileHeight)
+    const pulse = Math.sin(Math.max(0, Math.min(1, progress)) * Math.PI)
+    const inset = Math.max(5, Math.round(shortEdge * 0.06))
+    const lineWidth = Math.max(2, Math.round(shortEdge * 0.026))
+
+    this.ctx.save()
+    this.ctx.fillStyle = `rgba(34, 197, 94, ${0.08 + pulse * 0.16})`
+    this.ctx.fillRect(x + inset, y + inset, this.tileWidth - inset * 2, this.tileHeight - inset * 2)
+    this.ctx.shadowColor = `rgba(34, 197, 94, ${0.22 + pulse * 0.34})`
+    this.ctx.shadowBlur = Math.max(14, Math.round(shortEdge * (0.18 + pulse * 0.24)))
+    this.ctx.strokeStyle = `rgba(187, 247, 208, ${0.36 + pulse * 0.52})`
+    this.ctx.lineWidth = lineWidth
+    this.ctx.strokeRect(
+      x + inset + lineWidth / 2,
+      y + inset + lineWidth / 2,
+      this.tileWidth - inset * 2 - lineWidth,
+      this.tileHeight - inset * 2 - lineWidth
+    )
+    this.ctx.restore()
   }
 
   private renderTile(
@@ -561,6 +609,37 @@ export default class PuzzleRenderer {
       this.tileWidth - innerInset * 2 - innerLineWidth,
       this.tileHeight - innerInset * 2 - innerLineWidth
     )
+
+    if (shortEdge >= 48) {
+      const label = 'BLOCKIERT'
+      const badgeHeight = Math.max(22, Math.round(shortEdge * 0.18))
+      const badgePaddingX = Math.max(8, Math.round(shortEdge * 0.08))
+      let fontSize = Math.max(10, Math.round(shortEdge * 0.11))
+
+      this.ctx.font = `800 ${fontSize}px ${CANVAS_FONT_FAMILY}`
+      while (fontSize > 9 && this.ctx.measureText(label).width > this.tileWidth - badgePaddingX * 4) {
+        fontSize -= 1
+        this.ctx.font = `800 ${fontSize}px ${CANVAS_FONT_FAMILY}`
+      }
+
+      const labelWidth = this.ctx.measureText(label).width
+      const badgeWidth = Math.min(this.tileWidth - badgePaddingX * 2, labelWidth + badgePaddingX * 2)
+      const badgeX = x + (this.tileWidth - badgeWidth) / 2
+      const badgeY = y + (this.tileHeight - badgeHeight) / 2
+
+      this.ctx.fillStyle = `rgba(127, 29, 29, ${0.74 + metrics.glowAlpha * 0.2})`
+      this.ctx.strokeStyle = `rgba(254, 226, 226, ${0.34 + metrics.strokeAlpha * 0.26})`
+      this.ctx.lineWidth = 1
+      this.ctx.beginPath()
+      this.ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight / 2)
+      this.ctx.fill()
+      this.ctx.stroke()
+      this.ctx.fillStyle = `rgba(255, 255, 255, ${0.84 + metrics.strokeAlpha * 0.12})`
+      this.ctx.font = `800 ${fontSize}px ${CANVAS_FONT_FAMILY}`
+      this.ctx.textAlign = 'center'
+      this.ctx.textBaseline = 'middle'
+      this.ctx.fillText(label, badgeX + badgeWidth / 2, badgeY + badgeHeight / 2)
+    }
     this.ctx.restore()
   }
 
@@ -1394,43 +1473,89 @@ export default class PuzzleRenderer {
 
     const x = tile.col * this.tileWidth
     const y = tile.row * this.tileHeight
+    const targetSlotX = state.emptyCol * this.tileWidth
+    const targetSlotY = state.emptyRow * this.tileHeight
     const centerX = x + this.tileWidth / 2
     const centerY = y + this.tileHeight / 2
-    const targetX = state.emptyCol * this.tileWidth + this.tileWidth / 2
-    const targetY = state.emptyRow * this.tileHeight + this.tileHeight / 2
+    const targetX = targetSlotX + this.tileWidth / 2
+    const targetY = targetSlotY + this.tileHeight / 2
     const shortEdge = Math.min(this.tileWidth, this.tileHeight)
     const inset = Math.max(8, Math.round(shortEdge * 0.08))
+    const innerInset = Math.max(5, Math.round(shortEdge * 0.045))
+    const angle = Math.atan2(targetY - centerY, targetX - centerX)
+    const routeStartX = centerX + Math.cos(angle) * shortEdge * 0.18
+    const routeStartY = centerY + Math.sin(angle) * shortEdge * 0.18
+    const routeEndX = targetX - Math.cos(angle) * shortEdge * 0.16
+    const routeEndY = targetY - Math.sin(angle) * shortEdge * 0.16
+    const arrowSize = Math.max(11, Math.round(shortEdge * 0.13))
 
     this.ctx.save()
-    this.ctx.fillStyle = 'rgba(56, 189, 248, 0.14)'
+    this.ctx.fillStyle = 'rgba(14, 165, 233, 0.18)'
+    this.ctx.fillRect(
+      targetSlotX + innerInset,
+      targetSlotY + innerInset,
+      this.tileWidth - innerInset * 2,
+      this.tileHeight - innerInset * 2
+    )
+    this.ctx.shadowColor = 'rgba(56, 189, 248, 0.54)'
+    this.ctx.shadowBlur = Math.max(16, Math.round(shortEdge * 0.24))
+    this.ctx.strokeStyle = 'rgba(186, 230, 253, 0.96)'
+    this.ctx.lineWidth = Math.max(4, Math.round(shortEdge * 0.036))
+    this.ctx.setLineDash([Math.max(8, Math.round(shortEdge * 0.1)), Math.max(5, Math.round(shortEdge * 0.06))])
+    this.ctx.strokeRect(
+      targetSlotX + innerInset,
+      targetSlotY + innerInset,
+      this.tileWidth - innerInset * 2,
+      this.tileHeight - innerInset * 2
+    )
+    this.ctx.setLineDash([])
+
+    this.ctx.shadowBlur = 0
+    this.ctx.fillStyle = 'rgba(56, 189, 248, 0.24)'
     this.ctx.fillRect(x + inset, y + inset, this.tileWidth - inset * 2, this.tileHeight - inset * 2)
 
-    this.ctx.strokeStyle = '#38bdf8'
-    this.ctx.lineWidth = Math.max(4, Math.round(shortEdge * 0.035))
+    this.ctx.shadowColor = 'rgba(14, 165, 233, 0.58)'
+    this.ctx.shadowBlur = Math.max(18, Math.round(shortEdge * 0.26))
+    this.ctx.strokeStyle = 'rgba(125, 211, 252, 0.98)'
+    this.ctx.lineWidth = Math.max(4, Math.round(shortEdge * 0.04))
     this.ctx.strokeRect(x + inset, y + inset, this.tileWidth - inset * 2, this.tileHeight - inset * 2)
 
-    this.ctx.shadowColor = 'rgba(56, 189, 248, 0.35)'
-    this.ctx.shadowBlur = 14
-    this.ctx.strokeStyle = '#f8fafc'
-    this.ctx.lineWidth = Math.max(5, Math.round(shortEdge * 0.04))
+    this.ctx.shadowColor = 'rgba(2, 6, 23, 0.58)'
+    this.ctx.shadowBlur = Math.max(6, Math.round(shortEdge * 0.08))
+    this.ctx.strokeStyle = 'rgba(2, 6, 23, 0.72)'
+    this.ctx.lineWidth = Math.max(9, Math.round(shortEdge * 0.075))
     this.ctx.lineCap = 'round'
     this.ctx.beginPath()
-    this.ctx.moveTo(centerX, centerY)
-    this.ctx.lineTo(targetX, targetY)
+    this.ctx.moveTo(routeStartX, routeStartY)
+    this.ctx.lineTo(routeEndX, routeEndY)
     this.ctx.stroke()
 
-    const angle = Math.atan2(targetY - centerY, targetX - centerX)
-    const arrowSize = Math.max(10, Math.round(shortEdge * 0.12))
+    this.ctx.shadowColor = 'rgba(56, 189, 248, 0.68)'
+    this.ctx.shadowBlur = Math.max(18, Math.round(shortEdge * 0.22))
+    this.ctx.strokeStyle = '#f8fafc'
+    this.ctx.lineWidth = Math.max(5, Math.round(shortEdge * 0.044))
+    this.ctx.beginPath()
+    this.ctx.moveTo(routeStartX, routeStartY)
+    this.ctx.lineTo(routeEndX, routeEndY)
+    this.ctx.stroke()
+
+    this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.92)'
+    this.ctx.lineWidth = Math.max(2, Math.round(shortEdge * 0.018))
+    this.ctx.beginPath()
+    this.ctx.moveTo(routeStartX, routeStartY)
+    this.ctx.lineTo(routeEndX, routeEndY)
+    this.ctx.stroke()
+
     this.ctx.fillStyle = '#f8fafc'
     this.ctx.beginPath()
-    this.ctx.moveTo(targetX, targetY)
+    this.ctx.moveTo(routeEndX, routeEndY)
     this.ctx.lineTo(
-      targetX - arrowSize * Math.cos(angle - Math.PI / 6),
-      targetY - arrowSize * Math.sin(angle - Math.PI / 6)
+      routeEndX - arrowSize * Math.cos(angle - Math.PI / 6),
+      routeEndY - arrowSize * Math.sin(angle - Math.PI / 6)
     )
     this.ctx.lineTo(
-      targetX - arrowSize * Math.cos(angle + Math.PI / 6),
-      targetY - arrowSize * Math.sin(angle + Math.PI / 6)
+      routeEndX - arrowSize * Math.cos(angle + Math.PI / 6),
+      routeEndY - arrowSize * Math.sin(angle + Math.PI / 6)
     )
     this.ctx.closePath()
     this.ctx.fill()
