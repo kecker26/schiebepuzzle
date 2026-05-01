@@ -1,25 +1,29 @@
-import type { CSSProperties } from 'react'
-import cropIcon from '../assets/system/crop-screen-icons/crop.svg'
-import gridIcon from '../assets/system/crop-screen-icons/grid.svg'
-import maximizeIcon from '../assets/system/crop-screen-icons/maximize.svg'
-import moveIcon from '../assets/system/crop-screen-icons/move.svg'
-import refreshCwIcon from '../assets/system/crop-screen-icons/refresh-cw.svg'
-import rotateCcwIcon from '../assets/system/crop-screen-icons/rotate-ccw.svg'
-import rotateCwIcon from '../assets/system/crop-screen-icons/rotate-cw.svg'
-import slidersIcon from '../assets/system/crop-screen-icons/sliders.svg'
-import zoomInIcon from '../assets/system/crop-screen-icons/zoom-in.svg'
+import {
+  Crop,
+  Grid3X3,
+  Maximize,
+  Move,
+  RefreshCw,
+  RotateCcw,
+  RotateCw,
+  Scan,
+  SlidersHorizontal,
+  ZoomIn,
+  type LucideIcon,
+} from 'lucide-react'
 
 const cropScreenIconAssets = {
-  crop: cropIcon,
-  grid: gridIcon,
-  maximize: maximizeIcon,
-  move: moveIcon,
-  refreshCw: refreshCwIcon,
-  rotateCcw: rotateCcwIcon,
-  rotateCw: rotateCwIcon,
-  sliders: slidersIcon,
-  zoomIn: zoomInIcon,
-} as const
+  crop: Crop,
+  grid: Grid3X3,
+  maximize: Maximize,
+  move: Move,
+  refreshCw: RefreshCw,
+  rotateCcw: RotateCcw,
+  rotateCw: RotateCw,
+  scan: Scan,
+  sliders: SlidersHorizontal,
+  zoomIn: ZoomIn,
+} as const satisfies Record<string, LucideIcon>
 
 type CropScreenIconName = keyof typeof cropScreenIconAssets
 
@@ -31,11 +35,15 @@ interface CropScreenIconProps {
 export type { CropScreenIconName }
 
 export default function CropScreenIcon({ name, className }: CropScreenIconProps) {
+  const Icon = cropScreenIconAssets[name]
+
   return (
-    <span
+    <Icon
       aria-hidden="true"
+      focusable="false"
       className={className ? `crop-screen-icon ${className}` : 'crop-screen-icon'}
-      style={{ '--crop-screen-icon-url': `url("${cropScreenIconAssets[name]}")` } as CSSProperties}
+      strokeWidth={2.15}
+      absoluteStrokeWidth
     />
   )
 }

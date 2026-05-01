@@ -1,31 +1,49 @@
-import type { CSSProperties } from 'react'
-import activityIcon from '../assets/system/puzzle-screen-icons/activity.svg'
-import clockIcon from '../assets/system/puzzle-screen-icons/clock.svg'
-import commandIcon from '../assets/system/puzzle-screen-icons/command.svg'
-import crosshairIcon from '../assets/system/puzzle-screen-icons/crosshair.svg'
-import helpCircleIcon from '../assets/system/puzzle-screen-icons/help-circle.svg'
-import imageIcon from '../assets/system/puzzle-screen-icons/image.svg'
-import layersIcon from '../assets/system/puzzle-screen-icons/layers.svg'
-import moveIcon from '../assets/system/puzzle-screen-icons/move.svg'
-import musicIcon from '../assets/system/puzzle-screen-icons/music.svg'
-import rotateCcwIcon from '../assets/system/puzzle-screen-icons/rotate-ccw.svg'
-import volume2Icon from '../assets/system/puzzle-screen-icons/volume-2.svg'
-import volumeXIcon from '../assets/system/puzzle-screen-icons/volume-x.svg'
+import {
+  Activity,
+  Brain,
+  CircleHelp,
+  Clock,
+  Command,
+  Crosshair,
+  Eye,
+  Hash,
+  Image,
+  Layers,
+  Lightbulb,
+  Move,
+  Music,
+  RotateCcw,
+  Route,
+  Timer,
+  Undo2,
+  Volume2,
+  VolumeX,
+  WandSparkles,
+  type LucideIcon,
+} from 'lucide-react'
 
 const puzzleScreenIconAssets = {
-  activity: activityIcon,
-  clock: clockIcon,
-  command: commandIcon,
-  crosshair: crosshairIcon,
-  helpCircle: helpCircleIcon,
-  image: imageIcon,
-  layers: layersIcon,
-  move: moveIcon,
-  music: musicIcon,
-  rotateCcw: rotateCcwIcon,
-  volume2: volume2Icon,
-  volumeX: volumeXIcon,
-} as const
+  activity: Activity,
+  brain: Brain,
+  clock: Clock,
+  command: Command,
+  crosshair: Crosshair,
+  eye: Eye,
+  hash: Hash,
+  helpCircle: CircleHelp,
+  image: Image,
+  layers: Layers,
+  lightbulb: Lightbulb,
+  move: Move,
+  music: Music,
+  rotateCcw: RotateCcw,
+  route: Route,
+  timer: Timer,
+  undo2: Undo2,
+  volume2: Volume2,
+  volumeX: VolumeX,
+  wandSparkles: WandSparkles,
+} as const satisfies Record<string, LucideIcon>
 
 type PuzzleScreenIconName = keyof typeof puzzleScreenIconAssets
 
@@ -37,11 +55,15 @@ interface PuzzleScreenIconProps {
 export type { PuzzleScreenIconName }
 
 export default function PuzzleScreenIcon({ name, className }: PuzzleScreenIconProps) {
+  const Icon = puzzleScreenIconAssets[name]
+
   return (
-    <span
+    <Icon
       aria-hidden="true"
+      focusable="false"
       className={className ? `puzzle-screen-icon ${className}` : 'puzzle-screen-icon'}
-      style={{ '--puzzle-screen-icon-url': `url("${puzzleScreenIconAssets[name]}")` } as CSSProperties}
+      strokeWidth={2.15}
+      absoluteStrokeWidth
     />
   )
 }

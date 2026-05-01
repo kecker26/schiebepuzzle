@@ -492,7 +492,7 @@ export default function CropScreen({
         <AnimatedReveal as="header" level="medium">
           <h2>
             <span className="crop-title-icon-shell" aria-hidden="true">
-              <CropScreenIcon name="sliders" className="crop-title-icon" />
+              <CropScreenIcon name="scan" className="crop-title-icon" />
             </span>
             <span>Einstellungen</span>
           </h2>

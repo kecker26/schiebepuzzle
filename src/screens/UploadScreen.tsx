@@ -1102,7 +1102,7 @@ export default function UploadScreen({
           <span className="upload-kicker">Foto rein. Puzzle los.</span>
           <h1>
             <span className="upload-title-icon" aria-hidden="true">
-              <UploadScreenIcon name="image" className="upload-title-icon-symbol" />
+              <UploadScreenIcon name="uploadCloud" className="upload-title-icon-symbol" />
             </span>
             Schiebepuzzle
           </h1>

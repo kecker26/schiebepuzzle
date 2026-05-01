@@ -37,14 +37,13 @@
 }
 
 .crop-screen-icon {
-  --crop-screen-icon-url: none;
   flex: 0 0 auto;
   display: inline-block;
   width: 14px;
   height: 14px;
-  background: currentColor;
-  mask: var(--crop-screen-icon-url) center / contain no-repeat;
-  -webkit-mask: var(--crop-screen-icon-url) center / contain no-repeat;
+  color: currentColor;
+  transition: transform 0.22s ease, filter 0.22s ease;
+  vertical-align: -0.125em;
 }
 
 .crop-title-icon-shell {
@@ -486,4 +485,11 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 8px 18px color-mix(in srgb, var(--image-accent-solid) 4%, rgba(2, 6, 23, 0.08));
+}
+
+.crop-control-block:hover .crop-control-label-icon,
+.crop-hint:hover .crop-hint-icon,
+.crop-container h2:hover .crop-title-icon {
+  transform: translateY(-1px) scale(1.08);
+  filter: drop-shadow(0 4px 9px color-mix(in srgb, var(--image-accent-solid) 18%, transparent));
 }

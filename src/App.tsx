@@ -1326,6 +1326,7 @@ export default function App() {
     releaseAppFocus()
     scrollViewportToTop()
     setQuitHint(null)
+    setUploadCommandRequest(null)
     audioService.activate()
     setAppState('idle')
   }, [releaseAppFocus])

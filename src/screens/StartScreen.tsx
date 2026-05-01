@@ -32,7 +32,7 @@ const START_FEATURES = [
   {
     value: 'Upload + Zufall',
     label: 'Eigenes Bild oder Zufall',
-    icon: 'image',
+    icon: 'imagePlus',
   },
   {
     value: '10 Stile',
@@ -56,7 +56,7 @@ const START_FEATURE_GROUPS = [
     copy: 'Hinweise nutzen, Zuege steuern.',
     items: [
       { label: '3x3 bis 6x6', icon: 'grid' },
-      { label: 'Hinweise & Solver', icon: 'helpCircle' },
+      { label: 'Hinweise & Solver', icon: 'wandSparkles' },
       { label: 'Undo & Redo', icon: 'refreshCw' },
       { label: 'Stilwahl oben rechts', icon: 'sliders' },
     ],
@@ -65,10 +65,10 @@ const START_FEATURE_GROUPS = [
     title: 'Fortschritt behalten',
     copy: 'Saves, Zeiten und Galerie sichern.',
     items: [
-      { label: 'Spielstaende', icon: 'folder' },
+      { label: 'Spielstaende', icon: 'folderOpen' },
       { label: 'Statistik', icon: 'barChart2' },
       { label: 'Galerie', icon: 'image' },
-      { label: 'Backup & Import', icon: 'downloadCloud' },
+      { label: 'Backup & Import', icon: 'archiveRestore' },
     ],
   },
 ] satisfies Array<{
@@ -264,7 +264,7 @@ export default function StartScreen({
           <AnimatedReveal as="article" className="start-screen-hero-panel" level="strong" interaction="card">
             <div className="start-screen-hero">
               <span className="start-screen-kicker">
-                <StartScreenIcon name="image" className="start-screen-kicker-icon" />
+                <StartScreenIcon name="sparkles" className="start-screen-kicker-icon" />
                 <span>Foto rein. Puzzle los.</span>
               </span>
               <h1 className="start-screen-title">Schiebepuzzle</h1>

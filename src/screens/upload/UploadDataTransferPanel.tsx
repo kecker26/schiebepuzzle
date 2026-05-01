@@ -53,7 +53,7 @@ export default function UploadDataTransferPanel({
         <span className="upload-kicker">Datensicherung</span>
         <div className="upload-section-title-row">
           <span className="upload-section-title-icon-shell" aria-hidden="true">
-            <UploadScreenIcon name="downloadCloud" className="upload-section-title-icon" />
+            <UploadScreenIcon name="archiveRestore" className="upload-section-title-icon" />
           </span>
           <h2 id="data-transfer-title" className="data-transfer-title">
             Backup, Import und Export
@@ -73,7 +73,7 @@ export default function UploadDataTransferPanel({
             <span>{totalSolved} Siege</span>
           </span>
           <span className="saved-game-chip">
-            <UploadScreenIcon name="image" className="saved-game-chip-icon" />
+            <UploadScreenIcon name="gallery" className="saved-game-chip-icon" />
             <span>{galleryEntriesCount} Galerie-Bilder</span>
           </span>
         </div>
