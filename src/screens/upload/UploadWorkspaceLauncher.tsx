@@ -83,17 +83,28 @@ export default function UploadWorkspaceLauncher({
           revealLevel="medium"
         >
           <span className="menu-card-eyebrow">Fortsetzen</span>
-          <span className="menu-card-icon menu-card-icon-legacy" aria-hidden="true">💾</span>
+          <span className="menu-card-icon" aria-hidden="true">
+            <UploadScreenIcon name="folder" className="menu-card-icon-symbol" />
+          </span>
           <span className="menu-card-title">Spielstaende</span>
           <strong className="workspace-launcher-value">
             {isLoadingSavedGames ? 'Lade ...' : `${savedGamesCount} aktiv`}
           </strong>
           <span className="menu-card-desc">Offene Partien durchsuchen und direkt an der letzten Stelle weiterspielen.</span>
           <div className="workspace-launcher-meta">
-            <span className="saved-game-chip">{isLoadingSavedGames ? 'Wird geladen ...' : `${savedGamesCount} offen`}</span>
-            <span className="saved-game-chip">{savedGamesMeta}</span>
+            <span className="saved-game-chip">
+              <UploadScreenIcon name="listRestart" className="saved-game-chip-icon" />
+              {isLoadingSavedGames ? 'Wird geladen ...' : `${savedGamesCount} offen`}
+            </span>
+            <span className="saved-game-chip">
+              <UploadScreenIcon name="clock" className="saved-game-chip-icon" />
+              {savedGamesMeta}
+            </span>
           </div>
-          <span className="menu-card-arrow">Spielstaende oeffnen</span>
+          <span className="menu-card-arrow">
+            <UploadScreenIcon name="folder" className="menu-card-arrow-icon" />
+            Spielstaende oeffnen
+          </span>
         </AnimatedCardButton>
 
         <AnimatedCardButton
@@ -105,17 +116,28 @@ export default function UploadWorkspaceLauncher({
           revealLevel="medium"
         >
           <span className="menu-card-eyebrow">Auswertung</span>
-          <span className="menu-card-icon menu-card-icon-legacy" aria-hidden="true">📊</span>
+          <span className="menu-card-icon" aria-hidden="true">
+            <UploadScreenIcon name="barChart2" className="menu-card-icon-symbol" />
+          </span>
           <span className="menu-card-title">Statistik</span>
           <strong className="workspace-launcher-value">
             {isLoadingStats ? 'Lade ...' : `${totalSolved} Siege`}
           </strong>
           <span className="menu-card-desc">Rekorde, Stufenvergleich und Verlauf in einer klaren Gesamtansicht ansehen.</span>
           <div className="workspace-launcher-meta">
-            <span className="saved-game-chip">{isLoadingStats ? 'Wird geladen ...' : statsMeta}</span>
-            <span className="saved-game-chip">Aktiv {latestActivityLabel}</span>
+            <span className="saved-game-chip">
+              <UploadScreenIcon name="trophy" className="saved-game-chip-icon" />
+              {isLoadingStats ? 'Wird geladen ...' : statsMeta}
+            </span>
+            <span className="saved-game-chip">
+              <UploadScreenIcon name="clock" className="saved-game-chip-icon" />
+              Aktiv {latestActivityLabel}
+            </span>
           </div>
-          <span className="menu-card-arrow">Statistik oeffnen</span>
+          <span className="menu-card-arrow">
+            <UploadScreenIcon name="barChart2" className="menu-card-arrow-icon" />
+            Statistik oeffnen
+          </span>
         </AnimatedCardButton>
 
         <AnimatedCardButton
@@ -127,17 +149,28 @@ export default function UploadWorkspaceLauncher({
           revealLevel="medium"
         >
           <span className="menu-card-eyebrow">Rueckblick</span>
-          <span className="menu-card-icon menu-card-icon-legacy" aria-hidden="true">🖼️</span>
+          <span className="menu-card-icon" aria-hidden="true">
+            <UploadScreenIcon name="gallery" className="menu-card-icon-symbol" />
+          </span>
           <span className="menu-card-title">Galerie</span>
           <strong className="workspace-launcher-value">
             {isLoadingGallery ? 'Lade ...' : `${galleryEntriesCount} Motive`}
           </strong>
           <span className="menu-card-desc">Alle geloesten Motive als durchsuchbare Bildwand mit Schwierigkeit und Laufdaten.</span>
           <div className="workspace-launcher-meta">
-            <span className="saved-game-chip">{isLoadingGallery ? 'Wird geladen ...' : `${gallerySolveCount} Loesungen`}</span>
-            <span className="saved-game-chip">{galleryMeta}</span>
+            <span className="saved-game-chip">
+              <UploadScreenIcon name="image" className="saved-game-chip-icon" />
+              {isLoadingGallery ? 'Wird geladen ...' : `${gallerySolveCount} Loesungen`}
+            </span>
+            <span className="saved-game-chip">
+              <UploadScreenIcon name="clock" className="saved-game-chip-icon" />
+              {galleryMeta}
+            </span>
           </div>
-          <span className="menu-card-arrow">Galerie oeffnen</span>
+          <span className="menu-card-arrow">
+            <UploadScreenIcon name="gallery" className="menu-card-arrow-icon" />
+            Galerie oeffnen
+          </span>
         </AnimatedCardButton>
       </AnimatedStaggerGroup>
     </AnimatedStaggerGroup>

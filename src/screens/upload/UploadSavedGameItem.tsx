@@ -1,4 +1,5 @@
 import { memo, type KeyboardEvent as ReactKeyboardEvent, type RefObject, useCallback } from 'react'
+import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import { SavedGameSummary } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import { formatDate, formatTime } from './uploadUtils.ts'
@@ -47,9 +48,18 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
         <span className="saved-game-kicker">Zuletzt gespielt</span>
         <strong>{save.name}</strong>
         <div className="saved-game-chips">
-          <span className="saved-game-chip">{formatDifficultyLabel(save.config)}</span>
-          <span className="saved-game-chip">{save.moves} Zuege</span>
-          <span className="saved-game-chip">{formatTime(save.elapsedTime)}</span>
+          <span className="saved-game-chip">
+            <UploadScreenIcon name="layers" className="saved-game-chip-icon" />
+            {formatDifficultyLabel(save.config)}
+          </span>
+          <span className="saved-game-chip">
+            <UploadScreenIcon name="mousePointerClick" className="saved-game-chip-icon" />
+            {save.moves} Zuege
+          </span>
+          <span className="saved-game-chip">
+            <UploadScreenIcon name="timer" className="saved-game-chip-icon" />
+            {formatTime(save.elapsedTime)}
+          </span>
         </div>
         <span className="saved-game-date">{formatDate(save.updatedAt)}</span>
       </div>
@@ -63,7 +73,8 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
           onKeyDown={onActionKeyDown}
           disabled={isBusy}
         >
-          {isLoading ? 'Lade ...' : 'Weiterspielen'}
+          <UploadScreenIcon name="playCircle" className="saved-game-action-icon" />
+          <span>{isLoading ? 'Lade ...' : 'Weiterspielen'}</span>
         </button>
         <button
           type="button"
@@ -74,7 +85,8 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
           onKeyDown={onActionKeyDown}
           disabled={isBusy}
         >
-          {isDeleting ? 'Loesche ...' : 'Loeschen'}
+          <UploadScreenIcon name="trash" className="saved-game-action-icon" />
+          <span>{isDeleting ? 'Loesche ...' : 'Loeschen'}</span>
         </button>
       </div>
     </li>
