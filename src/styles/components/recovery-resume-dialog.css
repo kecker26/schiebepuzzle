@@ -1,0 +1,268 @@
+.recovery-resume-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 34%),
+    rgba(2, 6, 23, 0.54);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.recovery-resume-dialog {
+  position: relative;
+  width: min(640px, calc(100vw - 32px));
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 28px;
+  border: 1px solid color-mix(in srgb, var(--glass-border) 96%, transparent);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-accent-soft) 28%, transparent) 0%, transparent 30%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-strong) 95%, transparent),
+      color-mix(in srgb, var(--surface-soft) 92%, transparent)
+    );
+  box-shadow:
+    0 34px 80px rgba(2, 6, 23, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.recovery-resume-dialog h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 4vw, 2.4rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.recovery-resume-head {
+  display: grid;
+  gap: 8px;
+}
+
+.recovery-resume-kicker {
+  color: var(--primary-color);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.recovery-resume-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.recovery-resume-card {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 18px;
+  padding: 16px;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--glass-border) 88%, transparent);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 22%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--surface-soft) 88%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.recovery-resume-preview-shell {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--glass-border) 84%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+  aspect-ratio: 1;
+}
+
+.recovery-resume-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recovery-resume-summary {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.recovery-resume-summary-head {
+  display: grid;
+  gap: 4px;
+}
+
+.recovery-resume-summary-head strong {
+  color: var(--text-main);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.recovery-resume-summary-head span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.recovery-resume-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recovery-resume-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--secondary-border) 88%, rgba(255, 255, 255, 0.12));
+  background: color-mix(in srgb, var(--secondary-bg) 82%, transparent);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    var(--secondary-shadow);
+}
+
+.recovery-resume-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.recovery-resume-actions button {
+  min-width: 180px;
+}
+
+[data-theme="light"] .recovery-resume-overlay {
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--image-accent-soft) 28%, rgba(255, 255, 255, 0.2)), transparent 34%),
+    rgba(148, 163, 184, 0.26);
+}
+
+[data-theme="light"] .recovery-resume-dialog {
+  border-color: color-mix(in srgb, var(--primary-color) 18%, rgba(15, 23, 42, 0.1));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-accent-soft) 22%, rgba(255, 255, 255, 0.78)) 0%, transparent 30%),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.97),
+      rgba(243, 247, 252, 0.92)
+    );
+  box-shadow:
+    0 34px 80px rgba(148, 163, 184, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+[data-theme="light"] .recovery-resume-card {
+  border-color: color-mix(in srgb, var(--primary-color) 14%, rgba(15, 23, 42, 0.08));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 16%, transparent) 0%, transparent 42%),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.9),
+      rgba(244, 247, 251, 0.84)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 14px 28px rgba(148, 163, 184, 0.12);
+}
+
+[data-theme="light"] .recovery-resume-preview-shell {
+  border-color: color-mix(in srgb, var(--primary-color) 16%, rgba(15, 23, 42, 0.08));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(241, 245, 249, 0.88));
+}
+
+[data-theme="light"] .recovery-resume-chip {
+  border-color: color-mix(in srgb, var(--primary-color) 16%, rgba(15, 23, 42, 0.08));
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.94),
+      rgba(241, 245, 249, 0.88)
+    );
+  color: color-mix(in srgb, var(--text-main) 82%, #0f172a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 8px 18px rgba(148, 163, 184, 0.12);
+}
+
+@media (max-width: 640px) {
+  .recovery-resume-overlay {
+    padding: 16px;
+    align-items: flex-start;
+  }
+
+  .recovery-resume-dialog {
+    width: 100%;
+    margin-top: 40px;
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .recovery-resume-card {
+    grid-template-columns: 1fr;
+  }
+
+  .recovery-resume-preview-shell {
+    max-width: 132px;
+  }
+
+  .recovery-resume-actions {
+    flex-direction: column-reverse;
+  }
+
+  .recovery-resume-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Passive information surfaces: resume metadata is informational. */
+.recovery-resume-kicker,
+.recovery-resume-card,
+.recovery-resume-preview-shell,
+.recovery-resume-chip {
+  cursor: default;
+}
+
+.recovery-resume-chip {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 4px 10px color-mix(in srgb, var(--image-accent-solid) 4%, rgba(2, 6, 23, 0.08));
+}
+
+/* Documentation/checklist language for passive content. */
+.recovery-resume-chips {
+  gap: 0;
+}
+
+.recovery-resume-chip {
+  min-height: 0;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-secondary);
+}
+
+.recovery-resume-chip + .recovery-resume-chip {
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid color-mix(in srgb, var(--image-accent-solid) 16%, rgba(148, 163, 184, 0.18));
+}

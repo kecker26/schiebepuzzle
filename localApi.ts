@@ -1,0 +1,2780 @@
+import { createHash, randomUUID } from 'node:crypto'
+import { execFile } from 'node:child_process'
+import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+import { gunzipSync, gzipSync } from 'node:zlib'
+import type { Plugin } from 'vite'
+import MusicProviderCoordinator from './src/services/music/MusicProviderCoordinator.ts'
+import { isMusicStyleId } from './src/services/musicStyles.ts'
+import type { MusicProviderId } from './src/services/music/types.ts'
+
+const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
+const SAVES_DIR = path.join(ROOT_DIR, 'spielstaende')
+const BACKUPS_DIR = path.join(ROOT_DIR, 'backups')
+const STATS_FILE = path.join(SAVES_DIR, '__stats.json')
+const GALLERY_FILE = path.join(SAVES_DIR, '__gallery.json')
+const LEGACY_BACKUP_FILE_EXTENSION = '.spbkp'
+const COMPRESSED_BACKUP_FILE_EXTENSION = '.spbkp.gz'
+const BACKUP_FILE_EXTENSION = COMPRESSED_BACKUP_FILE_EXTENSION
+const SAVE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
+const BACKUP_FILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.spbkp(?:\.gz)?$/
+const MAX_BODY_SIZE = 40 * 1024 * 1024
+const MAX_BACKUP_FILES = 3
+const BACKUP_FORMAT_VERSION = 2
+const RECENT_COMPLETION_PREVIEW_LIMIT = 8
+const RECENT_MEDIAN_SAMPLE_SIZE = 5
+const GZIP_MAGIC_BYTE_1 = 0x1f
+const GZIP_MAGIC_BYTE_2 = 0x8b
+const CLIPBOARD_COMMAND_MAX_BUFFER = 64 * 1024 * 1024
+const POWERSHELL_PATH = process.platform === 'win32'
+  ? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  : 'powershell'
+const execFileAsync = promisify(execFile)
+
+const POWERSHELL_CLIPBOARD_IMAGE_STATUS_SCRIPT = [
+  "$ErrorActionPreference = 'Stop'",
+  '$image = Get-Clipboard -Format Image -ErrorAction SilentlyContinue',
+  'try {',
+  "  if ($null -eq $image) { [Console]::Out.Write('NO_IMAGE'); exit 0 }",
+  "  [Console]::Out.Write('HAS_IMAGE')",
+  '} finally {',
+  "  if ($image -is [System.IDisposable]) { $image.Dispose() }",
+  '}',
+].join('\n')
+
+const POWERSHELL_CLIPBOARD_IMAGE_READ_SCRIPT = [
+  "$ErrorActionPreference = 'Stop'",
+  'Add-Type -AssemblyName System.Drawing',
+  '$image = Get-Clipboard -Format Image -ErrorAction SilentlyContinue',
+  'if ($null -eq $image) { throw "NO_IMAGE" }',
+  '$stream = New-Object System.IO.MemoryStream',
+  'try {',
+  '  $image.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)',
+  '  [Console]::Out.Write([Convert]::ToBase64String($stream.ToArray()))',
+  '} finally {',
+  '  $stream.Dispose()',
+  "  if ($image -is [System.IDisposable]) { $image.Dispose() }",
+  '}',
+].join('\n')
+
+interface StoredPuzzleConfig {
+  rows: number
+  cols: number
+}
+
+type StoredAssistanceMode = 'clean' | 'hinted' | 'auto-assisted'
+
+interface StoredRunMetrics {
+  actionMoves: number
+  undoCount: number
+  redoCount: number
+  hintCount: number
+  suggestedMoveCount: number
+}
+
+interface StoredSaveProgress {
+  moveCount: number
+  elapsedTime: number
+  runMetrics?: StoredRunMetrics
+  [key: string]: unknown
+}
+
+interface StoredSaveFile {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  image: string
+  croppedImage: string
+  previewImage: string
+  config: StoredPuzzleConfig
+  progress: StoredSaveProgress
+}
+
+interface StoredSaveMetaFile {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  previewImage: string
+  config: StoredPuzzleConfig
+}
+
+interface StoredSaveProgressFile {
+  progress: StoredSaveProgress
+}
+
+interface SaveSummary {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  previewImage: string
+  config: StoredPuzzleConfig
+  moves: number
+  elapsedTime: number
+}
+
+interface StoredCompletionRecord {
+  id: string
+  completedAt: string
+  previewImage: string | null
+  config: StoredPuzzleConfig
+  moves: number
+  actionMoves: number
+  time: number
+  undoCount: number
+  redoCount: number
+  hintCount: number
+  suggestedMoveCount: number
+  assistanceMode: StoredAssistanceMode
+  hasDetailedProfile: boolean
+}
+
+interface StoredDifficultyStats {
+  config: StoredPuzzleConfig
+  solveCount: number
+  cleanSolveCount: number
+  assistedSolveCount: number
+  autoAssistedSolveCount: number
+  totalMoves: number
+  totalActionMoves: number
+  totalTime: number
+  bestMoves: number | null
+  bestCleanMoves: number | null
+  bestTime: number | null
+  bestCleanTime: number | null
+  lastCompletedAt: string | null
+}
+
+interface StoredStatsFile {
+  totalSolved: number
+  cleanSolvedCount: number
+  assistedSolvedCount: number
+  autoAssistedSolvedCount: number
+  totalMoves: number
+  totalTime: number
+  bestMoves: number | null
+  bestCleanMoves: number | null
+  bestTime: number | null
+  bestCleanTime: number | null
+  byDifficulty: StoredDifficultyStats[]
+  completionHistory: StoredCompletionRecord[]
+  lastUpdatedAt: string | null
+}
+
+interface StoredGalleryEntry {
+  id: string
+  completedAt: string
+  previewImage: string | null
+  sourceImage: string | null
+  config: StoredPuzzleConfig
+  moves: number
+  time: number
+  actionMoves: number
+  assistanceMode: StoredAssistanceMode
+  hasDetailedProfile: boolean
+}
+
+interface StoredGalleryFile {
+  entries: StoredGalleryEntry[]
+  lastUpdatedAt: string | null
+}
+interface DifficultyStatsResponse extends StoredDifficultyStats {
+  averageMoves: number
+  averageActionMoves: number | null
+  averageTime: number
+  medianMoves: number
+  medianActionMoves: number | null
+  medianTime: number
+  averageExtraMoves: number | null
+  medianExtraMoves: number | null
+  recentMedianMoves: number
+  recentMedianTime: number
+  profiledSolveCount: number
+  legacySolveCount: number
+  lastMoves: number | null
+  lastActionMoves: number | null
+  lastExtraMoves: number | null
+  lastTime: number | null
+  lastAssistanceMode: StoredAssistanceMode | null
+  lastHasDetailedProfile: boolean | null
+}
+
+interface StatsResponse {
+  totalSolved: number
+  cleanSolvedCount: number
+  assistedSolvedCount: number
+  autoAssistedSolvedCount: number
+  profiledSolvedCount: number
+  legacySolvedCount: number
+  totalMoves: number
+  totalTime: number
+  averageMoves: number
+  averageTime: number
+  medianMoves: number
+  medianTime: number
+  currentStreak: number
+  bestStreak: number
+  activeDays: number
+  bestMoves: number | null
+  bestCleanMoves: number | null
+  bestTime: number | null
+  bestCleanTime: number | null
+  byDifficulty: DifficultyStatsResponse[]
+  recentCompletions: StoredCompletionRecord[]
+  completionHistory: StoredCompletionRecord[]
+  lastCompletedAt: string | null
+  lastUpdatedAt: string | null
+}
+
+interface GalleryResponse {
+  entries: StoredGalleryEntry[]
+  totalEntries: number
+  lastCompletedAt: string | null
+  lastUpdatedAt: string | null
+}
+
+interface BackupImageAssetRef {
+  assetId: string
+}
+
+type BackupImageValue = string | BackupImageAssetRef | null
+
+type BackupAssetMap = Record<string, string>
+
+interface BackupCompletionRecord extends Omit<StoredCompletionRecord, 'previewImage'> {
+  previewImage: BackupImageValue
+}
+
+interface BackupGalleryResponse extends Omit<GalleryResponse, 'entries'> {
+  entries: BackupGalleryEntry[]
+}
+
+interface BackupGalleryEntry extends Omit<StoredGalleryEntry, 'previewImage' | 'sourceImage'> {
+  previewImage: BackupImageValue
+  sourceImage: BackupImageValue
+}
+
+interface BackupStatsResponse extends Omit<StatsResponse, 'recentCompletions' | 'completionHistory'> {
+  recentCompletions: BackupCompletionRecord[]
+  completionHistory: BackupCompletionRecord[]
+}
+
+interface BackupSaveResponse extends Omit<SaveSummary, 'previewImage'> {
+  previewImage: BackupImageValue
+  image: BackupImageValue
+  croppedImage: BackupImageValue
+  progress: StoredSaveProgress
+}
+
+interface BackupResponse {
+  app: 'schiebepuzzle'
+  version: 1 | 2
+  exportedAt: string
+  savedGames: BackupSaveResponse[]
+  stats: BackupStatsResponse
+  gallery: BackupGalleryResponse
+  assets?: BackupAssetMap
+}
+
+interface BackupImportResponse {
+  importedAt: string
+  savedGames: SaveSummary[]
+  stats: StatsResponse
+  gallery: GalleryResponse
+}
+
+interface BackupFileResponse {
+  fileName: string
+  exportedAt: string | null
+  savedGamesCount: number
+  totalSolved: number
+  galleryEntriesCount: number
+  size: number
+  modifiedAt: string
+  alreadyCurrent: boolean
+  deletedBackupFileNames: string[]
+  retentionLimit: number
+}
+
+interface ClipboardImageStatusResponse {
+  hasImage: boolean
+}
+
+interface ClipboardImageResponse {
+  imageDataUrl: string
+}
+
+interface RecordCompletionResponse {
+  stats: StatsResponse
+  completion: StoredCompletionRecord
+  difficultyStats: DifficultyStatsResponse
+  previousCompletion: StoredCompletionRecord | null
+  previousRecentMedianMoves: number | null
+  previousRecentMedianTime: number | null
+  isNewBestMoves: boolean
+  isNewBestTime: boolean
+  isNewBestCleanMoves: boolean
+  isNewBestCleanTime: boolean
+}
+
+function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
+  res.statusCode = statusCode
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  res.end(JSON.stringify(payload))
+}
+
+function isValidSaveId(id: string): boolean {
+  return SAVE_ID_PATTERN.test(id)
+}
+
+function isValidPuzzleConfig(config: unknown): config is StoredPuzzleConfig {
+  if (!config || typeof config !== 'object') return false
+  const input = config as { rows?: unknown; cols?: unknown }
+
+  return (
+    typeof input.rows === 'number' &&
+    Number.isInteger(input.rows) &&
+    input.rows > 0 &&
+    typeof input.cols === 'number' &&
+    Number.isInteger(input.cols) &&
+    input.cols > 0
+  )
+}
+
+function sanitizeCount(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0
+  return Math.max(0, Math.round(value))
+}
+
+function sanitizeOptionalCount(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null
+  return Math.max(0, Math.round(value))
+}
+
+function getBestOptionalValue(values: Array<number | null | undefined>): number | null {
+  const candidates = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+  if (candidates.length === 0) return null
+  return Math.min(...candidates)
+}
+
+function normalizeCleanBestValue(input: {
+  explicitValue: unknown
+  generalValue: number | null
+  cleanCount: number
+  assistedCount: number
+  autoAssistedCount: number
+  derivedValue?: number | null
+}): number | null {
+  if (input.cleanCount === 0) return null
+
+  const explicitValue = sanitizeOptionalCount(input.explicitValue)
+  if (explicitValue !== null) return explicitValue
+
+  if (input.assistedCount === 0 && input.autoAssistedCount === 0) {
+    return input.generalValue
+  }
+
+  return input.derivedValue ?? null
+}
+function comparePuzzleConfig(a: StoredPuzzleConfig, b: StoredPuzzleConfig): number {
+  const areaDiff = a.rows * a.cols - b.rows * b.cols
+  if (areaDiff !== 0) return areaDiff
+
+  const rowDiff = a.rows - b.rows
+  if (rowDiff !== 0) return rowDiff
+
+  return a.cols - b.cols
+}
+
+function getIsoTimestampValue(value: string | null | undefined): number {
+  if (!value) return 0
+  const parsed = Date.parse(value)
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+async function ensureSavesDir(): Promise<void> {
+  await mkdir(SAVES_DIR, { recursive: true })
+}
+
+async function ensureBackupsDir(): Promise<void> {
+  await mkdir(BACKUPS_DIR, { recursive: true })
+}
+
+function legacySaveFilePath(saveId: string): string {
+  if (!isValidSaveId(saveId)) {
+    throw new Error('Ungueltige Spielstand-ID')
+  }
+
+  return path.join(SAVES_DIR, `${saveId}.json`)
+}
+
+function saveDirPath(saveId: string): string {
+  if (!isValidSaveId(saveId)) {
+    throw new Error('Ungueltige Spielstand-ID')
+  }
+
+  return path.join(SAVES_DIR, saveId)
+}
+
+function saveMetaPath(saveId: string): string {
+  return path.join(saveDirPath(saveId), 'meta.json')
+}
+
+function saveProgressPath(saveId: string): string {
+  return path.join(saveDirPath(saveId), 'progress.json')
+}
+
+function saveImagePath(saveId: string): string {
+  return path.join(saveDirPath(saveId), 'image.txt')
+}
+
+function saveCroppedImagePath(saveId: string): string {
+  return path.join(saveDirPath(saveId), 'cropped-image.txt')
+}
+
+function isValidBackupFileName(fileName: string): boolean {
+  return BACKUP_FILE_NAME_PATTERN.test(fileName)
+}
+
+function backupFilePath(fileName: string): string {
+  if (!isValidBackupFileName(fileName)) {
+    throw new Error('Ungueltiger Backup-Dateiname')
+  }
+
+  return path.join(BACKUPS_DIR, fileName)
+}
+
+function isCompressedBackupFileName(fileName: string): boolean {
+  return fileName.endsWith(COMPRESSED_BACKUP_FILE_EXTENSION)
+}
+
+function isLegacyBackupFileName(fileName: string): boolean {
+  return fileName.endsWith(LEGACY_BACKUP_FILE_EXTENSION) && !isCompressedBackupFileName(fileName)
+}
+
+function isGzipBuffer(value: Uint8Array): boolean {
+  return value.length >= 2 && value[0] === GZIP_MAGIC_BYTE_1 && value[1] === GZIP_MAGIC_BYTE_2
+}
+
+function parseBackupPayloadFromFileContent(content: Uint8Array, fileName: string): unknown {
+  const useCompressedContent = isCompressedBackupFileName(fileName) || (!isLegacyBackupFileName(fileName) && isGzipBuffer(content))
+  const rawJson = useCompressedContent
+    ? gunzipSync(content).toString('utf-8')
+    : Buffer.from(content).toString('utf-8')
+
+  return JSON.parse(rawJson) as unknown
+}
+
+function serializeBackupPayload(backup: BackupResponse): Buffer {
+  return gzipSync(JSON.stringify(backup))
+}
+
+function isReservedDataFilename(filename: string): boolean {
+  return filename === path.basename(STATS_FILE) || filename === path.basename(GALLERY_FILE)
+}
+async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    let raw = ''
+
+    req.on('data', (chunk) => {
+      raw += chunk.toString()
+      if (raw.length > MAX_BODY_SIZE) {
+        reject(new Error('Anfrage zu gross'))
+      }
+    })
+
+    req.on('end', () => {
+      if (!raw) {
+        resolve({})
+        return
+      }
+
+      try {
+        resolve(JSON.parse(raw))
+      } catch {
+        reject(new Error('Ungueltiges JSON'))
+      }
+    })
+
+    req.on('error', reject)
+  })
+}
+
+async function readJsonFile<T>(filePath: string): Promise<T | null> {
+  try {
+    const raw = await readFile(filePath, 'utf-8')
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+async function readTextFile(filePath: string): Promise<string | null> {
+  try {
+    return await readFile(filePath, 'utf-8')
+  } catch {
+    return null
+  }
+}
+
+function sanitizeRunMetrics(input: unknown, fallbackMoveCount: number = 0): StoredRunMetrics {
+  const source = input && typeof input === 'object' ? (input as Record<string, unknown>) : {}
+  return {
+    actionMoves: Math.max(fallbackMoveCount, sanitizeCount(source.actionMoves)),
+    undoCount: sanitizeCount(source.undoCount),
+    redoCount: sanitizeCount(source.redoCount),
+    hintCount: sanitizeCount(source.hintCount),
+    suggestedMoveCount: sanitizeCount(source.suggestedMoveCount),
+  }
+}
+
+function sanitizeProgress(progress: unknown): StoredSaveProgress {
+  const input = progress && typeof progress === 'object' ? (progress as Record<string, unknown>) : {}
+  const moveCount = sanitizeCount(input.moveCount)
+  return {
+    ...input,
+    moveCount,
+    elapsedTime: sanitizeCount(input.elapsedTime),
+    runMetrics: sanitizeRunMetrics(input.runMetrics, moveCount),
+  }
+}
+
+function toSummary(save: Pick<StoredSaveFile, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'previewImage' | 'config' | 'progress'>): SaveSummary {
+  return {
+    id: save.id,
+    name: save.name,
+    createdAt: save.createdAt,
+    updatedAt: save.updatedAt,
+    previewImage: save.previewImage,
+    config: save.config,
+    moves: sanitizeCount(save.progress?.moveCount),
+    elapsedTime: sanitizeCount(save.progress?.elapsedTime),
+  }
+}
+
+async function readStructuredSaveMeta(saveId: string): Promise<StoredSaveMetaFile | null> {
+  const meta = await readJsonFile<StoredSaveMetaFile>(saveMetaPath(saveId))
+  if (!meta || typeof meta.id !== 'string' || !isValidPuzzleConfig(meta.config)) {
+    return null
+  }
+
+  return meta
+}
+
+async function readStructuredSaveProgress(saveId: string): Promise<StoredSaveProgress> {
+  const progressFile = await readJsonFile<StoredSaveProgressFile>(saveProgressPath(saveId))
+  return sanitizeProgress(progressFile?.progress)
+}
+
+async function readLegacySaveById(saveId: string): Promise<StoredSaveFile | null> {
+  try {
+    const raw = await readFile(legacySaveFilePath(saveId), 'utf-8')
+    return JSON.parse(raw) as StoredSaveFile
+  } catch {
+    return null
+  }
+}
+
+async function readSaveById(saveId: string): Promise<StoredSaveFile | null> {
+  const meta = await readStructuredSaveMeta(saveId)
+  if (meta) {
+    const [progress, image, croppedImage] = await Promise.all([
+      readStructuredSaveProgress(saveId),
+      readTextFile(saveImagePath(saveId)),
+      readTextFile(saveCroppedImagePath(saveId)),
+    ])
+
+    if (!image || !croppedImage) {
+      return null
+    }
+
+    return {
+      ...meta,
+      image,
+      croppedImage,
+      progress,
+    }
+  }
+
+  return readLegacySaveById(saveId)
+}
+
+async function writeStructuredSave(save: StoredSaveFile): Promise<void> {
+  await ensureSavesDir()
+  await mkdir(saveDirPath(save.id), { recursive: true })
+
+  const meta: StoredSaveMetaFile = {
+    id: save.id,
+    name: save.name,
+    createdAt: save.createdAt,
+    updatedAt: save.updatedAt,
+    previewImage: save.previewImage,
+    config: save.config,
+  }
+  const progressFile: StoredSaveProgressFile = {
+    progress: sanitizeProgress(save.progress),
+  }
+
+  // Write sequentially: images first (most valuable), then meta+progress, finally legacy cleanup.
+  // This avoids a partial-failure state where some files are written but others are not.
+  await writeFile(saveImagePath(save.id), save.image, 'utf-8')
+  await writeFile(saveCroppedImagePath(save.id), save.croppedImage, 'utf-8')
+  await writeFile(saveMetaPath(save.id), JSON.stringify(meta, null, 2), 'utf-8')
+  await writeFile(saveProgressPath(save.id), JSON.stringify(progressFile, null, 2), 'utf-8')
+  await rm(legacySaveFilePath(save.id), { force: true })
+}
+
+async function updateSaveProgress(saveId: string, progress: StoredSaveProgress): Promise<SaveSummary | null> {
+  const meta = await readStructuredSaveMeta(saveId)
+  if (meta) {
+    const nextUpdatedAt = new Date().toISOString()
+    const nextMeta: StoredSaveMetaFile = {
+      ...meta,
+      updatedAt: nextUpdatedAt,
+    }
+    const nextProgress = sanitizeProgress(progress)
+
+    await Promise.all([
+      writeFile(saveMetaPath(saveId), JSON.stringify(nextMeta, null, 2), 'utf-8'),
+      writeFile(saveProgressPath(saveId), JSON.stringify({ progress: nextProgress }, null, 2), 'utf-8'),
+    ])
+
+    return toSummary({
+      ...nextMeta,
+      progress: nextProgress,
+    })
+  }
+
+  const legacy = await readLegacySaveById(saveId)
+  if (!legacy) {
+    return null
+  }
+
+  const migrated: StoredSaveFile = {
+    ...legacy,
+    progress: sanitizeProgress(progress),
+    updatedAt: new Date().toISOString(),
+  }
+  await writeStructuredSave(migrated)
+  return toSummary(migrated)
+}
+
+async function deleteAllSaves(): Promise<void> {
+  await ensureSavesDir()
+  const entries = await readdir(SAVES_DIR, { withFileTypes: true })
+  const deleteTasks: Array<Promise<void>> = []
+
+  for (const entry of entries) {
+    if (entry.isDirectory() && isValidSaveId(entry.name)) {
+      deleteTasks.push(rm(saveDirPath(entry.name), { recursive: true, force: true }))
+      continue
+    }
+
+    if (!entry.isFile() || !entry.name.endsWith('.json') || isReservedDataFilename(entry.name)) {
+      continue
+    }
+
+    const saveId = entry.name.slice(0, -5)
+    if (!isValidSaveId(saveId)) continue
+    deleteTasks.push(rm(legacySaveFilePath(saveId), { force: true }))
+  }
+
+  await Promise.all(deleteTasks)
+}
+
+async function listAllSaveSummaries(): Promise<SaveSummary[]> {
+  await ensureSavesDir()
+  const entries = await readdir(SAVES_DIR, { withFileTypes: true })
+  const summaries: SaveSummary[] = []
+
+  for (const entry of entries) {
+    if (entry.isDirectory() && isValidSaveId(entry.name)) {
+      const meta = await readStructuredSaveMeta(entry.name)
+      if (!meta) continue
+      const progress = await readStructuredSaveProgress(entry.name)
+      summaries.push(
+        toSummary({
+          ...meta,
+          progress,
+        })
+      )
+      continue
+    }
+
+    if (!entry.isFile() || !entry.name.endsWith('.json') || isReservedDataFilename(entry.name)) {
+      continue
+    }
+
+    const saveId = entry.name.slice(0, -5)
+    if (!isValidSaveId(saveId)) continue
+
+    const legacy = await readLegacySaveById(saveId)
+    if (legacy) {
+      summaries.push(toSummary(legacy))
+    }
+  }
+
+  summaries.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+  return summaries
+}
+
+async function listAllSaveData(): Promise<StoredSaveFile[]> {
+  const summaries = await listAllSaveSummaries()
+  const loadedSaves = await Promise.all(summaries.map((summary) => readSaveById(summary.id)))
+
+  return loadedSaves
+    .filter((save): save is StoredSaveFile => save !== null)
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+}
+
+function toBackupSaveResponse(
+  save: StoredSaveFile,
+  assetRegistry: ReturnType<typeof createBackupAssetRegistry>
+): BackupSaveResponse {
+  return {
+    ...toSummary(save),
+    previewImage: assetRegistry.store(save.previewImage),
+    image: assetRegistry.store(save.image),
+    croppedImage: assetRegistry.store(save.croppedImage),
+    progress: sanitizeProgress(save.progress),
+  }
+}
+
+function sanitizeTextValue(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value.length > 0 ? value : fallback
+}
+
+function normalizeImportedSave(
+  entry: unknown,
+  index: number,
+  usedIds: Set<string>,
+  assets: BackupAssetMap = {}
+): StoredSaveFile | null {
+  if (!entry || typeof entry !== 'object') return null
+
+  const input = entry as Record<string, unknown>
+  if (
+    !isValidPuzzleConfig(input.config)
+    || typeof input.progress !== 'object'
+    || input.progress === null
+  ) {
+    return null
+  }
+
+  const image = resolveBackupImageValue(input.image, assets)
+  const croppedImage = resolveBackupImageValue(input.croppedImage, assets)
+  if (!image || !croppedImage) {
+    return null
+  }
+
+  const requestedId = typeof input.id === 'string' && isValidSaveId(input.id) ? input.id : null
+  const saveId = requestedId && !usedIds.has(requestedId) ? requestedId : randomUUID()
+  usedIds.add(saveId)
+
+  const createdAt = sanitizeTextValue(input.createdAt, new Date().toISOString())
+  const updatedAt = sanitizeTextValue(input.updatedAt, createdAt)
+  const previewImage = resolveBackupImageValue(input.previewImage, assets) ?? croppedImage
+
+  return {
+    id: saveId,
+    name: sanitizeTextValue(input.name, `Importierter Spielstand ${index + 1}`),
+    createdAt,
+    updatedAt,
+    image,
+    croppedImage,
+    previewImage,
+    config: input.config,
+    progress: sanitizeProgress(input.progress),
+  }
+}
+
+function validateBackupPayload(payload: unknown): payload is {
+  app?: unknown
+  version?: unknown
+  savedGames?: unknown
+  stats?: unknown
+  gallery?: unknown
+  assets?: unknown
+} {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as Record<string, unknown>
+  return (
+    (input.app === undefined || input.app === 'schiebepuzzle')
+    && (input.version === undefined || input.version === 1 || input.version === 2)
+    && (input.savedGames === undefined || Array.isArray(input.savedGames))
+  )
+}
+
+async function buildBackupResponse(): Promise<BackupResponse> {
+  const [saves, stats, gallery] = await Promise.all([
+    listAllSaveData(),
+    readStatsFile(),
+    readGalleryFile(),
+  ])
+  const assetRegistry = createBackupAssetRegistry()
+  const rawSavedGames = saves.map((save) => toBackupSaveResponse(save, assetRegistry))
+  const rawStatsResponse = toBackupStatsResponse(stats, assetRegistry)
+  const rawGalleryResponse = toBackupGalleryResponse(gallery, assetRegistry)
+  assetRegistry.finalize()
+
+  const savedGames = rawSavedGames.map((save) => materializeBackupSaveResponse(save, assetRegistry))
+  const statsResponse = materializeBackupStatsResponse(rawStatsResponse, assetRegistry)
+  const galleryResponse = materializeBackupGalleryResponse(rawGalleryResponse, assetRegistry)
+  const assets = normalizeBackupAssetMap(assetRegistry.assets)
+
+  return {
+    app: 'schiebepuzzle',
+    version: BACKUP_FORMAT_VERSION,
+    exportedAt: new Date().toISOString(),
+    savedGames,
+    stats: statsResponse,
+    gallery: galleryResponse,
+    ...(Object.keys(assets).length > 0 ? { assets } : {}),
+  }
+}
+
+async function importBackupPayload(payload: {
+  savedGames?: unknown
+  stats?: unknown
+  gallery?: unknown
+  assets?: unknown
+}): Promise<BackupImportResponse> {
+  const importedAt = new Date().toISOString()
+  const assets = normalizeBackupAssetMap(payload.assets)
+  const rawSaves = Array.isArray(payload.savedGames) ? payload.savedGames : []
+  const usedIds = new Set<string>()
+  const importedSaves = rawSaves
+    .map((entry, index) => normalizeImportedSave(entry, index, usedIds, assets))
+    .filter((entry): entry is StoredSaveFile => entry !== null)
+
+  const importedStats = normalizeStatsFile(payload.stats, assets)
+  const importedGallery = payload.gallery === null || payload.gallery === undefined
+    ? createGalleryFileFromCompletionHistory(importedStats.completionHistory, importedStats.lastUpdatedAt)
+    : normalizeGalleryFile(payload.gallery, assets)
+
+  await deleteAllSaves()
+  await Promise.all(importedSaves.map((save) => writeStructuredSave(save)))
+  await Promise.all([
+    writeStatsFile(importedStats),
+    writeGalleryFile(importedGallery),
+  ])
+
+  return {
+    importedAt,
+    savedGames: await listAllSaveSummaries(),
+    stats: toStatsResponse(importedStats),
+    gallery: toGalleryResponse(importedGallery),
+  }
+}
+
+function createBackupFileName(exportedAt: string): string {
+  const stamp = exportedAt.replace(/[:.]/g, '-').replace('T', '_').replace('Z', '')
+  return `schiebepuzzle-backup-${stamp}${BACKUP_FILE_EXTENSION}`
+}
+
+function getBackupFileGalleryEntriesCount(gallery: unknown): number {
+  if (!gallery || typeof gallery !== 'object') {
+    return 0
+  }
+
+  const input = gallery as { totalEntries?: unknown; entries?: unknown }
+  if (typeof input.totalEntries === 'number' && Number.isFinite(input.totalEntries)) {
+    return Math.max(0, Math.round(input.totalEntries))
+  }
+
+  return Array.isArray(input.entries) ? input.entries.length : 0
+}
+
+function buildBackupFileResponse(
+  fileName: string,
+  backup: {
+    exportedAt?: unknown
+    savedGames?: unknown
+    stats?: unknown
+    gallery?: unknown
+  },
+  size: number,
+  modifiedAt: string,
+  alreadyCurrent: boolean = false,
+  deletedBackupFileNames: string[] = [],
+  retentionLimit: number = MAX_BACKUP_FILES
+): BackupFileResponse {
+  const stats = backup.stats && typeof backup.stats === 'object'
+    ? (backup.stats as { totalSolved?: unknown })
+    : null
+
+  return {
+    fileName,
+    exportedAt: typeof backup.exportedAt === 'string' ? backup.exportedAt : null,
+    savedGamesCount: Array.isArray(backup.savedGames) ? backup.savedGames.length : 0,
+    totalSolved: sanitizeCount(stats?.totalSolved),
+    galleryEntriesCount: getBackupFileGalleryEntriesCount(backup.gallery),
+    size: Math.max(0, Math.round(size)),
+    modifiedAt,
+    alreadyCurrent,
+    deletedBackupFileNames,
+    retentionLimit,
+  }
+}
+
+function createBackupComparisonHash(backup: {
+  app?: unknown
+  version?: unknown
+  savedGames?: unknown
+  stats?: unknown
+  gallery?: unknown
+  assets?: unknown
+}): string {
+  const comparableBackup = {
+    app: backup.app === 'schiebepuzzle' ? backup.app : 'schiebepuzzle',
+    version: backup.version === 2 ? 2 : 1,
+    assets: normalizeBackupAssetMap(backup.assets),
+    savedGames: Array.isArray(backup.savedGames) ? backup.savedGames : [],
+    stats: backup.stats ?? null,
+    gallery: backup.gallery ?? null,
+  }
+
+  return createHash('sha256').update(JSON.stringify(comparableBackup)).digest('hex')
+}
+
+async function findMatchingBackupFile(backup: BackupResponse): Promise<BackupFileResponse | null> {
+  await ensureBackupsDir()
+  const entries = await readdir(BACKUPS_DIR, { withFileTypes: true })
+  const targetHash = createBackupComparisonHash(backup)
+  let newestMatch: BackupFileResponse | null = null
+
+  for (const entry of entries) {
+    if (!entry.isFile() || !isValidBackupFileName(entry.name)) {
+      continue
+    }
+
+    try {
+      const filePath = backupFilePath(entry.name)
+      const [raw, fileStats] = await Promise.all([
+        readFile(filePath),
+        stat(filePath),
+      ])
+      const payload = parseBackupPayloadFromFileContent(raw, entry.name)
+      if (!validateBackupPayload(payload)) {
+        continue
+      }
+
+      if (createBackupComparisonHash(payload as {
+        app?: unknown
+        version?: unknown
+        savedGames?: unknown
+        stats?: unknown
+        gallery?: unknown
+        assets?: unknown
+      }) !== targetHash) {
+        continue
+      }
+
+      const match = buildBackupFileResponse(
+        entry.name,
+        payload as {
+          exportedAt?: unknown
+          savedGames?: unknown
+          stats?: unknown
+          gallery?: unknown
+        },
+        fileStats.size,
+        fileStats.mtime.toISOString(),
+        true
+      )
+
+      if (!newestMatch || getIsoTimestampValue(match.modifiedAt) > getIsoTimestampValue(newestMatch.modifiedAt)) {
+        newestMatch = match
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return newestMatch
+}
+
+async function listBackupFiles(): Promise<BackupFileResponse[]> {
+  await ensureBackupsDir()
+  const entries = await readdir(BACKUPS_DIR, { withFileTypes: true })
+
+  const backups = await Promise.all(entries.map(async (entry) => {
+    if (!entry.isFile() || !isValidBackupFileName(entry.name)) {
+      return null
+    }
+
+    try {
+      const filePath = backupFilePath(entry.name)
+      const [raw, fileStats] = await Promise.all([
+        readFile(filePath),
+        stat(filePath),
+      ])
+      const payload = parseBackupPayloadFromFileContent(raw, entry.name)
+      if (!validateBackupPayload(payload)) {
+        return null
+      }
+
+      return buildBackupFileResponse(
+        entry.name,
+        payload as {
+          exportedAt?: unknown
+          savedGames?: unknown
+          stats?: unknown
+          gallery?: unknown
+        },
+        fileStats.size,
+        fileStats.mtime.toISOString()
+      )
+    } catch {
+      return null
+    }
+  }))
+
+  return backups
+    .filter((entry): entry is BackupFileResponse => entry !== null)
+    .sort((a, b) => {
+      const modifiedDiff = getIsoTimestampValue(b.modifiedAt) - getIsoTimestampValue(a.modifiedAt)
+      if (modifiedDiff !== 0) {
+        return modifiedDiff
+      }
+
+      const exportedDiff = getIsoTimestampValue(b.exportedAt) - getIsoTimestampValue(a.exportedAt)
+      if (exportedDiff !== 0) {
+        return exportedDiff
+      }
+
+      return b.fileName.localeCompare(a.fileName)
+    })
+}
+
+async function pruneBackupFilesToRetentionLimit(limit: number): Promise<string[]> {
+  if (limit < 1) {
+    return []
+  }
+
+  const backups = await listBackupFiles()
+  const backupsToDelete = backups.slice(limit)
+  if (backupsToDelete.length === 0) {
+    return []
+  }
+
+  await Promise.all(backupsToDelete.map((backup) => rm(backupFilePath(backup.fileName), { force: true })))
+  return backupsToDelete.map((backup) => backup.fileName)
+}
+
+async function createBackupFile(): Promise<BackupFileResponse> {
+  const backup = await buildBackupResponse()
+  const existingMatch = await findMatchingBackupFile(backup)
+  if (existingMatch) {
+    return existingMatch
+  }
+
+  const fileName = createBackupFileName(backup.exportedAt)
+  const filePath = backupFilePath(fileName)
+
+  await ensureBackupsDir()
+  await writeFile(filePath, serializeBackupPayload(backup))
+
+  const deletedBackupFileNames = await pruneBackupFilesToRetentionLimit(MAX_BACKUP_FILES)
+  const fileStats = await stat(filePath)
+  return buildBackupFileResponse(
+    fileName,
+    backup,
+    fileStats.size,
+    fileStats.mtime.toISOString(),
+    false,
+    deletedBackupFileNames,
+    MAX_BACKUP_FILES
+  )
+}
+
+async function deleteBackupFile(fileName: string): Promise<void> {
+  await rm(backupFilePath(fileName))
+}
+
+async function importBackupFile(fileName: string): Promise<BackupImportResponse> {
+  const raw = await readFile(backupFilePath(fileName))
+  const payload = parseBackupPayloadFromFileContent(raw, fileName)
+
+  if (!validateBackupPayload(payload)) {
+    throw new Error('Ungueltige Backup-Datei')
+  }
+
+  return importBackupPayload(payload)
+}
+
+function isMissingFileError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return false
+  }
+
+  return (error as { code?: unknown }).code === 'ENOENT'
+}
+
+function generateSaveName(): string {
+  const now = new Date()
+  const pad = (value: number): string => String(value).padStart(2, '0')
+  return `Spielstand ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+}
+
+function createEmptyStatsFile(): StoredStatsFile {
+  return {
+    totalSolved: 0,
+    cleanSolvedCount: 0,
+    assistedSolvedCount: 0,
+    autoAssistedSolvedCount: 0,
+    totalMoves: 0,
+    totalTime: 0,
+    bestMoves: null,
+    bestCleanMoves: null,
+    bestTime: null,
+    bestCleanTime: null,
+    byDifficulty: [],
+    completionHistory: [],
+    lastUpdatedAt: null,
+  }
+}
+
+function createEmptyGalleryFile(): StoredGalleryFile {
+  return {
+    entries: [],
+    lastUpdatedAt: null,
+  }
+}
+function deriveAssistanceMode(runMetrics: Pick<StoredRunMetrics, 'hintCount' | 'suggestedMoveCount'>): StoredAssistanceMode {
+  if (runMetrics.suggestedMoveCount > 0) return 'auto-assisted'
+  if (runMetrics.hintCount > 0) return 'hinted'
+  return 'clean'
+}
+
+function sanitizeAssistanceMode(
+  input: unknown,
+  runMetrics: Pick<StoredRunMetrics, 'hintCount' | 'suggestedMoveCount'>
+): StoredAssistanceMode {
+  if (input === 'clean' || input === 'hinted' || input === 'auto-assisted') {
+    return input
+  }
+
+  return deriveAssistanceMode(runMetrics)
+}
+
+function countExtraMoves(entry: Pick<StoredCompletionRecord, 'moves' | 'actionMoves'>): number {
+  return Math.max(0, entry.actionMoves - entry.moves)
+}
+
+function sanitizeOptionalPreviewImage(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null
+}
+
+function isBackupImageAssetRef(value: unknown): value is BackupImageAssetRef {
+  return (
+    !!value
+    && typeof value === 'object'
+    && typeof (value as { assetId?: unknown }).assetId === 'string'
+    && (value as { assetId: string }).assetId.length > 0
+  )
+}
+
+function normalizeBackupAssetMap(value: unknown): BackupAssetMap {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {}
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([assetId, assetValue]) => assetId.length > 0 && typeof assetValue === 'string' && assetValue.length > 0)
+      .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
+  )
+}
+
+function resolveBackupImageValue(value: unknown, assets: BackupAssetMap): string | null {
+  if (typeof value === 'string') {
+    return sanitizeOptionalPreviewImage(value)
+  }
+
+  if (!isBackupImageAssetRef(value)) {
+    return null
+  }
+
+  return sanitizeOptionalPreviewImage(assets[value.assetId])
+}
+
+function createBackupAssetRegistry(): {
+  assets: BackupAssetMap
+  store: (value: string | null | undefined) => BackupImageValue
+  finalize: () => void
+  resolve: (value: BackupImageValue) => BackupImageValue
+} {
+  const assets: BackupAssetMap = {}
+  const counts = new Map<string, number>()
+  const orderedValues: string[] = []
+  const assetIds = new Map<string, string>()
+
+  return {
+    assets,
+    store: (value) => {
+      const normalizedValue = sanitizeOptionalPreviewImage(value)
+      if (!normalizedValue) {
+        return null
+      }
+
+      const nextCount = (counts.get(normalizedValue) ?? 0) + 1
+      counts.set(normalizedValue, nextCount)
+      if (nextCount === 1) {
+        orderedValues.push(normalizedValue)
+      }
+
+      return normalizedValue
+    },
+    finalize: () => {
+      assetIds.clear()
+      for (const assetId of Object.keys(assets)) {
+        delete assets[assetId]
+      }
+
+      let nextAssetIndex = 1
+      for (const value of orderedValues) {
+        if ((counts.get(value) ?? 0) < 2) {
+          continue
+        }
+
+        const assetId = `a${nextAssetIndex}`
+        nextAssetIndex += 1
+        assetIds.set(value, assetId)
+        assets[assetId] = value
+      }
+    },
+    resolve: (value) => {
+      const normalizedValue = sanitizeOptionalPreviewImage(value)
+      if (!normalizedValue) {
+        return null
+      }
+
+      const assetId = assetIds.get(normalizedValue)
+      return assetId ? { assetId } : normalizedValue
+    },
+  }
+}
+
+function materializeBackupCompletionRecord(
+  entry: BackupCompletionRecord,
+  assetRegistry: ReturnType<typeof createBackupAssetRegistry>
+): BackupCompletionRecord {
+  return {
+    ...entry,
+    previewImage: assetRegistry.resolve(entry.previewImage),
+  }
+}
+
+function materializeBackupGalleryEntry(
+  entry: BackupGalleryEntry,
+  assetRegistry: ReturnType<typeof createBackupAssetRegistry>
+): BackupGalleryEntry {
+  return {
+    ...entry,
+    previewImage: assetRegistry.resolve(entry.previewImage),
+    sourceImage: assetRegistry.resolve(entry.sourceImage),
+  }
+}
+
+function materializeBackupSaveResponse(
+  entry: BackupSaveResponse,
+  assetRegistry: ReturnType<typeof createBackupAssetRegistry>
+): BackupSaveResponse {
+  return {
+    ...entry,
+    previewImage: assetRegistry.resolve(entry.previewImage),
+    image: assetRegistry.resolve(entry.image),
+    croppedImage: assetRegistry.resolve(entry.croppedImage),
+  }
+}
+
+function materializeBackupStatsResponse(
+  response: BackupStatsResponse,
+  assetRegistry: ReturnType<typeof createBackupAssetRegistry>
+): BackupStatsResponse {
+  return {
+    ...response,
+    recentCompletions: response.recentCompletions.map((entry) => materializeBackupCompletionRecord(entry, assetRegistry)),
+    completionHistory: response.completionHistory.map((entry) => materializeBackupCompletionRecord(entry, assetRegistry)),
+  }
+}
+
+function materializeBackupGalleryResponse(
+  response: BackupGalleryResponse,
+  assetRegistry: ReturnType<typeof createBackupAssetRegistry>
+): BackupGalleryResponse {
+  return {
+    ...response,
+    entries: response.entries.map((entry) => materializeBackupGalleryEntry(entry, assetRegistry)),
+  }
+}
+
+function toBackupCompletionRecord(
+  entry: StoredCompletionRecord,
+  assetRegistry: ReturnType<typeof createBackupAssetRegistry>
+): BackupCompletionRecord {
+  return {
+    ...entry,
+    previewImage: assetRegistry.store(entry.previewImage),
+  }
+}
+
+function toBackupGalleryEntry(
+  entry: StoredGalleryEntry,
+  assetRegistry: ReturnType<typeof createBackupAssetRegistry>
+): BackupGalleryEntry {
+  return {
+    ...entry,
+    previewImage: assetRegistry.store(entry.previewImage),
+    sourceImage: assetRegistry.store(entry.sourceImage),
+  }
+}
+
+function toBackupStatsResponse(
+  stats: StoredStatsFile,
+  assetRegistry: ReturnType<typeof createBackupAssetRegistry>
+): BackupStatsResponse {
+  const response = toStatsResponse(stats)
+
+  return {
+    ...response,
+    recentCompletions: response.recentCompletions.map((entry) => toBackupCompletionRecord(entry, assetRegistry)),
+    completionHistory: response.completionHistory.map((entry) => toBackupCompletionRecord(entry, assetRegistry)),
+  }
+}
+
+function toBackupGalleryResponse(
+  gallery: StoredGalleryFile,
+  assetRegistry: ReturnType<typeof createBackupAssetRegistry>
+): BackupGalleryResponse {
+  const response = toGalleryResponse(gallery)
+
+  return {
+    ...response,
+    entries: response.entries.map((entry) => toBackupGalleryEntry(entry, assetRegistry)),
+  }
+}
+
+function hasDetailedProfileData(input: {
+  actionMoves?: unknown
+  undoCount?: unknown
+  redoCount?: unknown
+  hintCount?: unknown
+  suggestedMoveCount?: unknown
+  assistanceMode?: unknown
+  hasDetailedProfile?: unknown
+}): boolean {
+  return (
+    input.hasDetailedProfile === true
+    || input.actionMoves !== undefined
+    || input.undoCount !== undefined
+    || input.redoCount !== undefined
+    || input.hintCount !== undefined
+    || input.suggestedMoveCount !== undefined
+    || input.assistanceMode !== undefined
+  )
+}
+
+function normalizeCompletionRecord(entry: unknown, assets: BackupAssetMap = {}): StoredCompletionRecord | null {
+  if (!entry || typeof entry !== 'object') return null
+  const input = entry as {
+    id?: unknown
+    completedAt?: unknown
+    previewImage?: unknown
+    config?: unknown
+    moves?: unknown
+    actionMoves?: unknown
+    time?: unknown
+    undoCount?: unknown
+    redoCount?: unknown
+    hintCount?: unknown
+    suggestedMoveCount?: unknown
+    assistanceMode?: unknown
+  }
+
+  if (typeof input.id !== 'string' || typeof input.completedAt !== 'string' || !isValidPuzzleConfig(input.config)) {
+    return null
+  }
+
+  const moves = sanitizeCount(input.moves)
+  const runMetrics = sanitizeRunMetrics(
+    {
+      actionMoves: input.actionMoves,
+      undoCount: input.undoCount,
+      redoCount: input.redoCount,
+      hintCount: input.hintCount,
+      suggestedMoveCount: input.suggestedMoveCount,
+    },
+    moves
+  )
+  const hasDetailedProfile = hasDetailedProfileData(input)
+
+  return {
+    id: input.id,
+    completedAt: input.completedAt,
+    previewImage: resolveBackupImageValue(input.previewImage, assets),
+    config: input.config,
+    moves,
+    actionMoves: runMetrics.actionMoves,
+    time: sanitizeCount(input.time),
+    undoCount: runMetrics.undoCount,
+    redoCount: runMetrics.redoCount,
+    hintCount: runMetrics.hintCount,
+    suggestedMoveCount: runMetrics.suggestedMoveCount,
+    assistanceMode: sanitizeAssistanceMode(input.assistanceMode, runMetrics),
+    hasDetailedProfile,
+  }
+}
+
+function normalizeDifficultyStats(entry: unknown): StoredDifficultyStats | null {
+  if (!entry || typeof entry !== 'object') return null
+  const input = entry as {
+    config?: unknown
+    solveCount?: unknown
+    cleanSolveCount?: unknown
+    assistedSolveCount?: unknown
+    autoAssistedSolveCount?: unknown
+    totalMoves?: unknown
+    totalActionMoves?: unknown
+    totalTime?: unknown
+    bestMoves?: unknown
+    bestCleanMoves?: unknown
+    bestTime?: unknown
+    bestCleanTime?: unknown
+    lastCompletedAt?: unknown
+  }
+
+  if (!isValidPuzzleConfig(input.config)) return null
+
+  const solveCount = sanitizeCount(input.solveCount)
+  const cleanSolveCount = input.cleanSolveCount === undefined
+    ? solveCount
+    : Math.min(solveCount, sanitizeCount(input.cleanSolveCount))
+  const autoAssistedSolveCount = input.autoAssistedSolveCount === undefined
+    ? 0
+    : Math.min(solveCount, sanitizeCount(input.autoAssistedSolveCount))
+  const rawAssistedSolveCount = input.assistedSolveCount === undefined
+    ? Math.max(0, solveCount - cleanSolveCount)
+    : Math.max(autoAssistedSolveCount, Math.min(solveCount, sanitizeCount(input.assistedSolveCount)))
+  // Ensure clean + assisted never exceeds total
+  const assistedSolveCount = Math.min(rawAssistedSolveCount, Math.max(0, solveCount - cleanSolveCount))
+  const bestMoves = sanitizeOptionalCount(input.bestMoves)
+  const bestTime = sanitizeOptionalCount(input.bestTime)
+
+  return {
+    config: input.config,
+    solveCount,
+    cleanSolveCount,
+    assistedSolveCount,
+    autoAssistedSolveCount,
+    totalMoves: sanitizeCount(input.totalMoves),
+    totalActionMoves: Math.max(sanitizeCount(input.totalMoves), sanitizeCount(input.totalActionMoves)),
+    totalTime: sanitizeCount(input.totalTime),
+    bestMoves,
+    bestCleanMoves: normalizeCleanBestValue({
+      explicitValue: input.bestCleanMoves,
+      generalValue: bestMoves,
+      cleanCount: cleanSolveCount,
+      assistedCount: assistedSolveCount,
+      autoAssistedCount: autoAssistedSolveCount,
+    }),
+    bestTime,
+    bestCleanTime: normalizeCleanBestValue({
+      explicitValue: input.bestCleanTime,
+      generalValue: bestTime,
+      cleanCount: cleanSolveCount,
+      assistedCount: assistedSolveCount,
+      autoAssistedCount: autoAssistedSolveCount,
+    }),
+    lastCompletedAt: typeof input.lastCompletedAt === 'string' ? input.lastCompletedAt : null,
+  }
+}
+
+function normalizeStatsFile(payload: unknown, assets: BackupAssetMap = {}): StoredStatsFile {
+  if (!payload || typeof payload !== 'object') {
+    return createEmptyStatsFile()
+  }
+
+  const input = payload as {
+    totalSolved?: unknown
+    cleanSolvedCount?: unknown
+    assistedSolvedCount?: unknown
+    autoAssistedSolvedCount?: unknown
+    totalMoves?: unknown
+    totalTime?: unknown
+    bestMoves?: unknown
+    bestCleanMoves?: unknown
+    bestTime?: unknown
+    bestCleanTime?: unknown
+    byDifficulty?: unknown
+    recentCompletions?: unknown
+    completionHistory?: unknown
+    lastUpdatedAt?: unknown
+  }
+
+  const byDifficulty = Array.isArray(input.byDifficulty)
+    ? input.byDifficulty
+        .map((entry) => normalizeDifficultyStats(entry))
+        .filter((entry): entry is StoredDifficultyStats => entry !== null)
+        .sort((a, b) => comparePuzzleConfig(a.config, b.config))
+    : []
+
+  const rawHistory = Array.isArray(input.completionHistory)
+    ? input.completionHistory
+    : Array.isArray(input.recentCompletions)
+      ? input.recentCompletions
+      : []
+
+  const completionHistory = rawHistory
+    .map((entry) => normalizeCompletionRecord(entry, assets))
+    .filter((entry): entry is StoredCompletionRecord => entry !== null)
+    .sort((a, b) => getIsoTimestampValue(b.completedAt) - getIsoTimestampValue(a.completedAt))
+
+  const totalSolved = sanitizeCount(input.totalSolved)
+  const hasProfiledHistory = completionHistory.some((entry) => entry.hasDetailedProfile)
+  const derivedCleanSolvedCount = completionHistory.filter((entry) => entry.assistanceMode === 'clean').length
+  const derivedAssistedSolvedCount = completionHistory.filter((entry) => entry.assistanceMode !== 'clean').length
+  const derivedAutoAssistedSolvedCount = completionHistory.filter((entry) => entry.assistanceMode === 'auto-assisted').length
+  const cleanSolvedCount = Math.min(
+    totalSolved,
+    input.cleanSolvedCount === undefined
+      ? completionHistory.length > 0
+        ? hasProfiledHistory
+          ? derivedCleanSolvedCount
+          : totalSolved
+        : totalSolved
+      : sanitizeCount(input.cleanSolvedCount)
+  )
+  const rawAssistedSolvedCount = Math.min(
+    totalSolved,
+    input.assistedSolvedCount === undefined
+      ? completionHistory.length > 0 && hasProfiledHistory
+        ? derivedAssistedSolvedCount
+        : 0
+      : sanitizeCount(input.assistedSolvedCount)
+  )
+  // Ensure clean + assisted never exceeds total
+  const assistedSolvedCount = Math.min(rawAssistedSolvedCount, Math.max(0, totalSolved - cleanSolvedCount))
+  const autoAssistedSolvedCount = Math.min(
+    assistedSolvedCount,
+    input.autoAssistedSolvedCount === undefined
+      ? completionHistory.length > 0 && hasProfiledHistory
+        ? derivedAutoAssistedSolvedCount
+        : 0
+      : sanitizeCount(input.autoAssistedSolvedCount)
+  )
+  const derivedBestMoves = getBestOptionalValue(byDifficulty.map((entry) => entry.bestMoves))
+  const derivedBestCleanMoves = getBestOptionalValue(byDifficulty.map((entry) => entry.bestCleanMoves))
+  const derivedBestTime = getBestOptionalValue(byDifficulty.map((entry) => entry.bestTime))
+  const derivedBestCleanTime = getBestOptionalValue(byDifficulty.map((entry) => entry.bestCleanTime))
+  const bestMoves = sanitizeOptionalCount(input.bestMoves) ?? derivedBestMoves
+  const bestTime = sanitizeOptionalCount(input.bestTime) ?? derivedBestTime
+
+  return {
+    totalSolved,
+    cleanSolvedCount,
+    assistedSolvedCount,
+    autoAssistedSolvedCount,
+    totalMoves: sanitizeCount(input.totalMoves),
+    totalTime: sanitizeCount(input.totalTime),
+    bestMoves,
+    bestCleanMoves: normalizeCleanBestValue({
+      explicitValue: input.bestCleanMoves,
+      generalValue: bestMoves,
+      cleanCount: cleanSolvedCount,
+      assistedCount: assistedSolvedCount,
+      autoAssistedCount: autoAssistedSolvedCount,
+      derivedValue: derivedBestCleanMoves,
+    }),
+    bestTime,
+    bestCleanTime: normalizeCleanBestValue({
+      explicitValue: input.bestCleanTime,
+      generalValue: bestTime,
+      cleanCount: cleanSolvedCount,
+      assistedCount: assistedSolvedCount,
+      autoAssistedCount: autoAssistedSolvedCount,
+      derivedValue: derivedBestCleanTime,
+    }),
+    byDifficulty,
+    completionHistory,
+    lastUpdatedAt: typeof input.lastUpdatedAt === 'string' ? input.lastUpdatedAt : null,
+  }
+}
+function toGalleryEntryFromCompletion(entry: StoredCompletionRecord): StoredGalleryEntry {
+  return {
+    id: entry.id,
+    completedAt: entry.completedAt,
+    previewImage: entry.previewImage,
+    sourceImage: entry.previewImage,
+    config: entry.config,
+    moves: entry.moves,
+    time: entry.time,
+    actionMoves: entry.actionMoves,
+    assistanceMode: entry.assistanceMode,
+    hasDetailedProfile: entry.hasDetailedProfile,
+  }
+}
+
+function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): StoredGalleryEntry | null {
+  if (!entry || typeof entry !== 'object') return null
+
+  const input = entry as {
+    id?: unknown
+    completedAt?: unknown
+    previewImage?: unknown
+    sourceImage?: unknown
+    config?: unknown
+    moves?: unknown
+    time?: unknown
+    actionMoves?: unknown
+    assistanceMode?: unknown
+    hasDetailedProfile?: unknown
+  }
+
+  if (typeof input.id !== 'string' || typeof input.completedAt !== 'string' || !isValidPuzzleConfig(input.config)) {
+    return null
+  }
+
+  const moves = sanitizeCount(input.moves)
+  const previewImage = resolveBackupImageValue(input.previewImage, assets)
+  const sourceImage = resolveBackupImageValue(input.sourceImage, assets) ?? previewImage
+
+  return {
+    id: input.id,
+    completedAt: input.completedAt,
+    previewImage,
+    sourceImage,
+    config: input.config,
+    moves,
+    time: sanitizeCount(input.time),
+    actionMoves: Math.max(moves, sanitizeCount(input.actionMoves)),
+    assistanceMode: sanitizeAssistanceMode(input.assistanceMode, { hintCount: 0, suggestedMoveCount: 0 }),
+    hasDetailedProfile: input.hasDetailedProfile === false ? false : true,
+  }
+}
+
+function createGalleryFileFromCompletionHistory(
+  history: StoredCompletionRecord[],
+  lastUpdatedAt: string | null
+): StoredGalleryFile {
+  return {
+    entries: history
+      .map((entry) => toGalleryEntryFromCompletion(entry))
+      .sort((a, b) => getIsoTimestampValue(b.completedAt) - getIsoTimestampValue(a.completedAt)),
+    lastUpdatedAt,
+  }
+}
+
+function normalizeGalleryFile(payload: unknown, assets: BackupAssetMap = {}): StoredGalleryFile {
+  if (!payload || typeof payload !== 'object') {
+    return createEmptyGalleryFile()
+  }
+
+  const input = payload as {
+    entries?: unknown
+    lastUpdatedAt?: unknown
+  }
+
+  const entries = Array.isArray(input.entries)
+    ? input.entries
+      .map((entry) => normalizeGalleryEntry(entry, assets))
+      .filter((entry): entry is StoredGalleryEntry => entry !== null)
+      .sort((a, b) => getIsoTimestampValue(b.completedAt) - getIsoTimestampValue(a.completedAt))
+    : []
+
+  return {
+    entries,
+    lastUpdatedAt: typeof input.lastUpdatedAt === 'string'
+      ? input.lastUpdatedAt
+      : entries[0]?.completedAt ?? null,
+  }
+}
+async function readStatsFile(): Promise<StoredStatsFile> {
+  try {
+    await ensureSavesDir()
+    const raw = await readFile(STATS_FILE, 'utf-8')
+    return normalizeStatsFile(JSON.parse(raw))
+  } catch (error) {
+    if (!isMissingFileError(error)) {
+      console.warn('[localApi] Statistik-Datei konnte nicht gelesen werden, verwende leere Statistik:', error)
+    }
+    return createEmptyStatsFile()
+  }
+}
+
+async function writeStatsFile(stats: StoredStatsFile): Promise<void> {
+  await ensureSavesDir()
+  await writeFile(STATS_FILE, JSON.stringify(stats, null, 2), 'utf-8')
+}
+
+async function readGalleryFile(): Promise<StoredGalleryFile> {
+  await ensureSavesDir()
+
+  const rawGallery = await readJsonFile<StoredGalleryFile>(GALLERY_FILE)
+  if (rawGallery) {
+    return normalizeGalleryFile(rawGallery)
+  }
+
+  const stats = await readStatsFile()
+  const migratedGallery = createGalleryFileFromCompletionHistory(stats.completionHistory, stats.lastUpdatedAt)
+  await writeGalleryFile(migratedGallery)
+  return migratedGallery
+}
+
+async function writeGalleryFile(gallery: StoredGalleryFile): Promise<void> {
+  await ensureSavesDir()
+  await writeFile(GALLERY_FILE, JSON.stringify(gallery, null, 2), 'utf-8')
+}
+
+function toGalleryResponse(gallery: StoredGalleryFile): GalleryResponse {
+  const sortedEntries = gallery.entries
+    .slice()
+    .sort((a, b) => getIsoTimestampValue(b.completedAt) - getIsoTimestampValue(a.completedAt))
+
+  return {
+    entries: sortedEntries,
+    totalEntries: sortedEntries.length,
+    lastCompletedAt: sortedEntries[0]?.completedAt ?? null,
+    lastUpdatedAt: gallery.lastUpdatedAt ?? sortedEntries[0]?.completedAt ?? null,
+  }
+}
+function calculateMedian(values: number[]): number {
+  if (values.length === 0) return 0
+
+  const sorted = [...values].sort((a, b) => a - b)
+  const middleIndex = Math.floor(sorted.length / 2)
+
+  if (sorted.length % 2 === 0) {
+    return Math.round((sorted[middleIndex - 1] + sorted[middleIndex]) / 2)
+  }
+
+  return sorted[middleIndex]
+}
+
+function calculateRecentMedian(values: number[]): number {
+  return calculateMedian(values.slice(0, RECENT_MEDIAN_SAMPLE_SIZE))
+}
+
+function toLocalDayKey(isoDate: string): string {
+  const parsed = new Date(isoDate)
+  if (Number.isNaN(parsed.getTime())) return ''
+
+  const year = parsed.getFullYear()
+  const month = String(parsed.getMonth() + 1).padStart(2, '0')
+  const day = String(parsed.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getUniqueCompletionDays(history: StoredCompletionRecord[]): string[] {
+  return [...new Set(history.map((entry) => toLocalDayKey(entry.completedAt)).filter(Boolean))]
+    .sort((a, b) => b.localeCompare(a))
+}
+
+function calculateStreaks(history: StoredCompletionRecord[]): {
+  currentStreak: number
+  bestStreak: number
+  activeDays: number
+} {
+  const uniqueDays = getUniqueCompletionDays(history)
+  if (uniqueDays.length === 0) {
+    return {
+      currentStreak: 0,
+      bestStreak: 0,
+      activeDays: 0,
+    }
+  }
+
+  let bestStreak = 1
+  let runningStreak = 1
+
+  for (let index = 1; index < uniqueDays.length; index++) {
+    const previous = new Date(`${uniqueDays[index - 1]}T00:00:00`)
+    const current = new Date(`${uniqueDays[index]}T00:00:00`)
+    const diffDays = Math.round((previous.getTime() - current.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 1) {
+      runningStreak += 1
+      if (runningStreak > bestStreak) {
+        bestStreak = runningStreak
+      }
+      continue
+    }
+
+    runningStreak = 1
+  }
+
+  let currentStreak = 1
+  for (let index = 1; index < uniqueDays.length; index++) {
+    const previous = new Date(`${uniqueDays[index - 1]}T00:00:00`)
+    const current = new Date(`${uniqueDays[index]}T00:00:00`)
+    const diffDays = Math.round((previous.getTime() - current.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 1) {
+      currentStreak += 1
+      continue
+    }
+
+    break
+  }
+
+  return {
+    currentStreak,
+    bestStreak,
+    activeDays: uniqueDays.length,
+  }
+}
+
+function getCompletionHistoryForConfig(
+  history: StoredCompletionRecord[],
+  config: StoredPuzzleConfig
+): StoredCompletionRecord[] {
+  return history.filter(
+    (entry) => entry.config.rows === config.rows && entry.config.cols === config.cols
+  )
+}
+
+function toDifficultyStatsResponse(
+  entry: StoredDifficultyStats,
+  completionHistory: StoredCompletionRecord[]
+): DifficultyStatsResponse {
+  const averageMoves = entry.solveCount > 0 ? Math.round(entry.totalMoves / entry.solveCount) : 0
+  const averageTime = entry.solveCount > 0 ? Math.round(entry.totalTime / entry.solveCount) : 0
+  const scopedHistory = getCompletionHistoryForConfig(completionHistory, entry.config)
+  const profiledHistory = scopedHistory.filter((record) => record.hasDetailedProfile)
+  const medianMoves = calculateMedian(scopedHistory.map((record) => record.moves))
+  const medianTime = calculateMedian(scopedHistory.map((record) => record.time))
+  const averageActionMoves = profiledHistory.length > 0
+    ? Math.round(profiledHistory.reduce((sum, record) => sum + record.actionMoves, 0) / profiledHistory.length)
+    : null
+  const medianActionMoves = profiledHistory.length > 0
+    ? calculateMedian(profiledHistory.map((record) => record.actionMoves))
+    : null
+  const averageExtraMoves = profiledHistory.length > 0
+    ? Math.round(profiledHistory.reduce((sum, record) => sum + countExtraMoves(record), 0) / profiledHistory.length)
+    : null
+  const medianExtraMoves = profiledHistory.length > 0
+    ? calculateMedian(profiledHistory.map((record) => countExtraMoves(record)))
+    : null
+  const recentHistory = scopedHistory.slice(0, RECENT_MEDIAN_SAMPLE_SIZE)
+  const latestCompletion = scopedHistory[0] ?? null
+  const profiledSolveCount = profiledHistory.length
+
+  return {
+    ...entry,
+    averageMoves,
+    averageActionMoves,
+    averageTime,
+    medianMoves,
+    medianActionMoves,
+    medianTime,
+    averageExtraMoves,
+    medianExtraMoves,
+    recentMedianMoves: calculateMedian(recentHistory.map((record) => record.moves)),
+    recentMedianTime: calculateMedian(recentHistory.map((record) => record.time)),
+    profiledSolveCount,
+    legacySolveCount: Math.max(0, entry.solveCount - profiledSolveCount),
+    lastMoves: latestCompletion?.moves ?? null,
+    lastActionMoves: latestCompletion?.hasDetailedProfile ? latestCompletion.actionMoves : null,
+    lastExtraMoves: latestCompletion?.hasDetailedProfile ? countExtraMoves(latestCompletion) : null,
+    lastTime: latestCompletion?.time ?? null,
+    lastAssistanceMode: latestCompletion?.hasDetailedProfile ? latestCompletion.assistanceMode : null,
+    lastHasDetailedProfile: latestCompletion?.hasDetailedProfile ?? null,
+  }
+}
+
+function toStatsResponse(stats: StoredStatsFile): StatsResponse {
+  const averageMoves = stats.totalSolved > 0 ? Math.round(stats.totalMoves / stats.totalSolved) : 0
+  const averageTime = stats.totalSolved > 0 ? Math.round(stats.totalTime / stats.totalSolved) : 0
+  const completionHistory = stats.completionHistory
+    .slice()
+    .sort((a, b) => getIsoTimestampValue(b.completedAt) - getIsoTimestampValue(a.completedAt))
+  const medianMoves = calculateMedian(completionHistory.map((entry) => entry.moves))
+  const medianTime = calculateMedian(completionHistory.map((entry) => entry.time))
+  const streaks = calculateStreaks(completionHistory)
+  const profiledSolvedCount = completionHistory.filter((entry) => entry.hasDetailedProfile).length
+
+  return {
+    totalSolved: stats.totalSolved,
+    cleanSolvedCount: stats.cleanSolvedCount,
+    assistedSolvedCount: stats.assistedSolvedCount,
+    autoAssistedSolvedCount: stats.autoAssistedSolvedCount,
+    profiledSolvedCount,
+    legacySolvedCount: Math.max(0, stats.totalSolved - profiledSolvedCount),
+    totalMoves: stats.totalMoves,
+    totalTime: stats.totalTime,
+    averageMoves,
+    averageTime,
+    medianMoves,
+    medianTime,
+    currentStreak: streaks.currentStreak,
+    bestStreak: streaks.bestStreak,
+    activeDays: streaks.activeDays,
+    bestMoves: stats.bestMoves,
+    bestCleanMoves: stats.bestCleanMoves,
+    bestTime: stats.bestTime,
+    bestCleanTime: stats.bestCleanTime,
+    byDifficulty: stats.byDifficulty
+      .slice()
+      .sort((a, b) => comparePuzzleConfig(a.config, b.config))
+      .map((entry) => toDifficultyStatsResponse(entry, completionHistory)),
+    recentCompletions: completionHistory.slice(0, RECENT_COMPLETION_PREVIEW_LIMIT),
+    completionHistory,
+    lastCompletedAt: completionHistory[0]?.completedAt ?? null,
+    lastUpdatedAt: stats.lastUpdatedAt,
+  }
+}
+
+function validateCreatePayload(payload: unknown): payload is {
+  image: string
+  croppedImage: string
+  previewImage: string
+  config: StoredPuzzleConfig
+  progress: StoredSaveProgress
+} {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as Record<string, unknown>
+  return (
+    typeof input.image === 'string' &&
+    typeof input.croppedImage === 'string' &&
+    typeof input.previewImage === 'string' &&
+    isValidPuzzleConfig(input.config) &&
+    typeof input.progress === 'object' &&
+    input.progress !== null
+  )
+}
+
+function validateUpdatePayload(payload: unknown): payload is { progress: StoredSaveProgress } {
+  if (!payload || typeof payload !== 'object') return false
+  const input = payload as Record<string, unknown>
+  return typeof input.progress === 'object' && input.progress !== null
+}
+
+function validateCompletionPayload(payload: unknown): payload is {
+  config: StoredPuzzleConfig
+  moves: number
+  time: number
+  previewImage?: string | null
+  actionMoves: number
+  undoCount: number
+  redoCount: number
+  hintCount: number
+  suggestedMoveCount: number
+} {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as Record<string, unknown>
+  return (
+    isValidPuzzleConfig(input.config) &&
+    typeof input.moves === 'number' &&
+    Number.isFinite(input.moves) &&
+    input.moves >= 0 &&
+    typeof input.time === 'number' &&
+    Number.isFinite(input.time) &&
+    input.time >= 0 &&
+    typeof input.actionMoves === 'number' &&
+    Number.isFinite(input.actionMoves) &&
+    input.actionMoves >= 0 &&
+    typeof input.undoCount === 'number' &&
+    Number.isFinite(input.undoCount) &&
+    input.undoCount >= 0 &&
+    typeof input.redoCount === 'number' &&
+    Number.isFinite(input.redoCount) &&
+    input.redoCount >= 0 &&
+    typeof input.hintCount === 'number' &&
+    Number.isFinite(input.hintCount) &&
+    input.hintCount >= 0 &&
+    typeof input.suggestedMoveCount === 'number' &&
+    Number.isFinite(input.suggestedMoveCount) &&
+    input.suggestedMoveCount >= 0 &&
+    (input.previewImage === undefined || input.previewImage === null || typeof input.previewImage === 'string')
+  )
+}
+
+function validateGalleryPayload(payload: unknown): payload is {
+  id?: string
+  completedAt?: string | null
+  previewImage?: string | null
+  sourceImage?: string | null
+  config: StoredPuzzleConfig
+  moves: number
+  time: number
+  actionMoves: number
+  assistanceMode: StoredAssistanceMode
+  hasDetailedProfile: boolean
+} {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as Record<string, unknown>
+  return (
+    (input.id === undefined || typeof input.id === 'string') &&
+    (input.completedAt === undefined || input.completedAt === null || typeof input.completedAt === 'string') &&
+    (input.previewImage === undefined || input.previewImage === null || typeof input.previewImage === 'string') &&
+    (input.sourceImage === undefined || input.sourceImage === null || typeof input.sourceImage === 'string') &&
+    isValidPuzzleConfig(input.config) &&
+    typeof input.moves === 'number' &&
+    Number.isFinite(input.moves) &&
+    input.moves >= 0 &&
+    typeof input.time === 'number' &&
+    Number.isFinite(input.time) &&
+    input.time >= 0 &&
+    typeof input.actionMoves === 'number' &&
+    Number.isFinite(input.actionMoves) &&
+    input.actionMoves >= 0 &&
+    (input.assistanceMode === 'clean' || input.assistanceMode === 'hinted' || input.assistanceMode === 'auto-assisted') &&
+    typeof input.hasDetailedProfile === 'boolean'
+  )
+}
+
+function validateGalleryDeletePayload(payload: unknown): payload is { ids: string[] } {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as { ids?: unknown }
+  return (
+    Array.isArray(input.ids) &&
+    input.ids.length > 0 &&
+    input.ids.every((id) => typeof id === 'string' && id.length > 0)
+  )
+}
+
+async function deleteGalleryEntries(entryIds: string[]): Promise<StoredGalleryFile> {
+  const idsToDelete = new Set(entryIds.filter((id) => typeof id === 'string' && id.length > 0))
+  if (idsToDelete.size === 0) {
+    return readGalleryFile()
+  }
+
+  const gallery = await readGalleryFile()
+  const nextEntries = gallery.entries.filter((entry) => !idsToDelete.has(entry.id))
+
+  if (nextEntries.length === gallery.entries.length) {
+    return gallery
+  }
+
+  const nextGallery: StoredGalleryFile = {
+    entries: nextEntries,
+    lastUpdatedAt: new Date().toISOString(),
+  }
+
+  await writeGalleryFile(nextGallery)
+  return nextGallery
+}
+
+async function runPowerShellClipboardCommand(script: string): Promise<string> {
+  if (process.platform !== 'win32') {
+    throw new Error('Zwischenablage-Bilder werden nur unter Windows unterstuetzt')
+  }
+
+  const { stdout } = await execFileAsync(
+    POWERSHELL_PATH,
+    ['-NoProfile', '-NonInteractive', '-Command', script],
+    {
+      maxBuffer: CLIPBOARD_COMMAND_MAX_BUFFER,
+      windowsHide: true,
+      encoding: 'utf8',
+    }
+  )
+
+  return stdout.trim()
+}
+
+async function hasClipboardImage(): Promise<boolean> {
+  const result = await runPowerShellClipboardCommand(POWERSHELL_CLIPBOARD_IMAGE_STATUS_SCRIPT)
+  return result === 'HAS_IMAGE'
+}
+
+async function readClipboardImageDataUrl(): Promise<string | null> {
+  try {
+    const base64 = await runPowerShellClipboardCommand(POWERSHELL_CLIPBOARD_IMAGE_READ_SCRIPT)
+    return base64.length > 0 ? `data:image/png;base64,${base64}` : null
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('NO_IMAGE')) {
+      return null
+    }
+
+    throw error
+  }
+}
+
+async function handleClipboardApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void
+): Promise<void> {
+  const reqUrl = req.url ?? '/'
+  const url = new URL(reqUrl, 'http://localhost')
+
+  if (!url.pathname.startsWith('/api/clipboard')) {
+    next()
+    return
+  }
+
+  if (req.method === 'OPTIONS') {
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
+  const parts = url.pathname.split('/').filter(Boolean)
+
+  try {
+    if (req.method === 'GET' && parts.length === 4 && parts[2] === 'image' && parts[3] === 'status') {
+      const response: ClipboardImageStatusResponse = {
+        hasImage: await hasClipboardImage(),
+      }
+      sendJson(res, 200, response)
+      return
+    }
+
+    if (req.method === 'GET' && parts.length === 3 && parts[2] === 'image') {
+      const imageDataUrl = await readClipboardImageDataUrl()
+      if (!imageDataUrl) {
+        sendJson(res, 404, { error: 'In der Zwischenablage befindet sich kein Bild' })
+        return
+      }
+
+      const response: ClipboardImageResponse = { imageDataUrl }
+      sendJson(res, 200, response)
+      return
+    }
+
+    sendJson(res, 405, { error: 'Methode nicht erlaubt' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler'
+    sendJson(res, 500, { error: message })
+  }
+}
+
+async function handleSaveApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void
+): Promise<void> {
+  const reqUrl = req.url ?? '/'
+  const url = new URL(reqUrl, 'http://localhost')
+
+  if (!url.pathname.startsWith('/api/saves')) {
+    next()
+    return
+  }
+
+  if (req.method === 'OPTIONS') {
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
+  const parts = url.pathname.split('/').filter(Boolean)
+  const saveId = parts.length > 2 ? decodeURIComponent(parts[2]) : null
+
+  try {
+    if (req.method === 'GET' && parts.length === 2) {
+      const saves = await listAllSaveSummaries()
+      sendJson(res, 200, saves)
+      return
+    }
+
+    if (req.method === 'DELETE' && parts.length === 2) {
+      await deleteAllSaves()
+      sendJson(res, 200, { ok: true })
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 2) {
+      const body = await readJsonBody(req)
+      if (!validateCreatePayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer neuen Spielstand' })
+        return
+      }
+
+      const nowIso = new Date().toISOString()
+      const save: StoredSaveFile = {
+        id: randomUUID(),
+        name: generateSaveName(),
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        image: body.image,
+        croppedImage: body.croppedImage,
+        previewImage: body.previewImage,
+        config: body.config,
+        progress: sanitizeProgress(body.progress),
+      }
+
+      await writeStructuredSave(save)
+      sendJson(res, 201, toSummary(save))
+      return
+    }
+
+    if (!saveId || !isValidSaveId(saveId)) {
+      sendJson(res, 400, { error: 'Ungueltige Spielstand-ID' })
+      return
+    }
+
+    if (req.method === 'GET' && parts.length === 3) {
+      const existing = await readSaveById(saveId)
+      if (!existing) {
+        sendJson(res, 404, { error: 'Spielstand nicht gefunden' })
+        return
+      }
+
+      sendJson(res, 200, {
+        ...toSummary(existing),
+        image: existing.image,
+        croppedImage: existing.croppedImage,
+        progress: sanitizeProgress(existing.progress),
+      })
+      return
+    }
+
+    if (req.method === 'PUT' && parts.length === 3) {
+      const body = await readJsonBody(req)
+      if (!validateUpdatePayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Spielstand-Update' })
+        return
+      }
+
+      const updated = await updateSaveProgress(saveId, body.progress)
+      if (!updated) {
+        sendJson(res, 404, { error: 'Spielstand nicht gefunden' })
+        return
+      }
+
+      sendJson(res, 200, updated)
+      return
+    }
+
+    if (req.method === 'DELETE' && parts.length === 3) {
+      await Promise.all([
+        rm(saveDirPath(saveId), { recursive: true, force: true }),
+        rm(legacySaveFilePath(saveId), { force: true }),
+      ])
+      sendJson(res, 200, { ok: true })
+      return
+    }
+
+    sendJson(res, 405, { error: 'Methode nicht erlaubt' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler'
+    sendJson(res, 500, { error: message })
+  }
+}
+
+async function handleBackupApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void
+): Promise<void> {
+  const reqUrl = req.url ?? '/'
+  const url = new URL(reqUrl, 'http://localhost')
+
+  if (!url.pathname.startsWith('/api/backup')) {
+    next()
+    return
+  }
+
+  if (req.method === 'OPTIONS') {
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
+  const parts = url.pathname.split('/').filter(Boolean)
+
+  try {
+    if (req.method === 'GET' && parts.length === 3 && parts[2] === 'files') {
+      sendJson(res, 200, await listBackupFiles())
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 3 && parts[2] === 'files') {
+      sendJson(res, 201, await createBackupFile())
+      return
+    }
+
+    if (req.method === 'DELETE' && parts.length === 4 && parts[2] === 'files') {
+      const fileName = decodeURIComponent(parts[3] ?? '')
+      if (!isValidBackupFileName(fileName)) {
+        sendJson(res, 400, { error: 'Ungueltiger Backup-Dateiname' })
+        return
+      }
+
+      try {
+        await deleteBackupFile(fileName)
+        sendJson(res, 200, { ok: true })
+      } catch (error) {
+        if (isMissingFileError(error)) {
+          sendJson(res, 404, { error: 'Backup-Datei nicht gefunden' })
+          return
+        }
+
+        throw error
+      }
+
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 5 && parts[2] === 'files' && parts[4] === 'import') {
+      const fileName = decodeURIComponent(parts[3] ?? '')
+      if (!isValidBackupFileName(fileName)) {
+        sendJson(res, 400, { error: 'Ungueltiger Backup-Dateiname' })
+        return
+      }
+
+      try {
+        sendJson(res, 200, await importBackupFile(fileName))
+      } catch (error) {
+        if (isMissingFileError(error)) {
+          sendJson(res, 404, { error: 'Backup-Datei nicht gefunden' })
+          return
+        }
+
+        throw error
+      }
+
+      return
+    }
+
+    if (req.method === 'GET' && parts.length === 2) {
+      sendJson(res, 200, await buildBackupResponse())
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 2) {
+      const body = await readJsonBody(req)
+      if (!validateBackupPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Backup-Import' })
+        return
+      }
+
+      sendJson(res, 200, await importBackupPayload(body))
+      return
+    }
+
+    sendJson(res, 405, { error: 'Methode nicht erlaubt' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler'
+    sendJson(res, 500, { error: message })
+  }
+}
+
+async function handleGalleryApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void
+): Promise<void> {
+  const reqUrl = req.url ?? '/'
+  const url = new URL(reqUrl, 'http://localhost')
+
+  if (!url.pathname.startsWith('/api/gallery')) {
+    next()
+    return
+  }
+
+  if (req.method === 'OPTIONS') {
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
+  const parts = url.pathname.split('/').filter(Boolean)
+
+  try {
+    if (req.method === 'GET' && parts.length === 2) {
+      const gallery = await readGalleryFile()
+      sendJson(res, 200, toGalleryResponse(gallery))
+      return
+    }
+
+    if (req.method === 'DELETE' && parts.length === 3 && parts[2] === 'entries') {
+      const body = await readJsonBody(req)
+      if (!validateGalleryDeletePayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Galerie-Loeschung' })
+        return
+      }
+
+      const nextGallery = await deleteGalleryEntries(body.ids)
+      sendJson(res, 200, toGalleryResponse(nextGallery))
+      return
+    }
+
+    if (req.method === 'DELETE' && parts.length === 2) {
+      const emptyGallery = createEmptyGalleryFile()
+      await writeGalleryFile(emptyGallery)
+      sendJson(res, 200, toGalleryResponse(emptyGallery))
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 2) {
+      const body = await readJsonBody(req)
+      if (!validateGalleryPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Galerie-Eintrag' })
+        return
+      }
+
+      const gallery = await readGalleryFile()
+      const nowIso = new Date().toISOString()
+      const moves = sanitizeCount(body.moves)
+      const completedAt = typeof body.completedAt === 'string' && body.completedAt.length > 0
+        ? body.completedAt
+        : nowIso
+      const previewImage = sanitizeOptionalPreviewImage(body.previewImage)
+      const sourceImage = sanitizeOptionalPreviewImage(body.sourceImage) ?? previewImage
+      const entry: StoredGalleryEntry = {
+        id: typeof body.id === 'string' && body.id.length > 0 ? body.id : randomUUID(),
+        completedAt,
+        previewImage,
+        sourceImage,
+        config: body.config,
+        moves,
+        time: sanitizeCount(body.time),
+        actionMoves: Math.max(moves, sanitizeCount(body.actionMoves)),
+        assistanceMode: body.assistanceMode,
+        hasDetailedProfile: body.hasDetailedProfile,
+      }
+
+      const nextGallery: StoredGalleryFile = {
+        entries: [entry, ...gallery.entries.filter((existing) => existing.id !== entry.id)]
+          .sort((a, b) => getIsoTimestampValue(b.completedAt) - getIsoTimestampValue(a.completedAt)),
+        lastUpdatedAt: nowIso,
+      }
+
+      await writeGalleryFile(nextGallery)
+      sendJson(res, 201, toGalleryResponse(nextGallery))
+      return
+    }
+
+    sendJson(res, 405, { error: 'Methode nicht erlaubt' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler'
+    sendJson(res, 500, { error: message })
+  }
+}
+async function handleStatsApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void
+): Promise<void> {
+  const reqUrl = req.url ?? '/'
+  const url = new URL(reqUrl, 'http://localhost')
+
+  if (!url.pathname.startsWith('/api/stats')) {
+    next()
+    return
+  }
+
+  if (req.method === 'OPTIONS') {
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
+  const parts = url.pathname.split('/').filter(Boolean)
+
+  try {
+    if (req.method === 'GET' && parts.length === 2) {
+      const stats = await readStatsFile()
+      sendJson(res, 200, toStatsResponse(stats))
+      return
+    }
+
+    if (req.method === 'DELETE' && parts.length === 2) {
+      const emptyStats = createEmptyStatsFile()
+      await writeStatsFile(emptyStats)
+      sendJson(res, 200, toStatsResponse(emptyStats))
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 3 && parts[2] === 'completions') {
+      const body = await readJsonBody(req)
+      if (!validateCompletionPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Statistik-Update' })
+        return
+      }
+
+      const stats = await readStatsFile()
+      const moves = sanitizeCount(body.moves)
+      const time = sanitizeCount(body.time)
+      const actionMoves = Math.max(moves, sanitizeCount(body.actionMoves))
+      const undoCount = sanitizeCount(body.undoCount)
+      const redoCount = sanitizeCount(body.redoCount)
+      const hintCount = sanitizeCount(body.hintCount)
+      const suggestedMoveCount = sanitizeCount(body.suggestedMoveCount)
+      const assistanceMode = deriveAssistanceMode({ hintCount, suggestedMoveCount })
+      const nowIso = new Date().toISOString()
+      const previousHistory = getCompletionHistoryForConfig(stats.completionHistory, body.config)
+      const previousCompletion = previousHistory[0] ?? null
+      const previousRecentMedianMoves = previousHistory.length > 0
+        ? calculateRecentMedian(previousHistory.map((entry) => entry.moves))
+        : null
+      const previousRecentMedianTime = previousHistory.length > 0
+        ? calculateRecentMedian(previousHistory.map((entry) => entry.time))
+        : null
+      const completion: StoredCompletionRecord = {
+        id: randomUUID(),
+        completedAt: nowIso,
+        previewImage: sanitizeOptionalPreviewImage(body.previewImage),
+        config: body.config,
+        moves,
+        actionMoves,
+        time,
+        undoCount,
+        redoCount,
+        hintCount,
+        suggestedMoveCount,
+        assistanceMode,
+        hasDetailedProfile: true,
+      }
+
+      stats.totalSolved += 1
+      stats.totalMoves += moves
+      stats.totalTime += time
+      stats.lastUpdatedAt = nowIso
+
+      if (assistanceMode === 'clean') {
+        stats.cleanSolvedCount += 1
+      } else {
+        stats.assistedSolvedCount += 1
+        if (assistanceMode === 'auto-assisted') {
+          stats.autoAssistedSolvedCount += 1
+        }
+      }
+
+      if (stats.bestMoves === null || moves < stats.bestMoves) {
+        stats.bestMoves = moves
+      }
+      if (stats.bestTime === null || time < stats.bestTime) {
+        stats.bestTime = time
+      }
+
+      const isCleanRun = assistanceMode === 'clean'
+      if (isCleanRun && (stats.bestCleanMoves === null || moves < stats.bestCleanMoves)) {
+        stats.bestCleanMoves = moves
+      }
+      if (isCleanRun && (stats.bestCleanTime === null || time < stats.bestCleanTime)) {
+        stats.bestCleanTime = time
+      }
+
+      let difficultyStats = stats.byDifficulty.find(
+        (entry) => entry.config.rows === body.config.rows && entry.config.cols === body.config.cols
+      )
+
+      if (!difficultyStats) {
+        difficultyStats = {
+          config: body.config,
+          solveCount: 0,
+          cleanSolveCount: 0,
+          assistedSolveCount: 0,
+          autoAssistedSolveCount: 0,
+          totalMoves: 0,
+          totalActionMoves: 0,
+          totalTime: 0,
+          bestMoves: null,
+          bestCleanMoves: null,
+          bestTime: null,
+          bestCleanTime: null,
+          lastCompletedAt: null,
+        }
+        stats.byDifficulty.push(difficultyStats)
+      }
+
+      const isNewBestMoves = difficultyStats.bestMoves === null || moves < difficultyStats.bestMoves
+      const isNewBestTime = difficultyStats.bestTime === null || time < difficultyStats.bestTime
+      const isNewBestCleanMoves = isCleanRun
+        && (difficultyStats.bestCleanMoves === null || moves < difficultyStats.bestCleanMoves)
+      const isNewBestCleanTime = isCleanRun
+        && (difficultyStats.bestCleanTime === null || time < difficultyStats.bestCleanTime)
+
+      difficultyStats.solveCount += 1
+      difficultyStats.totalMoves += moves
+      difficultyStats.totalActionMoves += actionMoves
+      difficultyStats.totalTime += time
+      difficultyStats.lastCompletedAt = nowIso
+
+      if (isCleanRun) {
+        difficultyStats.cleanSolveCount += 1
+      } else {
+        difficultyStats.assistedSolveCount += 1
+        if (assistanceMode === 'auto-assisted') {
+          difficultyStats.autoAssistedSolveCount += 1
+        }
+      }
+
+      if (isNewBestMoves) {
+        difficultyStats.bestMoves = moves
+      }
+      if (isNewBestTime) {
+        difficultyStats.bestTime = time
+      }
+      if (isNewBestCleanMoves) {
+        difficultyStats.bestCleanMoves = moves
+      }
+      if (isNewBestCleanTime) {
+        difficultyStats.bestCleanTime = time
+      }
+
+      stats.byDifficulty.sort((a, b) => comparePuzzleConfig(a.config, b.config))
+      stats.completionHistory = [completion, ...stats.completionHistory]
+        .sort((a, b) => getIsoTimestampValue(b.completedAt) - getIsoTimestampValue(a.completedAt))
+
+      await writeStatsFile(stats)
+
+      const response: RecordCompletionResponse = {
+        stats: toStatsResponse(stats),
+        completion,
+        difficultyStats: toDifficultyStatsResponse(difficultyStats, stats.completionHistory),
+        previousCompletion,
+        previousRecentMedianMoves,
+        previousRecentMedianTime,
+        isNewBestMoves,
+        isNewBestTime,
+        isNewBestCleanMoves,
+        isNewBestCleanTime,
+      }
+
+      sendJson(res, 201, response)
+      return
+    }
+
+    sendJson(res, 405, { error: 'Methode nicht erlaubt' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler'
+    sendJson(res, 500, { error: message })
+  }
+}
+
+function isMusicProviderId(value: string | null | undefined): value is MusicProviderId {
+  return (
+    value === 'jamendo' ||
+    value === 'openverse' ||
+    value === 'ccmixter' ||
+    value === 'wikimedia-commons' ||
+    value === 'internet-archive' ||
+    value === 'local-fallback'
+  )
+}
+
+async function handleMusicApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void,
+  musicProviderCoordinator: MusicProviderCoordinator
+): Promise<void> {
+  const reqUrl = req.url ?? '/'
+  const url = new URL(reqUrl, 'http://localhost')
+
+  if (!url.pathname.startsWith('/api/music')) {
+    next()
+    return
+  }
+
+  try {
+    const parts = url.pathname.split('/').filter(Boolean)
+    if (req.method === 'GET' && parts.length === 3 && parts[2] === 'next') {
+      const styleId = url.searchParams.get('style')
+      if (!styleId || !isMusicStyleId(styleId)) {
+        sendJson(res, 400, { error: 'Ungueltiger Musikstil' })
+        return
+      }
+
+      const excludeTrackIds = url.searchParams
+        .getAll('exclude')
+        .map((value) => value.trim())
+        .filter(Boolean)
+      const failedTrackId = url.searchParams.get('failedTrackId')?.trim() ?? null
+      const failedProviderRaw = url.searchParams.get('failedProvider')?.trim() ?? null
+      const failureReason = url.searchParams.get('failureReason')?.trim() ?? null
+      const failedProvider = isMusicProviderId(failedProviderRaw) ? failedProviderRaw : null
+
+      const response = await musicProviderCoordinator.pickTrack({
+        styleId,
+        excludeTrackIds,
+        allowFallback: url.searchParams.get('allowFallback') !== 'false',
+        failedTrackId,
+        failedProvider,
+        failureReason,
+      })
+
+      sendJson(res, 200, response)
+      return
+    }
+
+    sendJson(res, 405, { error: 'Methode nicht erlaubt' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler'
+    sendJson(res, 500, { error: message })
+  }
+}
+
+async function handleApiRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void,
+  musicProviderCoordinator: MusicProviderCoordinator
+): Promise<void> {
+  const reqUrl = req.url ?? '/'
+  const url = new URL(reqUrl, 'http://localhost')
+
+  if (url.pathname.startsWith('/api/saves')) {
+    await handleSaveApi(req, res, next)
+    return
+  }
+
+  if (url.pathname.startsWith('/api/backup')) {
+    await handleBackupApi(req, res, next)
+    return
+  }
+
+  if (url.pathname.startsWith('/api/clipboard')) {
+    await handleClipboardApi(req, res, next)
+    return
+  }
+
+  if (url.pathname.startsWith('/api/stats')) {
+    await handleStatsApi(req, res, next)
+    return
+  }
+
+  if (url.pathname.startsWith('/api/gallery')) {
+    await handleGalleryApi(req, res, next)
+    return
+  }
+
+  if (url.pathname.startsWith('/api/music')) {
+    await handleMusicApi(req, res, next, musicProviderCoordinator)
+    return
+  }
+
+  next()
+}
+
+export function apiPlugin(options: { jamendoClientId?: string } = {}): Plugin {
+  const musicProviderCoordinator = new MusicProviderCoordinator(options.jamendoClientId ?? '')
+
+  return {
+    name: 'schiebepuzzle-local-api',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        void handleApiRequest(req, res, next, musicProviderCoordinator)
+      })
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        void handleApiRequest(req, res, next, musicProviderCoordinator)
+      })
+    },
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,184 @@
+/* ==========================================================================
+   ErrorToast – Global glass-morphism notification toast
+   ========================================================================== */
+
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(14px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.error-toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(14px) scale(0.97);
+  z-index: 1100;
+  width: min(560px, calc(100% - 48px));
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.error-toast-container.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+  pointer-events: auto;
+  animation: toastSlideUp 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.error-toast {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  background:
+    radial-gradient(circle at 6% 50%, rgba(239, 68, 68, 0.16), transparent 48%),
+    linear-gradient(180deg, rgba(14, 21, 38, 0.86), rgba(18, 27, 46, 0.74));
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow:
+    0 22px 52px rgba(2, 6, 23, 0.38),
+    0 0 28px rgba(239, 68, 68, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.error-toast-icon-shell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle, rgba(239, 68, 68, 0.2), transparent 72%),
+    rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  color: #f87171;
+}
+
+.error-toast-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.error-toast-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.error-toast-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.72;
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: none;
+}
+
+.error-toast-close:hover {
+  opacity: 1;
+  background: rgba(248, 113, 113, 0.14);
+  border-color: rgba(248, 113, 113, 0.24);
+  color: #fca5a5;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.12);
+}
+
+.error-toast-close:focus-visible {
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.22);
+  outline: none;
+}
+
+/* ---- Light mode ---- */
+[data-theme="light"] .error-toast {
+  border-color: rgba(239, 68, 68, 0.18);
+  background:
+    radial-gradient(circle at 6% 50%, rgba(239, 68, 68, 0.08), transparent 44%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(250, 252, 255, 0.86));
+  box-shadow:
+    0 22px 52px rgba(15, 23, 42, 0.14),
+    0 0 22px rgba(239, 68, 68, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+[data-theme="light"] .error-toast-icon-shell {
+  background:
+    radial-gradient(circle, rgba(239, 68, 68, 0.12), transparent 72%),
+    rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+}
+
+[data-theme="light"] .error-toast-close {
+  border-color: rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--text-muted);
+}
+
+[data-theme="light"] .error-toast-close:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.18);
+  color: #dc2626;
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 640px) {
+  .error-toast-container {
+    bottom: 16px;
+    width: calc(100% - 32px);
+  }
+
+  .error-toast {
+    padding: 14px 16px;
+    gap: 12px;
+    border-radius: 16px;
+  }
+
+  .error-toast-icon-shell {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+
+  .error-toast-icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .error-toast-text {
+    font-size: 13px;
+  }
+
+  .error-toast-close {
+    width: 28px;
+    height: 28px;
+  }
+}

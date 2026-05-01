@@ -1,0 +1,44 @@
+SCHIEBEPUZZLE WEB-APP - QUICK START
+=====================================
+
+Es gibt zwei .bat-Dateien zum Starten der App:
+
+1. START.BAT
+   - Startet den Entwicklungsserver (npm run dev)
+   - Öffnet die App im Browser unter http://localhost:5173
+   - Für Entwicklung und Testen
+   - Nutze diese Datei, wenn du die App lokal bearbeiten willst
+   
+   Klicke einfach doppelt auf: start.bat
+
+2. BUILD.BAT
+   - Erstellt einen Production-Build (npm run build)
+   - Optimierte Datei liegt dann im "dist/" Ordner
+   - Für Deployment / Veröffentlichung
+   - Verwende diese für die finale Version
+   
+   Klicke einfach doppelt auf: build.bat
+
+EINMALIGE SETUP:
+- Beim ersten Start wird npm install automatisch durchgeführt
+- Danach startet die App direkt
+- Node.js und npm müssen installiert sein (https://nodejs.org)
+
+REQUIREMENTS:
+- Windows 10+ oder Windows 11
+- Node.js & npm installiert
+- Moderner Browser (Chrome, Firefox, Edge, Safari)
+
+BEDIENUNG:
+1) Bild hochladen
+2) Puzzlegröße wählen + Crop-Bereich festlegen
+3) Kacheln mit LINKER Maustaste ziehen
+4) Puzzle lösen für die Gewinn-Statistik
+
+TROUBLESHOOTING:
+- Falls start.bat nicht funktioniert: Stelle sicher, dass Node.js installiert ist
+  Öffne PowerShell und tippe: npm --version
+  
+- Falls der Port 5173 belegt ist: Ändere in vite.config.ts den Port
+
+Viel Spaß mit deinem Schiebepuzzle! 🎮

@@ -1,0 +1,174 @@
+.music-style-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.music-style-picker--grid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.music-style-picker--compact {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.music-style-picker--popover {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.music-style-picker--sidebar {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.music-style-picker-button {
+  min-height: 88px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--secondary-border) 92%, transparent);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 128%, transparent) 0%, transparent 48%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-elevated) 96%, transparent),
+      color-mix(in srgb, var(--surface-soft) 92%, transparent)
+    );
+  color: var(--text-main);
+  box-shadow: var(--secondary-shadow);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    background 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.music-style-picker-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--image-accent-solid) 42%, var(--secondary-border));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-strong) 140%, transparent) 0%, transparent 46%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-elevated) 98%, transparent),
+      color-mix(in srgb, var(--surface-soft) 94%, transparent)
+    );
+}
+
+.music-style-picker-button:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--image-accent-solid) 56%, var(--secondary-border));
+  box-shadow: var(--focus-ring), var(--secondary-shadow);
+}
+
+.music-style-picker-button.is-selected {
+  border-color: color-mix(in srgb, var(--image-accent-solid) 68%, rgba(56, 189, 248, 0.3));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-strong) 180%, transparent) 0%, transparent 48%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--primary-color) 10%, var(--surface-elevated)),
+      color-mix(in srgb, var(--image-accent-solid) 18%, var(--surface-soft))
+    );
+  box-shadow:
+    0 18px 34px color-mix(in srgb, var(--image-accent-solid) 18%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.music-style-picker-button.is-selected:focus-visible {
+  box-shadow:
+    var(--focus-ring),
+    0 18px 34px color-mix(in srgb, var(--image-accent-solid) 18%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.music-style-picker-button:disabled {
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.music-style-picker-label {
+  color: var(--text-main);
+  font-size: 0.93rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.music-style-picker-copy {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.music-style-picker--popover .music-style-picker-button {
+  min-height: 76px;
+  padding: 12px 14px;
+  gap: 6px;
+}
+
+.music-style-picker--sidebar .music-style-picker-button {
+  min-height: 62px;
+  padding: 12px 14px;
+  gap: 5px;
+}
+
+.music-style-picker--compact .music-style-picker-button {
+  min-height: 54px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.music-style-picker--compact .music-style-picker-label {
+  font-size: 0.78rem;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.music-style-picker--popover .music-style-picker-label {
+  font-size: 0.86rem;
+}
+
+.music-style-picker--sidebar .music-style-picker-label {
+  font-size: 0.86rem;
+}
+
+.music-style-picker--popover .music-style-picker-copy {
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.music-style-picker--sidebar .music-style-picker-copy {
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  .music-style-picker--popover,
+  .music-style-picker--grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .music-style-picker--compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .music-style-picker--compact {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .music-style-picker--compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

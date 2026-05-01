@@ -1,0 +1,694 @@
+@font-face {
+  font-family: 'Puzzle Sans';
+  src: url('/fonts/Inter-Variable-latin-wght-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Puzzle Display';
+  src: url('/fonts/Outfit-Variable-latin-wght-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Puzzle UI';
+  src: url('/fonts/CascadiaCode.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+:root {
+  --font-ui: 'Puzzle Sans', 'Segoe UI', sans-serif;
+  --font-display: 'Puzzle Display', 'Puzzle Sans', 'Segoe UI', sans-serif;
+  --font-numeric: 'Puzzle Display', 'Puzzle Sans', 'Segoe UI', sans-serif;
+  --font-mono: 'Puzzle UI', 'Cascadia Code', 'Consolas', monospace;
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-shadow: rgba(37, 99, 235, 0.28);
+  --primary-shadow-hover: rgba(37, 99, 235, 0.38);
+  --image-accent-solid: rgb(88, 136, 216);
+  --image-accent-soft: rgba(88, 136, 216, 0.18);
+  --image-accent-strong: rgba(88, 136, 216, 0.34);
+  --image-glow: rgba(136, 182, 255, 0.48);
+
+  --bg-gradient:
+    radial-gradient(
+      circle at top left,
+      color-mix(in srgb, var(--image-accent-solid) 20%, #ffffff) 0%,
+      color-mix(in srgb, var(--image-accent-solid) 10%, #f4f8ff) 36%,
+      color-mix(in srgb, var(--image-accent-solid) 18%, #dfe8f5) 100%
+    );
+  --text-main: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #52627a;
+  --text-on-primary: #ffffff;
+
+  --surface-strong: color-mix(in srgb, var(--image-accent-solid) 6%, rgba(255, 255, 255, 0.96));
+  --surface-soft: color-mix(in srgb, var(--image-accent-solid) 7%, rgba(255, 255, 255, 0.82));
+  --surface-elevated: color-mix(in srgb, var(--image-accent-solid) 8%, rgba(255, 255, 255, 0.9));
+
+  --glass-bg:
+    radial-gradient(circle at 14% 16%, var(--image-accent-strong) 0%, transparent 34%),
+    radial-gradient(circle at top right, var(--image-accent-soft) 0%, transparent 56%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 7%, rgba(255, 255, 255, 0.92)),
+      color-mix(in srgb, var(--image-accent-solid) 12%, rgba(246, 250, 255, 0.88))
+    );
+  --glass-border: color-mix(in srgb, var(--image-accent-solid) 14%, rgba(255, 255, 255, 0.74));
+  --glass-shadow: 0 24px 60px color-mix(in srgb, var(--image-accent-solid) 12%, rgba(15, 23, 42, 0.14));
+  --glass-panel-bg:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 58%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 7%, rgba(255, 255, 255, 0.9)),
+      color-mix(in srgb, var(--image-accent-solid) 12%, rgba(244, 249, 255, 0.84))
+    );
+  --glass-panel-bg-hover:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 52%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, rgba(255, 255, 255, 0.96)),
+      color-mix(in srgb, var(--image-accent-solid) 16%, rgba(247, 251, 255, 0.9))
+    );
+  --glass-panel-border: color-mix(in srgb, var(--image-accent-solid) 18%, rgba(255, 255, 255, 0.62));
+  --glass-panel-shadow: 0 20px 46px color-mix(in srgb, var(--image-accent-solid) 10%, rgba(15, 23, 42, 0.12));
+  --glass-panel-shadow-hover: 0 26px 58px color-mix(in srgb, var(--image-accent-solid) 14%, rgba(15, 23, 42, 0.16));
+  --glass-panel-blur: 18px;
+  --glass-dialog-bg:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 54%),
+    radial-gradient(circle at bottom right, var(--image-accent-soft) 0%, transparent 36%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, rgba(255, 255, 255, 0.84)),
+      color-mix(in srgb, var(--image-accent-solid) 18%, rgba(242, 247, 255, 0.72))
+    );
+  --glass-dialog-border: color-mix(in srgb, var(--image-accent-solid) 20%, rgba(255, 255, 255, 0.72));
+  --glass-dialog-shadow: 0 28px 60px color-mix(in srgb, var(--image-accent-solid) 14%, rgba(15, 23, 42, 0.2));
+  --glass-dialog-blur: 24px;
+  --glass-menu-bg:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 50%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, rgba(255, 255, 255, 0.86)),
+      color-mix(in srgb, var(--image-accent-solid) 16%, rgba(241, 247, 255, 0.76))
+    );
+  --glass-menu-border: color-mix(in srgb, var(--image-accent-solid) 18%, rgba(255, 255, 255, 0.68));
+  --glass-menu-shadow: 0 24px 52px color-mix(in srgb, var(--image-accent-solid) 14%, rgba(15, 23, 42, 0.18));
+  --glass-menu-blur: 20px;
+
+  --card-bg:
+    radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 60%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 7%, rgba(255, 255, 255, 0.95)),
+      color-mix(in srgb, var(--image-accent-solid) 12%, rgba(246, 250, 255, 0.9))
+    );
+  --card-bg-hover:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 58%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, rgba(255, 255, 255, 0.98)),
+      color-mix(in srgb, var(--image-accent-solid) 15%, rgba(249, 252, 255, 0.94))
+    );
+  --card-border: color-mix(in srgb, var(--image-accent-solid) 20%, rgba(148, 163, 184, 0.26));
+  --panel-shadow: 0 18px 40px color-mix(in srgb, var(--image-accent-solid) 8%, rgba(15, 23, 42, 0.1));
+  --panel-shadow-hover: 0 24px 54px color-mix(in srgb, var(--image-accent-solid) 12%, rgba(15, 23, 42, 0.14));
+
+  --input-bg: color-mix(in srgb, var(--image-accent-solid) 8%, rgba(255, 255, 255, 0.92));
+  --input-border: color-mix(in srgb, var(--image-accent-solid) 24%, rgba(148, 163, 184, 0.3));
+  --input-bg-hover: color-mix(in srgb, var(--image-accent-solid) 12%, #ffffff);
+
+  --overlay-bg: rgba(15, 23, 42, 0.18);
+  --dialog-bg: rgba(255, 255, 255, 0.7);
+  --dialog-border: rgba(255, 255, 255, 0.48);
+
+  --danger-color: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-shadow: rgba(239, 68, 68, 0.3);
+
+  --secondary-bg:
+    radial-gradient(circle at top right, var(--image-accent-soft) 0%, transparent 64%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, rgba(255, 255, 255, 0.76)),
+      color-mix(in srgb, var(--image-accent-solid) 18%, rgba(237, 244, 255, 0.72))
+    );
+  --secondary-bg-hover:
+    radial-gradient(circle at top right, var(--image-accent-strong) 0%, transparent 60%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 14%, rgba(255, 255, 255, 0.92)),
+      color-mix(in srgb, var(--image-accent-solid) 22%, rgba(243, 248, 255, 0.88))
+    );
+  --secondary-border: color-mix(in srgb, var(--image-accent-solid) 22%, rgba(148, 163, 184, 0.26));
+  --secondary-shadow: 0 10px 24px color-mix(in srgb, var(--image-accent-solid) 6%, rgba(15, 23, 42, 0.08));
+  --secondary-shadow-hover: 0 16px 28px color-mix(in srgb, var(--image-accent-solid) 10%, rgba(15, 23, 42, 0.12));
+
+  --border-radius-lg: 28px;
+  --border-radius-md: 20px;
+  --border-radius-btn: 14px;
+  --motion-duration-fast: 180ms;
+  --motion-duration-base: 280ms;
+  --motion-duration-slow: 420ms;
+  --motion-ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --preview-bg:
+    radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 58%),
+    color-mix(in srgb, var(--image-accent-solid) 10%, rgba(255, 255, 255, 0.56));
+  --preview-border: color-mix(in srgb, var(--image-accent-solid) 16%, rgba(255, 255, 255, 0.56));
+  --canvas-bg: color-mix(in srgb, var(--image-accent-solid) 10%, rgba(15, 23, 42, 0.06));
+
+  --stat-bg:
+    radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 54%),
+    color-mix(in srgb, var(--image-accent-solid) 10%, rgba(255, 255, 255, 0.8));
+  --stat-border: color-mix(in srgb, var(--image-accent-solid) 18%, rgba(148, 163, 184, 0.22));
+
+  --error-bg: rgba(254, 242, 242, 0.92);
+  --error-border: rgba(252, 165, 165, 0.72);
+
+  --divider: color-mix(in srgb, var(--image-accent-solid) 16%, rgba(148, 163, 184, 0.18));
+  --focus-ring:
+    0 0 0 2px rgba(15, 23, 42, 0.92),
+    0 0 0 5px rgba(255, 255, 255, 0.98),
+    0 0 0 9px color-mix(in srgb, var(--primary-color) 58%, transparent),
+    0 18px 36px color-mix(in srgb, var(--primary-color) 22%, transparent);
+  --board-stage-bg:
+    radial-gradient(circle at top center, var(--image-accent-strong) 0%, transparent 54%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, rgba(255, 255, 255, 0.92)),
+      color-mix(in srgb, var(--image-accent-solid) 18%, rgba(235, 242, 255, 0.84))
+    );
+  --board-stage-border: color-mix(in srgb, var(--image-accent-solid) 18%, rgba(148, 163, 184, 0.22));
+  --puzzle-shell-bg:
+    radial-gradient(circle at 14% 16%, color-mix(in srgb, var(--image-accent-strong) 58%, transparent) 0%, transparent 24%),
+    radial-gradient(circle at 84% 78%, color-mix(in srgb, var(--image-glow) 34%, transparent) 0%, transparent 18%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 5%, rgba(255, 255, 255, 0.86)),
+      color-mix(in srgb, var(--image-accent-solid) 9%, rgba(243, 247, 252, 0.82))
+    );
+  --puzzle-shell-border: color-mix(in srgb, var(--image-accent-solid) 14%, rgba(255, 255, 255, 0.7));
+  --puzzle-shell-shadow: 0 24px 56px color-mix(in srgb, var(--image-accent-solid) 8%, rgba(15, 23, 42, 0.12));
+  --puzzle-rail-bg:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-strong) 54%, transparent) 0%, transparent 52%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--image-accent-soft) 52%, transparent) 0%, transparent 30%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 6%, rgba(255, 255, 255, 0.78)),
+      color-mix(in srgb, var(--image-accent-solid) 10%, rgba(241, 245, 251, 0.7))
+    );
+  --puzzle-rail-border: color-mix(in srgb, var(--image-accent-solid) 18%, rgba(148, 163, 184, 0.24));
+  --puzzle-rail-shadow: 0 16px 32px color-mix(in srgb, var(--image-accent-solid) 6%, rgba(15, 23, 42, 0.09));
+  --puzzle-card-primary-bg:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-strong) 58%, transparent) 0%, transparent 56%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--image-accent-soft) 46%, transparent) 0%, transparent 30%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 8%, rgba(255, 255, 255, 0.92)),
+      color-mix(in srgb, var(--image-accent-solid) 12%, rgba(240, 245, 252, 0.84))
+    );
+  --puzzle-card-secondary-bg:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 54%, transparent) 0%, transparent 54%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 6%, rgba(255, 255, 255, 0.88)),
+      color-mix(in srgb, var(--image-accent-solid) 10%, rgba(241, 245, 251, 0.8))
+    );
+  --puzzle-card-border: color-mix(in srgb, var(--image-accent-solid) 22%, rgba(148, 163, 184, 0.24));
+  --puzzle-card-secondary-border: color-mix(in srgb, var(--image-accent-solid) 18%, rgba(148, 163, 184, 0.2));
+  --puzzle-card-shadow: 0 14px 30px color-mix(in srgb, var(--image-accent-solid) 7%, rgba(15, 23, 42, 0.1));
+  --puzzle-card-shadow-hover: 0 20px 40px color-mix(in srgb, var(--image-accent-solid) 10%, rgba(15, 23, 42, 0.12));
+  --puzzle-board-shell-bg:
+    radial-gradient(circle at top center, color-mix(in srgb, var(--image-accent-strong) 52%, transparent) 0%, transparent 30%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 9%, rgba(255, 255, 255, 0.95)),
+      color-mix(in srgb, var(--image-accent-solid) 15%, rgba(235, 241, 249, 0.88))
+    );
+  --puzzle-board-shell-border: color-mix(in srgb, var(--image-accent-solid) 20%, rgba(148, 163, 184, 0.24));
+  --puzzle-board-shell-shadow: 0 28px 56px color-mix(in srgb, var(--image-accent-solid) 10%, rgba(15, 23, 42, 0.16));
+  --puzzle-canvas-border: color-mix(in srgb, var(--image-accent-solid) 18%, rgba(255, 255, 255, 0.86));
+  --puzzle-canvas-shadow:
+    0 26px 52px color-mix(in srgb, var(--image-accent-solid) 10%, rgba(15, 23, 42, 0.18)),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  --puzzle-caption-bg:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, rgba(255, 255, 255, 0.8)),
+      color-mix(in srgb, var(--image-accent-solid) 14%, rgba(240, 244, 250, 0.72))
+    );
+  --puzzle-caption-border: color-mix(in srgb, var(--image-accent-solid) 18%, rgba(148, 163, 184, 0.24));
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+[data-theme="dark"] {
+  --bg-gradient:
+    radial-gradient(
+      circle at top left,
+      color-mix(in srgb, var(--image-accent-solid) 18%, #1b2440) 0%,
+      #111a30 38%,
+      #0a1020 100%
+    );
+  --text-main: #f4f7ff;
+  --text-secondary: #d0dbef;
+  --text-muted: #94a7c7;
+  --text-on-primary: #ffffff;
+
+  --surface-strong: rgba(11, 18, 33, 0.86);
+  --surface-soft: rgba(14, 22, 38, 0.6);
+  --surface-elevated: rgba(17, 26, 45, 0.78);
+
+  --glass-bg:
+    radial-gradient(circle at 14% 16%, var(--image-accent-strong) 0%, transparent 28%),
+    radial-gradient(circle at top right, var(--image-accent-soft) 0%, transparent 52%),
+    linear-gradient(180deg, rgba(14, 21, 38, 0.88), rgba(18, 27, 46, 0.74));
+  --glass-border: rgba(147, 170, 214, 0.16);
+  --glass-shadow: 0 34px 84px rgba(2, 6, 23, 0.52);
+  --glass-panel-bg:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 54%),
+    linear-gradient(180deg, rgba(18, 27, 46, 0.74), rgba(14, 21, 38, 0.58));
+  --glass-panel-bg-hover:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 48%),
+    linear-gradient(180deg, rgba(25, 38, 63, 0.82), rgba(17, 26, 45, 0.64));
+  --glass-panel-border: rgba(147, 170, 214, 0.18);
+  --glass-panel-shadow: 0 24px 52px rgba(2, 6, 23, 0.3);
+  --glass-panel-shadow-hover: 0 30px 64px rgba(2, 6, 23, 0.38);
+  --glass-panel-blur: 18px;
+  --glass-dialog-bg:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 52%),
+    radial-gradient(circle at bottom right, var(--image-glow) 0%, transparent 34%),
+    linear-gradient(180deg, rgba(12, 19, 34, 0.84), rgba(15, 23, 42, 0.7));
+  --glass-dialog-border: rgba(147, 170, 214, 0.22);
+  --glass-dialog-shadow: 0 30px 68px rgba(2, 6, 23, 0.42);
+  --glass-dialog-blur: 24px;
+  --glass-menu-bg:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(10, 17, 31, 0.84), rgba(15, 23, 42, 0.76));
+  --glass-menu-border: rgba(147, 170, 214, 0.22);
+  --glass-menu-shadow: 0 24px 56px rgba(2, 6, 23, 0.44);
+  --glass-menu-blur: 18px;
+
+  --card-bg:
+    radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 56%),
+    linear-gradient(180deg, rgba(16, 25, 43, 0.88), rgba(16, 24, 42, 0.78));
+  --card-bg-hover:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 54%),
+    linear-gradient(180deg, rgba(23, 34, 57, 0.94), rgba(18, 27, 47, 0.88));
+  --card-border: rgba(147, 170, 214, 0.18);
+  --panel-shadow: 0 20px 42px rgba(2, 6, 23, 0.24);
+  --panel-shadow-hover: 0 28px 54px rgba(2, 6, 23, 0.3);
+
+  --input-bg: rgba(17, 27, 45, 0.86);
+  --input-border: rgba(147, 170, 214, 0.22);
+  --input-bg-hover: rgba(20, 31, 52, 0.92);
+
+  --overlay-bg: rgba(2, 6, 23, 0.14);
+  --dialog-bg: rgba(11, 18, 33, 0.3);
+  --dialog-border: rgba(147, 170, 214, 0.14);
+
+  --secondary-bg:
+    radial-gradient(circle at top right, var(--image-accent-soft) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(27, 38, 64, 0.84), rgba(18, 27, 45, 0.78));
+  --secondary-bg-hover:
+    radial-gradient(circle at top right, var(--image-accent-strong) 0%, transparent 56%),
+    linear-gradient(180deg, rgba(34, 47, 78, 0.9), rgba(23, 34, 57, 0.86));
+  --secondary-border: rgba(147, 170, 214, 0.22);
+  --secondary-shadow: 0 14px 30px rgba(2, 6, 23, 0.2);
+  --secondary-shadow-hover: 0 18px 36px rgba(2, 6, 23, 0.28);
+
+  --preview-bg:
+    radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 52%),
+    rgba(8, 14, 27, 0.64);
+  --preview-border: rgba(147, 170, 214, 0.16);
+  --canvas-bg: rgba(4, 8, 18, 0.72);
+
+  --stat-bg:
+    radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 50%),
+    rgba(18, 27, 45, 0.72);
+  --stat-border: rgba(147, 170, 214, 0.16);
+
+  --error-bg: rgba(127, 29, 29, 0.32);
+  --error-border: rgba(248, 113, 113, 0.4);
+
+  --divider: rgba(147, 170, 214, 0.16);
+  --focus-ring:
+    0 0 0 2px rgba(248, 250, 252, 0.98),
+    0 0 0 5px rgba(15, 23, 42, 0.96),
+    0 0 0 9px color-mix(in srgb, var(--primary-color) 62%, transparent),
+    0 20px 40px color-mix(in srgb, var(--primary-color) 24%, transparent);
+  --board-stage-bg:
+    radial-gradient(circle at top center, var(--image-accent-strong) 0%, transparent 48%),
+    linear-gradient(180deg, rgba(8, 14, 27, 0.96), rgba(12, 19, 34, 0.8));
+  --board-stage-border: rgba(147, 170, 214, 0.18);
+  --puzzle-shell-bg:
+    radial-gradient(circle at 14% 14%, color-mix(in srgb, var(--image-accent-strong) 72%, transparent) 0%, transparent 22%),
+    radial-gradient(circle at 84% 80%, color-mix(in srgb, var(--image-glow) 30%, transparent) 0%, transparent 14%),
+    linear-gradient(180deg, rgba(11, 18, 33, 0.94), rgba(14, 22, 39, 0.82));
+  --puzzle-shell-border: rgba(147, 170, 214, 0.14);
+  --puzzle-shell-shadow: 0 34px 86px rgba(2, 6, 23, 0.5);
+  --puzzle-rail-bg:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-strong) 62%, transparent) 0%, transparent 48%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--image-accent-soft) 52%, transparent) 0%, transparent 28%),
+    linear-gradient(180deg, rgba(14, 21, 38, 0.84), rgba(12, 19, 34, 0.7));
+  --puzzle-rail-border: rgba(147, 170, 214, 0.16);
+  --puzzle-rail-shadow: 0 22px 48px rgba(2, 6, 23, 0.26);
+  --puzzle-card-primary-bg:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-strong) 70%, transparent) 0%, transparent 52%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--image-accent-soft) 46%, transparent) 0%, transparent 28%),
+    linear-gradient(180deg, rgba(15, 23, 40, 0.86), rgba(12, 19, 34, 0.74));
+  --puzzle-card-secondary-bg:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 54%, transparent) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(14, 21, 38, 0.76), rgba(12, 19, 34, 0.64));
+  --puzzle-card-border: rgba(147, 170, 214, 0.18);
+  --puzzle-card-secondary-border: rgba(147, 170, 214, 0.14);
+  --puzzle-card-shadow: 0 16px 34px rgba(2, 6, 23, 0.24);
+  --puzzle-card-shadow-hover: 0 22px 42px rgba(2, 6, 23, 0.28);
+  --puzzle-board-shell-bg:
+    radial-gradient(circle at top center, color-mix(in srgb, var(--image-accent-strong) 56%, transparent) 0%, transparent 30%),
+    linear-gradient(180deg, rgba(6, 11, 22, 0.99), rgba(10, 17, 31, 0.9));
+  --puzzle-board-shell-border: rgba(147, 170, 214, 0.18);
+  --puzzle-board-shell-shadow: 0 34px 68px rgba(2, 6, 23, 0.38);
+  --puzzle-canvas-border: rgba(147, 170, 214, 0.2);
+  --puzzle-canvas-shadow:
+    0 28px 56px rgba(2, 6, 23, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --puzzle-caption-bg:
+    linear-gradient(135deg, rgba(12, 19, 34, 0.82), rgba(15, 23, 42, 0.7));
+  --puzzle-caption-border: rgba(147, 170, 214, 0.18);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  position: relative;
+  min-height: 100%;
+  font-family: var(--font-ui);
+  letter-spacing: -0.012em;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background:
+    radial-gradient(circle at 14% 12%, var(--image-glow) 0%, transparent 38%),
+    radial-gradient(circle at 86% 82%, var(--image-accent-strong) 0%, transparent 34%),
+    var(--bg-gradient);
+  color: var(--text-main);
+  background-attachment: fixed;
+  transition: background 0.4s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: auto;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::before {
+  top: -120px;
+  left: -80px;
+  width: 540px;
+  height: 540px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--image-glow) 0%, transparent 58%),
+    radial-gradient(circle, var(--primary-shadow-hover) 0%, transparent 68%);
+  filter: blur(34px);
+  opacity: 1;
+}
+
+body::after {
+  right: -120px;
+  bottom: -140px;
+  width: 620px;
+  height: 620px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--image-accent-strong) 0%, transparent 62%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, transparent 72%);
+  filter: blur(40px);
+  opacity: 0.92;
+}
+
+#root {
+  position: relative;
+  isolation: isolate;
+  z-index: 1;
+}
+
+::selection {
+  background: rgba(56, 189, 248, 0.24);
+  color: var(--text-main);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.038em;
+}
+
+:is(
+  [class$='-title'],
+  [class*='-title ']
+) {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+:is(
+  [class$='-value'],
+  [class*='-value '],
+  [class$='-count'],
+  [class*='-count ']
+) {
+  font-family: var(--font-numeric);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.035em;
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+p,
+span,
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+.app {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 22px;
+}
+
+.app-screen-fallback {
+  width: min(960px, 100%);
+  min-height: min(560px, calc(100vh - 44px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.app-screen-fallback-card {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px 26px;
+  border-radius: 26px;
+  border: 1px solid var(--glass-dialog-border);
+  background: var(--glass-dialog-bg);
+  box-shadow: var(--glass-dialog-shadow);
+  backdrop-filter: blur(var(--glass-dialog-blur)) saturate(145%);
+  -webkit-backdrop-filter: blur(var(--glass-dialog-blur)) saturate(145%);
+  text-align: left;
+}
+
+.app-screen-fallback-kicker {
+  color: var(--primary-color);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.app-screen-fallback-title {
+  color: var(--text-main);
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 34px);
+  line-height: 0.98;
+}
+
+.app-screen-fallback-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.motion-screen {
+  width: 100%;
+  will-change: transform, opacity, filter;
+}
+
+button {
+  min-height: 48px;
+  padding: 12px 24px;
+  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--border-radius-btn);
+  cursor: pointer;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-family: inherit;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  color: var(--text-on-primary);
+  box-shadow: 0 16px 30px var(--primary-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 34px var(--primary-shadow-hover), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button:focus,
+button:focus-visible,
+select:focus,
+select:focus-visible,
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+input[type="file"] {
+  display: none;
+}
+
+button.secondary {
+  background: var(--secondary-bg);
+  color: var(--text-main);
+  box-shadow: var(--secondary-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--secondary-border);
+}
+
+button.secondary:hover:not(:disabled) {
+  background: var(--secondary-bg-hover);
+  box-shadow: var(--secondary-shadow-hover), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+}
+
+button.secondary:focus,
+button.secondary:focus-visible {
+  background: var(--secondary-bg-hover);
+  box-shadow:
+    var(--focus-ring),
+    var(--secondary-shadow-hover),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+}
+
+button.danger {
+  background: linear-gradient(135deg, #fb7185, var(--danger-color));
+  box-shadow: 0 14px 28px var(--danger-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+button.danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fc8fa0, var(--danger-hover));
+  box-shadow: 0 18px 32px var(--danger-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+button.danger:focus,
+button.danger:focus-visible {
+  background: linear-gradient(135deg, #fc8fa0, var(--danger-hover));
+  box-shadow:
+    var(--focus-ring),
+    0 18px 32px var(--danger-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+@keyframes fadeZoomIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-in {
+  animation: fadeZoomIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+

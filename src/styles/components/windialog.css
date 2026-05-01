@@ -1,0 +1,632 @@
+.win-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
+  padding: 16px;
+  background:
+    radial-gradient(circle at top, rgba(244, 63, 94, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.04), rgba(2, 6, 23, 0.18));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 2000;
+}
+
+.win-dialog {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--text-main);
+  margin: auto 0;
+}
+
+.win-hero,
+.stats-display,
+.win-comparison,
+.win-status,
+.win-actions {
+  position: relative;
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--glass-border) 82%, rgba(255, 255, 255, 0.14));
+  background:
+    radial-gradient(circle at top left, var(--image-accent-strong) 0%, transparent 54%),
+    linear-gradient(180deg, rgba(17, 26, 45, 0.58), rgba(11, 18, 33, 0.4));
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 24px 54px rgba(2, 6, 23, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.win-hero,
+.stat-item,
+.win-comparison,
+.win-comparison-item,
+.win-status {
+  transition:
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    background 0.28s ease;
+}
+
+.win-hero:hover,
+.stat-item:hover,
+.win-comparison:hover,
+.win-comparison-item:hover,
+.win-status:hover,
+.win-status:hover {
+  border-color: color-mix(in srgb, #fb7185 42%, rgba(255, 255, 255, 0.22));
+  box-shadow:
+    var(--panel-shadow-hover),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.win-hero {
+  padding: 18px;
+}
+
+.win-hero-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.win-icon-shell {
+  flex: 0 0 68px;
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(251, 113, 133, 0.94), rgba(244, 63, 94, 0.8));
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: 0 14px 28px rgba(244, 63, 94, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transform: rotate(-5deg);
+}
+
+.win-icon-mark {
+  color: #fff9fb;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+}
+
+.win-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.win-kicker {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.win-dialog h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(30px, 5vw, 40px);
+  line-height: 0.96;
+  font-weight: 900;
+  text-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+}
+
+.win-message {
+  margin: 0;
+  color: rgba(241, 245, 249, 0.92);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.win-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.win-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.win-tag-accent {
+  background: rgba(251, 113, 133, 0.16);
+  border-color: rgba(251, 113, 133, 0.24);
+  color: #ffe4ea;
+}
+
+.win-tag-success {
+  background: rgba(34, 197, 94, 0.16);
+  border-color: rgba(74, 222, 128, 0.26);
+  color: #dcfce7;
+}
+
+.stats-display {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+}
+
+.win-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.win-comparison-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.win-comparison-copy {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.82);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.win-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.win-comparison-item {
+  position: relative;
+  padding: 14px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(244, 63, 94, 0.12) 0%, transparent 58%),
+    linear-gradient(180deg, rgba(17, 26, 45, 0.52), rgba(11, 18, 33, 0.34));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 26px rgba(2, 6, 23, 0.12);
+  backdrop-filter: blur(14px) saturate(135%);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+  overflow: hidden;
+}
+
+.win-comparison-item::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, #94a3b8, #64748b);
+}
+
+.win-comparison-item.is-positive::before {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+.win-comparison-item.is-negative::before {
+  background: linear-gradient(90deg, #f87171, #ef4444);
+}
+
+.win-comparison-label {
+  color: rgba(148, 163, 184, 0.96);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.win-comparison-value {
+  color: #f8fafc;
+  font-size: clamp(20px, 3vw, 28px);
+  line-height: 1;
+  font-weight: 900;
+}
+
+.win-comparison-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.win-comparison-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.win-comparison-badge.is-positive {
+  background: rgba(34, 197, 94, 0.16);
+  border-color: rgba(74, 222, 128, 0.26);
+  color: #dcfce7;
+}
+
+.win-comparison-badge.is-negative {
+  background: rgba(248, 113, 113, 0.16);
+  border-color: rgba(248, 113, 113, 0.26);
+  color: #fecaca;
+}
+
+.win-comparison-card-copy {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.stat-item {
+  position: relative;
+  padding: 14px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(244, 63, 94, 0.12) 0%, transparent 58%),
+    linear-gradient(180deg, rgba(17, 26, 45, 0.52), rgba(11, 18, 33, 0.34));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 26px rgba(2, 6, 23, 0.12);
+  backdrop-filter: blur(14px) saturate(135%);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+  overflow: hidden;
+}
+
+.stat-item::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, #fb7185, #f43f5e);
+}
+
+.stat-label {
+  color: rgba(148, 163, 184, 0.96);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  color: #f8fafc;
+  font-size: clamp(22px, 4vw, 30px);
+  line-height: 1;
+  font-weight: 900;
+}
+
+.win-status {
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.win-status.is-pending {
+  border-color: rgba(56, 189, 248, 0.24);
+}
+
+.win-status.is-error {
+  border-color: rgba(248, 113, 113, 0.26);
+  background:
+    radial-gradient(circle at top left, rgba(248, 113, 113, 0.18) 0%, transparent 42%),
+    linear-gradient(180deg, rgba(60, 22, 28, 0.56), rgba(11, 18, 33, 0.34));
+}
+
+.win-status-copy {
+  margin: 0;
+  color: rgba(241, 245, 249, 0.92);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.win-status.is-error .win-status-copy {
+  color: #fecaca;
+}
+
+.win-retry-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(248, 113, 113, 0.16);
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  color: #fecaca;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.win-retry-btn:hover {
+  background: rgba(248, 113, 113, 0.28);
+  border-color: rgba(248, 113, 113, 0.48);
+}
+
+.win-retry-btn:focus-visible {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.92),
+    0 0 0 6px rgba(248, 113, 113, 0.34),
+    0 14px 26px rgba(127, 29, 29, 0.28);
+}
+
+.win-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.win-actions-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.win-actions button {
+  width: 100%;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.win-actions-secondary button {
+  min-height: 56px;
+  padding-inline: 16px;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.win-actions button:disabled {
+  opacity: 0.56;
+  box-shadow: none !important;
+}
+
+.win-primary-btn {
+  background: linear-gradient(135deg, #fb7185, #f43f5e) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 14px 24px rgba(244, 63, 94, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+}
+
+.win-primary-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fc8194, #f43f5e) !important;
+  box-shadow: 0 16px 28px rgba(244, 63, 94, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.win-primary-btn:focus-visible {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.82) !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.92),
+    0 0 0 6px rgba(251, 113, 133, 0.38),
+    0 18px 30px rgba(244, 63, 94, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.win-secondary-btn {
+  background: linear-gradient(180deg, rgba(27, 38, 64, 0.82), rgba(18, 27, 45, 0.76)) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.win-secondary-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(34, 47, 78, 0.9), rgba(23, 34, 57, 0.84)) !important;
+}
+
+.win-secondary-btn:focus-visible {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.72) !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 0 6px rgba(148, 163, 184, 0.28),
+    0 14px 24px rgba(15, 23, 42, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+.win-secondary-btn:disabled {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(226, 232, 240, 0.72) !important;
+}
+
+.win-actions-hint {
+  margin: 2px 2px 0;
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+
+
+
+@media (max-width: 640px) {
+  .win-overlay {
+    padding: 12px;
+  }
+
+  .win-hero-row {
+    align-items: flex-start;
+  }
+
+  .stats-display {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .win-comparison-head {
+    flex-direction: column;
+  }
+
+  .win-comparison-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .win-actions-secondary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .win-hero {
+    padding: 16px;
+  }
+
+  .win-hero-row {
+    gap: 12px;
+  }
+
+  .win-icon-shell {
+    flex-basis: 58px;
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+  }
+
+  .win-icon-mark {
+    font-size: 15px;
+  }
+
+  .win-status {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .win-comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .win-actions-secondary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .win-hero-row {
+    flex-direction: column;
+  }
+
+  .win-dialog h2 {
+    font-size: 28px;
+  }
+
+  .win-message,
+  .win-status-copy {
+    font-size: 13px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+}
+
+/* Passive information surfaces: stats and status cards are not actions. */
+.win-hero,
+.win-kicker,
+.win-tag,
+.stats-display,
+.stat-item,
+.win-comparison,
+.win-comparison-item,
+.win-comparison-badge,
+.win-status {
+  cursor: default;
+}
+
+.win-hero:hover,
+.stat-item:hover,
+.win-comparison:hover,
+.win-comparison-item:hover,
+.win-status:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--glass-border) 82%, rgba(255, 255, 255, 0.14));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 12px 28px rgba(2, 6, 23, 0.12);
+}
+
+.stat-item,
+.win-comparison-item {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 8px 18px rgba(2, 6, 23, 0.1);
+}
+
+.win-tag,
+.win-comparison-badge {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 3px 8px rgba(2, 6, 23, 0.08);
+}
+
+/* Documentation/checklist language for passive content. Pills stay reserved for actions. */
+.win-hero-tags,
+.win-comparison-badges {
+  gap: 0;
+}
+
+.win-kicker,
+.win-tag,
+.win-comparison-badge {
+  min-height: 0;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.win-tag + .win-tag,
+.win-comparison-badge + .win-comparison-badge {
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.stat-item,
+.win-comparison-item {
+  text-align: left;
+}
