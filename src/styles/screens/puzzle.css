@@ -1664,10 +1664,36 @@
   flex: 0 0 auto;
   max-width: 100%;
   max-height: 100%;
+  transform-origin: center;
+  isolation: isolate;
 }
 
 .puzzle-board-canvas-stack.is-celebrating {
   filter: saturate(1.08) contrast(1.04);
+}
+
+.puzzle-board-canvas-stack.is-intro {
+  animation: puzzle-board-intro-pop 1180ms cubic-bezier(0.18, 1, 0.28, 1);
+}
+
+.puzzle-board-canvas-stack::after {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  z-index: 2;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--image-accent-solid) 34%, rgba(34, 197, 94, 0.28)), transparent 58%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.puzzle-board-canvas-stack.is-intro::after {
+  animation: puzzle-board-intro-aura 1180ms ease-out;
+}
+
+.puzzle-board-canvas-stack.is-celebrating::after {
+  animation: puzzle-board-final-glow 1600ms ease-out;
 }
 
 .puzzle-celebration-canvas {
@@ -1720,6 +1746,14 @@
   box-shadow: var(--puzzle-canvas-shadow);
   outline: none;
   transition: border-color 0.24s ease, box-shadow 0.24s ease;
+}
+
+.puzzle-board-canvas-stack.is-intro .puzzle-canvas {
+  animation: puzzle-canvas-settle 1180ms cubic-bezier(0.18, 1, 0.28, 1);
+}
+
+.puzzle-board-canvas-stack.is-celebrating .puzzle-canvas {
+  animation: puzzle-canvas-final-pulse 1600ms ease-out;
 }
 
 .puzzle-canvas:focus-visible {
@@ -2569,9 +2603,88 @@
   }
 }
 
+@keyframes puzzle-board-intro-pop {
+  0% {
+    transform: translateY(16px) scale(0.966);
+  }
+
+  58% {
+    transform: translateY(-4px) scale(1.016);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes puzzle-board-intro-aura {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  36% {
+    opacity: 0.86;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes puzzle-canvas-settle {
+  0% {
+    filter: saturate(0.92) brightness(0.96);
+  }
+
+  48% {
+    filter: saturate(1.22) brightness(1.1);
+  }
+
+  100% {
+    filter: saturate(1) brightness(1);
+  }
+}
+
+@keyframes puzzle-board-final-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  28% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.14);
+  }
+}
+
+@keyframes puzzle-canvas-final-pulse {
+  0% {
+    filter: saturate(1) brightness(1);
+  }
+
+  32% {
+    filter: saturate(1.34) brightness(1.14);
+  }
+
+  100% {
+    filter: saturate(1.04) brightness(1);
+  }
+}
+
 [data-motion="reduced"] .puzzle-hint-panel.is-active .puzzle-panel-kicker-icon,
 [data-motion="reduced"] .puzzle-hint-arrow,
 [data-motion="reduced"] .puzzle-hint-spinner,
-[data-motion="reduced"] .puzzle-hint-route-line::after {
+[data-motion="reduced"] .puzzle-hint-route-line::after,
+[data-motion="reduced"] .puzzle-board-canvas-stack.is-intro,
+[data-motion="reduced"] .puzzle-board-canvas-stack.is-intro::after,
+[data-motion="reduced"] .puzzle-board-canvas-stack.is-celebrating::after,
+[data-motion="reduced"] .puzzle-board-canvas-stack.is-intro .puzzle-canvas,
+[data-motion="reduced"] .puzzle-board-canvas-stack.is-celebrating .puzzle-canvas {
   animation: none;
 }
