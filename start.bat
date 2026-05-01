@@ -10,7 +10,7 @@ echo.
 REM Navigiere zum Projektverzeichnis
 cd /d "%~dp0"
 
-REM Prüfe ob node_modules existiert
+REM Pruefe ob node_modules existiert
 if not exist "node_modules" (
     echo Dependencies werden installiert...
     call npm install
@@ -25,7 +25,7 @@ if not exist "node_modules" (
 )
 
 REM Pruefe, ob bereits eine passende Schiebepuzzle-Instanz auf Port 5173 laeuft
-powershell -NoProfile -Command "try { $response = Invoke-WebRequest -Uri 'http://127.0.0.1:5173/' -UseBasicParsing -TimeoutSec 2; if ($response.Content -match 'Schiebepuzzle - MVB') { exit 0 } else { exit 2 } } catch { exit 1 }"
+powershell -NoProfile -Command "try { $response = Invoke-WebRequest -Uri 'http://127.0.0.1:5173/' -UseBasicParsing -TimeoutSec 2; if ($response.Content -match '<title>Schiebepuzzle</title>') { exit 0 } else { exit 2 } } catch { exit 1 }"
 if !errorlevel! equ 0 (
     echo Entwicklungsserver laeuft bereits unter http://127.0.0.1:5173/
     start "" "http://127.0.0.1:5173/"

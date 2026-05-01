@@ -10,7 +10,7 @@ echo.
 REM Navigiere zum Projektverzeichnis
 cd /d "%~dp0"
 
-REM Prüfe ob node_modules existiert
+REM Pruefe ob node_modules existiert
 if not exist "node_modules" (
     echo Dependencies werden installiert...
     call npm install
