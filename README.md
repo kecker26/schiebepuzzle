@@ -137,6 +137,7 @@ Wichtige Einstiegspunkte:
 - Persistierte Daten defensiv lesen, damit alte Spielstaende, Statistik-, Galerie- und Backup-Dateien weiter funktionieren.
 - Solver-, Canvas- und Worker-Aenderungen immer gegen `PuzzleState`, `Tile`, Worker-Protokolle und Tests pruefen.
 - UI-Aenderungen sollten vorhandene CSS-Struktur, Icon-Komponenten und Motion-Bausteine wiederverwenden.
+- Fuer groessere oder riskantere Aenderungen vorab klaeren, ob ein eigener Git-Branch sinnvoll ist.
 - Bei Struktur-, Workflow-, Befehls-, Persistenz- oder Architektur-Aenderungen auch `AGENTS.md` pruefen und bei Bedarf aktualisieren.
 
 ## Verifikation
