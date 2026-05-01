@@ -5,6 +5,7 @@ import {
 } from '../../app/focusVisibility.ts'
 import { getDirectionalFocusTarget } from '../../app/directionalFocusNavigation.ts'
 import GlobalUiIcon from '../../components/GlobalUiIcon.tsx'
+import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import { SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
@@ -223,11 +224,17 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
 
         <div className="gallery-card-stats" aria-label="Zusammenfassung des Laufs">
           <div className="gallery-card-stat">
-            <span className="gallery-card-stat-label">Zeit</span>
+            <span className="gallery-card-stat-label">
+              <UploadScreenIcon name="timer" className="gallery-card-stat-icon" />
+              Zeit
+            </span>
             <strong className="gallery-card-stat-value">{formatTime(representativeEntry.time)}</strong>
           </div>
           <div className="gallery-card-stat">
-            <span className="gallery-card-stat-label">Netto</span>
+            <span className="gallery-card-stat-label">
+              <UploadScreenIcon name="mousePointerClick" className="gallery-card-stat-icon" />
+              Netto
+            </span>
             <strong className="gallery-card-stat-value">{representativeEntry.moves}</strong>
           </div>
         </div>
@@ -259,7 +266,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                 : `Puzzle ${difficultyLabel} kann aktuell nicht erneut gespielt werden`
             }
           >
-            {primaryReplayAction?.label ?? 'Bild fehlt'}
+            <UploadScreenIcon name="playCircle" className="gallery-card-action-icon" />
+            <span>{primaryReplayAction?.label ?? 'Bild fehlt'}</span>
           </button>
           {secondaryReplayAction ? (
             <button
@@ -273,7 +281,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
               disabled={isDeleting}
               aria-label={`Motivweiten Schnellstart ${secondaryReplayAction.label.toLowerCase()}`}
             >
-              {secondaryReplayAction.label}
+              <UploadScreenIcon name="listRestart" className="gallery-card-action-icon" />
+              <span>{secondaryReplayAction.label}</span>
             </button>
           ) : null}
           <button
@@ -286,7 +295,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             onKeyDown={handleActionKeyDown}
             disabled={isDeleting}
           >
-            Details
+            <UploadScreenIcon name="info" className="gallery-card-action-icon" />
+            <span>Details</span>
           </button>
           <button
             type="button"
@@ -299,7 +309,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             disabled={isDeleting}
             aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} loeschen`}
           >
-            {isDeleting ? 'Loesche ...' : 'Loeschen'}
+            <UploadScreenIcon name="trash" className="gallery-card-action-icon" />
+            <span>{isDeleting ? 'Loesche ...' : 'Loeschen'}</span>
           </button>
         </div>
       </div>

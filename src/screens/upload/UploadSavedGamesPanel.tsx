@@ -276,6 +276,7 @@ export default function UploadSavedGamesPanel({
         {isLoadingSavedGames ? (
           <UploadStateNotice
             icon={'\u{23F3}'}
+            iconName="timer"
             title="Spielstaende werden geladen ..."
             detail="Die zuletzt gesicherten Partien werden gerade eingelesen."
             role="status"
@@ -284,8 +285,9 @@ export default function UploadSavedGamesPanel({
         ) : savedGames.length === 0 ? (
           <UploadStateNotice
             icon={'\u{1F4E6}'}
+            iconName="folder"
             title="Keine Spielstaende vorhanden."
-            detail="Starte ein neues Spiel. Dein Fortschritt landet danach automatisch hier im Bereich."
+            detail="Starte auf der Auswahlseite ein neues Puzzle. Dein Fortschritt landet danach automatisch hier im Bereich."
             className="saved-games-empty-state"
           />
         ) : (

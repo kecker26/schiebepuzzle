@@ -400,6 +400,7 @@ export default function UploadGalleryPanel({
           {isLoadingGallery ? (
             <UploadStateNotice
               icon={'\u{1F5BC}'}
+              iconName="gallery"
               title="Galerie wird geladen ..."
               detail="Die zuletzt geloesten Motive und Laufdaten werden vorbereitet."
               role="status"
@@ -408,8 +409,9 @@ export default function UploadGalleryPanel({
           ) : entries.length === 0 ? (
             <UploadStateNotice
               icon={'\u{1F5BC}'}
+              iconName="image"
               title="Noch keine Galerie-Eintraege vorhanden."
-              detail="Nach jedem geloesten Puzzle landet hier automatisch ein Thumbnail des Motivs mit Zeit, Zuegen und Schwierigkeit."
+              detail="Nach jedem geloesten Puzzle landet hier automatisch ein Thumbnail mit Zeit, Zuegen und Schwierigkeit."
             />
           ) : (
             <>
@@ -434,6 +436,7 @@ export default function UploadGalleryPanel({
                 {visibleEntries.length === 0 ? (
                   <UploadStateNotice
                     icon={'\u{1F50E}'}
+                    iconName="search"
                     title="Mit den aktuellen Filtern ist gerade kein Galerie-Bild sichtbar."
                     detail="Probiere eine andere Schwierigkeit, eine andere Laufart oder setze die Auswahl wieder auf alle Eintraege zurueck."
                     className="gallery-empty-state-filtered"

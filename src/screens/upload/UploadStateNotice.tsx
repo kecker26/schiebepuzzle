@@ -1,7 +1,9 @@
 import type { AriaRole } from 'react'
+import UploadScreenIcon, { type UploadScreenIconName } from '../../components/UploadScreenIcon.tsx'
 
 interface UploadStateNoticeProps {
   icon: string
+  iconName?: UploadScreenIconName
   title: string
   detail?: string
   className?: string
@@ -12,6 +14,7 @@ interface UploadStateNoticeProps {
 
 export default function UploadStateNotice({
   icon,
+  iconName,
   title,
   detail,
   className,
@@ -31,8 +34,8 @@ export default function UploadStateNotice({
 
   return (
     <div className={combinedClassName} role={role} aria-live={ariaLive}>
-      <span className="empty-icon" aria-hidden="true">
-        {icon}
+      <span className={iconName ? 'empty-icon empty-icon-lucide' : 'empty-icon'} aria-hidden="true">
+        {iconName ? <UploadScreenIcon name={iconName} className="empty-icon-symbol" /> : icon}
       </span>
       <p>{title}</p>
       {detail ? <p className="empty-hint">{detail}</p> : null}
