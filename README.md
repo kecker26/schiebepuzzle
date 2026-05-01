@@ -1,112 +1,154 @@
-# Schiebepuzzle Web-App (MVP)
+# Schiebepuzzle Web-App
 
-Eine interaktive Web-App zum Erstellen und Spielen von Schiebepuzzles mit Bild-Upload, Crop und Maus-Zieh-Steuerung.
+Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von Schiebepuzzles. Die App ist inzwischen mehr als ein MVP: Sie umfasst Startscreen, Bild-Upload, Zufallsbilder, Crop-Werkzeug, Canvas-Spielansicht, Hinweise, Solver, Autosave, Wiederherstellung, Statistik, Galerie, Backup-Import/-Export und Musik.
 
-## Features (MVP Phase 1-5)
+## Funktionsumfang
 
-✅ **Phase 1 - Fundament (Bild + Crop)**
-- Beliebiges Bild hochladen (JPG, PNG, WebP)
-- Interaktive Crop-Ansicht mit Seitenverhältnis-Anpassung
-- Puzzlegröße wählen (3×3 bis 6×6)
+- Eigene Bilder hochladen und als Puzzle-Motiv verwenden.
+- Zufallsbilder aus mehreren Quellen laden, mit lokalen und externen Providern.
+- Bildzuschnitt mit Crop-Ansicht, Transform und Puzzle-Konfiguration.
+- Schiebepuzzle mit Canvas-Rendering, Drag-/Keyboard-Interaktion und visuellen Hervorhebungen.
+- Loesbare Shuffle-Logik, Hinweise und Solver-Unterstuetzung.
+- Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
+- Autosave, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
+- Statistik mit Bestzeiten, Zugzahlen, Assistenzprofilen und Verlauf.
+- Galerie geloester Motive inklusive Replay-Funktion.
+- Lokale Backups fuer Spielstaende, Statistik und Galerie.
+- Musik- und Sound-Unterstuetzung mit lokalen Fallback-Tracks.
+- Command Palette, globale Hilfe, Kontextmenues, Theme-Umschaltung und Motion-Animationen.
 
-✅ **Phase 2 - Puzzle-Generierung**
-- Raster aus quadratischen Kacheln erzeugen
-- Korrekte Bildausschnitte pro Kachel
-- Leerfeld definieren
+## Technologie
 
-✅ **Phase 3 - Shuffle + Lösbarkeit**
-- Lösbar mischen (durch gültige Zufallszüge)
-- Garantiert solvable Startzustand
+- React 18 und TypeScript
+- Vite 5 als Dev-Server und Build-Tool
+- HTML5 Canvas fuer Puzzle-Rendering
+- `motion` / `motion/react` fuer Animationen
+- Vitest, Testing Library und jsdom fuer Tests
+- ESLint mit TypeScript-, React-Hooks- und React-Refresh-Regeln
+- Lokale Vite-Middleware in `localApi.ts` fuer `/api/*`
 
-✅ **Phase 4 - Interaktion mit Maus-Drag**
-- Linke Maustaste zum Ziehen
-- Nur benachbarte Kacheln bewegbar
-- Schwellwert-basiertes Einrasten
-
-✅ **Phase 5 - Win-Check + UX-Polish**
-- Gewinnzustand erkennen
-- Zeit und Züge tracking
-- Erfolgsdialog mit Statistik
-
-## Technologie-Stack
-
-- **Framework**: React 18 + TypeScript
-- **Build-Tool**: Vite (blitzschnell)
-- **Rendering**: HTML5 Canvas (für Performance)
-- **Styling**: Modular CSS
-
-## Installation & Start
+## Installation
 
 ```bash
-# Dependencies installieren
 npm install
+```
 
-# Development-Server starten
+Optional kann eine lokale `.env` aus `.env.example` angelegt werden. Ohne diese Schluessel nutzt die App weiterhin lokale Fallbacks oder Provider, die ohne Key funktionieren.
+
+```env
+VITE_JAMENDO_CLIENT_ID=deine_jamendo_client_id
+VITE_PEXELS_API_KEY=dein_pexels_api_key
+VITE_PIXABAY_API_KEY=dein_pixabay_api_key
+VITE_SMITHSONIAN_API_KEY=dein_smithsonian_api_key
+```
+
+## Start und Befehle
+
+```bash
+# Dev-Server starten
 npm run dev
 
-# Für Production bauen
+# Production-Build pruefen
 npm run build
+
+# Lint ausfuehren
+npm run lint
+
+# Keyboard-Smoke-Test
+npm run test:smoke
+
+# Alle Vitest-Tests
+npm exec vitest run
+
+# Preview-Server starten
+npm run preview
+
+# Lokale Audio-Assets generieren
+npm run generate:audio
 ```
 
-Der Server läuft dann auf `http://localhost:5173`
+Der Dev-Server ist in `vite.config.ts` auf `http://127.0.0.1:5173/` mit `strictPort: true` konfiguriert.
 
-## Projekt-Struktur
+## Lokale Daten
 
-```
+Die App arbeitet lokal. Die Vite-Middleware in `localApi.ts` verwaltet die Daten direkt im Projektordner:
+
+- `spielstaende/`: gespeicherte Partien, `__stats.json` und `__gallery.json`
+- `backups/`: lokale Backup-Dateien mit der Endung `.spbkp`
+- `public/audio/`: lokale Musik- und Sound-Assets
+- `public/fonts/`: eingebundene Fonts
+
+Diese Nutzdaten und Build-Artefakte sind fuer manuelle Bearbeitung tabu, sofern eine Aufgabe das nicht ausdruecklich verlangt.
+
+## Lokale API
+
+Die Frontend-Services greifen ueber lokale API-Routen auf die Middleware zu:
+
+- `/api/saves`: Spielstaende erstellen, laden, aktualisieren und loeschen.
+- `/api/stats`: Statistik laden, zuruecksetzen und Abschluesse aufzeichnen.
+- `/api/gallery`: Galerie geloester Motive laden, erweitern und bereinigen.
+- `/api/backup`: Daten exportieren, importieren und lokale Backup-Dateien verwalten.
+- `/api/clipboard`: Clipboard-Hilfen fuer lokale Ablage.
+- `/api/music`: Musiktracks anhand des gewaehlten Stils auswaehlen.
+
+Bei Aenderungen an diesen Routen muessen Frontend-Service, Typen und `localApi.ts` gemeinsam angepasst werden.
+
+## Projektstruktur
+
+```text
 src/
-├── components/          # Komponenten (WinDialog)
-├── screens/            # App-Blöcke (Upload, Crop, Puzzle)
-├── services/           # Business Logic (Engine, Renderer)
-├── styles/            # CSS nach Komponenten
-├── types/             # TypeScript Definitionen
-├── App.tsx             # State Management + Flow
-└── main.tsx           # Entry Point
+  app/         App-weite Hooks fuer Hilfe, Fokus, Sessions, Recovery und Shortcuts
+  assets/      System-Icons fuer Screens, Kontextmenues und globale UI
+  components/  Wiederverwendbare UI-Komponenten
+  contexts/    React-Kontexte, aktuell vor allem Theme-Zustand
+  motion/      Motion-Komponenten, Tokens, Varianten und Dialog-A11y
+  screens/     Start-, Upload-, Crop- und Puzzle-Ansichten
+  services/    Puzzle-, Save-, Stats-, Galerie-, Backup-, Musik- und Bildprovider-Logik
+  styles/      Globale, Komponenten- und Screen-CSS-Dateien
+  test/        Vitest-Tests und Test-Setup
+  types/       Zentrale TypeScript-Typen
+  utils/       Hilfslogik fuer Schwierigkeit, Run-Vergleich und Kontextfenster
+  workers/     Solver-Worker
 ```
+
+Wichtige Einstiegspunkte:
+
+- `src/App.tsx`: zentraler App-Flow, Lazy-Loading, Autosave, Recovery und Screen-Wechsel.
+- `src/screens/UploadScreen.tsx`: Workspace fuer Upload, Saves, Statistik, Galerie und Backups.
+- `src/screens/CropScreen.tsx`: Zuschnitt und Puzzle-Konfiguration.
+- `src/screens/PuzzleScreen.tsx`: Spielansicht und Puzzle-Interaktion.
+- `src/services/PuzzleEngine.ts`: Kernlogik fuer Board, Moves, Shuffle und Hinweise.
+- `src/services/PuzzleRenderer.ts`: Canvas-Rendering.
+- `src/services/PuzzleSolver.ts` und `src/services/ExactPuzzleSolver.ts`: Solver-Logik.
+- `localApi.ts`: lokale Dateipersistenz und API-Middleware.
 
 ## User Flow
 
-1. **Upload** → Bild hochladen
-2. **Crop** → Puzzlegröße wählen + Zuschnitt festlegen  
-3. **Generate** → Puzzle aus Bildausschnitt erstellen
-4. **Shuffle** → Lösbar durchmischen
-5. **Play** → Kacheln mit Maus ziehen
-6. **Win** → Erfolgsdialog
+1. Startscreen oeffnen und optional letzte Sitzung fortsetzen.
+2. Bild hochladen, Zufallsbild laden oder Galerie-/Save-Eintrag wiederverwenden.
+3. Motiv zuschneiden und Puzzle-Groesse waehlen.
+4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
+5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
+6. Spielstaende, Galerie und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
 
-## Wichtige Designentscheidungen
+## Entwicklungshinweise
 
-### Arch textur
+- Bestehende deutsche UI-Texte beibehalten, sofern kein Rewriting gewuenscht ist.
+- Persistierte Daten defensiv lesen, damit alte Spielstaende, Statistik-, Galerie- und Backup-Dateien weiter funktionieren.
+- Solver-, Canvas- und Worker-Aenderungen immer gegen `PuzzleState`, `Tile`, Worker-Protokolle und Tests pruefen.
+- UI-Aenderungen sollten vorhandene CSS-Struktur, Icon-Komponenten und Motion-Bausteine wiederverwenden.
+- Bei Struktur-, Workflow-, Befehls-, Persistenz- oder Architektur-Aenderungen auch `AGENTS.md` pruefen und bei Bedarf aktualisieren.
 
-- **State Machine**: App hat klare Zustände (`idle`, `imageLoaded`, `cropping`, `playing`, `solved`)
-- **Service Layer**: PuzzleEngine für Business Logic, PuzzleRenderer für Canvas
-- **Tile-Datenmodell**: Jede Kachel kennt ihre Ist- UND Soll-Position
+## Verifikation
 
-### Rendering
+Fuer reine Dokumentationsaenderungen ist normalerweise kein Build noetig. Fuer Codeaenderungen gilt:
 
-- **Canvas**: Effizient, performankant bei Drag-Operationen
-- **Bildausschnitt**: Per `drawImage()` source-region
-- **Raster**: Einfache Linien zum visuellen Feedback
-
-### Shuffle-Logik
-
-- Vom gelösten Zustand aus N gültige Zufallszüge
-- Verhindert direkte Rückwärtszüge (besseres Mischen)
-- Immer lösbar (mathematisch garantiert)
-
-### Interaktion
-
-- Nur **direkt benachbarte** Kacheln (klassisch)
-- Achsen-Sperrung (horizontal ODER vertikal)
-- 50% Schwellwert für Einrasten
-
-## Nächste Schritte (nicht in MVP)
-
-- [ ] Touch-Unterstützung
-- [ ] Sounds + Animationen
-- [ ] Highscore-Persistierung
-- [ ] Mehrfeld-Shift (ganze Reihe ziehen)
-- [ ] Bildrotation/Zoom beim Crop
-- [ ] Mobile-Responsive-Optimierung
+- Mindestens `npm run build` ausfuehren.
+- Nach TypeScript-/React-Aenderungen moeglichst `npm run lint` ausfuehren.
+- Bei Tastatur-/Fokuslogik `npm run test:smoke` ausfuehren.
+- Bei Galerie-, Replay- oder Run-Vergleichslogik passende Vitest-Dateien unter `src/test/` ausfuehren.
+- Bei API-/Persistenz-Aenderungen nach Moeglichkeit einen kurzen manuellen Dev-Server-Test machen.
 
 ## Lizenz
 
-MIT
+In diesem Repository ist aktuell keine separate Lizenzdatei hinterlegt.

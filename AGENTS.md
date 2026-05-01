@@ -56,6 +56,7 @@
 - Bei Audio-/Musik-Aenderungen lokale Fallbacks, Provider-Ausfallpfade und `VITE_JAMENDO_CLIENT_ID` aus `.env.example` beachten.
 - Bei Zufallsbild-Features Provider-Ausfaelle und CORS-/Lizenz-/Attributionsdaten defensiv behandeln.
 - Nach Projektstruktur-, Workflow-, Befehls-, Persistenz- oder Architektur-Aenderungen diese `AGENTS.md` immer pruefen und bei Bedarf im selben Arbeitsgang aktualisieren.
+- Nach Aenderungen an Funktionsumfang, Setup, Befehlen, Datenhaltung, API, Projektstruktur oder Verifikation auch `README.md` immer pruefen und bei Bedarf im selben Arbeitsgang aktualisieren.
 - Bevorzuge kleine, lokale Fixes statt breiter Refactors.
 - Nach abgeschlossenen Codeaenderungen den Nutzer fragen, ob die Aenderungen nach GitHub gepusht werden sollen; wenn der Nutzer bereits ausdruecklich Push/Upload verlangt hat, committen und pushen.
 
