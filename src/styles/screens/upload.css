@@ -92,14 +92,13 @@
 }
 
 .upload-screen-icon {
-  --upload-screen-icon-url: none;
   flex: 0 0 auto;
   display: inline-block;
   width: 16px;
   height: 16px;
-  background: currentColor;
-  mask: var(--upload-screen-icon-url) center / contain no-repeat;
-  -webkit-mask: var(--upload-screen-icon-url) center / contain no-repeat;
+  color: currentColor;
+  transition: transform 0.22s ease, filter 0.22s ease;
+  vertical-align: -0.125em;
 }
 
 .upload-container h1 {
@@ -2751,6 +2750,13 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
     var(--glass-panel-shadow-hover);
+}
+
+.workspace-window-nav-button:hover:not(:disabled) .workspace-window-nav-icon,
+.saved-game-chip:hover .saved-game-chip-icon,
+.data-transfer-panel:hover .upload-section-title-icon {
+  transform: translateY(-1px) scale(1.08);
+  filter: drop-shadow(0 4px 9px color-mix(in srgb, var(--image-accent-solid) 20%, transparent));
 }
 
 .workspace-window-nav-button.is-active {
@@ -5629,14 +5635,11 @@
 }
 
 .gallery-card-info-chip-icon {
-  --global-ui-icon-url: none;
   display: inline-block;
   width: 13px;
   height: 13px;
-  background: currentColor;
   color: color-mix(in srgb, var(--primary-color) 64%, var(--text-muted));
-  mask: var(--global-ui-icon-url) center / contain no-repeat;
-  -webkit-mask: var(--global-ui-icon-url) center / contain no-repeat;
+  vertical-align: -0.125em;
 }
 
 .gallery-card-stats {

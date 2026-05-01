@@ -122,14 +122,13 @@
 }
 
 .start-screen-icon {
-  --start-screen-icon-url: none;
   flex: 0 0 auto;
   display: inline-block;
   width: 14px;
   height: 14px;
-  background: currentColor;
-  mask: var(--start-screen-icon-url) center / contain no-repeat;
-  -webkit-mask: var(--start-screen-icon-url) center / contain no-repeat;
+  color: currentColor;
+  transition: transform 0.22s ease, filter 0.22s ease;
+  vertical-align: -0.125em;
 }
 
 .start-screen-kicker-icon {
@@ -703,6 +702,13 @@
   border-color: color-mix(in srgb, var(--image-accent-solid) 52%, rgba(56, 189, 248, 0.26));
   background: var(--card-bg-hover);
   box-shadow: var(--panel-shadow-hover);
+}
+
+.start-screen-highlight-card:hover .start-screen-highlight-icon,
+.start-screen-feature-card:hover .start-screen-feature-item-icon,
+.start-screen-hero-panel:hover .start-screen-kicker-icon {
+  transform: translateY(-1px) scale(1.08) rotate(-4deg);
+  filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--image-accent-solid) 22%, transparent));
 }
 
 .start-screen-hero-panel:active,

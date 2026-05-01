@@ -8,6 +8,7 @@
 - App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, Backup und Musik.
 - Frontend: React 18 + TypeScript.
 - Animationen: `motion` / `motion/react`.
+- Icons: `lucide-react` fuer React-SVG-Icons, plus kuratierte lokale SVGs unter `src/assets/system/`.
 - Build, Dev-Server und Tests: Vite, TypeScript, Vitest und ESLint.
 - Lokale API: `localApi.ts` wird ueber `vite.config.ts` als Vite-Plugin eingebunden.
 - Persistenz: Spielstaende, Statistik und Galerie liegen lokal unter `spielstaende/`; Backups liegen unter `backups/`.
@@ -37,7 +38,7 @@
 - `src/types/index.ts`: zentrale Typdefinitionen.
 - `src/utils/`: Hilfslogik fuer Puzzle-Schwierigkeit, Run-Vergleich und Context-Window.
 - `src/styles/`: globale und screen-/component-spezifische CSS-Dateien.
-- `src/assets/system/`: kuratierte SVG-Icon-Sets fuer Screens und Kontextmenues.
+- `src/assets/system/`: kuratierte SVG-Icon-Sets fuer Kontextmenues und lokale Spezial-Icons; Screen-Icon-Komponenten koennen Lucide-Icons kapseln.
 - `public/audio/` und `public/fonts/`: statische Audio- und Font-Assets.
 - `src/test/`: Vitest-Tests und Test-Setup.
 - `scripts/generate-audio-assets.mjs`: Generierung lokaler Audio-Assets.

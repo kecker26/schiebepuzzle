@@ -192,7 +192,7 @@ export default function PuzzleRightPanel({
               >
                 <span className="puzzle-panel-kicker">
                   <span className="puzzle-panel-kicker-icon-shell" aria-hidden="true">
-                    <PuzzleScreenIcon name="crosshair" className="puzzle-panel-kicker-icon" />
+                    <PuzzleScreenIcon name="brain" className="puzzle-panel-kicker-icon" />
                   </span>
                   <span className="puzzle-preview-insight-kicker">Strategischer Fokus</span>
                 </span>

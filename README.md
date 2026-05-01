@@ -23,6 +23,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Vite 5 als Dev-Server und Build-Tool
 - HTML5 Canvas fuer Puzzle-Rendering
 - `motion` / `motion/react` fuer Animationen
+- `lucide-react` fuer konsistente React-SVG-Icons
 - Vitest, Testing Library und jsdom fuer Tests
 - ESLint mit TypeScript-, React-Hooks- und React-Refresh-Regeln
 - Lokale Vite-Middleware in `localApi.ts` fuer `/api/*`

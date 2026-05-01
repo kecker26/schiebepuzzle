@@ -541,7 +541,7 @@ export default function UploadDashboard({
               revealLevel="subtle"
             >
               <span className="workspace-window-nav-head">
-                <UploadScreenIcon name="image" className="workspace-window-nav-icon" />
+                <UploadScreenIcon name="gallery" className="workspace-window-nav-icon" />
                 <span className="workspace-window-nav-label">Galerie</span>
               </span>
               <span className="workspace-window-nav-copy">{galleryCardCount} Motive sichtbar</span>

@@ -57,14 +57,13 @@
 }
 
 .global-ui-icon {
-  --global-ui-icon-url: none;
   flex: 0 0 auto;
   display: inline-block;
   width: 14px;
   height: 14px;
-  background: currentColor;
-  mask: var(--global-ui-icon-url) center / contain no-repeat;
-  -webkit-mask: var(--global-ui-icon-url) center / contain no-repeat;
+  color: currentColor;
+  transition: transform 0.16s ease;
+  vertical-align: -0.125em;
 }
 
 .puzzle-context-menu-item:hover,
@@ -77,6 +76,12 @@
 
 .puzzle-context-menu-item:focus-visible {
   box-shadow: var(--focus-ring);
+}
+
+.puzzle-context-menu-item:hover .global-ui-icon,
+.puzzle-context-menu-item:focus-visible .global-ui-icon,
+.puzzle-context-menu-item[data-active='true'] .global-ui-icon {
+  transform: scale(1.08);
 }
 
 .puzzle-context-menu-item:active {

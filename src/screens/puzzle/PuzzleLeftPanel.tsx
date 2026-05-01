@@ -196,7 +196,7 @@ export default function PuzzleLeftPanel({
           <div className="puzzle-stat-card">
             <div className="puzzle-stat-head">
               <span className="puzzle-stat-icon-shell" aria-hidden="true">
-                <PuzzleScreenIcon name="move" className="puzzle-stat-icon" />
+                <PuzzleScreenIcon name="route" className="puzzle-stat-icon" />
               </span>
               <span className="puzzle-stat-label">Deine Zuege</span>
             </div>
@@ -206,7 +206,7 @@ export default function PuzzleLeftPanel({
           <div className="puzzle-stat-card">
             <div className="puzzle-stat-head">
               <span className="puzzle-stat-icon-shell" aria-hidden="true">
-                <PuzzleScreenIcon name="clock" className="puzzle-stat-icon" />
+                <PuzzleScreenIcon name="timer" className="puzzle-stat-icon" />
               </span>
               <span className="puzzle-stat-label">Zeit</span>
             </div>
@@ -268,7 +268,7 @@ export default function PuzzleLeftPanel({
           <div className="puzzle-hint-header">
             <span className="puzzle-panel-kicker">
               <span className="puzzle-panel-kicker-icon-shell" aria-hidden="true">
-                <PuzzleScreenIcon name="helpCircle" className="puzzle-panel-kicker-icon" />
+                <PuzzleScreenIcon name="lightbulb" className="puzzle-panel-kicker-icon" />
               </span>
               <span className="puzzle-hint-kicker">Naechster Hinweis</span>
             </span>
