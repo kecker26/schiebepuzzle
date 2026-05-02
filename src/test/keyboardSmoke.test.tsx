@@ -11,6 +11,7 @@ import { useButtonOnlyTabNavigation } from '../app/useButtonOnlyTabNavigation.ts
 import { useCommandPaletteShortcuts } from '../app/useCommandPaletteShortcuts.ts'
 import { useGlobalHelpShortcuts } from '../app/useGlobalHelpShortcuts.ts'
 import { useGlobalPrimaryFocusShortcut } from '../app/useGlobalPrimaryFocusShortcut.ts'
+import { usePuzzleKeyboardShortcuts } from '../screens/puzzle/usePuzzleKeyboardShortcuts.ts'
 import {
   clearCropDraftSessionSnapshot,
   readCropDraftSessionSnapshot,
@@ -60,6 +61,7 @@ import type {
   SavedGameSummary,
   SolvedGallery,
   SolvedGalleryEntry,
+  PuzzleState,
 } from '../types/index'
 
 vi.mock('../services/BackupService.ts', async () => {
@@ -1816,6 +1818,63 @@ describe('keyboard smoke tests', () => {
 
     expect(document.activeElement).toBe(primaryButton)
     expect(focusRoot.scrollTop).toBe(0)
+  })
+
+  it('focuses the puzzle board with B even when a form control has focus', () => {
+    const activePuzzleState: PuzzleState = {
+      tiles: [],
+      board: [],
+      emptyIndex: 0,
+      emptyRow: 0,
+      emptyCol: 0,
+      moveCount: 0,
+      startTime: 0,
+      isSolved: false,
+      isAnimating: false,
+      dragState: null,
+    }
+
+    function PuzzleBoardFocusShortcutHarness() {
+      const boardRef = React.useRef<HTMLCanvasElement>(null)
+
+      usePuzzleKeyboardShortcuts({
+        isRestartConfirmOpen: false,
+        isHelpOpen: false,
+        puzzleState: activePuzzleState,
+        isInteractionLocked: false,
+        onFocusBoard: () => boardRef.current?.focus(),
+        onQuit: vi.fn(),
+        onTogglePreview: vi.fn(),
+        onToggleGhostPreview: vi.fn(),
+        onToggleHeatmapOverlay: vi.fn(),
+        onShowTileNumbers: vi.fn(),
+        onSuggestedMove: vi.fn(),
+        onShowHint: vi.fn(),
+        onRestart: vi.fn(),
+        onUndo: vi.fn(),
+        onRedo: vi.fn(),
+      })
+
+      return (
+        <div>
+          <label>
+            Lautstaerke
+            <input type="range" min="0" max="100" defaultValue="50" />
+          </label>
+          <canvas ref={boardRef} tabIndex={0} aria-label="Puzzlebrett" />
+        </div>
+      )
+    }
+
+    render(<PuzzleBoardFocusShortcutHarness />)
+
+    const volumeSlider = screen.getByLabelText('Lautstaerke')
+    const board = screen.getByLabelText('Puzzlebrett')
+
+    volumeSlider.focus()
+    fireEvent.keyDown(volumeSlider, { key: 'b' })
+
+    expect(document.activeElement).toBe(board)
   })
 
   it('scrolls focused actions smoothly into view while tabbing even if they are only partly visible', () => {

@@ -1594,6 +1594,80 @@ export default function PuzzleScreen({
     return true
   }
 
+  const startHistoryMoveAnimation = (
+    fromState: PuzzleState,
+    tileId: string,
+    onComplete: () => void
+  ): boolean => {
+    if (animationFrameRef.current !== null) {
+      return false
+    }
+
+    const tile = fromState.tiles.find((entry) => entry.id === tileId)
+    if (!tile || tile.isEmpty) return false
+
+    const animation: TileMoveAnimation = {
+      tileId,
+      fromRow: tile.row,
+      fromCol: tile.col,
+      toRow: fromState.emptyRow,
+      toCol: fromState.emptyCol,
+      progress: 0,
+    }
+
+    audioService.activate()
+    audioService.playMove()
+    stopAnimationFrame()
+    setPuzzleState((prev) =>
+      prev
+        ? {
+            ...prev,
+            isAnimating: true,
+            dragState: null,
+            tiles: prev.tiles.map((entry) => ({ ...entry, isDragging: false })),
+          }
+        : null
+    )
+    setMoveAnimation(animation)
+
+    const startedAt = performance.now()
+    const animate = (timestamp: number) => {
+      const progress = Math.min(1, (timestamp - startedAt) / MOVE_ANIMATION_DURATION_MS)
+      setMoveAnimation((prev) => (prev ? { ...prev, progress } : null))
+
+      if (progress < 1) {
+        animationFrameRef.current = window.requestAnimationFrame(animate)
+        return
+      }
+
+      animationFrameRef.current = null
+      setMoveAnimation(null)
+      onComplete()
+    }
+
+    animationFrameRef.current = window.requestAnimationFrame(animate)
+    return true
+  }
+
+  const didTileReachCorrectPlace = (
+    fromState: PuzzleState,
+    toState: PuzzleState,
+    tileId: string
+  ): boolean => {
+    const movedTileBefore = fromState.tiles.find((tile) => tile.id === tileId)
+    const movedTileAfter = toState.tiles.find((tile) => tile.id === tileId)
+
+    return Boolean(
+      movedTileBefore &&
+        movedTileAfter &&
+        !movedTileBefore.isEmpty &&
+        !movedTileAfter.isEmpty &&
+        (movedTileBefore.row !== movedTileBefore.correctRow || movedTileBefore.col !== movedTileBefore.correctCol) &&
+        movedTileAfter.row === movedTileAfter.correctRow &&
+        movedTileAfter.col === movedTileAfter.correctCol
+    )
+  }
+
   const getTileIdFromCanvasEvent = (event: React.MouseEvent<HTMLCanvasElement>): string | null => {
     if (!canvasRef.current || !puzzleState || !engineRef.current) return null
 
@@ -1880,17 +1954,31 @@ export default function PuzzleScreen({
     hideTileNumbers()
     cancelSuggestionFlow()
     clearCorrectTilePulse()
+    clearInvalidTileFeedback()
     const currentState = normalizePuzzleState(puzzleState, config)
     const previousState = normalizePuzzleState(moveHistory[moveHistory.length - 1], config)
-    syncTrackedPathToState(previousState)
-    setMoveHistory((prev) => prev.slice(0, -1))
-    setRedoHistory((prev) => [...prev.slice(-(HISTORY_LIMIT - 1)), currentState])
-    setPuzzleState(previousState)
-    setMoveCount(previousState.moveCount)
-    setRunMetrics((prev) => ({
-      ...prev,
-      undoCount: prev.undoCount + 1,
-    }))
+    const moveRecord = createMoveRecordForStates(previousState, currentState, currentState.moveCount)
+
+    const commitUndoMove = () => {
+      syncTrackedPathToState(previousState)
+      setMoveHistory((prev) => prev.slice(0, -1))
+      setRedoHistory((prev) => [...prev.slice(-(HISTORY_LIMIT - 1)), currentState])
+      setPuzzleState(previousState)
+      setMoveCount(previousState.moveCount)
+      setRunMetrics((prev) => ({
+        ...prev,
+        undoCount: prev.undoCount + 1,
+      }))
+      if (moveRecord && didTileReachCorrectPlace(currentState, previousState, moveRecord.tileId)) {
+        startCorrectTilePulse(moveRecord.tileId)
+      }
+    }
+
+    if (moveRecord && startHistoryMoveAnimation(currentState, moveRecord.tileId, commitUndoMove)) {
+      return
+    }
+
+    commitUndoMove()
   }
 
   const handleRedoMove = () => {
@@ -1899,25 +1987,37 @@ export default function PuzzleScreen({
     hideTileNumbers()
     cancelSuggestionFlow()
     clearCorrectTilePulse()
+    clearInvalidTileFeedback()
     const currentState = normalizePuzzleState(puzzleState, config)
     const nextState = normalizePuzzleState(redoHistory[redoHistory.length - 1], config)
     const moveRecord = createMoveRecordForStates(currentState, nextState, nextState.moveCount)
 
-    if (moveRecord) {
-      recordTrackedMove(nextState, moveRecord.tileId)
-    } else {
-      syncTrackedPathToState(nextState)
+    const commitRedoMove = () => {
+      if (moveRecord) {
+        recordTrackedMove(nextState, moveRecord.tileId)
+      } else {
+        syncTrackedPathToState(nextState)
+      }
+
+      setRedoHistory((prev) => prev.slice(0, -1))
+      setMoveHistory((prev) => [...prev.slice(-(HISTORY_LIMIT - 1)), currentState])
+      setPuzzleState(nextState)
+      setMoveCount(nextState.moveCount)
+      setRunMetrics((prev) => ({
+        ...prev,
+        actionMoves: prev.actionMoves + 1,
+        redoCount: prev.redoCount + 1,
+      }))
+      if (moveRecord && didTileReachCorrectPlace(currentState, nextState, moveRecord.tileId)) {
+        startCorrectTilePulse(moveRecord.tileId)
+      }
     }
 
-    setRedoHistory((prev) => prev.slice(0, -1))
-    setMoveHistory((prev) => [...prev.slice(-(HISTORY_LIMIT - 1)), currentState])
-    setPuzzleState(nextState)
-    setMoveCount(nextState.moveCount)
-    setRunMetrics((prev) => ({
-      ...prev,
-      actionMoves: prev.actionMoves + 1,
-      redoCount: prev.redoCount + 1,
-    }))
+    if (moveRecord && startHistoryMoveAnimation(currentState, moveRecord.tileId, commitRedoMove)) {
+      return
+    }
+
+    commitRedoMove()
   }
 
   const handleSuggestedMoveFromHotkey = () => {
