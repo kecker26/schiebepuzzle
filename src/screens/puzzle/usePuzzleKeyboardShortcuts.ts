@@ -36,11 +36,9 @@ export function usePuzzleKeyboardShortcuts({
   onRestart,
   onUndo,
   onRedo,
-}: UsePuzzleKeyboardShortcutsOptions): void {
+  }: UsePuzzleKeyboardShortcutsOptions): void {
   useEffect(() => {
     const handleWindowKeyDown = (event: KeyboardEvent) => {
-      if (isKeyboardShortcutBlockedTarget(event.target, { allowMarkedButtons: true, key: event.key })) return
-
       const key = event.key.toLowerCase()
 
       if (isHelpOpen) {
@@ -50,6 +48,18 @@ export function usePuzzleKeyboardShortcuts({
       if (isRestartConfirmOpen) return
 
       const hasCommandModifier = event.ctrlKey || event.metaKey
+
+      if (!hasCommandModifier && !event.altKey && key === 'b') {
+        if (!puzzleState || puzzleState.isSolved) return
+
+        event.preventDefault()
+        if (event.repeat) return
+
+        onFocusBoard()
+        return
+      }
+
+      if (isKeyboardShortcutBlockedTarget(event.target, { allowMarkedButtons: true, key: event.key })) return
 
       if (hasCommandModifier && !event.altKey) {
         if (!puzzleState || puzzleState.isSolved || isInteractionLocked) return
@@ -81,14 +91,6 @@ export function usePuzzleKeyboardShortcuts({
       }
 
       if (!puzzleState || puzzleState.isSolved) return
-
-      if (key === 'b') {
-        event.preventDefault()
-        if (event.repeat) return
-
-        onFocusBoard()
-        return
-      }
 
       if (key === ' ' || key === 'spacebar') {
         event.preventDefault()
