@@ -1,8 +1,11 @@
 import {
+  AlertTriangle,
   Crop,
   Grid3X3,
+  Image,
   Maximize,
   Move,
+  Play,
   RefreshCw,
   RotateCcw,
   RotateCw,
@@ -13,10 +16,13 @@ import {
 } from 'lucide-react'
 
 const cropScreenIconAssets = {
+  alertTriangle: AlertTriangle,
   crop: Crop,
   grid: Grid3X3,
+  image: Image,
   maximize: Maximize,
   move: Move,
+  play: Play,
   refreshCw: RefreshCw,
   rotateCcw: RotateCcw,
   rotateCw: RotateCw,

@@ -201,6 +201,41 @@ export function exportCroppedImage(
   return exportCanvas.toDataURL(mimeType, quality)
 }
 
+export function exportFullImage(
+  image: HTMLImageElement,
+  rotationDeg: number,
+  options: CropExportOptions = {}
+): string {
+  const rotationRad = toRadians(normalizeAngle(rotationDeg))
+  const rotatedBounds = computeRotatedBounds(image.width, image.height, rotationRad)
+  const maxEdge = options.maxEdge ?? DEFAULT_EXPORT_EDGE
+  const mimeType = options.mimeType ?? 'image/jpeg'
+  const quality = options.quality ?? 0.9
+  const scale = Math.min(1, maxEdge / Math.max(rotatedBounds.width, rotatedBounds.height))
+  const exportWidth = Math.max(1, Math.round(rotatedBounds.width * scale))
+  const exportHeight = Math.max(1, Math.round(rotatedBounds.height * scale))
+
+  const exportCanvas = document.createElement('canvas')
+  exportCanvas.width = exportWidth
+  exportCanvas.height = exportHeight
+
+  const exportCtx = exportCanvas.getContext('2d')
+  if (!exportCtx) {
+    throw new Error('Canvas context not available')
+  }
+
+  exportCtx.fillStyle = '#ffffff'
+  exportCtx.fillRect(0, 0, exportWidth, exportHeight)
+  exportCtx.save()
+  exportCtx.translate(exportWidth / 2, exportHeight / 2)
+  exportCtx.rotate(rotationRad)
+  exportCtx.scale(scale, scale)
+  exportCtx.drawImage(image, -image.width / 2, -image.height / 2)
+  exportCtx.restore()
+
+  return exportCanvas.toDataURL(mimeType, quality)
+}
+
 export function createDefaultCropTransform(): CropTransform {
   return {
     zoom: 1,

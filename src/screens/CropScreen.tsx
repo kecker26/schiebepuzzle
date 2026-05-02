@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'motion/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import { type AppContextMenuHandler, type AppContextMenuRequest } from '../app/appContextMenu.ts'
 import { handleDirectionalFocusNavigation } from '../app/directionalFocusNavigation.ts'
 import { handleSelectEnterKeyDown } from '../app/formControlUtils.ts'
@@ -13,6 +13,7 @@ import {
   createDefaultCropTransform,
   CropTransform,
   exportCroppedImage,
+  exportFullImage,
   getCropViewportSize,
   renderCropPreview,
 } from '../services/CropService.ts'
@@ -21,7 +22,7 @@ import ErrorToast from '../components/ErrorToast.tsx'
 import '../styles/screens/crop.css'
 import { PuzzleConfig } from '../types/index'
 import { shouldPreserveNativeContextMenu } from '../utils/contextWindow.ts'
-import { DIFFICULTY_OPTIONS } from '../utils/puzzleDifficulty.ts'
+import { DIFFICULTY_OPTIONS, getDifficultyOption } from '../utils/puzzleDifficulty.ts'
 
 interface CropScreenProps {
   image: string
@@ -70,7 +71,7 @@ export default function CropScreen({
   const screenRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const previewStageRef = useRef<HTMLDivElement>(null)
-  const sizeSelectRef = useRef<HTMLSelectElement>(null)
+  const activeDifficultyButtonRef = useRef<HTMLButtonElement>(null)
   const dragRef = useRef<{ pointerId: number; lastX: number; lastY: number } | null>(null)
   const initialTransformRef = useRef<CropTransform | null>(initialTransform)
   const initialUseFullImageRef = useRef(initialUseFullImage)
@@ -80,12 +81,19 @@ export default function CropScreen({
   const [isDragging, setIsDragging] = useState(false)
   const [imageLoadError, setImageLoadError] = useState(false)
   const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null)
+  const [cropPreviewDisplaySize, setCropPreviewDisplaySize] = useState(320)
 
   const zoomPercent = Math.round((transform.zoom - 1) * 100)
-  const aspectRatio = config.cols / config.rows
-  const viewportSize = useMemo(() => getCropViewportSize(aspectRatio), [aspectRatio])
+  const cropAspectRatio = 1
+  const viewportSize = useMemo(() => getCropViewportSize(cropAspectRatio), [])
   const modeIconName: CropScreenIconName = useFullImage ? 'maximize' : 'crop'
   const hintIconName: CropScreenIconName = useFullImage ? 'maximize' : 'move'
+  const selectedDifficulty = getDifficultyOption(config)
+  const selectedDifficultyLabel = selectedDifficulty
+    ? `${selectedDifficulty.label} ${selectedDifficulty.description}`
+    : `${config.rows}x${config.cols}`
+  const previewTileCount = config.rows * config.cols
+  const fullImageRotationDeg = ((transform.rotationDeg % 360) + 360) % 360
 
   useEffect(() => {
     initialTransformRef.current = initialTransform
@@ -126,7 +134,7 @@ export default function CropScreen({
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
-      sizeSelectRef.current?.focus({ preventScroll: true })
+      activeDifficultyButtonRef.current?.focus({ preventScroll: true })
     })
 
     return () => {
@@ -188,10 +196,55 @@ export default function CropScreen({
     }
   }, [sourceImage, transform, viewportSize.width, viewportSize.height, useFullImage])
 
+  useEffect(() => {
+    if (useFullImage || !sourceImage) return
+
+    const wrapper = previewStageRef.current?.parentElement
+    if (!wrapper) return
+
+    const updatePreviewSize = () => {
+      const computed = window.getComputedStyle(wrapper)
+      const horizontalPadding = parseFloat(computed.paddingLeft) + parseFloat(computed.paddingRight)
+      const verticalPadding = parseFloat(computed.paddingTop) + parseFloat(computed.paddingBottom)
+      const availableWidth = wrapper.clientWidth - horizontalPadding
+      const availableHeight = wrapper.clientHeight - verticalPadding
+      const nextSize = Math.round(Math.max(220, Math.min(560, availableWidth, availableHeight)))
+
+      setCropPreviewDisplaySize((previousSize) => (
+        Math.abs(previousSize - nextSize) > 1 ? nextSize : previousSize
+      ))
+    }
+
+    updatePreviewSize()
+
+    const observer = new ResizeObserver(updatePreviewSize)
+    observer.observe(wrapper)
+    window.addEventListener('resize', updatePreviewSize)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', updatePreviewSize)
+    }
+  }, [sourceImage, useFullImage])
+
   const handleConfirm = () => {
     if (!sourceImage) return
     if (useFullImage) {
-      onCropConfirmed(image)
+      if (fullImageRotationDeg === 0) {
+        onCropConfirmed(image)
+        return
+      }
+
+      try {
+        const rotated = exportFullImage(sourceImage, fullImageRotationDeg, {
+          maxEdge: 1800,
+          quality: 0.9,
+          mimeType: 'image/jpeg',
+        })
+        onCropConfirmed(rotated)
+      } catch {
+        onCropConfirmed(image)
+      }
       return
     }
 
@@ -203,7 +256,7 @@ export default function CropScreen({
     ).transform
 
     try {
-      const cropped = exportCroppedImage(sourceImage, aspectRatio, bounded, viewportSize, {
+      const cropped = exportCroppedImage(sourceImage, cropAspectRatio, bounded, viewportSize, {
         maxEdge: 1800,
         quality: 0.9,
         mimeType: 'image/jpeg',
@@ -359,7 +412,7 @@ export default function CropScreen({
       return
     }
 
-    if (!sourceImage || useFullImage) {
+    if (!sourceImage) {
       return
     }
 
@@ -368,36 +421,44 @@ export default function CropScreen({
 
     switch (event.key) {
       case 'ArrowLeft':
+        if (useFullImage) return
         event.preventDefault()
         handleNudgeCrop(-moveStep, 0)
         return
       case 'ArrowRight':
+        if (useFullImage) return
         event.preventDefault()
         handleNudgeCrop(moveStep, 0)
         return
       case 'ArrowUp':
+        if (useFullImage) return
         event.preventDefault()
         handleNudgeCrop(0, -moveStep)
         return
       case 'ArrowDown':
+        if (useFullImage) return
         event.preventDefault()
         handleNudgeCrop(0, moveStep)
         return
       case '+':
       case '=':
+        if (useFullImage) return
         event.preventDefault()
         handleZoomChange(transform.zoom + zoomStep)
         return
       case '-':
       case '_':
+        if (useFullImage) return
         event.preventDefault()
         handleZoomChange(transform.zoom - zoomStep)
         return
       case 'PageUp':
+        if (useFullImage) return
         event.preventDefault()
         handleZoomChange(transform.zoom + KEYBOARD_ZOOM_STEP_LARGE)
         return
       case 'PageDown':
+        if (useFullImage) return
         event.preventDefault()
         handleZoomChange(transform.zoom - KEYBOARD_ZOOM_STEP_LARGE)
         return
@@ -464,11 +525,11 @@ export default function CropScreen({
       disabled: !sourceImage,
     },
     {
-      label: 'Ausschnitt resetten',
+      label: useFullImage ? 'Rotation resetten' : 'Ausschnitt resetten',
       icon: 'rotateCcw',
       meta: 'Reset',
       onClick: handleResetCrop,
-      disabled: !sourceImage || useFullImage,
+      disabled: !sourceImage,
     },
     ...(isRandomImage && onFetchNewRandomImage
       ? [
@@ -490,18 +551,27 @@ export default function CropScreen({
     <div ref={screenRef} className="crop-screen" data-page-focus-root="true" onContextMenu={handleOpenContextWindow}>
       <AnimatedStaggerGroup className="crop-container" level="medium">
         <AnimatedReveal as="header" level="medium">
-          <h2>
-            <span className="crop-title-icon-shell" aria-hidden="true">
-              <CropScreenIcon name="scan" className="crop-title-icon" />
-            </span>
-            <span>Einstellungen</span>
-          </h2>
+          <div className="crop-header">
+            <div className="crop-header-title">
+              <span className="crop-title-icon-shell" aria-hidden="true">
+                <CropScreenIcon name="scan" className="crop-title-icon" />
+              </span>
+              <div>
+                <span className="crop-kicker">Puzzle vorbereiten</span>
+                <h2>Einstellungen</h2>
+              </div>
+            </div>
+            <div className="crop-header-summary" aria-label="Aktuelle Auswahl">
+              <span>{selectedDifficultyLabel}</span>
+              <span>{useFullImage ? 'Komplettes Bild' : 'Ausschnitt aktiv'}</span>
+            </div>
+          </div>
         </AnimatedReveal>
 
         <ErrorToast message={randomImageError || null} />
 
         {isRandomImage && randomImageSource?.label && (
-          <AnimatedReveal level="medium">
+          <AnimatedReveal className="crop-source-row" level="medium">
             <p className="crop-random-source">
               Quelle:{' '}
               {randomImageSource.url ? (
@@ -515,33 +585,55 @@ export default function CropScreen({
           </AnimatedReveal>
         )}
 
-        <AnimatedStaggerGroup className="crop-controls" level="medium">
-          <AnimatedReveal className="config-selector crop-control-block" level="medium">
-            <label htmlFor="puzzle-size" className="crop-control-label">
+        <div className="crop-side-panel">
+          <AnimatedStaggerGroup className="crop-controls" level="medium">
+            <AnimatedReveal className="config-selector crop-control-block" level="medium">
+            <div id="puzzle-size-label" className="crop-control-label">
               <span className="crop-control-label-head">
                 <span className="crop-control-label-icon-shell" aria-hidden="true">
                   <CropScreenIcon name="grid" className="crop-control-label-icon" />
                 </span>
-                <span>Schwierigkeitsgrad:</span>
+                <span>Schwierigkeitsgrad</span>
               </span>
-            </label>
-            <select
-              ref={sizeSelectRef}
-              id="puzzle-size"
-              data-page-primary-focus="true"
-              value={`${config.rows}x${config.cols}`}
-              onKeyDown={handleSelectEnterKeyDown}
-              onChange={(event) => {
-                const [rows, cols] = event.target.value.split('x').map(Number)
-                onConfigChange(rows, cols)
-              }}
+            </div>
+            <AnimatedStaggerGroup
+              className="crop-difficulty-grid"
+              role="radiogroup"
+              aria-labelledby="puzzle-size-label"
+              level="subtle"
+              onKeyDown={handleDirectionalFocusNavigation}
             >
               {DIFFICULTY_OPTIONS.map((option) => (
-                <option key={option.key} value={`${option.rows}x${option.cols}`}>
-                  {option.label} - {option.description} ({option.tileCount} Kacheln)
-                </option>
+                <button
+                  key={option.key}
+                  ref={option.rows === config.rows && option.cols === config.cols ? activeDifficultyButtonRef : undefined}
+                  type="button"
+                  className={`crop-difficulty-card${option.rows === config.rows && option.cols === config.cols ? ' is-active' : ''}`}
+                  role="radio"
+                  aria-checked={option.rows === config.rows && option.cols === config.cols}
+                  data-page-primary-focus={option.rows === config.rows && option.cols === config.cols ? 'true' : undefined}
+                  onClick={() => onConfigChange(option.rows, option.cols)}
+                >
+                  <span className="crop-difficulty-card-top">
+                    <span className="crop-difficulty-card-label">{option.label}</span>
+                    <span className="crop-difficulty-card-size">{option.description}</span>
+                  </span>
+                  <span
+                    className="crop-difficulty-mini-grid"
+                    style={{
+                      '--difficulty-grid-rows': option.rows,
+                      '--difficulty-grid-cols': option.cols,
+                    } as CSSProperties}
+                    aria-hidden="true"
+                  >
+                    {Array.from({ length: option.tileCount }, (_, index) => (
+                      <span key={index} />
+                    ))}
+                  </span>
+                  <span className="crop-difficulty-card-meta">{option.tileCount} Kacheln</span>
+                </button>
               ))}
-            </select>
+            </AnimatedStaggerGroup>
           </AnimatedReveal>
 
           <AnimatedReveal className="crop-control-block" level="medium">
@@ -568,91 +660,106 @@ export default function CropScreen({
           </AnimatedReveal>
 
           {!useFullImage && (
-            <>
-              <AnimatedReveal className="crop-control-block" level="medium">
-                <label htmlFor="crop-zoom" className="crop-control-label">
-                  <span className="crop-control-label-head">
-                    <span className="crop-control-label-icon-shell" aria-hidden="true">
-                      <CropScreenIcon name="zoomIn" className="crop-control-label-icon" />
-                    </span>
-                    <span>
-                      Zoom: {zoomPercent > 0 ? `+${zoomPercent}%` : `${zoomPercent}%`} ({transform.zoom.toFixed(2)}x)
-                    </span>
+            <AnimatedReveal className="crop-control-block" level="medium">
+              <label htmlFor="crop-zoom" className="crop-control-label">
+                <span className="crop-control-label-head">
+                  <span className="crop-control-label-icon-shell" aria-hidden="true">
+                    <CropScreenIcon name="zoomIn" className="crop-control-label-icon" />
                   </span>
-                </label>
-                <input
-                  id="crop-zoom"
-                  type="range"
-                  min={0}
-                  max={300}
-                  step={1}
-                  value={zoomPercent}
-                  onChange={(event) => handleZoomPercentChange(Number(event.target.value))}
-                  disabled={!sourceImage}
-                />
-              </AnimatedReveal>
-
-              <AnimatedReveal className="crop-control-block" level="medium">
-                <label className="crop-control-label">
-                  <span className="crop-control-label-head">
-                    <span className="crop-control-label-icon-shell" aria-hidden="true">
-                      <CropScreenIcon name="rotateCw" className="crop-control-label-icon" />
-                    </span>
-                    <span>Rotation:</span>
+                  <span>
+                    Zoom: {zoomPercent > 0 ? `+${zoomPercent}%` : `${zoomPercent}%`} ({transform.zoom.toFixed(2)}x)
                   </span>
-                </label>
-                <AnimatedStaggerGroup
-                  className="crop-rotation-buttons"
-                  level="subtle"
-                  onKeyDown={handleDirectionalFocusNavigation}
-                >
-                  <AnimatedButton
-                    className="secondary"
-                    onClick={() => handleRotateCrop(-90)}
-                    disabled={!sourceImage}
-                    reveal
-                    revealLevel="subtle"
-                  >
-                    <span className="crop-inline-button-content">
-                      <CropScreenIcon name="rotateCcw" className="crop-inline-button-icon" />
-                      <span>-90 Grad</span>
-                    </span>
-                  </AnimatedButton>
-                  <AnimatedButton
-                    className="secondary"
-                    onClick={() => handleRotateCrop(90)}
-                    disabled={!sourceImage}
-                    reveal
-                    revealLevel="subtle"
-                  >
-                    <span className="crop-inline-button-content">
-                      <CropScreenIcon name="rotateCw" className="crop-inline-button-icon" />
-                      <span>+90 Grad</span>
-                    </span>
-                  </AnimatedButton>
-                  <AnimatedButton
-                    className="secondary"
-                    onClick={handleResetCrop}
-                    disabled={!sourceImage}
-                    reveal
-                    revealLevel="subtle"
-                  >
-                    <span className="crop-inline-button-content">
-                      <CropScreenIcon name="refreshCw" className="crop-inline-button-icon" />
-                      <span>Reset</span>
-                    </span>
-                  </AnimatedButton>
-                </AnimatedStaggerGroup>
-              </AnimatedReveal>
-            </>
+                </span>
+              </label>
+              <input
+                id="crop-zoom"
+                type="range"
+                min={0}
+                max={300}
+                step={1}
+                value={zoomPercent}
+                onChange={(event) => handleZoomPercentChange(Number(event.target.value))}
+                disabled={!sourceImage}
+              />
+            </AnimatedReveal>
           )}
-        </AnimatedStaggerGroup>
+
+          <AnimatedReveal className="crop-control-block" level="medium">
+            <label className="crop-control-label">
+              <span className="crop-control-label-head">
+                <span className="crop-control-label-icon-shell" aria-hidden="true">
+                  <CropScreenIcon name="rotateCw" className="crop-control-label-icon" />
+                </span>
+                <span>Rotation:</span>
+              </span>
+            </label>
+            <AnimatedStaggerGroup
+              className="crop-rotation-buttons"
+              level="subtle"
+              onKeyDown={handleDirectionalFocusNavigation}
+            >
+              <AnimatedButton
+                className="secondary"
+                onClick={() => handleRotateCrop(-90)}
+                disabled={!sourceImage}
+                reveal
+                revealLevel="subtle"
+              >
+                <span className="crop-inline-button-content">
+                  <CropScreenIcon name="rotateCcw" className="crop-inline-button-icon" />
+                  <span>-90 Grad</span>
+                </span>
+              </AnimatedButton>
+              <AnimatedButton
+                className="secondary"
+                onClick={() => handleRotateCrop(90)}
+                disabled={!sourceImage}
+                reveal
+                revealLevel="subtle"
+              >
+                <span className="crop-inline-button-content">
+                  <CropScreenIcon name="rotateCw" className="crop-inline-button-icon" />
+                  <span>+90 Grad</span>
+                </span>
+              </AnimatedButton>
+              <AnimatedButton
+                className="secondary"
+                onClick={handleResetCrop}
+                disabled={!sourceImage}
+                reveal
+                revealLevel="subtle"
+              >
+                <span className="crop-inline-button-content">
+                  <CropScreenIcon name="refreshCw" className="crop-inline-button-icon" />
+                  <span>Reset</span>
+                </span>
+              </AnimatedButton>
+            </AnimatedStaggerGroup>
+          </AnimatedReveal>
+          </AnimatedStaggerGroup>
+
+          <AnimatedReveal className="crop-hint-row" level="medium">
+            <p id="crop-hint" className="crop-hint">
+              <span className="crop-hint-icon-shell" aria-hidden="true">
+                <CropScreenIcon name={hintIconName} className="crop-hint-icon" />
+              </span>
+              <span className="crop-hint-copy">
+              {useFullImage
+                ? 'Komplettes Bild aktiv: Q/E oder die Rotationstasten drehen das Bild, R setzt zurueck, Enter startet direkt.'
+                : 'Ausschnitt aktiv: Ziehen zum Verschieben oder den Vorschaubereich fokussieren und mit Pfeiltasten, Shift plus Pfeiltasten, Plus/Minus, Q/E und R arbeiten.'}
+              </span>
+            </p>
+          </AnimatedReveal>
+        </div>
 
         <AnimatedReveal className="crop-preview-wrapper" interaction="surface" level="medium">
           {sourceImage ? (
             <div
               ref={previewStageRef}
               className={`crop-preview-stage${useFullImage ? ' is-full-image' : ' is-croppable'}`}
+              style={!useFullImage ? {
+                '--crop-preview-size': `${cropPreviewDisplaySize}px`,
+              } as CSSProperties : undefined}
               tabIndex={0}
               data-tab-actionable="true"
               role="group"
@@ -666,10 +773,40 @@ export default function CropScreen({
             >
               {useFullImage ? (
                 <div className="crop-full-image-stage">
-                  <img src={image} alt="Volles Bild" className="crop-full-image-preview" />
+                  <div
+                    className="crop-full-image-frame"
+                    style={{
+                      '--full-image-rotation': `${fullImageRotationDeg}deg`,
+                      '--crop-grid-rows': config.rows,
+                      '--crop-grid-cols': config.cols,
+                    } as CSSProperties}
+                  >
+                    <img src={image} alt="Volles Bild" className="crop-full-image-preview" />
+                    <div className="crop-tile-preview-grid crop-tile-preview-grid-full" aria-hidden="true">
+                      {Array.from({ length: previewTileCount }, (_, index) => (
+                        <span key={index} />
+                      ))}
+                    </div>
+                    <span className="crop-full-image-badge" aria-hidden="true">
+                      <CropScreenIcon name="image" className="crop-full-image-badge-icon" />
+                      Komplett
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <div className="crop-canvas-stage">
+                  <div
+                    className="crop-tile-preview-grid"
+                    style={{
+                      '--crop-grid-rows': config.rows,
+                      '--crop-grid-cols': config.cols,
+                    } as CSSProperties}
+                    aria-hidden="true"
+                  >
+                    {Array.from({ length: previewTileCount }, (_, index) => (
+                      <span key={index} />
+                    ))}
+                  </div>
                   <canvas
                     ref={canvasRef}
                     className={`crop-canvas${isDragging ? ' is-dragging' : ''}`}
@@ -680,6 +817,15 @@ export default function CropScreen({
                     onPointerUp={handlePointerUp}
                     onPointerCancel={handlePointerUp}
                   />
+                  <div className="crop-frame-handles" aria-hidden="true">
+                    <span className="is-top-left" />
+                    <span className="is-top-right" />
+                    <span className="is-bottom-left" />
+                    <span className="is-bottom-right" />
+                  </div>
+                  <span className="crop-canvas-badge" aria-hidden="true">
+                    {selectedDifficultyLabel}
+                  </span>
                 </div>
               )}
             </div>
@@ -695,19 +841,6 @@ export default function CropScreen({
           ) : (
             <div className="crop-loading">Bild wird geladen ...</div>
           )}
-        </AnimatedReveal>
-
-        <AnimatedReveal level="medium">
-          <p id="crop-hint" className="crop-hint">
-            <span className="crop-hint-icon-shell" aria-hidden="true">
-              <CropScreenIcon name={hintIconName} className="crop-hint-icon" />
-            </span>
-            <span className="crop-hint-copy">
-            {useFullImage
-              ? 'Komplettes Bild aktiv: Enter startet direkt, Escape geht zurueck. Fuer den Zuschnitt per Tastatur einfach zum Vorschaubereich oder den Steuerelementen tabben.'
-              : 'Ausschnitt aktiv: Ziehen zum Verschieben oder den Vorschaubereich fokussieren und mit Pfeiltasten, Shift plus Pfeiltasten, Plus/Minus, Q/E und R arbeiten.'}
-            </span>
-          </p>
         </AnimatedReveal>
 
         <AnimatedStaggerGroup className="crop-actions" level="subtle" onKeyDown={handleDirectionalFocusNavigation}>
@@ -729,7 +862,10 @@ export default function CropScreen({
             Zurueck
           </AnimatedButton>
           <AnimatedButton onClick={handleConfirm} disabled={!sourceImage || imageLoadError || isFetchingRandom} reveal revealLevel="subtle">
-            Spiel starten
+            <span className="crop-inline-button-content">
+              <CropScreenIcon name="play" className="crop-inline-button-icon" />
+              <span>Spiel starten</span>
+            </span>
           </AnimatedButton>
         </AnimatedStaggerGroup>
       </AnimatedStaggerGroup>
