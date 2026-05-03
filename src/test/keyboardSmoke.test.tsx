@@ -762,6 +762,9 @@ describe('keyboard smoke tests', () => {
         registerAppContextMenuHandler={vi.fn()}
         resumeActionLabel="Letzte Sitzung fortsetzen"
         resumeActionDetail="Statistik zuletzt geoeffnet."
+        savedGamesCount={3}
+        solvedCount={12}
+        galleryCount={8}
       />
     )
 

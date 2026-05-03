@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'motion/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { type AppContextMenuHandler, type AppContextMenuRequest } from '../app/appContextMenu.ts'
 import { handleDirectionalFocusNavigation } from '../app/directionalFocusNavigation.ts'
 import CompactContextMenu, { type ContextMenuItem, type ContextMenuPosition } from '../components/CompactContextMenu.tsx'
@@ -7,7 +7,7 @@ import '../styles/screens/start.css'
 import AnimatedButton from '../motion/AnimatedButton.tsx'
 import AnimatedReveal from '../motion/AnimatedReveal.tsx'
 import AnimatedStaggerGroup from '../motion/AnimatedStaggerGroup.tsx'
-import StartScreenIcon, { type StartScreenIconName } from '../components/StartScreenIcon.tsx'
+import StartScreenIcon from '../components/StartScreenIcon.tsx'
 import StartScreenAnimatedBoard from '../components/StartScreenAnimatedBoard.tsx'
 import { shouldPreserveNativeContextMenu } from '../utils/contextWindow.ts'
 
@@ -21,72 +21,45 @@ interface StartScreenProps {
   registerAppContextMenuHandler: (handler: AppContextMenuHandler | null) => void
   resumeActionLabel?: string | null
   resumeActionDetail?: string | null
+  savedGamesCount: number
+  solvedCount: number
+  galleryCount: number
 }
 
-const START_FEATURES = [
-  {
-    value: '3x3-6x6',
-    label: 'Vier Stufen',
-    icon: 'grid',
-  },
-  {
-    value: 'Upload + Zufall',
-    label: 'Eigenes Bild oder Zufall',
-    icon: 'imagePlus',
-  },
-  {
-    value: '10 Stile',
-    label: 'Ambient bis Hard Rock',
-    icon: 'music',
-  },
-] satisfies Array<{ value: string; label: string; icon: StartScreenIconName }>
+const FEATURE_TAGLINE = ['3x3-6x6', '15 Musikstile', 'Eigenes Bild & Zufall']
 
-const START_FEATURE_GROUPS = [
+const START_FEATURE_LIST = [
   {
-    title: 'Motiv vorbereiten',
-    copy: 'Bild waehlen und zuschneiden.',
-    items: [
-      { label: 'Upload & Zufallsbild', icon: 'uploadCloud' },
-      { label: 'Freies Zuschneiden', icon: 'crop' },
-      { label: 'Musikwahl', icon: 'music' },
-    ],
+    title: 'Upload, Zufallsbild und Zuschnitt',
+    copy: 'Eigene Motive laden, Quellen wechseln und den Ausschnitt frei setzen.',
+    icon: 'crop',
   },
   {
-    title: 'Fokussiert spielen',
-    copy: 'Hinweise nutzen, Zuege steuern.',
-    items: [
-      { label: '3x3 bis 6x6', icon: 'grid' },
-      { label: 'Hinweise & Solver', icon: 'wandSparkles' },
-      { label: 'Undo & Redo', icon: 'refreshCw' },
-      { label: 'Stilwahl oben rechts', icon: 'sliders' },
-    ],
+    title: 'Hinweise, Solver, Undo und Redo',
+    copy: 'Beim Knobeln helfen lassen, Zuege zuruecknehmen und sauber weiterdenken.',
+    icon: 'wandSparkles',
   },
   {
-    title: 'Fortschritt behalten',
-    copy: 'Saves, Zeiten und Galerie sichern.',
-    items: [
-      { label: 'Spielstaende', icon: 'folderOpen' },
-      { label: 'Statistik', icon: 'barChart2' },
-      { label: 'Galerie', icon: 'image' },
-      { label: 'Backup & Import', icon: 'archiveRestore' },
-    ],
+    title: 'Spielstaende, Statistik und Galerie',
+    copy: 'Fortschritt sichern, geloeste Runden vergleichen und Motive wiederfinden.',
+    icon: 'barChart2',
+  },
+  {
+    title: 'Backup, Import und Musik',
+    copy: 'Lokale Daten sichern, wiederherstellen und mit 15 Musikstilen spielen.',
+    icon: 'archiveRestore',
   },
 ] satisfies Array<{
   title: string
   copy: string
-  items: Array<{ label: string; icon: StartScreenIconName }>
+  icon: 'archiveRestore' | 'barChart2' | 'crop' | 'wandSparkles'
 }>
 
-const START_VISUAL_NOTES = [
-  {
-    title: 'Direkt ins Spiel',
-    copy: 'Bild laden, Crop setzen, loslegen.',
-  },
-  {
-    title: 'Fortschritt bleibt',
-    copy: 'Spielstaende, Statistik und Galerie bleiben erhalten.',
-  },
-]
+const formatStatValue = (value: number) => (value > 0 ? value.toString() : 'Noch keine')
+
+const getCountLabel = (value: number, singular: string, plural: string) => (
+  value === 1 ? singular : plural
+)
 
 function StartScreenFallbackIllustration() {
   return (
@@ -188,10 +161,37 @@ export default function StartScreen({
   registerAppContextMenuHandler,
   resumeActionLabel = null,
   resumeActionDetail = null,
+  savedGamesCount,
+  solvedCount,
+  galleryCount,
 }: StartScreenProps) {
   const startButtonRef = useRef<HTMLButtonElement | null>(null)
+  const resumeDetailId = useId()
   const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null)
   const hasResumeAction = Boolean(onResumeSession && resumeActionLabel)
+  const startStats = useMemo(() => [
+    {
+      key: 'saved-games',
+      value: savedGamesCount,
+      displayValue: formatStatValue(savedGamesCount),
+      label: getCountLabel(savedGamesCount, 'Spiel', 'Spiele'),
+      icon: 'folderOpen' as const,
+    },
+    {
+      key: 'solved',
+      value: solvedCount,
+      displayValue: formatStatValue(solvedCount),
+      label: getCountLabel(solvedCount, 'Sieg', 'Siege'),
+      icon: 'barChart2' as const,
+    },
+    {
+      key: 'gallery',
+      value: galleryCount,
+      displayValue: formatStatValue(galleryCount),
+      label: getCountLabel(galleryCount, 'Motiv', 'Motive'),
+      icon: 'image' as const,
+    },
+  ], [galleryCount, savedGamesCount, solvedCount])
 
   const openContextWindow = useCallback((request: AppContextMenuRequest) => {
     if (shouldPreserveNativeContextMenu(request.target)) return
@@ -261,7 +261,7 @@ export default function StartScreen({
     <section className="start-screen" data-page-focus-root="true" onContextMenu={handleOpenContextWindow}>
       <div className="start-screen-shell">
         <AnimatedStaggerGroup className="start-screen-copy" level="strong">
-          <AnimatedReveal as="article" className="start-screen-hero-panel" level="strong" interaction="card">
+          <AnimatedReveal as="article" className="start-screen-hero-panel" level="strong">
             <div className="start-screen-hero">
               <span className="start-screen-kicker">
                 <StartScreenIcon name="sparkles" className="start-screen-kicker-icon" />
@@ -274,64 +274,45 @@ export default function StartScreen({
               </p>
             </div>
 
-            <AnimatedStaggerGroup className="start-screen-highlight-row" aria-label="Schnellueberblick" level="strong">
-              {START_FEATURES.map((feature) => (
-                <AnimatedReveal
-                  key={feature.value}
-                  as="article"
-                  className="start-screen-highlight-card"
-                  level="strong"
-                  interaction="card"
-                >
-                  <div className="start-screen-highlight-content">
-                    <span className="start-screen-highlight-icon-shell">
-                      <StartScreenIcon name={feature.icon} className="start-screen-highlight-icon" />
-                    </span>
-                    <span className="start-screen-highlight-copy">
-                      <strong className="start-screen-highlight-value">{feature.value}</strong>
-                      <span className="start-screen-highlight-label">{feature.label}</span>
-                    </span>
-                  </div>
-                </AnimatedReveal>
-              ))}
-            </AnimatedStaggerGroup>
+            {hasResumeAction && (
+              <AnimatedButton
+                ref={startButtonRef}
+                className="start-screen-resume-card"
+                interaction="card"
+                data-page-primary-focus="true"
+                aria-label={resumeActionLabel ?? undefined}
+                aria-describedby={resumeActionDetail ? resumeDetailId : undefined}
+                onClick={onResumeSession}
+                reveal
+                revealLevel="medium"
+              >
+                <span className="start-screen-resume-icon-shell">
+                  <StartScreenIcon name="play" className="start-screen-resume-icon" />
+                </span>
+                <span className="start-screen-resume-copy">
+                  <span className="start-screen-resume-label">{resumeActionLabel}</span>
+                  {resumeActionDetail && (
+                    <span id={resumeDetailId} className="start-screen-resume-detail">{resumeActionDetail}</span>
+                  )}
+                </span>
+              </AnimatedButton>
+            )}
 
-            <div className="start-screen-actions-panel">
-              <div className="start-screen-actions-copy">
-                <span className="start-screen-actions-kicker">Schneller Einstieg</span>
-                <p className="start-screen-actions-title">
-                  {hasResumeAction ? 'Letzte Sitzung aufnehmen oder frisch starten.' : 'Neue Runde starten oder sauber beenden.'}
-                </p>
-                {resumeActionDetail && (
-                  <p className="start-screen-actions-note">{resumeActionDetail}</p>
-                )}
-              </div>
-
+            <div className="start-screen-actions-block">
               <AnimatedStaggerGroup
                 className="start-screen-actions"
                 level="subtle"
                 onKeyDown={handleDirectionalFocusNavigation}
               >
-                {hasResumeAction && (
-                  <AnimatedButton
-                    ref={startButtonRef}
-                    className="start-screen-button start-screen-button-primary"
-                    data-page-primary-focus="true"
-                    onClick={onResumeSession}
-                    reveal
-                    revealLevel="subtle"
-                  >
-                    {resumeActionLabel}
-                  </AnimatedButton>
-                )}
                 <AnimatedButton
                   ref={hasResumeAction ? undefined : startButtonRef}
-                  className={`start-screen-button ${hasResumeAction ? 'start-screen-button-secondary' : 'start-screen-button-primary'}`}
+                  className="start-screen-button start-screen-button-primary"
                   data-page-primary-focus={hasResumeAction ? undefined : 'true'}
                   onClick={onStart}
                   reveal
                   revealLevel="subtle"
                 >
+                  <StartScreenIcon name="play" className="start-screen-button-icon" />
                   Spiel starten
                 </AnimatedButton>
                 <AnimatedButton
@@ -340,6 +321,7 @@ export default function StartScreen({
                   reveal
                   revealLevel="subtle"
                 >
+                  <StartScreenIcon name="power" className="start-screen-button-icon" />
                   Beenden
                 </AnimatedButton>
               </AnimatedStaggerGroup>
@@ -352,55 +334,59 @@ export default function StartScreen({
             </p>
           )}
 
-          <AnimatedReveal as="article" className="start-screen-overview-card" level="strong" interaction="card">
-            <div className="start-screen-overview-head">
-              <span className="start-screen-overview-kicker">Vom Motiv zur Runde</span>
-              <p className="start-screen-overview-title">Alles fuer dein Puzzle</p>
-              <p className="start-screen-overview-copy">
-                Upload, Crop, Hinweise, Solver, Saves und Statistik.
-              </p>
-            </div>
-
-            <AnimatedStaggerGroup className="start-screen-feature-grid" aria-label="Funktionsuebersicht" level="strong">
-              {START_FEATURE_GROUPS.map((group, index) => (
+          <AnimatedReveal as="section" className="start-screen-progress-panel" level="strong" aria-label="Dein Fortschritt und wichtige Features">
+            <AnimatedStaggerGroup className="start-screen-stat-row" level="medium">
+              {startStats.map((stat) => (
                 <AnimatedReveal
-                  key={group.title}
+                  key={stat.key}
                   as="article"
-                  className="start-screen-feature-card"
-                  level="strong"
-                  interaction="card"
+                  className={`start-screen-stat-tile${stat.value === 0 ? ' is-empty' : ''}`}
+                  level="medium"
                 >
-                  <div className="start-screen-feature-head">
-                    <div className="start-screen-feature-meta">
-                      <h2 className="start-screen-feature-title">{group.title}</h2>
-                      <span className="start-screen-feature-index" aria-hidden="true">
-                        {(index + 1).toString().padStart(2, '0')}
-                      </span>
-                    </div>
-                    <p className="start-screen-feature-copy">{group.copy}</p>
-                  </div>
-
-                  <ul className="start-screen-feature-list">
-                    {group.items.map((item) => (
-                      <li key={item.label} className="start-screen-feature-item">
-                        <span className="start-screen-feature-item-content">
-                          <StartScreenIcon name={item.icon} className="start-screen-feature-item-icon" />
-                          <span className="start-screen-feature-item-text">{item.label}</span>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  <StartScreenIcon name={stat.icon} className="start-screen-stat-icon" />
+                  <strong className="start-screen-stat-value">{stat.displayValue}</strong>
+                  <span className="start-screen-stat-label">{stat.label}</span>
                 </AnimatedReveal>
               ))}
             </AnimatedStaggerGroup>
+
+            <div className="start-screen-shortcuts" aria-label="Shortcuts">
+              <div className="start-screen-shortcut">
+                <StartScreenIcon name="helpCircle" className="start-screen-shortcut-icon" />
+                <span><kbd>F1</kbd> Hilfe & Shortcuts</span>
+              </div>
+              <div className="start-screen-shortcut">
+                <StartScreenIcon name="keyboard" className="start-screen-shortcut-icon" />
+                <span><kbd>Ctrl</kbd><kbd>K</kbd> Schnellaktionen</span>
+              </div>
+            </div>
+
+            <section className="start-screen-feature-overview" aria-labelledby="start-screen-feature-overview-title">
+              <div className="start-screen-feature-overview-head">
+                <span id="start-screen-feature-overview-title" className="start-screen-feature-overview-kicker">
+                  Wichtigste Features
+                </span>
+              </div>
+
+              <ul className="start-screen-feature-list">
+                {START_FEATURE_LIST.map((feature) => (
+                  <li key={feature.title} className="start-screen-feature-item">
+                    <StartScreenIcon name={feature.icon} className="start-screen-feature-item-icon" />
+                    <span className="start-screen-feature-item-copy">
+                      <strong>{feature.title}</strong>
+                      <span>{feature.copy}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           </AnimatedReveal>
         </AnimatedStaggerGroup>
 
         <div className="start-screen-visual">
           <AnimatedStaggerGroup className="start-screen-visual-stack" level="strong">
-            <AnimatedReveal className="start-screen-visual-frame" level="strong" interaction="card">
+            <AnimatedReveal className="start-screen-visual-frame" level="strong">
               <div className="start-screen-visual-glow" aria-hidden="true" />
-              <div className="start-screen-visual-badge">Startklar</div>
               {heroImage ? (
                 <StartScreenAnimatedBoard imageSrc={heroImage} />
               ) : (
@@ -408,20 +394,14 @@ export default function StartScreen({
               )}
             </AnimatedReveal>
 
-            <AnimatedStaggerGroup className="start-screen-visual-notes" level="medium">
-              {START_VISUAL_NOTES.map((note) => (
-                <AnimatedReveal
-                  key={note.title}
-                  as="article"
-                  className="start-screen-visual-note"
-                  level="medium"
-                  interaction="card"
-                >
-                  <h2 className="start-screen-visual-note-title">{note.title}</h2>
-                  <p className="start-screen-visual-note-copy">{note.copy}</p>
-                </AnimatedReveal>
+            <p className="start-screen-feature-tagline" aria-label="Puzzle-Funktionen">
+              {FEATURE_TAGLINE.map((feature, index) => (
+                <span key={feature}>
+                  {index > 0 && <span className="start-screen-feature-separator" aria-hidden="true">.</span>}
+                  {feature}
+                </span>
               ))}
-            </AnimatedStaggerGroup>
+            </p>
           </AnimatedStaggerGroup>
         </div>
       </div>

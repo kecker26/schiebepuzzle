@@ -2133,6 +2133,9 @@ export default function App() {
               registerAppContextMenuHandler={registerAppContextMenuHandler}
               resumeActionLabel={startResumeCandidate?.label ?? null}
               resumeActionDetail={startResumeCandidate?.detail ?? null}
+              savedGamesCount={savedGames.length}
+              solvedCount={statsOverview?.totalSolved ?? 0}
+              galleryCount={gallery?.entries.length ?? 0}
             />
           ),
         }

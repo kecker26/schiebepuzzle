@@ -493,3 +493,954 @@
   transform: translateY(-1px) scale(1.08);
   filter: drop-shadow(0 4px 9px color-mix(in srgb, var(--image-accent-solid) 18%, transparent));
 }
+
+/* Crop polish: make the handoff from image choice to puzzle start feel deliberate. */
+.crop-container {
+  width: min(1080px, 100%);
+}
+
+.crop-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.crop-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.crop-kicker {
+  display: inline-flex;
+  margin-bottom: 5px;
+  color: var(--primary-color);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.crop-header-summary {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 360px;
+}
+
+.crop-header-summary span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 28%, rgba(255, 255, 255, 0.14));
+  background: color-mix(in srgb, var(--secondary-bg) 80%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.crop-controls {
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr);
+}
+
+.config-selector {
+  padding: 14px;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 18%, var(--card-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--image-accent-soft) 54%, transparent), transparent 58%),
+    color-mix(in srgb, var(--card-bg) 90%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 26px color-mix(in srgb, var(--image-accent-solid) 5%, rgba(2, 6, 23, 0.08));
+}
+
+.crop-difficulty-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crop-difficulty-card {
+  position: relative;
+  min-width: 0;
+  min-height: 126px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--card-border) 88%, rgba(255, 255, 255, 0.14));
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.12), transparent 58%),
+    color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(2, 6, 23, 0.08);
+  color: var(--text-main);
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform 0.24s ease,
+    border-color 0.24s ease,
+    background 0.24s ease,
+    box-shadow 0.24s ease;
+}
+
+.crop-difficulty-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 14px 0;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+  opacity: 0;
+  transform: scaleX(0.44);
+  transition: opacity 0.24s ease, transform 0.24s ease;
+}
+
+.crop-difficulty-card:hover,
+.crop-difficulty-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--primary-color) 46%, rgba(255, 255, 255, 0.22));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 78%, transparent), transparent 60%),
+    color-mix(in srgb, var(--surface-elevated) 94%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 14px 28px color-mix(in srgb, var(--primary-shadow-hover) 15%, rgba(2, 6, 23, 0.1));
+  outline: none;
+}
+
+.crop-difficulty-card.is-active {
+  border-color: color-mix(in srgb, var(--primary-color) 68%, rgba(255, 255, 255, 0.22));
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--primary-color) 22%, transparent), transparent 66%),
+    color-mix(in srgb, var(--surface-elevated) 96%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 16px 34px color-mix(in srgb, var(--primary-shadow-hover) 21%, rgba(2, 6, 23, 0.12)),
+    0 0 0 1px color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.crop-difficulty-card.is-active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.crop-difficulty-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.crop-difficulty-card-label {
+  font-size: 14px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.crop-difficulty-card-size,
+.crop-difficulty-card-meta {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.crop-difficulty-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 48px;
+  align-self: center;
+  opacity: 0.86;
+}
+
+.crop-difficulty-mini-grid span {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--primary-color) 38%, rgba(255, 255, 255, 0.18));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.crop-preview-wrapper {
+  position: relative;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--image-accent-soft) 34%, transparent), transparent 48%),
+    var(--preview-bg);
+}
+
+.crop-canvas-stage,
+.crop-full-image-stage {
+  position: relative;
+  isolation: isolate;
+  box-shadow:
+    0 18px 42px rgba(2, 6, 23, 0.16),
+    0 0 0 1px color-mix(in srgb, var(--primary-color) 18%, transparent);
+}
+
+.crop-canvas-stage {
+  border: 2px solid color-mix(in srgb, var(--primary-color) 76%, rgba(255, 255, 255, 0.26));
+  transition:
+    transform 0.24s ease,
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    filter 0.24s ease;
+}
+
+.crop-preview-stage:focus-within .crop-canvas-stage,
+.crop-canvas-stage:hover {
+  border-color: color-mix(in srgb, var(--primary-color) 88%, #ffffff);
+  box-shadow:
+    0 20px 48px rgba(2, 6, 23, 0.2),
+    0 0 0 1px color-mix(in srgb, var(--primary-color) 26%, transparent),
+    0 0 34px color-mix(in srgb, var(--primary-shadow-hover) 20%, transparent);
+  filter: saturate(1.04);
+}
+
+.crop-canvas.is-dragging {
+  transform: scale(1.006);
+  filter: saturate(1.08) brightness(1.03);
+}
+
+.crop-tile-preview-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(var(--crop-grid-cols), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--crop-grid-rows), minmax(0, 1fr));
+  pointer-events: none;
+}
+
+.crop-tile-preview-grid span {
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(2, 6, 23, 0.08);
+}
+
+.crop-frame-handles {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.crop-frame-handles span {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: rgba(248, 250, 252, 0.96);
+  filter: drop-shadow(0 4px 10px rgba(2, 6, 23, 0.35));
+}
+
+.crop-frame-handles .is-top-left {
+  top: 10px;
+  left: 10px;
+  border-top: 3px solid;
+  border-left: 3px solid;
+}
+
+.crop-frame-handles .is-top-right {
+  top: 10px;
+  right: 10px;
+  border-top: 3px solid;
+  border-right: 3px solid;
+}
+
+.crop-frame-handles .is-bottom-left {
+  bottom: 10px;
+  left: 10px;
+  border-bottom: 3px solid;
+  border-left: 3px solid;
+}
+
+.crop-frame-handles .is-bottom-right {
+  right: 10px;
+  bottom: 10px;
+  border-right: 3px solid;
+  border-bottom: 3px solid;
+}
+
+.crop-canvas-badge,
+.crop-full-image-badge {
+  position: absolute;
+  z-index: 4;
+  left: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(8, 15, 30, 0.72);
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.22);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.crop-full-image-badge-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.crop-actions button:last-child {
+  border-color: color-mix(in srgb, var(--primary-color) 68%, rgba(255, 255, 255, 0.22));
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  color: var(--text-on-primary);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 16px 30px color-mix(in srgb, var(--primary-shadow-hover) 28%, transparent);
+}
+
+.crop-actions button:last-child:hover:not(:disabled),
+.crop-actions button:last-child:focus-visible {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 20px 38px color-mix(in srgb, var(--primary-shadow-hover) 36%, transparent);
+}
+
+@media (max-width: 900px) {
+  .crop-header {
+    flex-direction: column;
+  }
+
+  .crop-header-summary {
+    justify-content: flex-start;
+    max-width: none;
+  }
+
+  .crop-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .crop-difficulty-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .crop-difficulty-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+[data-motion="reduced"] .crop-difficulty-card,
+[data-motion="reduced"] .crop-canvas,
+[data-motion="reduced"] .crop-actions button:last-child {
+  transition: none;
+}
+
+/* Square, calmer crop layout. */
+.crop-container {
+  width: min(1020px, 100%);
+  gap: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.crop-header {
+  align-items: center;
+}
+
+.crop-controls {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.crop-controls .crop-control-block:nth-child(3),
+.crop-controls .crop-control-block:nth-child(4) {
+  grid-column: auto;
+}
+
+.config-selector {
+  padding: 12px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--card-bg) 88%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 22px rgba(2, 6, 23, 0.08);
+}
+
+.crop-difficulty-grid {
+  grid-template-columns: repeat(4, minmax(104px, 1fr));
+  gap: 10px;
+}
+
+.crop-difficulty-card {
+  aspect-ratio: 1;
+  min-height: 0;
+  max-width: 150px;
+  width: 100%;
+  justify-self: center;
+  padding: 10px;
+  border-radius: 14px;
+  gap: 6px;
+  transform: none;
+}
+
+.crop-difficulty-card:hover,
+.crop-difficulty-card:focus-visible {
+  transform: translateY(-2px);
+}
+
+.crop-difficulty-card-top {
+  align-items: center;
+}
+
+.crop-difficulty-mini-grid {
+  grid-template-columns: repeat(var(--difficulty-grid-cols), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--difficulty-grid-rows), minmax(0, 1fr));
+  width: min(58px, 60%);
+  max-height: none;
+  aspect-ratio: 1;
+  gap: 2px;
+}
+
+.crop-difficulty-mini-grid span {
+  aspect-ratio: 1;
+  border-radius: 2px;
+}
+
+.crop-difficulty-card-size,
+.crop-difficulty-card-meta {
+  font-size: 10px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.crop-preview-wrapper {
+  flex: 1 0 260px;
+  min-height: 260px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--preview-bg) 92%, transparent);
+}
+
+.crop-preview-stage.is-croppable {
+  width: var(--crop-preview-size, 320px);
+  height: var(--crop-preview-size, 320px);
+  max-width: min(100%, var(--crop-preview-size, 320px));
+  max-height: var(--crop-preview-size, 320px);
+  aspect-ratio: 1;
+}
+
+.crop-preview-stage.is-croppable .crop-canvas-stage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1;
+}
+
+.crop-preview-stage.is-croppable .crop-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.crop-full-image-stage {
+  width: min(760px, 100%);
+}
+
+.crop-hint {
+  align-self: center;
+  width: min(760px, 100%);
+  padding: 0;
+  box-shadow: none;
+}
+
+.crop-actions {
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--card-border) 58%, transparent);
+}
+
+@media (max-width: 760px) {
+  .crop-difficulty-grid {
+    grid-template-columns: repeat(2, minmax(104px, 1fr));
+  }
+
+  .crop-preview-stage.is-croppable {
+    width: var(--crop-preview-size, 300px);
+    height: var(--crop-preview-size, 300px);
+  }
+}
+
+@media (max-width: 420px) {
+  .crop-difficulty-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crop-difficulty-card {
+    width: min(150px, 100%);
+    justify-self: center;
+  }
+}
+
+@media (max-height: 860px) {
+  .crop-container {
+    padding-top: 18px;
+    padding-bottom: 18px;
+    gap: 10px;
+  }
+
+  .config-selector {
+    padding: 10px 12px;
+  }
+
+  .crop-difficulty-card {
+    max-width: 132px;
+    padding: 8px;
+  }
+
+  .crop-difficulty-mini-grid {
+    width: min(48px, 58%);
+  }
+
+  .crop-preview-wrapper {
+    flex-basis: 220px;
+    min-height: 220px;
+    padding: 10px;
+  }
+}
+
+@media (max-height: 760px) {
+  .crop-header-summary {
+    display: none;
+  }
+
+  .crop-difficulty-card {
+    max-width: 118px;
+  }
+
+  .crop-difficulty-mini-grid {
+    width: min(42px, 56%);
+  }
+
+  .crop-preview-wrapper {
+    flex-basis: 210px;
+    min-height: 210px;
+  }
+
+  .crop-preview-stage.is-croppable {
+    width: var(--crop-preview-size, 280px);
+    height: var(--crop-preview-size, 280px);
+  }
+}
+
+/* Dominant preview layout: the image is the workspace, controls orbit it. */
+.crop-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  align-items: stretch;
+  gap: 12px 16px;
+  overflow: hidden;
+}
+
+.crop-container > header,
+.crop-source-row {
+  grid-column: 1 / -1;
+}
+
+.crop-source-row {
+  margin-top: -4px;
+}
+
+.crop-preview-wrapper {
+  grid-column: 1;
+  grid-row: 3 / span 2;
+  align-self: stretch;
+  min-height: 0;
+  height: 100%;
+  flex: none;
+  padding: 16px;
+}
+
+.crop-preview-stage.is-croppable {
+  width: var(--crop-preview-size, 460px);
+  height: var(--crop-preview-size, 460px);
+  max-width: var(--crop-preview-size, 460px);
+  max-height: var(--crop-preview-size, 460px);
+}
+
+.crop-controls {
+  grid-column: 2;
+  grid-row: 3;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 100%;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.crop-hint-row {
+  grid-column: 2;
+  grid-row: 4;
+  align-self: end;
+}
+
+.crop-actions {
+  grid-column: 1 / -1;
+  grid-row: 5;
+}
+
+.config-selector {
+  padding: 10px;
+}
+
+.crop-difficulty-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.crop-difficulty-card {
+  max-width: 116px;
+  padding: 8px;
+}
+
+.crop-difficulty-mini-grid {
+  width: min(46px, 56%);
+}
+
+.crop-control-block {
+  gap: 6px;
+}
+
+.crop-control-block select {
+  min-height: 42px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.crop-rotation-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.crop-rotation-buttons button,
+.crop-actions button {
+  min-width: 0;
+}
+
+.crop-hint {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+@media (min-width: 1180px) and (min-height: 820px) {
+  .crop-container {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  }
+
+  .crop-difficulty-card {
+    max-width: 126px;
+  }
+}
+
+@media (max-width: 900px) {
+  .crop-container {
+    display: flex;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .crop-preview-wrapper,
+  .crop-controls,
+  .crop-hint-row,
+  .crop-actions {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .crop-preview-wrapper {
+    min-height: 360px;
+    height: auto;
+  }
+
+  .crop-difficulty-grid {
+    grid-template-columns: repeat(4, minmax(96px, 1fr));
+  }
+
+  .crop-rotation-buttons {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .crop-difficulty-grid {
+    grid-template-columns: repeat(2, minmax(96px, 1fr));
+  }
+
+  .crop-preview-wrapper {
+    min-height: 300px;
+  }
+
+  .crop-rotation-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Final crop layout refinements: one scroll surface, clearer selection, full-image grid. */
+.crop-container {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.crop-controls {
+  max-height: none;
+  overflow: visible;
+}
+
+.crop-difficulty-card.is-active {
+  outline: none;
+  border-color: color-mix(in srgb, var(--primary-color) 92%, #ffffff);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0 0 1px color-mix(in srgb, var(--primary-color) 52%, transparent),
+    0 0 28px color-mix(in srgb, var(--primary-color) 42%, transparent),
+    0 16px 30px rgba(2, 6, 23, 0.22);
+}
+
+.crop-difficulty-card.is-active .crop-difficulty-mini-grid span {
+  background: color-mix(in srgb, var(--primary-color) 72%, rgba(255, 255, 255, 0.22));
+}
+
+.crop-full-image-stage {
+  overflow: hidden;
+}
+
+.crop-full-image-frame {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+  line-height: 0;
+  transform: rotate(var(--full-image-rotation, 0deg));
+  transform-origin: center;
+  transition: transform 0.28s ease;
+}
+
+.crop-full-image-frame .crop-full-image-preview {
+  display: block;
+}
+
+.crop-tile-preview-grid-full {
+  z-index: 2;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.crop-tile-preview-grid-full span {
+  border-right-color: rgba(255, 255, 255, 0.28);
+  border-bottom-color: rgba(255, 255, 255, 0.28);
+}
+
+@media (max-height: 860px) and (min-width: 901px) {
+  .crop-header {
+    gap: 12px;
+  }
+
+  .crop-header-title {
+    gap: 10px;
+  }
+
+  .crop-container {
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    gap: 8px 14px;
+  }
+
+  .crop-difficulty-card {
+    max-width: 106px;
+  }
+
+  .crop-control-block select {
+    min-height: 38px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .crop-rotation-buttons {
+    gap: 7px;
+  }
+
+  .crop-rotation-buttons button {
+    min-height: 38px;
+  }
+
+  .crop-hint-copy {
+    font-size: 12px;
+    line-height: 1.32;
+  }
+}
+
+/* Keep the right column distributed across the preview card height. */
+.crop-side-panel {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(14px, 2.4vh, 24px);
+}
+
+.crop-side-panel .crop-controls {
+  grid-column: auto;
+  grid-row: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(12px, 2vh, 22px);
+}
+
+.crop-side-panel .crop-hint-row {
+  grid-column: auto;
+  grid-row: auto;
+  flex: 0 0 auto;
+  margin-top: clamp(10px, 1.8vh, 20px);
+}
+
+.crop-side-panel .crop-hint {
+  margin: 0;
+}
+
+@media (max-height: 820px) and (min-width: 901px) {
+  .crop-side-panel {
+    gap: 12px;
+  }
+
+  .crop-side-panel .crop-controls {
+    gap: 10px;
+  }
+
+  .crop-side-panel .crop-hint-row {
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  .crop-side-panel {
+    grid-column: auto;
+    grid-row: auto;
+    height: auto;
+  }
+
+  .crop-side-panel .crop-controls {
+    flex: none;
+  }
+}
+
+/* Header source alignment and tighter work area. */
+.crop-container {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 9px 16px;
+}
+
+.crop-container > header {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.crop-source-row {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: center;
+  justify-self: center;
+  z-index: 1;
+  margin: 0;
+  pointer-events: none;
+}
+
+.crop-source-row a {
+  pointer-events: auto;
+}
+
+.crop-preview-wrapper {
+  grid-row: 2 / span 2;
+}
+
+.crop-controls {
+  grid-row: 2;
+}
+
+.crop-hint-row {
+  grid-row: 3;
+  margin-top: 12px;
+}
+
+.crop-actions {
+  grid-row: 4;
+}
+
+.crop-hint {
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .crop-source-row {
+    align-self: auto;
+    justify-self: auto;
+    pointer-events: auto;
+  }
+
+  .crop-hint-row {
+    margin-top: 0;
+  }
+}
+
+/* Center the right-side controls inside the space beside the preview card. */
+@media (min-width: 901px) {
+  .crop-container {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);
+  }
+
+  .crop-side-panel {
+    width: min(340px, 100%);
+    justify-self: center;
+    align-items: center;
+  }
+
+  .crop-side-panel .crop-controls,
+  .crop-side-panel .crop-hint-row,
+  .crop-side-panel .crop-control-block {
+    width: 100%;
+  }
+
+  .crop-side-panel .config-selector {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .crop-side-panel .crop-hint {
+    width: 100%;
+  }
+}
