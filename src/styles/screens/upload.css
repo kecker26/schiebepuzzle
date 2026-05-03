@@ -3341,21 +3341,6 @@
   align-content: start;
 }
 
-.gallery-card-tags .saved-game-chip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  height: 100%;
-  padding: 4px 8px;
-  font-size: 11px;
-  line-height: 1.2;
-  min-width: 0;
-  text-align: center;
-  overflow-wrap: anywhere;
-  text-wrap: balance;
-}
-
 .gallery-card-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5440,7 +5425,6 @@
 .stats-summary-card:hover,
 .stats-difficulty-card:hover,
 .stats-recent-item:hover,
-.gallery-card-stat:hover,
 .stats-report-card:hover,
 .stats-report-run-card:hover,
 .stats-report-fact-block:hover {
@@ -5593,23 +5577,38 @@
 /* Gallery cards: compact icon facts, not button chips. */
 .gallery-card-tags {
   --gallery-card-chip-row-height: auto;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-auto-rows: auto;
-  gap: 0;
+  gap: 6px;
   min-height: 0;
-  padding: 4px 0 2px;
+  padding: 6px 0 4px;
 }
 
-.gallery-card-tags .saved-game-chip,
+.gallery-card-meta-line {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 0;
+  color: var(--text-secondary);
+}
+
+.gallery-card-meta-line + .gallery-card-meta-line {
+  padding-top: 7px;
+  border-top: 1px solid color-mix(in srgb, var(--image-accent-solid) 12%, rgba(148, 163, 184, 0.14));
+}
+
 .gallery-card-tags .gallery-card-info-chip {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 15px minmax(0, auto);
   align-items: center;
   justify-content: start;
-  column-gap: 7px;
+  column-gap: 6px;
   height: auto;
-  min-height: 34px;
-  padding: 7px 8px;
+  min-height: 0;
+  padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -5625,13 +5624,21 @@
   text-wrap: auto;
 }
 
-.gallery-card-tags .saved-game-chip:nth-child(3n + 2),
-.gallery-card-tags .saved-game-chip:nth-child(3n + 3) {
-  border-left: 1px solid color-mix(in srgb, var(--image-accent-solid) 18%, rgba(148, 163, 184, 0.22));
+.gallery-card-tags .gallery-card-info-chip + .gallery-card-info-chip {
+  margin-left: 10px;
+  padding-left: 12px;
 }
 
-.gallery-card-tags .saved-game-chip:nth-child(n + 4) {
-  border-top: 1px solid color-mix(in srgb, var(--image-accent-solid) 14%, rgba(148, 163, 184, 0.16));
+.gallery-card-tags .gallery-card-info-chip + .gallery-card-info-chip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-color) 48%, var(--text-muted));
+  transform: translateY(-50%);
 }
 
 .gallery-card-info-chip-icon {
@@ -5643,16 +5650,16 @@
 }
 
 .gallery-card-stats {
-  gap: 0;
-  padding: 8px 0 2px;
-  border-top: 1px solid color-mix(in srgb, var(--image-accent-solid) 14%, rgba(148, 163, 184, 0.16));
+  gap: 12px;
+  padding: 10px 0 2px;
+  border-top: 1px solid color-mix(in srgb, var(--image-accent-solid) 12%, rgba(148, 163, 184, 0.14));
 }
 
 .gallery-card-stat {
   display: grid;
   grid-template-columns: 1fr;
   gap: 3px;
-  padding: 2px 12px;
+  padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -5660,7 +5667,7 @@
 }
 
 .gallery-card-stat + .gallery-card-stat {
-  border-left: 1px solid color-mix(in srgb, var(--image-accent-solid) 18%, rgba(148, 163, 184, 0.22));
+  border-left: 0;
 }
 
 .gallery-card-stat-label {
@@ -5908,12 +5915,6 @@
   width: 13px;
   height: 13px;
   color: color-mix(in srgb, var(--primary-color) 68%, var(--text-muted));
-}
-
-.gallery-card-tags .saved-game-chip:hover .gallery-card-info-chip-icon,
-.gallery-card-stat:hover .gallery-card-stat-icon {
-  transform: translateY(-1px) scale(1.08);
-  filter: drop-shadow(0 4px 9px color-mix(in srgb, var(--image-accent-solid) 20%, transparent));
 }
 
 @keyframes upload-card-icon-pop {
