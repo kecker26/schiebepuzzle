@@ -193,33 +193,37 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
           <span className="gallery-card-date">{completedAtLabel}</span>
         </div>
 
-        <div className="gallery-card-tags">
-          <span className="saved-game-chip gallery-card-info-chip">
-            <GlobalUiIcon name="grid" className="gallery-card-info-chip-icon" />
-            <span>{formatPuzzleSize(representativeEntry.config)}</span>
-          </span>
-          <span className="saved-game-chip gallery-card-info-chip">
-            <GlobalUiIcon name="refreshCw" className="gallery-card-info-chip-icon" />
-            <span>{solveCountLabel}</span>
-          </span>
-          <span className="saved-game-chip gallery-card-info-chip">
-            <GlobalUiIcon
-              name={representativeEntry.assistanceMode === 'auto-assisted' ? 'zap' : 'navigation'}
-              className="gallery-card-info-chip-icon"
-            />
-            <span>{assistanceLabel}</span>
-          </span>
-          <span className="saved-game-chip gallery-card-info-chip">
-            <GlobalUiIcon name="move" className="gallery-card-info-chip-icon" />
-            <span>Motivweit {motifDifficultyCount} {motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'}</span>
-          </span>
-          <span className="saved-game-chip gallery-card-info-chip">
-            <GlobalUiIcon
-              name={motifReplayableCount > 0 ? 'refreshCw' : 'archive'}
-              className="gallery-card-info-chip-icon"
-            />
-            <span>{motifReplayableCount > 0 ? `Motivweit ${motifReplayableCount} spielbar` : 'Archiv'}</span>
-          </span>
+        <div className="gallery-card-tags" aria-label="Puzzle- und Motivdaten">
+          <div className="gallery-card-meta-line">
+            <span className="gallery-card-info-chip">
+              <GlobalUiIcon name="grid" className="gallery-card-info-chip-icon" />
+              <span>{formatPuzzleSize(representativeEntry.config)}</span>
+            </span>
+            <span className="gallery-card-info-chip">
+              <GlobalUiIcon name="refreshCw" className="gallery-card-info-chip-icon" />
+              <span>{solveCountLabel}</span>
+            </span>
+            <span className="gallery-card-info-chip">
+              <GlobalUiIcon
+                name={representativeEntry.assistanceMode === 'auto-assisted' ? 'zap' : 'navigation'}
+                className="gallery-card-info-chip-icon"
+              />
+              <span>{assistanceLabel}</span>
+            </span>
+          </div>
+          <div className="gallery-card-meta-line">
+            <span className="gallery-card-info-chip">
+              <GlobalUiIcon name="move" className="gallery-card-info-chip-icon" />
+              <span>Motivweit {motifDifficultyCount} {motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'}</span>
+            </span>
+            <span className="gallery-card-info-chip">
+              <GlobalUiIcon
+                name={motifReplayableCount > 0 ? 'refreshCw' : 'archive'}
+                className="gallery-card-info-chip-icon"
+              />
+              <span>{motifReplayableCount > 0 ? `${motifReplayableCount} spielbar` : 'Archiv'}</span>
+            </span>
+          </div>
         </div>
 
         <div className="gallery-card-stats" aria-label="Zusammenfassung des Laufs">
