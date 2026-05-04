@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'motion/react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { type AppContextMenuHandler, type AppContextMenuRequest } from '../app/appContextMenu.ts'
+import { COMMAND_PALETTE_SHORTCUT_LABEL } from '../app/commandPaletteShortcut.ts'
 import { handleDirectionalFocusNavigation } from '../app/directionalFocusNavigation.ts'
 import CompactContextMenu, { type ContextMenuItem, type ContextMenuPosition } from '../components/CompactContextMenu.tsx'
 import '../styles/screens/start.css'
@@ -357,7 +358,7 @@ export default function StartScreen({
               </div>
               <div className="start-screen-shortcut">
                 <StartScreenIcon name="keyboard" className="start-screen-shortcut-icon" />
-                <span><kbd>Ctrl</kbd><kbd>K</kbd> Schnellaktionen</span>
+                <span><kbd>{COMMAND_PALETTE_SHORTCUT_LABEL}</kbd> Schnellaktionen</span>
               </div>
             </div>
 
