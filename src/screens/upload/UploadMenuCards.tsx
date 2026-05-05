@@ -30,6 +30,7 @@ export default function UploadMenuCards({
         reveal
         revealLevel="medium"
       >
+        <span className="menu-card-glow" aria-hidden="true" />
         <span className="menu-card-eyebrow">{isDragActive ? 'Datei erkannt' : 'Eigenes Motiv'}</span>
         <span className="menu-card-icon" aria-hidden="true">
           <UploadScreenIcon name={isDragActive ? 'uploadCloud' : 'imagePlus'} className="menu-card-icon-symbol" />
@@ -58,6 +59,7 @@ export default function UploadMenuCards({
         reveal
         revealLevel="medium"
       >
+        <span className="menu-card-glow" aria-hidden="true" />
         <span className="menu-card-eyebrow">Ueberraschung</span>
         <span className="menu-card-icon" aria-hidden="true">
           <UploadScreenIcon name="dice" className="menu-card-icon-symbol" />

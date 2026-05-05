@@ -6021,3 +6021,121 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Cursor glow layers for interactive upload surfaces. */
+.menu-card {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-size: 320px;
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 18%, transparent);
+  isolation: isolate;
+}
+
+.menu-card > :not(.menu-card-glow) {
+  position: relative;
+  z-index: 1;
+}
+
+.menu-card-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-size) circle at var(--glow-x) var(--glow-y),
+    var(--glow-color-hover),
+    transparent 60%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+}
+
+.menu-card:hover:not(:disabled) .menu-card-glow,
+.menu-card:focus-visible .menu-card-glow {
+  opacity: 1;
+}
+
+.saved-game-item {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-size: 240px;
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.saved-game-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-size) circle at var(--glow-x) var(--glow-y),
+    var(--glow-color-hover),
+    transparent 62%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+}
+
+.saved-game-item:hover::after,
+.saved-game-item:focus-within::after {
+  opacity: 1;
+}
+
+.saved-game-preview-shell,
+.saved-game-meta,
+.saved-game-actions {
+  position: relative;
+  z-index: 1;
+}
+
+.gallery-card {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-size: 260px;
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 14%, transparent);
+  position: relative;
+  isolation: isolate;
+}
+
+.gallery-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-size) circle at var(--glow-x) var(--glow-y),
+    var(--glow-color-hover),
+    transparent 62%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+}
+
+.gallery-card:hover::before,
+.gallery-card:focus-within::before {
+  opacity: 1;
+}
+
+.gallery-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+[data-theme="dark"] .menu-card,
+[data-theme="dark"] .saved-game-item,
+[data-theme="dark"] .gallery-card {
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 11%, transparent);
+}
+
+[data-motion="reduced"] .menu-card-glow,
+[data-motion="reduced"] .saved-game-item::after,
+[data-motion="reduced"] .gallery-card::before {
+  display: none;
+}

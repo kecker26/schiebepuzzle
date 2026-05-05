@@ -577,6 +577,13 @@ textarea {
 }
 
 button {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-size: 180px;
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 16%, transparent);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   min-height: 48px;
   padding: 12px 24px;
   font-size: 16px;
@@ -590,6 +597,32 @@ button {
   background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
   color: var(--text-on-primary);
   box-shadow: 0 16px 30px var(--primary-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-size) circle at var(--glow-x) var(--glow-y),
+    var(--glow-color-hover),
+    transparent 62%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+}
+
+button > * {
+  position: relative;
+  z-index: 1;
+}
+
+button:hover:not(:disabled)::before,
+button:focus-visible:not(:disabled)::before {
+  opacity: 1;
 }
 
 button:hover:not(:disabled) {
@@ -647,6 +680,10 @@ button.secondary:focus-visible {
   color: var(--text-main);
 }
 
+[data-theme="dark"] button {
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 11%, transparent);
+}
+
 button.danger {
   background: linear-gradient(135deg, #fb7185, var(--danger-color));
   box-shadow: 0 14px 28px var(--danger-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.14);
@@ -689,6 +726,10 @@ html[data-motion='reduced'] *::after {
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
   scroll-behavior: auto !important;
+}
+
+html[data-motion='reduced'] button::before {
+  display: none;
 }
 
 

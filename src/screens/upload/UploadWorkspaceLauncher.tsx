@@ -82,6 +82,7 @@ export default function UploadWorkspaceLauncher({
           reveal
           revealLevel="medium"
         >
+          <span className="menu-card-glow" aria-hidden="true" />
           <span className="menu-card-eyebrow">Fortsetzen</span>
           <span className="menu-card-icon" aria-hidden="true">
             <UploadScreenIcon name="folder" className="menu-card-icon-symbol" />
@@ -115,6 +116,7 @@ export default function UploadWorkspaceLauncher({
           reveal
           revealLevel="medium"
         >
+          <span className="menu-card-glow" aria-hidden="true" />
           <span className="menu-card-eyebrow">Auswertung</span>
           <span className="menu-card-icon" aria-hidden="true">
             <UploadScreenIcon name="barChart2" className="menu-card-icon-symbol" />
@@ -148,6 +150,7 @@ export default function UploadWorkspaceLauncher({
           reveal
           revealLevel="medium"
         >
+          <span className="menu-card-glow" aria-hidden="true" />
           <span className="menu-card-eyebrow">Rueckblick</span>
           <span className="menu-card-icon" aria-hidden="true">
             <UploadScreenIcon name="gallery" className="menu-card-icon-symbol" />
