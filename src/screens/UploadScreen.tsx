@@ -204,6 +204,38 @@ export default function UploadScreen({
   const [contextMenuState, setContextMenuState] = useState<UploadContextMenuState | null>(null)
   const [uploadClipboardPasteStatus, setUploadClipboardPasteStatus] = useState<UploadClipboardPasteStatus>('idle')
 
+  const alignSelectionViewportToTop = useCallback(() => {
+    screenRef.current?.scrollIntoView({ block: 'start', inline: 'nearest' })
+    scrollViewportToTop()
+  }, [])
+
+  const scheduleSelectionViewportAlignment = useCallback(() => {
+    let nestedFrameId: number | null = null
+    let timeoutId: number | null = null
+
+    alignSelectionViewportToTop()
+
+    const frameId = window.requestAnimationFrame(() => {
+      alignSelectionViewportToTop()
+      nestedFrameId = window.requestAnimationFrame(() => {
+        alignSelectionViewportToTop()
+      })
+      timeoutId = window.setTimeout(() => {
+        alignSelectionViewportToTop()
+      }, 0)
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      if (nestedFrameId !== null) {
+        window.cancelAnimationFrame(nestedFrameId)
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [alignSelectionViewportToTop])
+
   useEffect(() => {
     const updateHelpContext = (target: EventTarget | null) => {
       onHelpContextChange(getUploadHelpContextForTarget(activeWindow, target))
@@ -360,36 +392,8 @@ export default function UploadScreen({
   }, [handlePaste])
 
   useLayoutEffect(() => {
-    const alignViewport = () => {
-      screenRef.current?.scrollIntoView({ block: 'start', inline: 'nearest' })
-      scrollViewportToTop()
-    }
-
-    let nestedFrameId: number | null = null
-    let timeoutId: number | null = null
-
-    alignViewport()
-
-    const frameId = window.requestAnimationFrame(() => {
-      alignViewport()
-      nestedFrameId = window.requestAnimationFrame(() => {
-        alignViewport()
-      })
-      timeoutId = window.setTimeout(() => {
-        alignViewport()
-      }, 0)
-    })
-
-    return () => {
-      window.cancelAnimationFrame(frameId)
-      if (nestedFrameId !== null) {
-        window.cancelAnimationFrame(nestedFrameId)
-      }
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId)
-      }
-    }
-  }, [])
+    return scheduleSelectionViewportAlignment()
+  }, [scheduleSelectionViewportAlignment])
 
   const isBlockingDialogOpen =
     isShowingBackupBrowser
@@ -589,6 +593,7 @@ export default function UploadScreen({
 
   const handleWindowChange = useCallback((window: UploadWorkspaceWindow) => {
     if (window === 'start') {
+      scheduleSelectionViewportAlignment()
       hasFocusedStartWindowRef.current = false
       if (activeWindow !== 'start') {
         pendingStartFocusRef.current = activeWindow
@@ -600,7 +605,7 @@ export default function UploadScreen({
     pendingStartFocusRef.current = null
     setIsWorkspaceExiting(false)
     setActiveWindow(window)
-  }, [activeWindow])
+  }, [activeWindow, scheduleSelectionViewportAlignment])
 
   const handleWorkspaceExitComplete = useCallback(() => {
     if (!isWorkspaceExiting) {
@@ -610,10 +615,10 @@ export default function UploadScreen({
     setActiveWindow('start')
     setIsWorkspaceExiting(false)
     window.requestAnimationFrame(() => {
-      scrollViewportToTop()
+      scheduleSelectionViewportAlignment()
       primaryUploadCardRef.current?.focus({ preventScroll: true })
     })
-  }, [isWorkspaceExiting])
+  }, [isWorkspaceExiting, scheduleSelectionViewportAlignment])
 
   const handleLoadSave = useCallback(async (saveId: string) => {
     setLoadingSaveId(saveId)
