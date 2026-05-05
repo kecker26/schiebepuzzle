@@ -156,8 +156,13 @@
 }
 
 .start-screen-resume-card {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-size: 300px;
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 16%, transparent);
   position: relative;
   z-index: 1;
+  isolation: isolate;
   appearance: none;
   width: 100%;
   display: grid;
@@ -180,6 +185,33 @@
   cursor: pointer;
   box-shadow: 0 18px 38px color-mix(in srgb, var(--primary-color) 18%, transparent);
   transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+  overflow: hidden;
+}
+
+.start-screen-resume-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-size) circle at var(--glow-x) var(--glow-y),
+    var(--glow-color-hover),
+    transparent 60%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+}
+
+.start-screen-resume-card:hover::before,
+.start-screen-resume-card:focus-visible::before {
+  opacity: 1;
+}
+
+.start-screen-resume-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .start-screen-resume-card:hover {
@@ -245,6 +277,12 @@
 }
 
 .start-screen-button {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-size: 200px;
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 20%, transparent);
+  position: relative;
+  isolation: isolate;
   appearance: none;
   border: 0;
   border-radius: 999px;
@@ -260,6 +298,33 @@
   letter-spacing: 0.01em;
   cursor: pointer;
   transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, color 0.22s ease;
+  overflow: hidden;
+}
+
+.start-screen-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-size) circle at var(--glow-x) var(--glow-y),
+    var(--glow-color-hover),
+    transparent 62%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+}
+
+.start-screen-button:hover::before,
+.start-screen-button:focus-visible::before {
+  opacity: 1;
+}
+
+.start-screen-button > * {
+  position: relative;
+  z-index: 1;
 }
 
 .start-screen-button:hover {
@@ -301,6 +366,16 @@
 .start-screen-button-secondary:hover {
   background: var(--secondary-bg-hover);
   box-shadow: var(--secondary-shadow-hover);
+}
+
+[data-theme="dark"] .start-screen-resume-card,
+[data-theme="dark"] .start-screen-button {
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+[data-motion="reduced"] .start-screen-resume-card::before,
+[data-motion="reduced"] .start-screen-button::before {
+  display: none;
 }
 
 .start-screen-quit-hint {

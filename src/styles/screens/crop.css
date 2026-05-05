@@ -570,7 +570,12 @@
 }
 
 .crop-difficulty-card {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-size: 180px;
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 14%, transparent);
   position: relative;
+  isolation: isolate;
   min-width: 0;
   min-height: 126px;
   display: flex;
@@ -597,16 +602,43 @@
     box-shadow 0.24s ease;
 }
 
+.crop-difficulty-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-size) circle at var(--glow-x) var(--glow-y),
+    var(--glow-color-hover),
+    transparent 62%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+}
+
+.crop-difficulty-card:hover::before,
+.crop-difficulty-card:focus-visible::before {
+  opacity: 1;
+}
+
 .crop-difficulty-card::after {
   content: '';
   position: absolute;
   inset: auto 14px 0;
+  z-index: 2;
   height: 3px;
   border-radius: 999px 999px 0 0;
   background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
   opacity: 0;
   transform: scaleX(0.44);
   transition: opacity 0.24s ease, transform 0.24s ease;
+}
+
+.crop-difficulty-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .crop-difficulty-card:hover,
@@ -851,6 +883,14 @@
 [data-motion="reduced"] .crop-canvas,
 [data-motion="reduced"] .crop-actions button:last-child {
   transition: none;
+}
+
+[data-theme="dark"] .crop-difficulty-card {
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 11%, transparent);
+}
+
+[data-motion="reduced"] .crop-difficulty-card::before {
+  display: none;
 }
 
 /* Square, calmer crop layout. */

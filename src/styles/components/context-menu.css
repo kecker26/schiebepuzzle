@@ -34,6 +34,12 @@
 }
 
 .puzzle-context-menu-item {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-size: 160px;
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -54,6 +60,34 @@
   transition:
     background 0.15s ease,
     color 0.15s ease;
+  overflow: hidden;
+}
+
+.puzzle-context-menu-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-size) circle at var(--glow-x) var(--glow-y),
+    var(--glow-color-hover),
+    transparent 64%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.24s ease;
+}
+
+.puzzle-context-menu-item:hover::before,
+.puzzle-context-menu-item:focus-visible::before,
+.puzzle-context-menu-item[data-active='true']::before {
+  opacity: 1;
+}
+
+.puzzle-context-menu-item > * {
+  position: relative;
+  z-index: 1;
 }
 
 .global-ui-icon {
@@ -219,6 +253,14 @@
 
 [data-theme="light"] .puzzle-context-menu-item:active {
   background: color-mix(in srgb, var(--image-accent-solid) 22%, rgba(59, 130, 246, 0.14));
+}
+
+[data-theme="dark"] .puzzle-context-menu-item {
+  --glow-color-hover: color-mix(in srgb, var(--primary-color) 8%, transparent);
+}
+
+[data-motion="reduced"] .puzzle-context-menu-item::before {
+  display: none;
 }
 
 [data-theme="light"] .puzzle-context-menu-hotkey {

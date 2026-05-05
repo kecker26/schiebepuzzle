@@ -39,6 +39,7 @@ import { useSolvedGallery } from './app/useSolvedGallery.ts'
 import { type AppContextMenuHandler } from './app/appContextMenu.ts'
 import { useButtonOnlyTabNavigation } from './app/useButtonOnlyTabNavigation.ts'
 import AnimatedScreen from './motion/AnimatedScreen.tsx'
+import { useGlobalGlowTracking } from './motion/useGlowTracking.ts'
 import {
   createCompletionPreviewImage,
   createGalleryPreviewImage,
@@ -216,6 +217,8 @@ function AppScreenFallback({ title, copy }: AppScreenFallbackProps) {
 
 export default function App() {
   const appRef = useRef<HTMLDivElement | null>(null)
+  useGlobalGlowTracking()
+
   const announceAccessibility = useAccessibilityAnnouncer()
   const { mode, toggleMode } = useTheme()
   const isMusicMuted = useMusicMuted()
