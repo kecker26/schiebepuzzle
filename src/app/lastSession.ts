@@ -20,7 +20,13 @@ interface LastSessionSnapshotInput {
 }
 
 function isUploadWorkspaceWindow(value: unknown): value is UploadWorkspaceWindow {
-  return value === 'start' || value === 'savedGames' || value === 'stats' || value === 'gallery'
+  return (
+    value === 'start'
+    || value === 'savedGames'
+    || value === 'stats'
+    || value === 'gallery'
+    || value === 'collections'
+  )
 }
 
 function isHistoryFilter(value: unknown): value is HistoryFilter {

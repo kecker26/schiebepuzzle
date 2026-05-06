@@ -2,11 +2,12 @@ import type { AriaRole, RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ensureElementVisible } from '../../app/focusVisibility.ts'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
-import { SolvedGallery, SolvedGalleryEntry } from '../../types/index'
+import { ImageCollection, SolvedGallery, SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import UploadConfirmDialog from './UploadConfirmDialog.tsx'
 import UploadGalleryCard from './UploadGalleryCard.tsx'
 import UploadGalleryDetailDialog from './UploadGalleryDetailDialog.tsx'
+import UploadCollectionPickerDialog from './UploadCollectionPickerDialog.tsx'
 import {
   buildGalleryDisplayEntriesFromGroups,
   buildGalleryDisplayGroups,
@@ -26,15 +27,19 @@ import {
 
 interface UploadGalleryPanelProps {
   gallery: SolvedGallery | null
+  collections?: ImageCollection[]
   isLoadingGallery: boolean
+  isLoadingCollections?: boolean
   onReplayEntry: (entry: SolvedGalleryEntry) => void
   onDeleteEntries: (entryIds: string[]) => Promise<void>
+  onCreateCollection?: (name: string, imageIds: string[]) => Promise<void>
+  onAddCollectionImages?: (collectionId: string, imageIds: string[]) => Promise<void>
   titleId?: string
   panelRole?: AriaRole
   primaryFilterRef?: RefObject<HTMLSelectElement>
 }
 
-type GalleryAction = 'preview' | 'play-primary' | 'play-secondary' | 'details' | 'delete'
+type GalleryAction = 'preview' | 'play-primary' | 'play-secondary' | 'details' | 'collect' | 'delete'
 
 interface PendingGalleryDeletionFocus {
   entryId: string
@@ -50,9 +55,13 @@ type GalleryToolbarFocusTarget = 'difficulty' | 'assistance' | 'sort'
 
 export default function UploadGalleryPanel({
   gallery,
+  collections = [],
   isLoadingGallery,
+  isLoadingCollections = false,
   onReplayEntry,
   onDeleteEntries,
+  onCreateCollection = async () => undefined,
+  onAddCollectionImages = async () => undefined,
   titleId = 'workspace-window-gallery-title',
   panelRole = 'region',
   primaryFilterRef,
@@ -70,6 +79,8 @@ export default function UploadGalleryPanel({
   const [assistanceFilter, setAssistanceFilter] = useState<GalleryAssistanceFilter>('all')
   const [sortOption, setSortOption] = useState<GallerySortOption>('latest')
   const [selectedEntry, setSelectedEntry] = useState<GalleryDisplayEntry | null>(null)
+  const [collectingEntry, setCollectingEntry] = useState<GalleryDisplayEntry | null>(null)
+  const [isSavingCollection, setIsSavingCollection] = useState(false)
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null)
   const [pendingDeleteEntry, setPendingDeleteEntry] = useState<PendingGalleryDeletionRequest | null>(null)
   const deletingEntryIdRef = useRef<string | null>(null)
@@ -321,6 +332,17 @@ export default function UploadGalleryPanel({
     })
   }, [visibleEntries])
 
+  const handleCollectEntryRequest = useCallback((entry: GalleryDisplayEntry) => {
+    if (deletingEntryIdRef.current !== null) return
+    setCollectingEntry(entry)
+  }, [])
+
+  const handleCollectEntryFromDetails = useCallback((entry: GalleryDisplayEntry) => {
+    if (deletingEntryIdRef.current !== null) return
+    setSelectedEntry(null)
+    setCollectingEntry(entry)
+  }, [])
+
   const handleCancelDeleteEntry = useCallback(() => {
     if (deletingEntryIdRef.current !== null || !pendingDeleteEntry) {
       return
@@ -371,6 +393,31 @@ export default function UploadGalleryPanel({
     visibleEntries.length === 0
       ? `filtered-empty:${difficultyFilter}:${assistanceFilter}:${sortOption}`
       : `grid:${difficultyFilter}:${assistanceFilter}:${sortOption}`
+  const collectingImageIds = collectingEntry?.allEntries.map((entry) => entry.id) ?? []
+  const collectingRepresentativeEntry = collectingEntry?.representativeEntry ?? null
+  const collectingImageLabel = collectingRepresentativeEntry
+    ? `${formatDifficultyLabel(collectingRepresentativeEntry.config)} vom ${formatDate(collectingRepresentativeEntry.completedAt)}`
+    : 'Dieses Motiv'
+
+  const handleCreateCollection = useCallback(async (name: string, imageIds: string[]) => {
+    setIsSavingCollection(true)
+    try {
+      await onCreateCollection(name, imageIds)
+      setCollectingEntry(null)
+    } finally {
+      setIsSavingCollection(false)
+    }
+  }, [onCreateCollection])
+
+  const handleAddCollectionImages = useCallback(async (collectionId: string, imageIds: string[]) => {
+    setIsSavingCollection(true)
+    try {
+      await onAddCollectionImages(collectionId, imageIds)
+      setCollectingEntry(null)
+    } finally {
+      setIsSavingCollection(false)
+    }
+  }, [onAddCollectionImages])
 
   return (
     <>
@@ -449,6 +496,7 @@ export default function UploadGalleryPanel({
                         entry={entry}
                         onOpenDetails={setSelectedEntry}
                         onReplayEntry={onReplayEntry}
+                        onCollectEntry={handleCollectEntryRequest}
                         onDeleteEntry={handleDeleteEntryRequest}
                         isDeleting={deletingEntryId === entry.id}
                       />
@@ -465,6 +513,7 @@ export default function UploadGalleryPanel({
         <UploadGalleryDetailDialog
           entry={selectedEntry}
           onReplayEntry={onReplayEntry}
+          onCollectEntry={handleCollectEntryFromDetails}
           onClose={() => setSelectedEntry(null)}
         />
       )}
@@ -486,6 +535,22 @@ export default function UploadGalleryPanel({
           onCancel={handleCancelDeleteEntry}
           onConfirm={() => {
             void handleConfirmDeleteEntry()
+          }}
+        />
+      )}
+
+      {collectingEntry && (
+        <UploadCollectionPickerDialog
+          collections={collections}
+          imageIds={collectingImageIds}
+          imageLabel={collectingImageLabel}
+          isBusy={isSavingCollection || isLoadingCollections}
+          onCreateCollection={handleCreateCollection}
+          onAddToCollection={handleAddCollectionImages}
+          onClose={() => {
+            if (!isSavingCollection) {
+              setCollectingEntry(null)
+            }
           }}
         />
       )}

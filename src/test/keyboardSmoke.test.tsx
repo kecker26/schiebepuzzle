@@ -954,7 +954,7 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(savedGamesButton)
   })
 
-  it('focuses the active workspace selection card when switching between saved games, statistics and gallery', async () => {
+  it('focuses workspace navigation cards and jumps to the first navigation item with V', async () => {
     const sharedProps = {
       savedGames: [] as SavedGameSummary[],
       savedGamesCount: 0,
@@ -1023,6 +1023,12 @@ describe('keyboard smoke tests', () => {
       const workspaceNavigation = screen.getByRole('navigation', { name: 'Bereiche wechseln' })
       expect(document.activeElement).toBe(within(workspaceNavigation).getByRole('button', { name: /Galerie/i }))
     })
+
+    const workspaceNavigation = screen.getByRole('navigation', { name: 'Bereiche wechseln' })
+    expect(workspaceNavigation.getAttribute('aria-keyshortcuts')).toBe('V')
+
+    fireEvent.keyDown(window, { key: 'v' })
+    expect(document.activeElement).toBe(within(workspaceNavigation).getByRole('button', { name: /Spielstaende/i }))
   })
 
   it('moves through workspace header actions with arrows, Pos1 and Ende', async () => {
@@ -2534,6 +2540,7 @@ describe('keyboard smoke tests', () => {
             <UploadGalleryDetailDialog
               entry={detailEntry}
               onReplayEntry={vi.fn()}
+              onCollectEntry={vi.fn()}
               onClose={() => setIsOpen(false)}
             />
           ) : null}
@@ -2557,6 +2564,12 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.keyDown(bestTimeButton, { key: 'ArrowLeft' })
     expect(document.activeElement).toBe(replayButton)
+
+    const collectButton = screen.getByRole('button', { name: /zu einer Sammlung hinzufuegen/i })
+    const closeButton = screen.getByRole('button', { name: 'Schliessen' })
+    collectButton.focus()
+    fireEvent.keyDown(collectButton, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(closeButton)
 
     expect(screen.getByText('Laufverlauf')).toBeTruthy()
     expect(screen.getByText('Aktuell')).toBeTruthy()
@@ -3637,8 +3650,8 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    const difficultySelect = await screen.findByRole('combobox', { name: /Schwierigkeitsgrad/i })
-    difficultySelect.focus()
+    const difficultyOption = await screen.findByRole('radio', { checked: true })
+    difficultyOption.focus()
     fireEvent.keyDown(window, { key: 'Escape' })
 
     expect(onBack).toHaveBeenCalledTimes(1)

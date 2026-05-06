@@ -16,6 +16,7 @@ const SAVES_DIR = path.join(ROOT_DIR, 'spielstaende')
 const BACKUPS_DIR = path.join(ROOT_DIR, 'backups')
 const STATS_FILE = path.join(SAVES_DIR, '__stats.json')
 const GALLERY_FILE = path.join(SAVES_DIR, '__gallery.json')
+const COLLECTIONS_FILE = path.join(SAVES_DIR, '__collections.json')
 const LEGACY_BACKUP_FILE_EXTENSION = '.spbkp'
 const COMPRESSED_BACKUP_FILE_EXTENSION = '.spbkp.gz'
 const BACKUP_FILE_EXTENSION = COMPRESSED_BACKUP_FILE_EXTENSION
@@ -23,7 +24,7 @@ const SAVE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
 const BACKUP_FILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.spbkp(?:\.gz)?$/
 const MAX_BODY_SIZE = 40 * 1024 * 1024
 const MAX_BACKUP_FILES = 3
-const BACKUP_FORMAT_VERSION = 2
+const BACKUP_FORMAT_VERSION = 3
 const RECENT_COMPLETION_PREVIEW_LIMIT = 8
 const RECENT_MEDIAN_SAMPLE_SIZE = 5
 const GZIP_MAGIC_BYTE_1 = 0x1f
@@ -183,6 +184,21 @@ interface StoredGalleryFile {
   entries: StoredGalleryEntry[]
   lastUpdatedAt: string | null
 }
+
+interface StoredImageCollection {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+  updatedAt: string
+  imageIds: string[]
+}
+
+interface StoredImageCollectionsFile {
+  collections: StoredImageCollection[]
+  lastUpdatedAt: string | null
+}
+
 interface DifficultyStatsResponse extends StoredDifficultyStats {
   averageMoves: number
   averageActionMoves: number | null
@@ -238,6 +254,12 @@ interface GalleryResponse {
   lastUpdatedAt: string | null
 }
 
+interface ImageCollectionsResponse {
+  collections: StoredImageCollection[]
+  totalCollections: number
+  lastUpdatedAt: string | null
+}
+
 interface BackupImageAssetRef {
   assetId: string
 }
@@ -273,11 +295,12 @@ interface BackupSaveResponse extends Omit<SaveSummary, 'previewImage'> {
 
 interface BackupResponse {
   app: 'schiebepuzzle'
-  version: 1 | 2
+  version: 1 | 2 | 3
   exportedAt: string
   savedGames: BackupSaveResponse[]
   stats: BackupStatsResponse
   gallery: BackupGalleryResponse
+  collections?: ImageCollectionsResponse | null
   assets?: BackupAssetMap
 }
 
@@ -286,6 +309,7 @@ interface BackupImportResponse {
   savedGames: SaveSummary[]
   stats: StatsResponse
   gallery: GalleryResponse
+  collections: ImageCollectionsResponse
 }
 
 interface BackupFileResponse {
@@ -475,7 +499,11 @@ function serializeBackupPayload(backup: BackupResponse): Buffer {
 }
 
 function isReservedDataFilename(filename: string): boolean {
-  return filename === path.basename(STATS_FILE) || filename === path.basename(GALLERY_FILE)
+  return (
+    filename === path.basename(STATS_FILE)
+    || filename === path.basename(GALLERY_FILE)
+    || filename === path.basename(COLLECTIONS_FILE)
+  )
 }
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -799,6 +827,7 @@ function validateBackupPayload(payload: unknown): payload is {
   savedGames?: unknown
   stats?: unknown
   gallery?: unknown
+  collections?: unknown
   assets?: unknown
 } {
   if (!payload || typeof payload !== 'object') return false
@@ -806,7 +835,7 @@ function validateBackupPayload(payload: unknown): payload is {
   const input = payload as Record<string, unknown>
   return (
     (input.app === undefined || input.app === 'schiebepuzzle')
-    && (input.version === undefined || input.version === 1 || input.version === 2)
+    && (input.version === undefined || input.version === 1 || input.version === 2 || input.version === 3)
     && (input.savedGames === undefined || Array.isArray(input.savedGames))
   )
 }
@@ -817,6 +846,7 @@ async function buildBackupResponse(): Promise<BackupResponse> {
     readStatsFile(),
     readGalleryFile(),
   ])
+  const collections = await readCollectionsFile(gallery)
   const assetRegistry = createBackupAssetRegistry()
   const rawSavedGames = saves.map((save) => toBackupSaveResponse(save, assetRegistry))
   const rawStatsResponse = toBackupStatsResponse(stats, assetRegistry)
@@ -835,6 +865,7 @@ async function buildBackupResponse(): Promise<BackupResponse> {
     savedGames,
     stats: statsResponse,
     gallery: galleryResponse,
+    collections: toCollectionsResponse(collections),
     ...(Object.keys(assets).length > 0 ? { assets } : {}),
   }
 }
@@ -843,6 +874,7 @@ async function importBackupPayload(payload: {
   savedGames?: unknown
   stats?: unknown
   gallery?: unknown
+  collections?: unknown
   assets?: unknown
 }): Promise<BackupImportResponse> {
   const importedAt = new Date().toISOString()
@@ -857,12 +889,14 @@ async function importBackupPayload(payload: {
   const importedGallery = payload.gallery === null || payload.gallery === undefined
     ? createGalleryFileFromCompletionHistory(importedStats.completionHistory, importedStats.lastUpdatedAt)
     : normalizeGalleryFile(payload.gallery, assets)
+  const importedCollections = normalizeCollectionsFile(payload.collections, getValidGalleryEntryIds(importedGallery))
 
   await deleteAllSaves()
   await Promise.all(importedSaves.map((save) => writeStructuredSave(save)))
   await Promise.all([
     writeStatsFile(importedStats),
     writeGalleryFile(importedGallery),
+    writeCollectionsFile(importedCollections),
   ])
 
   return {
@@ -870,6 +904,7 @@ async function importBackupPayload(payload: {
     savedGames: await listAllSaveSummaries(),
     stats: toStatsResponse(importedStats),
     gallery: toGalleryResponse(importedGallery),
+    collections: toCollectionsResponse(importedCollections),
   }
 }
 
@@ -929,15 +964,17 @@ function createBackupComparisonHash(backup: {
   savedGames?: unknown
   stats?: unknown
   gallery?: unknown
+  collections?: unknown
   assets?: unknown
 }): string {
   const comparableBackup = {
     app: backup.app === 'schiebepuzzle' ? backup.app : 'schiebepuzzle',
-    version: backup.version === 2 ? 2 : 1,
+    version: backup.version === 3 ? 3 : backup.version === 2 ? 2 : 1,
     assets: normalizeBackupAssetMap(backup.assets),
     savedGames: Array.isArray(backup.savedGames) ? backup.savedGames : [],
     stats: backup.stats ?? null,
     gallery: backup.gallery ?? null,
+    collections: backup.collections ?? null,
   }
 
   return createHash('sha256').update(JSON.stringify(comparableBackup)).digest('hex')
@@ -971,6 +1008,7 @@ async function findMatchingBackupFile(backup: BackupResponse): Promise<BackupFil
         savedGames?: unknown
         stats?: unknown
         gallery?: unknown
+        collections?: unknown
         assets?: unknown
       }) !== targetHash) {
         continue
@@ -1144,6 +1182,13 @@ function createEmptyStatsFile(): StoredStatsFile {
 function createEmptyGalleryFile(): StoredGalleryFile {
   return {
     entries: [],
+    lastUpdatedAt: null,
+  }
+}
+
+function createEmptyCollectionsFile(): StoredImageCollectionsFile {
+  return {
+    collections: [],
     lastUpdatedAt: null,
   }
 }
@@ -1696,6 +1741,102 @@ function normalizeGalleryFile(payload: unknown, assets: BackupAssetMap = {}): St
       : entries[0]?.completedAt ?? null,
   }
 }
+
+function sanitizeCollectionText(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed.slice(0, 80) : null
+}
+
+function sanitizeCollectionDescription(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed.slice(0, 220) : undefined
+}
+
+function normalizeCollectionImageIds(value: unknown, validImageIds?: Set<string>): string[] {
+  if (!Array.isArray(value)) return []
+
+  const uniqueIds = new Set<string>()
+  for (const imageId of value) {
+    if (typeof imageId !== 'string' || imageId.length === 0) {
+      continue
+    }
+
+    if (validImageIds && !validImageIds.has(imageId)) {
+      continue
+    }
+
+    uniqueIds.add(imageId)
+  }
+
+  return Array.from(uniqueIds)
+}
+
+function normalizeImageCollection(
+  collection: unknown,
+  index: number,
+  usedIds: Set<string>,
+  validImageIds?: Set<string>
+): StoredImageCollection | null {
+  if (!collection || typeof collection !== 'object') return null
+
+  const input = collection as {
+    id?: unknown
+    name?: unknown
+    description?: unknown
+    createdAt?: unknown
+    updatedAt?: unknown
+    imageIds?: unknown
+  }
+  const name = sanitizeCollectionText(input.name)
+  if (!name) return null
+
+  const requestedId = typeof input.id === 'string' && isValidSaveId(input.id) ? input.id : null
+  const id = requestedId && !usedIds.has(requestedId) ? requestedId : randomUUID()
+  usedIds.add(id)
+
+  const createdAt = sanitizeTextValue(input.createdAt, new Date().toISOString())
+  const updatedAt = sanitizeTextValue(input.updatedAt, createdAt)
+  const description = sanitizeCollectionDescription(input.description)
+
+  return {
+    id,
+    name: name || `Sammlung ${index + 1}`,
+    ...(description ? { description } : {}),
+    createdAt,
+    updatedAt,
+    imageIds: normalizeCollectionImageIds(input.imageIds, validImageIds),
+  }
+}
+
+function normalizeCollectionsFile(
+  payload: unknown,
+  validImageIds?: Set<string>
+): StoredImageCollectionsFile {
+  if (!payload || typeof payload !== 'object') {
+    return createEmptyCollectionsFile()
+  }
+
+  const input = payload as {
+    collections?: unknown
+    lastUpdatedAt?: unknown
+  }
+  const usedIds = new Set<string>()
+  const collections = Array.isArray(input.collections)
+    ? input.collections
+      .map((collection, index) => normalizeImageCollection(collection, index, usedIds, validImageIds))
+      .filter((collection): collection is StoredImageCollection => collection !== null)
+      .sort((a, b) => getIsoTimestampValue(b.updatedAt) - getIsoTimestampValue(a.updatedAt))
+    : []
+
+  return {
+    collections,
+    lastUpdatedAt: typeof input.lastUpdatedAt === 'string'
+      ? input.lastUpdatedAt
+      : collections[0]?.updatedAt ?? null,
+  }
+}
 async function readStatsFile(): Promise<StoredStatsFile> {
   try {
     await ensureSavesDir()
@@ -1733,6 +1874,28 @@ async function writeGalleryFile(gallery: StoredGalleryFile): Promise<void> {
   await writeFile(GALLERY_FILE, JSON.stringify(gallery, null, 2), 'utf-8')
 }
 
+function getValidGalleryEntryIds(gallery: StoredGalleryFile): Set<string> {
+  return new Set(gallery.entries.map((entry) => entry.id))
+}
+
+async function readCollectionsFile(gallery?: StoredGalleryFile): Promise<StoredImageCollectionsFile> {
+  await ensureSavesDir()
+
+  const currentGallery = gallery ?? await readGalleryFile()
+  const validImageIds = getValidGalleryEntryIds(currentGallery)
+  const rawCollections = await readJsonFile<StoredImageCollectionsFile>(COLLECTIONS_FILE)
+  if (!rawCollections) {
+    return createEmptyCollectionsFile()
+  }
+
+  return normalizeCollectionsFile(rawCollections, validImageIds)
+}
+
+async function writeCollectionsFile(collections: StoredImageCollectionsFile): Promise<void> {
+  await ensureSavesDir()
+  await writeFile(COLLECTIONS_FILE, JSON.stringify(collections, null, 2), 'utf-8')
+}
+
 function toGalleryResponse(gallery: StoredGalleryFile): GalleryResponse {
   const sortedEntries = gallery.entries
     .slice()
@@ -1743,6 +1906,18 @@ function toGalleryResponse(gallery: StoredGalleryFile): GalleryResponse {
     totalEntries: sortedEntries.length,
     lastCompletedAt: sortedEntries[0]?.completedAt ?? null,
     lastUpdatedAt: gallery.lastUpdatedAt ?? sortedEntries[0]?.completedAt ?? null,
+  }
+}
+
+function toCollectionsResponse(collectionsFile: StoredImageCollectionsFile): ImageCollectionsResponse {
+  const sortedCollections = collectionsFile.collections
+    .slice()
+    .sort((a, b) => getIsoTimestampValue(b.updatedAt) - getIsoTimestampValue(a.updatedAt))
+
+  return {
+    collections: sortedCollections,
+    totalCollections: sortedCollections.length,
+    lastUpdatedAt: collectionsFile.lastUpdatedAt ?? sortedCollections[0]?.updatedAt ?? null,
   }
 }
 function calculateMedian(values: number[]): number {
@@ -2063,7 +2238,170 @@ async function deleteGalleryEntries(entryIds: string[]): Promise<StoredGalleryFi
   }
 
   await writeGalleryFile(nextGallery)
+  const collections = await readCollectionsFile(nextGallery)
+  await writeCollectionsFile(collections)
   return nextGallery
+}
+
+function validateCreateCollectionPayload(payload: unknown): payload is {
+  name: unknown
+  description?: unknown
+  imageIds?: unknown
+} {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as { name?: unknown; imageIds?: unknown }
+  return (
+    sanitizeCollectionText(input.name) !== null
+    && (input.imageIds === undefined || Array.isArray(input.imageIds))
+  )
+}
+
+function validateUpdateCollectionPayload(payload: unknown): payload is {
+  name?: unknown
+  description?: unknown
+  imageIds?: unknown
+} {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as { name?: unknown; imageIds?: unknown }
+  return (
+    (input.name === undefined || sanitizeCollectionText(input.name) !== null)
+    && (input.imageIds === undefined || Array.isArray(input.imageIds))
+  )
+}
+
+function validateCollectionImagesPayload(payload: unknown): payload is { imageIds: string[] } {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as { imageIds?: unknown }
+  return (
+    Array.isArray(input.imageIds)
+    && input.imageIds.length > 0
+    && input.imageIds.every((imageId) => typeof imageId === 'string' && imageId.length > 0)
+  )
+}
+
+function getValidCollectionImageIds(payloadImageIds: unknown, gallery: StoredGalleryFile): string[] {
+  return normalizeCollectionImageIds(payloadImageIds, getValidGalleryEntryIds(gallery))
+}
+
+async function createCollection(payload: {
+  name: unknown
+  description?: unknown
+  imageIds?: unknown
+}): Promise<StoredImageCollectionsFile> {
+  const gallery = await readGalleryFile()
+  const collections = await readCollectionsFile(gallery)
+  const nowIso = new Date().toISOString()
+  const name = sanitizeCollectionText(payload.name)
+  if (!name) {
+    throw new Error('Sammlungsname fehlt')
+  }
+
+  const description = sanitizeCollectionDescription(payload.description)
+  const collection: StoredImageCollection = {
+    id: randomUUID(),
+    name,
+    ...(description ? { description } : {}),
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    imageIds: getValidCollectionImageIds(payload.imageIds, gallery),
+  }
+  const nextCollections = {
+    collections: [collection, ...collections.collections],
+    lastUpdatedAt: nowIso,
+  }
+
+  await writeCollectionsFile(nextCollections)
+  return nextCollections
+}
+
+async function updateCollection(
+  collectionId: string,
+  payload: {
+    name?: unknown
+    description?: unknown
+    imageIds?: unknown
+  }
+): Promise<StoredImageCollectionsFile | null> {
+  const gallery = await readGalleryFile()
+  const collections = await readCollectionsFile(gallery)
+  const existing = collections.collections.find((collection) => collection.id === collectionId)
+  if (!existing) {
+    return null
+  }
+
+  const nowIso = new Date().toISOString()
+  const nextCollection: StoredImageCollection = {
+    ...existing,
+    ...(payload.name !== undefined ? { name: sanitizeCollectionText(payload.name) ?? existing.name } : {}),
+    ...(payload.description !== undefined
+      ? (() => {
+          const description = sanitizeCollectionDescription(payload.description)
+          return description ? { description } : { description: undefined }
+        })()
+      : {}),
+    ...(payload.imageIds !== undefined ? { imageIds: getValidCollectionImageIds(payload.imageIds, gallery) } : {}),
+    updatedAt: nowIso,
+  }
+  if (nextCollection.description === undefined) {
+    delete nextCollection.description
+  }
+
+  const nextCollections = {
+    collections: collections.collections
+      .map((collection) => collection.id === collectionId ? nextCollection : collection)
+      .sort((a, b) => getIsoTimestampValue(b.updatedAt) - getIsoTimestampValue(a.updatedAt)),
+    lastUpdatedAt: nowIso,
+  }
+
+  await writeCollectionsFile(nextCollections)
+  return nextCollections
+}
+
+async function deleteCollection(collectionId: string): Promise<StoredImageCollectionsFile | null> {
+  const collections = await readCollectionsFile()
+  const nextCollectionEntries = collections.collections.filter((collection) => collection.id !== collectionId)
+  if (nextCollectionEntries.length === collections.collections.length) {
+    return null
+  }
+
+  const nextCollections = {
+    collections: nextCollectionEntries,
+    lastUpdatedAt: new Date().toISOString(),
+  }
+
+  await writeCollectionsFile(nextCollections)
+  return nextCollections
+}
+
+async function addCollectionImages(collectionId: string, imageIds: string[]): Promise<StoredImageCollectionsFile | null> {
+  const gallery = await readGalleryFile()
+  const validImageIds = getValidCollectionImageIds(imageIds, gallery)
+  const collections = await readCollectionsFile(gallery)
+  const existing = collections.collections.find((collection) => collection.id === collectionId)
+  if (!existing) {
+    return null
+  }
+
+  const nextImageIds = Array.from(new Set([...existing.imageIds, ...validImageIds]))
+  return updateCollection(collectionId, { imageIds: nextImageIds })
+}
+
+async function removeCollectionImages(
+  collectionId: string,
+  imageIds: string[]
+): Promise<StoredImageCollectionsFile | null> {
+  const collections = await readCollectionsFile()
+  const existing = collections.collections.find((collection) => collection.id === collectionId)
+  if (!existing) {
+    return null
+  }
+
+  const idsToRemove = new Set(imageIds)
+  const nextImageIds = existing.imageIds.filter((imageId) => !idsToRemove.has(imageId))
+  return updateCollection(collectionId, { imageIds: nextImageIds })
 }
 
 async function runPowerShellClipboardCommand(script: string): Promise<string> {
@@ -2401,7 +2739,10 @@ async function handleGalleryApi(
 
     if (req.method === 'DELETE' && parts.length === 2) {
       const emptyGallery = createEmptyGalleryFile()
-      await writeGalleryFile(emptyGallery)
+      await Promise.all([
+        writeGalleryFile(emptyGallery),
+        writeCollectionsFile(createEmptyCollectionsFile()),
+      ])
       sendJson(res, 200, toGalleryResponse(emptyGallery))
       return
     }
@@ -2442,6 +2783,104 @@ async function handleGalleryApi(
 
       await writeGalleryFile(nextGallery)
       sendJson(res, 201, toGalleryResponse(nextGallery))
+      return
+    }
+
+    sendJson(res, 405, { error: 'Methode nicht erlaubt' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler'
+    sendJson(res, 500, { error: message })
+  }
+}
+
+async function handleCollectionsApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void
+): Promise<void> {
+  const reqUrl = req.url ?? '/'
+  const url = new URL(reqUrl, 'http://localhost')
+
+  if (!url.pathname.startsWith('/api/collections')) {
+    next()
+    return
+  }
+
+  if (req.method === 'OPTIONS') {
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
+  const parts = url.pathname.split('/').filter(Boolean)
+  const collectionId = parts.length > 2 ? decodeURIComponent(parts[2]) : null
+
+  try {
+    if (req.method === 'GET' && parts.length === 2) {
+      sendJson(res, 200, toCollectionsResponse(await readCollectionsFile()))
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 2) {
+      const body = await readJsonBody(req)
+      if (!validateCreateCollectionPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer neue Sammlung' })
+        return
+      }
+
+      sendJson(res, 201, toCollectionsResponse(await createCollection(body)))
+      return
+    }
+
+    if (!collectionId || !isValidSaveId(collectionId)) {
+      sendJson(res, 400, { error: 'Ungueltige Sammlungs-ID' })
+      return
+    }
+
+    if (req.method === 'PUT' && parts.length === 3) {
+      const body = await readJsonBody(req)
+      if (!validateUpdateCollectionPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Sammlung' })
+        return
+      }
+
+      const collections = await updateCollection(collectionId, body)
+      if (!collections) {
+        sendJson(res, 404, { error: 'Sammlung nicht gefunden' })
+        return
+      }
+
+      sendJson(res, 200, toCollectionsResponse(collections))
+      return
+    }
+
+    if (req.method === 'DELETE' && parts.length === 3) {
+      const collections = await deleteCollection(collectionId)
+      if (!collections) {
+        sendJson(res, 404, { error: 'Sammlung nicht gefunden' })
+        return
+      }
+
+      sendJson(res, 200, toCollectionsResponse(collections))
+      return
+    }
+
+    if ((req.method === 'POST' || req.method === 'DELETE') && parts.length === 4 && parts[3] === 'images') {
+      const body = await readJsonBody(req)
+      if (!validateCollectionImagesPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Bildauswahl fuer Sammlung' })
+        return
+      }
+
+      const collections = req.method === 'POST'
+        ? await addCollectionImages(collectionId, body.imageIds)
+        : await removeCollectionImages(collectionId, body.imageIds)
+
+      if (!collections) {
+        sendJson(res, 404, { error: 'Sammlung nicht gefunden' })
+        return
+      }
+
+      sendJson(res, 200, toCollectionsResponse(collections))
       return
     }
 
@@ -2737,6 +3176,11 @@ async function handleApiRequest(
 
   if (url.pathname.startsWith('/api/gallery')) {
     await handleGalleryApi(req, res, next)
+    return
+  }
+
+  if (url.pathname.startsWith('/api/collections')) {
+    await handleCollectionsApi(req, res, next)
     return
   }
 

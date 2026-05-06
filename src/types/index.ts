@@ -243,6 +243,37 @@ export interface SolvedGallery {
   lastUpdatedAt: string | null
 }
 
+export interface ImageCollection {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+  updatedAt: string
+  imageIds: string[]
+}
+
+export interface ImageCollections {
+  collections: ImageCollection[]
+  totalCollections: number
+  lastUpdatedAt: string | null
+}
+
+export interface CreateImageCollectionPayload {
+  name: string
+  description?: string
+  imageIds?: string[]
+}
+
+export interface UpdateImageCollectionPayload {
+  name?: string
+  description?: string
+  imageIds?: string[]
+}
+
+export interface UpdateImageCollectionImagesPayload {
+  imageIds: string[]
+}
+
 export interface BackupImageAssetRef {
   assetId: string
 }
@@ -277,11 +308,12 @@ export interface PuzzleDataBackupGallery extends Omit<SolvedGallery, 'entries'> 
 
 export interface PuzzleDataBackup {
   app: 'schiebepuzzle'
-  version: 1 | 2
+  version: 1 | 2 | 3
   exportedAt: string
   savedGames: PuzzleDataBackupSavedGame[]
   stats: PuzzleDataBackupStats | null
   gallery: PuzzleDataBackupGallery | null
+  collections?: ImageCollections | null
   assets?: BackupImageAssets
 }
 
@@ -290,6 +322,7 @@ export interface PuzzleDataImportResult {
   savedGames: SavedGameSummary[]
   stats: PuzzleStats
   gallery: SolvedGallery
+  collections: ImageCollections
 }
 
 export interface PuzzleDataBackupFile {

@@ -5,22 +5,25 @@ import {
   SavedGameSummary,
   SolvedGallery,
   SolvedGalleryEntry,
+  ImageCollection,
 } from '../../types/index'
 import { motion } from 'motion/react'
 import { startTransition, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
+import { isEditableTarget } from '../../app/keyboardShortcutUtils.ts'
 import UploadScreenIcon, { type UploadScreenIconName } from '../../components/UploadScreenIcon.tsx'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedSwapPane from '../../motion/AnimatedSwapPane.tsx'
-import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
 import AnimatedWorkspaceWindow from '../../motion/AnimatedWorkspaceWindow.tsx'
 import { getStaggerContainerVariants, getStaggerItemVariants } from '../../motion/variants.ts'
 import { useReducedMotionPreference } from '../../motion/useReducedMotionPreference.ts'
 import { DIFFICULTY_OPTIONS, formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import UploadGalleryPanel from './UploadGalleryPanel.tsx'
+import UploadCollectionsPanel from './UploadCollectionsPanel.tsx'
 import { countUniqueGalleryEntries, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
 import UploadStatsReport from './UploadStatsReport.tsx'
 import UploadSavedGamesPanel from './UploadSavedGamesPanel.tsx'
+import UploadWorkspaceSideNav from './UploadWorkspaceSideNav.tsx'
 import {
   DashboardMetric,
   HistoryFilter,
@@ -50,10 +53,12 @@ interface UploadDashboardProps {
   fastestDifficulty: PuzzleDifficultyStats | null
   stats: PuzzleStats | null
   gallery: SolvedGallery | null
+  collections?: ImageCollection[]
   isLoadingStats: boolean
   isResettingStats: boolean
   isLoadingSavedGames: boolean
   isLoadingGallery: boolean
+  isLoadingCollections?: boolean
   isResettingGallery: boolean
   hasRecordedStats: boolean
   onWindowChange: (window: UploadWorkspaceWindow) => void
@@ -62,12 +67,21 @@ interface UploadDashboardProps {
   onRequestGalleryReset: () => void
   onReplayGalleryEntry: (entry: SolvedGalleryEntry) => void
   onDeleteGalleryEntries: (entryIds: string[]) => Promise<void>
+  onCreateImageCollection?: (name: string, imageIds: string[]) => Promise<void>
+  onUpdateImageCollection?: (
+    collectionId: string,
+    updates: Pick<ImageCollection, 'name'> & Partial<Pick<ImageCollection, 'description'>>
+  ) => Promise<void>
+  onDeleteImageCollection?: (collectionId: string) => Promise<void>
+  onAddImageCollectionImages?: (collectionId: string, imageIds: string[]) => Promise<void>
+  onRemoveImageCollectionImages?: (collectionId: string, imageIds: string[]) => Promise<void>
   onLoadSave: (saveId: string) => void
   onDeleteRequest: (save: SavedGameSummary) => void
   onDeleteAllRequest: () => void
 }
 
 type DifficultyOption = (typeof DIFFICULTY_OPTIONS)[number]
+const WORKSPACE_NAV_FOCUS_SHORTCUT_KEY = 'v'
 
 function getDashboardMetricIconName(label: string): UploadScreenIconName {
   switch (label) {
@@ -101,10 +115,12 @@ export default function UploadDashboard({
   fastestDifficulty,
   stats,
   gallery,
+  collections = [],
   isLoadingStats,
   isResettingStats,
   isLoadingSavedGames,
   isLoadingGallery,
+  isLoadingCollections = false,
   isResettingGallery,
   hasRecordedStats,
   onWindowChange,
@@ -113,18 +129,24 @@ export default function UploadDashboard({
   onRequestGalleryReset,
   onReplayGalleryEntry,
   onDeleteGalleryEntries,
+  onCreateImageCollection = async () => undefined,
+  onUpdateImageCollection = async () => undefined,
+  onDeleteImageCollection = async () => undefined,
+  onAddImageCollectionImages = async () => undefined,
+  onRemoveImageCollectionImages = async () => undefined,
   onLoadSave,
   onDeleteRequest,
   onDeleteAllRequest,
 }: UploadDashboardProps) {
   const [statsViewReloadKey, setStatsViewReloadKey] = useState(0)
-  const startNavButtonRef = useRef<HTMLButtonElement>(null)
   const savedGamesNavButtonRef = useRef<HTMLButtonElement>(null)
   const statsNavButtonRef = useRef<HTMLButtonElement>(null)
   const galleryNavButtonRef = useRef<HTMLButtonElement>(null)
+  const collectionsNavButtonRef = useRef<HTMLButtonElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const savedGamesPrimaryActionRef = useRef<HTMLButtonElement>(null)
   const galleryPrimaryFilterRef = useRef<HTMLSelectElement>(null)
+  const collectionsPrimaryActionRef = useRef<HTMLButtonElement>(null)
   const statsPrimaryActionRef = useRef<HTMLButtonElement>(null)
   const standardDifficultyStats: Array<{
     option: DifficultyOption
@@ -144,6 +166,8 @@ export default function UploadDashboard({
   const galleryDifficultySpread = new Set(galleryEntries.map((entry) => `${entry.config.rows}x${entry.config.cols}`)).size
   const galleryCleanCount = galleryEntries.filter((entry) => entry.assistanceMode === 'clean').length
   const galleryProfiledCount = galleryEntries.filter((entry) => entry.hasDetailedProfile).length
+  const collectionsCount = collections.length
+  const collectedImageCount = collections.reduce((sum, collection) => sum + collection.imageIds.length, 0)
   const savedGamesTotalTime = savedGames.reduce((sum, save) => sum + save.elapsedTime, 0)
   const savedGamesTotalMoves = savedGames.reduce((sum, save) => sum + save.moves, 0)
   const savedGamesDifficultySpread = new Set(savedGames.map((save) => `${save.config.rows}x${save.config.cols}`)).size
@@ -152,11 +176,12 @@ export default function UploadDashboard({
   const latestGalleryLabel = latestGalleryEntry ? formatDate(latestGalleryEntry.completedAt) : 'Noch kein Galerie-Eintrag'
   const isStatsWindow = activeWindow === 'stats'
   const isGalleryWindow = activeWindow === 'gallery'
+  const isCollectionsWindow = activeWindow === 'collections'
   const hasGalleryEntries = galleryEntriesCount > 0
   const shouldReduceMotion = useReducedMotionPreference()
   const staggerItemVariants = getStaggerItemVariants(shouldReduceMotion)
   const staggerContainerVariants = getStaggerContainerVariants(shouldReduceMotion)
-  const workspaceShellClassName = `workspace-window-shell${activeWindow === 'savedGames' ? ' is-saves' : activeWindow === 'gallery' ? ' is-gallery' : ' is-stats'}`
+  const workspaceShellClassName = `workspace-window-shell${activeWindow === 'savedGames' ? ' is-saves' : activeWindow === 'gallery' ? ' is-gallery' : activeWindow === 'collections' ? ' is-collections' : ' is-stats'}`
   const handleReturnToStart = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     onWindowChange('start')
@@ -238,6 +263,8 @@ export default function UploadDashboard({
         return statsNavButtonRef.current
       case 'gallery':
         return galleryNavButtonRef.current
+      case 'collections':
+        return collectionsNavButtonRef.current
     }
   }, [activeWindow])
 
@@ -367,6 +394,53 @@ export default function UploadDashboard({
     }
   }, [activeWindow, getActiveWorkspaceNavButton, resetWorkspaceScrollPosition])
 
+  useEffect(() => {
+    const handleWorkspaceNavigationShortcut = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented
+        || event.altKey
+        || event.ctrlKey
+        || event.metaKey
+        || event.shiftKey
+        || event.key.toLowerCase() !== WORKSPACE_NAV_FOCUS_SHORTCUT_KEY
+        || isEditableTarget(event.target)
+      ) {
+        return
+      }
+
+      const firstNavButton = savedGamesNavButtonRef.current
+      if (!firstNavButton?.isConnected) {
+        return
+      }
+
+      event.preventDefault()
+      firstNavButton.focus({ preventScroll: true })
+    }
+
+    window.addEventListener('keydown', handleWorkspaceNavigationShortcut, true)
+
+    return () => {
+      window.removeEventListener('keydown', handleWorkspaceNavigationShortcut, true)
+    }
+  }, [])
+
+  const workspaceSideNav = (
+    <UploadWorkspaceSideNav
+      activeWindow={activeWindow}
+      savedGamesCount={savedGamesCount}
+      statsTotalSolved={stats?.totalSolved ?? 0}
+      galleryCardCount={galleryCardCount}
+      collectionsCount={collectionsCount}
+      savedGamesNavButtonRef={savedGamesNavButtonRef}
+      statsNavButtonRef={statsNavButtonRef}
+      collectionsNavButtonRef={collectionsNavButtonRef}
+      galleryNavButtonRef={galleryNavButtonRef}
+      focusShortcutLabel={WORKSPACE_NAV_FOCUS_SHORTCUT_KEY.toUpperCase()}
+      onWindowChange={onWindowChange}
+      onKeyDown={handleWorkspaceNavKeyDown}
+    />
+  )
+
   let title = 'Gespeicherte Spielstaende verwalten'
   let copy = 'Alle laufenden Partien in einem eigenen Fenster mit schneller Navigation zur Statistik, Galerie und Auswahl.'
   let kicker = 'Spielstandfenster'
@@ -381,6 +455,12 @@ export default function UploadDashboard({
     title = 'Galerie aller geloesten Spiele'
     copy = 'Jedes geloeste Motiv als eigener Galerie-Eintrag mit Vorschaubild, Schwierigkeit und Laufdaten.'
     kicker = 'Galeriefenster'
+  }
+
+  if (isCollectionsWindow) {
+    title = 'Sammlungen fuer Lieblingsmotive'
+    copy = 'Ordne geloeste Motive in eigene Gruppen und starte sie direkt aus deinen Kollektionen neu.'
+    kicker = 'Sammlungsfenster'
   }
 
   return (
@@ -401,7 +481,9 @@ export default function UploadDashboard({
           ? savedGamesNavButtonRef
           : activeWindow === 'gallery'
             ? galleryNavButtonRef
-            : statsNavButtonRef
+            : activeWindow === 'collections'
+              ? collectionsNavButtonRef
+              : statsNavButtonRef
       }
     >
       <AnimatedSwapPane swapKey={activeWindow} className="workspace-window-view" initialTiming="matched">
@@ -436,6 +518,11 @@ export default function UploadDashboard({
                     <span className="workspace-window-status">{galleryCardCount} Motive</span>
                     <span className="workspace-window-status">{formatGallerySolveCount(galleryEntriesCount)}</span>
                     <span className="workspace-window-status">Letzter Sieg {latestGalleryLabel}</span>
+                  </>
+                ) : isCollectionsWindow ? (
+                  <>
+                    <span className="workspace-window-status">{collectionsCount} Sammlungen</span>
+                    <span className="workspace-window-status">{collectedImageCount} Motive</span>
                   </>
                 ) : (
                   <>
@@ -475,120 +562,55 @@ export default function UploadDashboard({
             </div>
           </motion.header>
 
-          <AnimatedStaggerGroup
-            className="workspace-window-nav"
-            as="nav"
-            aria-label="Bereiche wechseln"
-            level="subtle"
-            onKeyDown={handleWorkspaceNavKeyDown}
-          >
-            <AnimatedButton
-              ref={startNavButtonRef}
-              className="workspace-window-nav-button"
-              interaction="surface"
-              data-workspace-window-nav="start"
-              data-page-primary-focus="true"
-              onClick={handleReturnToStart}
-              reveal
-              revealLevel="subtle"
-            >
-              <span className="workspace-window-nav-head">
-                <UploadScreenIcon name="home" className="workspace-window-nav-icon" />
-                <span className="workspace-window-nav-label">Auswahl</span>
-              </span>
-              <span className="workspace-window-nav-copy">Neue Runde beginnen</span>
-            </AnimatedButton>
-            <AnimatedButton
-              ref={savedGamesNavButtonRef}
-              className={`workspace-window-nav-button${activeWindow === 'savedGames' ? ' is-active' : ''}`}
-              interaction="surface"
-              data-workspace-window-nav="savedGames"
-              aria-current={activeWindow === 'savedGames' ? 'page' : undefined}
-              onClick={() => onWindowChange('savedGames')}
-              reveal
-              revealLevel="subtle"
-            >
-              <span className="workspace-window-nav-head">
-                <UploadScreenIcon name="folder" className="workspace-window-nav-icon" />
-                <span className="workspace-window-nav-label">Spielstaende</span>
-              </span>
-              <span className="workspace-window-nav-copy">{savedGamesCount} aktive Partien</span>
-            </AnimatedButton>
-            <AnimatedButton
-              ref={statsNavButtonRef}
-              className={`workspace-window-nav-button${activeWindow === 'stats' ? ' is-active' : ''}`}
-              interaction="surface"
-              data-workspace-window-nav="stats"
-              aria-current={activeWindow === 'stats' ? 'page' : undefined}
-              onClick={() => onWindowChange('stats')}
-              reveal
-              revealLevel="subtle"
-            >
-              <span className="workspace-window-nav-head">
-                <UploadScreenIcon name="barChart2" className="workspace-window-nav-icon" />
-                <span className="workspace-window-nav-label">Statistik</span>
-              </span>
-              <span className="workspace-window-nav-copy">{stats?.totalSolved ?? 0} Siege gesamt</span>
-            </AnimatedButton>
-            <AnimatedButton
-              ref={galleryNavButtonRef}
-              className={`workspace-window-nav-button${activeWindow === 'gallery' ? ' is-active' : ''}`}
-              interaction="surface"
-              data-workspace-window-nav="gallery"
-              aria-current={activeWindow === 'gallery' ? 'page' : undefined}
-              onClick={() => onWindowChange('gallery')}
-              reveal
-              revealLevel="subtle"
-            >
-              <span className="workspace-window-nav-head">
-                <UploadScreenIcon name="gallery" className="workspace-window-nav-icon" />
-                <span className="workspace-window-nav-label">Galerie</span>
-              </span>
-              <span className="workspace-window-nav-copy">{galleryCardCount} Motive sichtbar</span>
-            </AnimatedButton>
-          </AnimatedStaggerGroup>
-
           {isStatsWindow ? (
             <motion.div
               key={`stats-view-${statsViewReloadKey}`}
               className="workspace-window-body workspace-window-body-stats"
               variants={staggerItemVariants}
             >
-              <motion.div className="stats-compact-kpis" variants={staggerContainerVariants}>
-                {topStats.map((item) => (
-                  <motion.div key={item.label} className="stats-compact-kpi" variants={staggerItemVariants}>
-                    <span className="stats-compact-kpi-icon-shell" aria-hidden="true">
-                      <UploadScreenIcon
-                        name={getDashboardMetricIconName(item.label)}
-                        className="stats-compact-kpi-icon"
-                      />
-                    </span>
-                    <span className="stats-compact-kpi-copy">
-                      <span className="stats-compact-kpi-label">{item.label}</span>
-                      <strong className="stats-compact-kpi-value">{item.value}</strong>
-                    </span>
+              <div className="workspace-window-layout workspace-window-layout-stats">
+                <motion.div className="workspace-window-main" variants={staggerItemVariants}>
+                  <motion.div className="stats-compact-kpis" variants={staggerContainerVariants}>
+                    {topStats.map((item) => (
+                      <motion.div key={item.label} className="stats-compact-kpi" variants={staggerItemVariants}>
+                        <span className="stats-compact-kpi-icon-shell" aria-hidden="true">
+                          <UploadScreenIcon
+                            name={getDashboardMetricIconName(item.label)}
+                            className="stats-compact-kpi-icon"
+                          />
+                        </span>
+                        <span className="stats-compact-kpi-copy">
+                          <span className="stats-compact-kpi-label">{item.label}</span>
+                          <strong className="stats-compact-kpi-value">{item.value}</strong>
+                        </span>
+                      </motion.div>
+                    ))}
                   </motion.div>
-                ))}
-              </motion.div>
 
-              <motion.div variants={staggerItemVariants}>
+                  <motion.div variants={staggerItemVariants}>
                     <UploadStatsReport
                       primaryFocusRef={statsPrimaryActionRef}
                       isLoadingStats={isLoadingStats}
                       stats={stats}
-                  latestCompletion={latestCompletion}
-                  favoriteDifficulty={favoriteDifficulty}
-                  fastestDifficulty={fastestDifficulty}
-                  completionHistory={completionHistory}
-                  filteredHistory={filteredHistory}
-                  historyFilter={historyFilter}
-                  historyFilterOptions={historyFilterOptions}
-                  standardDifficultyStats={standardDifficultyStats}
-                  onHistoryFilterChange={onHistoryFilterChange}
-                  onReloadView={handleReloadStatsView}
-                  onBackToStart={handleReturnToStart}
-                />
-              </motion.div>
+                      latestCompletion={latestCompletion}
+                      favoriteDifficulty={favoriteDifficulty}
+                      fastestDifficulty={fastestDifficulty}
+                      completionHistory={completionHistory}
+                      filteredHistory={filteredHistory}
+                      historyFilter={historyFilter}
+                      historyFilterOptions={historyFilterOptions}
+                      standardDifficultyStats={standardDifficultyStats}
+                      onHistoryFilterChange={onHistoryFilterChange}
+                      onReloadView={handleReloadStatsView}
+                      onBackToStart={handleReturnToStart}
+                    />
+                  </motion.div>
+                </motion.div>
+
+                <motion.aside className="workspace-window-aside" variants={staggerContainerVariants}>
+                  {workspaceSideNav}
+                </motion.aside>
+              </div>
             </motion.div>
           ) : isGalleryWindow ? (
             <motion.div className="workspace-window-body workspace-window-body-gallery" variants={staggerItemVariants}>
@@ -598,9 +620,13 @@ export default function UploadDashboard({
                     <UploadGalleryPanel
                       primaryFilterRef={galleryPrimaryFilterRef}
                       gallery={gallery}
+                      collections={collections}
                       isLoadingGallery={isLoadingGallery}
+                      isLoadingCollections={isLoadingCollections}
                       onReplayEntry={onReplayGalleryEntry}
                       onDeleteEntries={onDeleteGalleryEntries}
+                      onCreateCollection={onCreateImageCollection}
+                      onAddCollectionImages={onAddImageCollectionImages}
                       titleId="workspace-window-gallery-title"
                       panelRole="region"
                     />
@@ -608,73 +634,91 @@ export default function UploadDashboard({
                 </motion.div>
 
                 <motion.aside className="workspace-window-aside" variants={staggerContainerVariants}>
+                  {workspaceSideNav}
+
                   <motion.article className="workspace-window-card" variants={staggerItemVariants}>
-                  <span className="saved-games-kicker">Ueberblick</span>
-                  <strong className="workspace-window-card-title">Geloeste Motive</strong>
-                  <p className="workspace-window-card-copy">
-                    {hasGalleryEntries
-                      ? `${galleryCardCount} Motive aus ${formatGallerySolveCount(galleryEntriesCount)} ueber ${galleryDifficultySpread} Schwierigkeitsstufen, davon ${galleryCleanCount} sauber und ${galleryProfiledCount} mit vollem Laufprofil.`
-                      : 'Die Galerie fuellt sich automatisch nach jedem Sieg und bleibt bewusst getrennt von Statistik und Spielstaenden loeschbar.'}
-                  </p>
-                  <div className="dashboard-inline-chips">
-                    <span className="saved-game-chip">{galleryCardCount} Motive</span>
-                    <span className="saved-game-chip">{formatGallerySolveCount(galleryEntriesCount)}</span>
-                    <span className="saved-game-chip">{galleryDifficultySpread} Stufen</span>
-                    <span className="saved-game-chip">Clean {galleryCleanCount}</span>
-                    <span className="saved-game-chip">Profil {galleryProfiledCount}</span>
+                    <span className="saved-games-kicker">Ueberblick</span>
+                    <strong className="workspace-window-card-title">Geloeste Motive</strong>
+                    <p className="workspace-window-card-copy">
+                      {hasGalleryEntries
+                        ? `${galleryCardCount} Motive aus ${formatGallerySolveCount(galleryEntriesCount)} ueber ${galleryDifficultySpread} Schwierigkeitsstufen, davon ${galleryCleanCount} sauber und ${galleryProfiledCount} mit vollem Laufprofil.`
+                        : 'Die Galerie fuellt sich automatisch nach jedem Sieg und bleibt bewusst getrennt von Statistik und Spielstaenden loeschbar.'}
+                    </p>
+                    <div className="dashboard-inline-chips">
+                      <span className="saved-game-chip">{galleryCardCount} Motive</span>
+                      <span className="saved-game-chip">{formatGallerySolveCount(galleryEntriesCount)}</span>
+                      <span className="saved-game-chip">{galleryDifficultySpread} Stufen</span>
+                      <span className="saved-game-chip">Clean {galleryCleanCount}</span>
+                      <span className="saved-game-chip">Profil {galleryProfiledCount}</span>
+                    </div>
+                  </motion.article>
+
+                  <motion.article className="workspace-window-card" variants={staggerItemVariants}>
+                    <span className="saved-games-kicker">Zuletzt geloest</span>
+                    {latestGalleryEntry ? (
+                      <>
+                        <strong className="workspace-window-card-title">{formatDifficultyLabel(latestGalleryEntry.config)}</strong>
+                        <p className="workspace-window-card-copy">
+                          Letzter Galerie-Eintrag vom {formatDate(latestGalleryEntry.completedAt)} mit {formatTime(latestGalleryEntry.time)} und {latestGalleryEntry.moves} Netto-Zuegen.
+                        </p>
+                        <div className="dashboard-inline-chips">
+                          <span className="saved-game-chip">{formatPuzzleSize(latestGalleryEntry.config)}</span>
+                          <span className="saved-game-chip">{formatTime(latestGalleryEntry.time)}</span>
+                          <span className="saved-game-chip">Netto {latestGalleryEntry.moves}</span>
+                          {latestGalleryEntry.hasDetailedProfile ? (
+                            <span className="saved-game-chip">Aktionen {latestGalleryEntry.actionMoves}</span>
+                          ) : (
+                            <span className="saved-game-chip">Legacy-Daten</span>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <strong className="workspace-window-card-title">Noch kein Eintrag</strong>
+                        <p className="workspace-window-card-copy">
+                          Sobald du ein Puzzle loest, wird das Motiv hier mit Thumbnail und Laufwerten abgelegt.
+                        </p>
+                      </>
+                    )}
+                  </motion.article>
+                </motion.aside>
+              </div>
+            </motion.div>
+          ) : isCollectionsWindow ? (
+            <motion.div className="workspace-window-body workspace-window-body-collections" variants={staggerItemVariants}>
+              <div className="workspace-window-layout workspace-window-layout-collections">
+                <motion.div className="workspace-window-main" variants={staggerItemVariants}>
+                  <div className="dashboard-panel workspace-window-panel workspace-window-panel-collections">
+                    <UploadCollectionsPanel
+                      primaryActionRef={collectionsPrimaryActionRef}
+                      collections={collections}
+                      gallery={gallery}
+                      isLoadingCollections={isLoadingCollections}
+                      onReplayEntry={onReplayGalleryEntry}
+                      onUpdateCollection={onUpdateImageCollection}
+                      onDeleteCollection={onDeleteImageCollection}
+                      onRemoveCollectionImages={onRemoveImageCollectionImages}
+                      titleId="workspace-window-collections-title"
+                      panelRole="region"
+                    />
                   </div>
-                  </motion.article>
+                </motion.div>
+
+                <motion.aside className="workspace-window-aside" variants={staggerContainerVariants}>
+                  {workspaceSideNav}
 
                   <motion.article className="workspace-window-card" variants={staggerItemVariants}>
-                  <span className="saved-games-kicker">Zuletzt geloest</span>
-                  {latestGalleryEntry ? (
-                    <>
-                      <strong className="workspace-window-card-title">{formatDifficultyLabel(latestGalleryEntry.config)}</strong>
-                      <p className="workspace-window-card-copy">
-                        Letzter Galerie-Eintrag vom {formatDate(latestGalleryEntry.completedAt)} mit {formatTime(latestGalleryEntry.time)} und {latestGalleryEntry.moves} Netto-Zuegen.
-                      </p>
-                      <div className="dashboard-inline-chips">
-                        <span className="saved-game-chip">{formatPuzzleSize(latestGalleryEntry.config)}</span>
-                        <span className="saved-game-chip">{formatTime(latestGalleryEntry.time)}</span>
-                        <span className="saved-game-chip">Netto {latestGalleryEntry.moves}</span>
-                        {latestGalleryEntry.hasDetailedProfile ? (
-                          <span className="saved-game-chip">Aktionen {latestGalleryEntry.actionMoves}</span>
-                        ) : (
-                          <span className="saved-game-chip">Legacy-Daten</span>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <strong className="workspace-window-card-title">Noch kein Eintrag</strong>
-                      <p className="workspace-window-card-copy">
-                        Sobald du ein Puzzle loest, wird das Motiv hier mit Thumbnail und Laufwerten abgelegt.
-                      </p>
-                    </>
-                  )}
-                  </motion.article>
-
-                  <motion.article className="workspace-window-card workspace-window-card-actions" variants={staggerItemVariants}>
-                  <span className="saved-games-kicker">Weiter navigieren</span>
-                  <strong className="workspace-window-card-title">Alle Bereiche direkt verbunden</strong>
-                  <p className="workspace-window-card-copy">
-                    Wechsle von der Galerie ohne Umweg zu offenen Partien, zur Statistik oder zur Auswahl.
-                  </p>
-                  <AnimatedStaggerGroup
-                    className="workspace-window-card-buttons"
-                    level="subtle"
-                    onKeyDown={handleDirectionalFocusNavigation}
-                  >
-                    <AnimatedButton className="secondary" onClick={() => onWindowChange('savedGames')} reveal revealLevel="subtle">
-                      Zu Spielstaenden
-                    </AnimatedButton>
-                    <AnimatedButton className="secondary" onClick={() => onWindowChange('stats')} reveal revealLevel="subtle">
-                      Zur Statistik
-                    </AnimatedButton>
-                    <AnimatedButton className="secondary" onClick={handleReturnToStart} reveal revealLevel="subtle">
-                      Zur Auswahl
-                    </AnimatedButton>
-                  </AnimatedStaggerGroup>
+                    <span className="saved-games-kicker">Ueberblick</span>
+                    <strong className="workspace-window-card-title">Deine Kollektionen</strong>
+                    <p className="workspace-window-card-copy">
+                      {collectionsCount > 0
+                        ? `${collectionsCount} Sammlungen mit ${collectedImageCount} gespeicherten Galerie-Referenzen.`
+                        : 'Sobald du in der Galerie ein Motiv sammelst, erscheint hier deine erste Kollektion.'}
+                    </p>
+                    <div className="dashboard-inline-chips">
+                      <span className="saved-game-chip">{collectionsCount} Sammlungen</span>
+                      <span className="saved-game-chip">{collectedImageCount} Motive</span>
+                    </div>
                   </motion.article>
                 </motion.aside>
               </div>
@@ -702,66 +746,45 @@ export default function UploadDashboard({
                 </motion.div>
 
                 <motion.aside className="workspace-window-aside" variants={staggerContainerVariants}>
+                  {workspaceSideNav}
+
                   <motion.article className="workspace-window-card" variants={staggerItemVariants}>
-                  <span className="saved-games-kicker">Ueberblick</span>
-                  <strong className="workspace-window-card-title">Aktive Partien</strong>
-                  <p className="workspace-window-card-copy">
-                    {savedGamesCount > 0
-                      ? `${savedGamesCount} offene Partien mit ${savedGamesTotalMoves} bisher gespielten Zuegen und ${formatDuration(savedGamesTotalTime)} Gesamtspielzeit.`
-                      : 'Sobald du ein Puzzle unterbrichst, erscheint es hier sofort als fortsetzbarer Spielstand.'}
-                  </p>
-                  <div className="dashboard-inline-chips">
-                    <span className="saved-game-chip">{savedGamesCount} aktiv</span>
-                    <span className="saved-game-chip">{savedGamesDifficultySpread} Stufen</span>
-                    <span className="saved-game-chip">{formatDuration(savedGamesTotalTime)}</span>
-                  </div>
+                    <span className="saved-games-kicker">Ueberblick</span>
+                    <strong className="workspace-window-card-title">Aktive Partien</strong>
+                    <p className="workspace-window-card-copy">
+                      {savedGamesCount > 0
+                        ? `${savedGamesCount} offene Partien mit ${savedGamesTotalMoves} bisher gespielten Zuegen und ${formatDuration(savedGamesTotalTime)} Gesamtspielzeit.`
+                        : 'Sobald du ein Puzzle unterbrichst, erscheint es hier sofort als fortsetzbarer Spielstand.'}
+                    </p>
+                    <div className="dashboard-inline-chips">
+                      <span className="saved-game-chip">{savedGamesCount} aktiv</span>
+                      <span className="saved-game-chip">{savedGamesDifficultySpread} Stufen</span>
+                      <span className="saved-game-chip">{formatDuration(savedGamesTotalTime)}</span>
+                    </div>
                   </motion.article>
 
                   <motion.article className="workspace-window-card" variants={staggerItemVariants}>
-                  <span className="saved-games-kicker">Zuletzt gesichert</span>
-                  {latestSavedGame ? (
-                    <>
-                      <strong className="workspace-window-card-title">{latestSavedGame.name}</strong>
-                      <p className="workspace-window-card-copy">
-                        Letzte Sicherung am {formatDate(latestSavedGame.updatedAt)}. Die Partie liegt auf {formatDifficultyLabel(latestSavedGame.config)} bei {latestSavedGame.moves} Zuegen.
-                      </p>
-                      <div className="dashboard-inline-chips">
-                        <span className="saved-game-chip">{formatPuzzleSize(latestSavedGame.config)}</span>
-                        <span className="saved-game-chip">{latestSavedGame.moves} Zuege</span>
-                        <span className="saved-game-chip">{formatTime(latestSavedGame.elapsedTime)}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <strong className="workspace-window-card-title">Noch keine Sicherung</strong>
-                      <p className="workspace-window-card-copy">
-                        Starte ein neues Puzzle, unterbrich es spaeter und du findest es hier mit Vorschau und Fortschritt wieder.
-                      </p>
-                    </>
-                  )}
-                  </motion.article>
-
-                  <motion.article className="workspace-window-card workspace-window-card-actions" variants={staggerItemVariants}>
-                  <span className="saved-games-kicker">Weiter navigieren</span>
-                  <strong className="workspace-window-card-title">Statistik, Galerie und Auswahl direkt daneben</strong>
-                  <p className="workspace-window-card-copy">
-                    Wechsle zur Statistik fuer Rekorde, in die Galerie fuer geloeste Motive oder zur Auswahl fuer ein neues Bild.
-                  </p>
-                  <AnimatedStaggerGroup
-                    className="workspace-window-card-buttons"
-                    level="subtle"
-                    onKeyDown={handleDirectionalFocusNavigation}
-                  >
-                    <AnimatedButton className="secondary" onClick={() => onWindowChange('stats')} reveal revealLevel="subtle">
-                      Zur Statistik
-                    </AnimatedButton>
-                    <AnimatedButton className="secondary" onClick={() => onWindowChange('gallery')} reveal revealLevel="subtle">
-                      Zur Galerie
-                    </AnimatedButton>
-                    <AnimatedButton className="secondary" onClick={handleReturnToStart} reveal revealLevel="subtle">
-                      Zur Auswahl
-                    </AnimatedButton>
-                  </AnimatedStaggerGroup>
+                    <span className="saved-games-kicker">Zuletzt gesichert</span>
+                    {latestSavedGame ? (
+                      <>
+                        <strong className="workspace-window-card-title">{latestSavedGame.name}</strong>
+                        <p className="workspace-window-card-copy">
+                          Letzte Sicherung am {formatDate(latestSavedGame.updatedAt)}. Die Partie liegt auf {formatDifficultyLabel(latestSavedGame.config)} bei {latestSavedGame.moves} Zuegen.
+                        </p>
+                        <div className="dashboard-inline-chips">
+                          <span className="saved-game-chip">{formatPuzzleSize(latestSavedGame.config)}</span>
+                          <span className="saved-game-chip">{latestSavedGame.moves} Zuege</span>
+                          <span className="saved-game-chip">{formatTime(latestSavedGame.elapsedTime)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <strong className="workspace-window-card-title">Noch keine Sicherung</strong>
+                        <p className="workspace-window-card-copy">
+                          Starte ein neues Puzzle, unterbrich es spaeter und du findest es hier mit Vorschau und Fortschritt wieder.
+                        </p>
+                      </>
+                    )}
                   </motion.article>
                 </motion.aside>
               </div>

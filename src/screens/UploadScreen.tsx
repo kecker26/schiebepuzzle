@@ -14,6 +14,8 @@ import {
   SavedGameSummary,
   SolvedGallery,
   SolvedGalleryEntry,
+  ImageCollection,
+  ImageCollections,
 } from '../types/index'
 import { getErrorMessage, scrollViewportToTop } from '../app/appUtils.ts'
 import { listPuzzleDataBackupFiles } from '../services/BackupService.ts'
@@ -65,6 +67,9 @@ interface UploadScreenProps {
   isLoadingGallery: boolean
   isResettingGallery: boolean
   galleryError: string | null
+  collections?: ImageCollections | null
+  isLoadingCollections?: boolean
+  collectionsError?: string | null
   isFetchingRandom: boolean
   randomImageError: string | null
   onFetchRandomImage: () => Promise<void> | void
@@ -75,6 +80,14 @@ interface UploadScreenProps {
   onResetGallery: () => Promise<void>
   onReplayGalleryEntry: (entry: SolvedGalleryEntry) => void
   onDeleteGalleryEntries: (entryIds: string[]) => Promise<void>
+  onCreateImageCollection?: (name: string, imageIds: string[], description?: string) => Promise<ImageCollections>
+  onUpdateImageCollection?: (
+    collectionId: string,
+    updates: Pick<ImageCollection, 'name'> & Partial<Pick<ImageCollection, 'description'>>
+  ) => Promise<ImageCollections>
+  onDeleteImageCollection?: (collectionId: string) => Promise<ImageCollections>
+  onAddImageCollectionImages?: (collectionId: string, imageIds: string[]) => Promise<ImageCollections>
+  onRemoveImageCollectionImages?: (collectionId: string, imageIds: string[]) => Promise<ImageCollections>
   onCreateBackupFile: () => Promise<PuzzleDataBackupFile>
   onDeleteBackupFile: (fileName: string) => Promise<void>
   onImportBackupFile: (fileName: string) => Promise<PuzzleDataImportResult>
@@ -149,6 +162,9 @@ export default function UploadScreen({
   isLoadingGallery,
   isResettingGallery,
   galleryError,
+  collections = null,
+  isLoadingCollections = false,
+  collectionsError = null,
   isFetchingRandom,
   randomImageError,
   onFetchRandomImage,
@@ -159,6 +175,11 @@ export default function UploadScreen({
   onResetGallery,
   onReplayGalleryEntry,
   onDeleteGalleryEntries,
+  onCreateImageCollection,
+  onUpdateImageCollection,
+  onDeleteImageCollection,
+  onAddImageCollectionImages,
+  onRemoveImageCollectionImages,
   onCreateBackupFile,
   onDeleteBackupFile,
   onImportBackupFile,
@@ -169,6 +190,7 @@ export default function UploadScreen({
   const savedGamesLauncherRef = useRef<HTMLButtonElement>(null)
   const statsLauncherRef = useRef<HTMLButtonElement>(null)
   const galleryLauncherRef = useRef<HTMLButtonElement>(null)
+  const collectionsLauncherRef = useRef<HTMLButtonElement>(null)
   const hasFocusedStartWindowRef = useRef(false)
   const deleteConfirmButtonRef = useRef<HTMLButtonElement>(null)
   const deleteAllConfirmButtonRef = useRef<HTMLButtonElement>(null)
@@ -333,6 +355,8 @@ export default function UploadScreen({
         return statsLauncherRef.current?.isConnected ? statsLauncherRef.current : null
       case 'gallery':
         return galleryLauncherRef.current?.isConnected ? galleryLauncherRef.current : null
+      case 'collections':
+        return collectionsLauncherRef.current?.isConnected ? collectionsLauncherRef.current : null
       case 'primaryUploadCard':
       case null:
       default:
@@ -591,6 +615,10 @@ export default function UploadScreen({
     handleWindowChange('gallery')
   }
 
+  const handleOpenCollectionsWindow = () => {
+    handleWindowChange('collections')
+  }
+
   const handleWindowChange = useCallback((window: UploadWorkspaceWindow) => {
     if (window === 'start') {
       scheduleSelectionViewportAlignment()
@@ -808,6 +836,9 @@ export default function UploadScreen({
       case 'open-gallery':
         handleWindowChange('gallery')
         return
+      case 'open-collections':
+        handleWindowChange('collections')
+        return
       case 'restore-session':
         setHistoryFilter(commandRequest.historyFilter ?? 'all')
         if ((commandRequest.window ?? 'start') === 'start') {
@@ -898,6 +929,9 @@ export default function UploadScreen({
   const savedGamesCount = savedGames.length
   const galleryEntriesCount = gallery?.totalEntries ?? gallery?.entries.length ?? 0
   const galleryUniqueEntriesCount = countUniqueGalleryEntries(gallery?.entries ?? [])
+  const imageCollections = collections?.collections ?? []
+  const imageCollectionsCount = collections?.totalCollections ?? imageCollections.length
+  const collectedImagesCount = imageCollections.reduce((sum, collection) => sum + collection.imageIds.length, 0)
   const latestGalleryAt = gallery?.lastCompletedAt ?? gallery?.entries[0]?.completedAt ?? null
   const hasRecordedStats = Boolean(stats && stats.totalSolved > 0)
   const historyFilterOptions = useMemo(() => getDifficultyHistoryFilterOptions(), [])
@@ -918,6 +952,34 @@ export default function UploadScreen({
       (entry) => entry.config.rows === rows && entry.config.cols === cols
     )
   }, [completionHistory, historyFilter])
+
+  const handleCreateCollection = useCallback(async (name: string, imageIds: string[]) => {
+    if (!onCreateImageCollection) return
+    await onCreateImageCollection(name, imageIds)
+  }, [onCreateImageCollection])
+
+  const handleUpdateCollection = useCallback(async (
+    collectionId: string,
+    updates: Pick<ImageCollection, 'name'> & Partial<Pick<ImageCollection, 'description'>>
+  ) => {
+    if (!onUpdateImageCollection) return
+    await onUpdateImageCollection(collectionId, updates)
+  }, [onUpdateImageCollection])
+
+  const handleDeleteCollection = useCallback(async (collectionId: string) => {
+    if (!onDeleteImageCollection) return
+    await onDeleteImageCollection(collectionId)
+  }, [onDeleteImageCollection])
+
+  const handleAddCollectionImages = useCallback(async (collectionId: string, imageIds: string[]) => {
+    if (!onAddImageCollectionImages) return
+    await onAddImageCollectionImages(collectionId, imageIds)
+  }, [onAddImageCollectionImages])
+
+  const handleRemoveCollectionImages = useCallback(async (collectionId: string, imageIds: string[]) => {
+    if (!onRemoveImageCollectionImages) return
+    await onRemoveImageCollectionImages(collectionId, imageIds)
+  }, [onRemoveImageCollectionImages])
 
   const topStats: DashboardMetric[] = [
     {
@@ -1065,6 +1127,12 @@ export default function UploadScreen({
       onClick: handleOpenGalleryWindow,
     },
     {
+      label: 'Sammlungen',
+      icon: 'folder',
+      meta: isLoadingCollections ? 'Laedt ...' : `${imageCollectionsCount}`,
+      onClick: handleOpenCollectionsWindow,
+    },
+    {
       groupTitle: 'Backups',
     },
     {
@@ -1118,7 +1186,7 @@ export default function UploadScreen({
         </div>
 
         <ErrorToast
-          message={error || savedGamesError || statsError || galleryError || randomImageError || null}
+          message={error || savedGamesError || statsError || galleryError || collectionsError || randomImageError || null}
           onDismiss={clearError}
         />
 
@@ -1168,19 +1236,24 @@ export default function UploadScreen({
               savedGamesActionRef={savedGamesLauncherRef}
               statsActionRef={statsLauncherRef}
               galleryActionRef={galleryLauncherRef}
+              collectionsActionRef={collectionsLauncherRef}
               savedGamesCount={savedGamesCount}
               totalSolved={stats?.totalSolved ?? 0}
               activeDays={stats?.activeDays ?? 0}
               galleryEntriesCount={galleryUniqueEntriesCount}
               gallerySolveCount={galleryEntriesCount}
+              collectionsCount={imageCollectionsCount}
+              collectedImagesCount={collectedImagesCount}
               latestActivityAt={latestActivityAt}
               latestGalleryAt={latestGalleryAt}
               isLoadingSavedGames={isLoadingSavedGames}
               isLoadingStats={isLoadingStats}
               isLoadingGallery={isLoadingGallery}
+              isLoadingCollections={isLoadingCollections}
               onOpenSavedGames={handleOpenSavedGamesWindow}
               onOpenStats={handleOpenStatsWindow}
               onOpenGallery={handleOpenGalleryWindow}
+              onOpenCollections={handleOpenCollectionsWindow}
             />
           </AnimatedReveal>
 
@@ -1223,10 +1296,12 @@ export default function UploadScreen({
               fastestDifficulty={fastestDifficulty}
               stats={stats}
               gallery={gallery}
+              collections={imageCollections}
               isLoadingStats={isLoadingStats}
               isResettingStats={isResettingStats}
               isLoadingSavedGames={isLoadingSavedGames}
               isLoadingGallery={isLoadingGallery}
+              isLoadingCollections={isLoadingCollections}
               isResettingGallery={isResettingGallery}
               hasRecordedStats={hasRecordedStats}
               onWindowChange={handleWindowChange}
@@ -1235,6 +1310,11 @@ export default function UploadScreen({
               onRequestGalleryReset={handleRequestGalleryReset}
               onReplayGalleryEntry={onReplayGalleryEntry}
               onDeleteGalleryEntries={onDeleteGalleryEntries}
+              onCreateImageCollection={handleCreateCollection}
+              onUpdateImageCollection={handleUpdateCollection}
+              onDeleteImageCollection={handleDeleteCollection}
+              onAddImageCollectionImages={handleAddCollectionImages}
+              onRemoveImageCollectionImages={handleRemoveCollectionImages}
               onLoadSave={handleLoadSave}
               onDeleteRequest={handleDeleteRequest}
               onDeleteAllRequest={handleRequestDeleteAllSavedGames}

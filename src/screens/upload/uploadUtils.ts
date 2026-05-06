@@ -10,7 +10,7 @@ import {
 } from '../../types/index'
 import { DIFFICULTY_OPTIONS } from '../../utils/puzzleDifficulty.ts'
 
-export type UploadWorkspaceWindow = 'start' | 'savedGames' | 'stats' | 'gallery'
+export type UploadWorkspaceWindow = 'start' | 'savedGames' | 'stats' | 'gallery' | 'collections'
 
 export type StatsDashboardTab = 'overview' | 'difficulties' | 'history'
 

@@ -5,6 +5,7 @@ export type UploadCommandRequestAction =
   | 'open-saved-games'
   | 'open-stats'
   | 'open-gallery'
+  | 'open-collections'
   | 'export-backup'
   | 'import-backup'
   | 'restore-session'
