@@ -21,6 +21,7 @@ interface UploadGalleryCardProps {
   entry: GalleryDisplayEntry
   onOpenDetails: (entry: GalleryDisplayEntry) => void
   onReplayEntry: (entry: SolvedGalleryEntry) => void
+  onCollectEntry?: (entry: GalleryDisplayEntry) => void
   onDeleteEntry: (entry: GalleryDisplayEntry) => void
   isDeleting: boolean
 }
@@ -29,6 +30,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   entry,
   onOpenDetails,
   onReplayEntry,
+  onCollectEntry,
   onDeleteEntry,
   isDeleting,
 }: UploadGalleryCardProps) {
@@ -160,6 +162,10 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   const handleDelete = useCallback(() => {
     onDeleteEntry(entry)
   }, [entry, onDeleteEntry])
+
+  const handleCollect = useCallback(() => {
+    onCollectEntry?.(entry)
+  }, [entry, onCollectEntry])
 
   return (
     <article className="gallery-card">
@@ -301,6 +307,20 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
           >
             <UploadScreenIcon name="info" className="gallery-card-action-icon" />
             <span>Details</span>
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            data-gallery-action="collect"
+            data-gallery-entry-id={entry.id}
+            {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
+            onClick={handleCollect}
+            onKeyDown={handleActionKeyDown}
+            disabled={isDeleting || !onCollectEntry}
+            aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} zu einer Sammlung hinzufuegen`}
+          >
+            <UploadScreenIcon name="folderHeart" className="gallery-card-action-icon" />
+            <span>Sammeln</span>
           </button>
           <button
             type="button"

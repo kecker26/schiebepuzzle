@@ -267,6 +267,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'navigation',
         items: [
           {
+            keys: ['V'],
+            label: 'Fokus direkt auf die rechte Bereichsnavigation setzen',
+          },
+          {
             keys: ['Pfeile'],
             label: 'Auf den Bereichskarten und in der Spielstandliste wechseln',
             detail: 'Links und rechts wechseln innerhalb einer Karte, hoch und runter zur gleichen Aktion anderer Spielstaende.',
@@ -324,6 +328,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         title: 'Statistikabschnitte',
         icon: 'grid',
         items: [
+          {
+            keys: ['V'],
+            label: 'Fokus direkt auf die rechte Bereichsnavigation setzen',
+          },
           {
             keys: ['Pfeile'],
             label: 'Zwischen den Abschnittskoepfen wechseln und den Zielabschnitt oben ausrichten',
@@ -418,6 +426,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         title: 'Wechsel in andere Bereiche',
         icon: 'navigation',
         items: [
+          {
+            keys: ['V'],
+            label: 'Fokus direkt auf die rechte Bereichsnavigation setzen',
+          },
           {
             keys: ['Pfeile'],
             label: 'Auf den grossen Bereichskarten zwischen Start, Spielstaenden, Statistik und Galerie wechseln',

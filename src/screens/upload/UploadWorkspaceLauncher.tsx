@@ -12,17 +12,22 @@ interface UploadWorkspaceLauncherProps {
   activeDays: number
   galleryEntriesCount: number
   gallerySolveCount: number
+  collectionsCount?: number
+  collectedImagesCount?: number
   latestActivityAt: string | null
   latestGalleryAt: string | null
   isLoadingSavedGames: boolean
   isLoadingStats: boolean
   isLoadingGallery: boolean
+  isLoadingCollections?: boolean
   onOpenSavedGames: () => void
   onOpenStats: () => void
   onOpenGallery: () => void
+  onOpenCollections?: () => void
   savedGamesActionRef?: RefObject<HTMLButtonElement>
   statsActionRef?: RefObject<HTMLButtonElement>
   galleryActionRef?: RefObject<HTMLButtonElement>
+  collectionsActionRef?: RefObject<HTMLButtonElement>
 }
 
 export default function UploadWorkspaceLauncher({
@@ -31,23 +36,29 @@ export default function UploadWorkspaceLauncher({
   activeDays,
   galleryEntriesCount,
   gallerySolveCount,
+  collectionsCount = 0,
+  collectedImagesCount = 0,
   latestActivityAt,
   latestGalleryAt,
   isLoadingSavedGames,
   isLoadingStats,
   isLoadingGallery,
+  isLoadingCollections = false,
   onOpenSavedGames,
   onOpenStats,
   onOpenGallery,
+  onOpenCollections = () => undefined,
   savedGamesActionRef,
   statsActionRef,
   galleryActionRef,
+  collectionsActionRef,
 }: UploadWorkspaceLauncherProps) {
   const latestActivityLabel = latestActivityAt ? formatDate(latestActivityAt) : 'Noch keine Aktivitaet'
   const latestGalleryLabel = latestGalleryAt ? formatDate(latestGalleryAt) : 'Noch kein Galerie-Eintrag'
   const savedGamesMeta = latestActivityAt ? `Aktiv ${latestActivityLabel}` : 'Bereit fuer offene Partien'
   const statsMeta = activeDays > 0 ? `${activeDays} aktive Tage` : 'Noch keine Sieges-Serie'
   const galleryMeta = latestGalleryAt ? `Letzter Sieg ${latestGalleryLabel}` : 'Wird mit jedem geloesten Bild gefuellt'
+  const collectionsMeta = collectionsCount > 0 ? `${collectedImagesCount} Motive gesammelt` : 'Favoriten sammeln'
 
   return (
     <AnimatedStaggerGroup
@@ -64,7 +75,7 @@ export default function UploadWorkspaceLauncher({
             <UploadScreenIcon name="layers" className="upload-section-title-icon" />
           </span>
           <h2 id="upload-data-window-title" className="upload-workspace-launcher-title">
-            Spielstaende, Statistik und Galerie
+            Spielstaende, Statistik, Galerie und Sammlungen
           </h2>
         </div>
       </AnimatedReveal>
@@ -139,6 +150,40 @@ export default function UploadWorkspaceLauncher({
           <span className="menu-card-arrow">
             <UploadScreenIcon name="barChart2" className="menu-card-arrow-icon" />
             Statistik oeffnen
+          </span>
+        </AnimatedCardButton>
+
+        <AnimatedCardButton
+          ref={collectionsActionRef}
+          className="workspace-launcher-link menu-card"
+          onClick={onOpenCollections}
+          disabled={isLoadingCollections}
+          reveal
+          revealLevel="medium"
+        >
+          <span className="menu-card-glow" aria-hidden="true" />
+          <span className="menu-card-eyebrow">Kollektionen</span>
+          <span className="menu-card-icon" aria-hidden="true">
+            <UploadScreenIcon name="folderHeart" className="menu-card-icon-symbol" />
+          </span>
+          <span className="menu-card-title">Sammlungen</span>
+          <strong className="workspace-launcher-value">
+            {isLoadingCollections ? 'Lade ...' : `${collectionsCount} aktiv`}
+          </strong>
+          <span className="menu-card-desc">Lieblingsmotive gruppieren, wiederfinden und direkt neu starten.</span>
+          <div className="workspace-launcher-meta">
+            <span className="saved-game-chip">
+              <UploadScreenIcon name="folderHeart" className="saved-game-chip-icon" />
+              {isLoadingCollections ? 'Wird geladen ...' : collectionsMeta}
+            </span>
+            <span className="saved-game-chip">
+              <UploadScreenIcon name="image" className="saved-game-chip-icon" />
+              Aus geloesten Motiven
+            </span>
+          </div>
+          <span className="menu-card-arrow">
+            <UploadScreenIcon name="folderHeart" className="menu-card-arrow-icon" />
+            Sammlungen oeffnen
           </span>
         </AnimatedCardButton>
 

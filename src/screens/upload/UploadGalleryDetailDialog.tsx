@@ -16,6 +16,7 @@ import {
 interface UploadGalleryDetailDialogProps {
   entry: GalleryDisplayEntry
   onReplayEntry: (entry: SolvedGalleryEntry) => void
+  onCollectEntry?: (entry: GalleryDisplayEntry) => void
   onClose: () => void
 }
 
@@ -26,10 +27,12 @@ function getConfigKey(entry: SolvedGalleryEntry): string {
 export default function UploadGalleryDetailDialog({
   entry,
   onReplayEntry,
+  onCollectEntry,
   onClose,
 }: UploadGalleryDetailDialogProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const replayButtonRef = useRef<HTMLButtonElement>(null)
+  const collectButtonRef = useRef<HTMLButtonElement>(null)
   const representativeEntry = entry.representativeEntry
   const detailImage = representativeEntry.sourceImage ?? representativeEntry.previewImage
   const assistanceLabel = representativeEntry.hasDetailedProfile
@@ -58,7 +61,11 @@ export default function UploadGalleryDetailDialog({
     ? motifReplaySummary.allEntries
     : entry.allEntries
   const descriptionId = 'gallery-detail-description'
-  const initialFocusRef = replayActions.length > 0 ? replayButtonRef : closeButtonRef
+  const initialFocusRef = replayActions.length > 0
+    ? replayButtonRef
+    : onCollectEntry
+      ? collectButtonRef
+      : closeButtonRef
 
   const handleActionKeyDown = useCallback((event: ReactKeyboardEvent<HTMLButtonElement>) => {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
@@ -317,6 +324,19 @@ export default function UploadGalleryDetailDialog({
           ) : null}
 
           <div className="gallery-detail-actions" data-gallery-detail-action-group="true">
+            {onCollectEntry ? (
+              <button
+                ref={collectButtonRef}
+                type="button"
+                className="secondary"
+                data-page-primary-focus={replayActions.length === 0 ? 'true' : undefined}
+                onClick={() => onCollectEntry(entry)}
+                onKeyDown={handleActionKeyDown}
+                aria-label={`Galerie-Bild ${formatDifficultyLabel(representativeEntry.config)} vom ${formatDate(representativeEntry.completedAt)} zu einer Sammlung hinzufuegen`}
+              >
+                Sammeln
+              </button>
+            ) : null}
             <button
               ref={closeButtonRef}
               type="button"

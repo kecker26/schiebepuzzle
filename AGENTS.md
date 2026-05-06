@@ -5,20 +5,20 @@
 - Halte Aenderungen klein, nachvollziehbar und kompatibel mit dem bestehenden React-, TypeScript- und Vite-Setup.
 
 ## Projektueberblick
-- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, Backup und Musik.
+- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, Sammlungen, Backup und Musik.
 - Frontend: React 18 + TypeScript.
 - Animationen: `motion` / `motion/react`.
 - Icons: `lucide-react` fuer React-SVG-Icons, plus kuratierte lokale SVGs unter `src/assets/system/`.
 - Build, Dev-Server und Tests: Vite, TypeScript, Vitest und ESLint.
 - Lokale API: `localApi.ts` wird ueber `vite.config.ts` als Vite-Plugin eingebunden.
-- Persistenz: Spielstaende, Statistik und Galerie liegen lokal unter `spielstaende/`; Backups liegen unter `backups/`.
+- Persistenz: Spielstaende, Statistik, Galerie und Sammlungen liegen lokal unter `spielstaende/`; Backups liegen unter `backups/`.
 - Dev-Server: `vite.config.ts` nutzt `127.0.0.1:5173` mit `strictPort: true`.
 
 ## Wichtige Pfade
 - `src/App.tsx`: zentraler App-Flow, Lazy-Loading der Screens, Session-Handling, Autosave, Recovery, Save-/Stats-/Gallery-Refresh und Screen-Wechsel.
 - `src/app/`: app-weite Hooks und Hilfen fuer Command Palette, Hilfesystem, Recovery, Last-Session, Crop-Drafts, Fokus- und Tastatursteuerung.
 - `src/screens/StartScreen.tsx`: Einstieg, Hero-Motiv, Schnellaktionen und Resume-Flow.
-- `src/screens/UploadScreen.tsx` und `src/screens/upload/`: Upload-Dashboard, gespeicherte Spiele, Statistik, Galerie, Backup-Import/-Export und Workspace-Fenster.
+- `src/screens/UploadScreen.tsx` und `src/screens/upload/`: Upload-Dashboard, gespeicherte Spiele, Statistik, Galerie, Sammlungen, Backup-Import/-Export und Workspace-Fenster.
 - `src/screens/CropScreen.tsx`: Zuschnitt, Transform und Puzzle-Konfiguration.
 - `src/screens/PuzzleScreen.tsx` und `src/screens/puzzle/`: Spielansicht, Panels, Kontextmenue, Tastaturkuerzel und Solver-Worker-Hooks.
 - `src/components/`: wiederverwendbare UI wie `CommandPalette`, `GlobalHelpOverlay`, `WinDialog`, `ThemeSwitcher`, Toasts, Recovery-Dialog und Icon-Komponenten.
@@ -30,11 +30,11 @@
 - `src/services/PuzzleSolver.ts`: Solver-Logik.
 - `src/services/ExactPuzzleSolver.ts` und `src/workers/exact-puzzle-solver.worker.ts`: exakte Solver-Variante und Worker.
 - `src/workers/puzzle-solver.worker.ts`: Worker fuer rechenintensive Solver-Aufgaben.
-- `src/services/SaveService.ts`, `StatsService.ts`, `GalleryService.ts`, `BackupService.ts`, `MusicService.ts`: Frontend-Zugriff auf lokale `/api/*`-Routen.
+- `src/services/SaveService.ts`, `StatsService.ts`, `GalleryService.ts`, `CollectionService.ts`, `BackupService.ts`, `MusicService.ts`: Frontend-Zugriff auf lokale `/api/*`-Routen.
 - `src/services/RandomImageService.ts` und Provider-Dateien wie `NasaImageProvider.ts`, `MetMuseumImageProvider.ts`, `PicsumImageProvider.ts`, `PixabayImageProvider.ts`, `PexelsImageProvider.ts`, `WikimediaImageProvider.ts`, `SmithsonianImageProvider.ts`, `ArtInstituteImageProvider.ts`, `GeneratedImageProvider.ts`: Zufallsbild-Quellen.
 - `src/services/AudioService.ts`, `MusicPlaybackController.ts`, `services/music/` und `musicStyles.ts`: lokale und externe Musikauswahl, Fallback-Tracks und Wiedergabezustand.
 - `src/services/api/apiClient.ts`: gemeinsamer Fetch-/Fehler-Wrapper fuer Frontend-API-Calls.
-- `localApi.ts`: lokale Dateipersistenz und API-Routen fuer Saves, Stats, Galerie, Backup, Clipboard und Musik.
+- `localApi.ts`: lokale Dateipersistenz und API-Routen fuer Saves, Stats, Galerie, Sammlungen, Backup, Clipboard und Musik.
 - `src/types/index.ts`: zentrale Typdefinitionen.
 - `src/utils/`: Hilfslogik fuer Puzzle-Schwierigkeit, Run-Vergleich und Context-Window.
 - `src/styles/`: globale und screen-/component-spezifische CSS-Dateien.
@@ -47,9 +47,9 @@
 - Vor groesseren Aenderungen die betroffenen Datenfluesse lesen, nicht nur die UI-Datei.
 - Aenderungen an App-Flows immer gegen `src/App.tsx`, die betroffenen Hooks in `src/app/` und die jeweiligen Screen-Props pruefen.
 - Aenderungen an Spielmechanik immer gegen `PuzzleEngine`, `PuzzleStateService`, `PuzzleSolver`, `ExactPuzzleSolver`, Worker-Protokolle und betroffene Typen pruefen.
-- Aenderungen an Save-/Stats-/Gallery-/Backup-Features immer auf Frontend-Service, `src/types/index.ts` und `localApi.ts` abstimmen.
-- Bestehende API-Pfade (`/api/saves`, `/api/stats`, `/api/gallery`, `/api/backup`, `/api/clipboard`, `/api/music`) nur aendern, wenn Frontend und lokale API gemeinsam angepasst werden.
-- Bei persistierten Formaten rueckwaertskompatibel bleiben; bestehende Saves, `__stats.json`, `__gallery.json` und `.spbkp`-Backups muessen weiter defensiv gelesen werden.
+- Aenderungen an Save-/Stats-/Gallery-/Collections-/Backup-Features immer auf Frontend-Service, `src/types/index.ts` und `localApi.ts` abstimmen.
+- Bestehende API-Pfade (`/api/saves`, `/api/stats`, `/api/gallery`, `/api/collections`, `/api/backup`, `/api/clipboard`, `/api/music`) nur aendern, wenn Frontend und lokale API gemeinsam angepasst werden.
+- Bei persistierten Formaten rueckwaertskompatibel bleiben; bestehende Saves, `__stats.json`, `__gallery.json`, `__collections.json` und `.spbkp`-Backups muessen weiter defensiv gelesen werden.
 - `dist/`, `node_modules/`, `spielstaende/`, `backups/`, `preview.*.txt`, temporaere Dateien und Office-Lockdateien nicht manuell bearbeiten, ausser die Aufgabe verlangt es explizit.
 - Bestehende deutsche UI-Texte beibehalten, sofern kein ausdrueckliches Rewriting gewuenscht ist.
 - Bei UI-Aenderungen bestehende CSS-Struktur unter `src/styles/` sowie Icon-Komponenten und Motion-Bausteine wiederverwenden.
@@ -77,7 +77,7 @@
 - Nach relevanten Codeaenderungen mindestens `npm run build` ausfuehren.
 - Bei Aenderungen an TypeScript- oder React-Code nach Moeglichkeit auch `npm run lint` ausfuehren.
 - Bei Aenderungen an Save-/Stats-Logik pruefen, ob Erstellen, Laden, Aktualisieren und Loeschen von Spielstaenden weiter funktioniert.
-- Bei Aenderungen an Galerie oder Backups pruefen, ob Export, lokales Backup-Erstellen, Import, Loeschen und Wiederherstellen weiter funktionieren.
+- Bei Aenderungen an Galerie, Sammlungen oder Backups pruefen, ob Export, lokales Backup-Erstellen, Import, Loeschen und Wiederherstellen weiter funktionieren.
 - Bei Aenderungen an Solver oder Rendering auf offensichtliche Laufzeitprobleme in Start-, Upload-, Crop- und Puzzle-Ansicht achten.
 - Bei Aenderungen an Tastatur-/Fokuslogik mindestens `npm run test:smoke` ausfuehren.
 - Bei Aenderungen an `src/screens/upload/galleryReplayActions.ts`, `UploadGalleryDisplayUtils.ts` oder Run-Vergleichen die passenden Vitest-Dateien unter `src/test/` ausfuehren.
@@ -87,6 +87,7 @@
 - Canvas- und Solver-Code ist zustandsabhaengig; dort keine stillen Strukturbrueche an `PuzzleState`, `Tile` oder Worker-Nachrichten einfuehren.
 - Autosave, Recovery und Last-Session greifen ineinander; vor Aenderungen die Snapshots in `src/app/recoverySession.ts`, `lastSession.ts` und `cropDraftSession.ts` pruefen.
 - Persistierte Daten muessen rueckwaertskompatibel behandelt werden, wenn bestehende Dateien in `spielstaende/` und `backups/` weiter lesbar bleiben sollen.
+- Sammlungen referenzieren Galerie-Eintraege ueber IDs; beim Laden fehlende Galerie-Referenzen defensiv ausfiltern statt die UI zu blockieren.
 - Wenn neue Features neue Felder in Save- oder Stats-Dateien brauchen, defensiv parsen und sinnvolle Defaults vorsehen.
 - Externe Provider duerfen die App nicht blockieren; bei Netzwerk-/API-Fehlern muss ein nutzbarer Fallback oder eine klare Fehlermeldung erhalten bleiben.
 - `localApi.ts` ist gross und traegt mehrere Verantwortungen; neue Endpunkte moeglichst nahe an den bestehenden Handlern und Validierungsfunktionen ergaenzen.

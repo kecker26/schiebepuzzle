@@ -36,6 +36,7 @@ import { useImageThemePalette } from './app/useImageThemePalette.ts'
 import { usePuzzleStats } from './app/usePuzzleStats.ts'
 import { useSavedGamesCatalog } from './app/useSavedGamesCatalog.ts'
 import { useSolvedGallery } from './app/useSolvedGallery.ts'
+import { useImageCollections } from './app/useImageCollections.ts'
 import { type AppContextMenuHandler } from './app/appContextMenu.ts'
 import { useButtonOnlyTabNavigation } from './app/useButtonOnlyTabNavigation.ts'
 import AnimatedScreen from './motion/AnimatedScreen.tsx'
@@ -64,6 +65,13 @@ import {
   updateSavedGame,
 } from './services/SaveService.ts'
 import { addSolvedGalleryEntry, deleteSolvedGalleryEntries } from './services/GalleryService.ts'
+import {
+  addImageCollectionImages,
+  createImageCollection,
+  deleteImageCollection,
+  removeImageCollectionImages,
+  updateImageCollection,
+} from './services/CollectionService.ts'
 import audioService from './services/AudioService.ts'
 import { recordPuzzleCompletion } from './services/StatsService.ts'
 import { useTheme } from './contexts/ThemeContext.tsx'
@@ -81,6 +89,8 @@ import {
   RecordSolvedGalleryEntryPayload,
   SavedGameSummary,
   SolvedGalleryEntry,
+  ImageCollection,
+  ImageCollections,
   WinStats,
 } from './types/index'
 import { DEFAULT_PUZZLE_CONFIG, getNextDifficultyOption } from './utils/puzzleDifficulty.ts'
@@ -119,6 +129,8 @@ function describeResumeWindow(activeWindow: UploadWorkspaceWindow, historyFilter
         : `Statistik zuletzt geoeffnet, Filter ${historyFilter}.`
     case 'gallery':
       return 'Galerie zuletzt geoeffnet.'
+    case 'collections':
+      return 'Sammlungen zuletzt geoeffnet.'
     case 'start':
     default:
       return 'Auswahlansicht zuletzt geoeffnet.'
@@ -282,6 +294,14 @@ export default function App() {
     setGalleryError,
     resetGallery,
   } = useSolvedGallery()
+  const {
+    collections,
+    isLoadingCollections,
+    collectionsError,
+    setCollections,
+    setCollectionsError,
+    refreshCollections,
+  } = useImageCollections()
 
   const createSavePromiseRef = useRef<Promise<string> | null>(null)
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
@@ -1248,6 +1268,7 @@ export default function App() {
     try {
       await resetGallery()
       setGalleryError(null)
+      await refreshCollections(false)
     } catch {
       // Hook already exposes the error state.
     }
@@ -1260,11 +1281,85 @@ export default function App() {
       const nextGallery = await deleteSolvedGalleryEntries(entryIds)
       setGallery(nextGallery)
       setGalleryError(null)
+      await refreshCollections(false)
     } catch (error) {
       setGalleryError(`Galerie-Bild konnte nicht geloescht werden: ${getErrorMessage(error)}`)
       throw error
     }
-  }, [setGallery, setGalleryError])
+  }, [refreshCollections, setGallery, setGalleryError])
+
+  const handleCreateImageCollection = useCallback(async (
+    name: string,
+    imageIds: string[],
+    description?: string
+  ): Promise<ImageCollections> => {
+    try {
+      const nextCollections = await createImageCollection({ name, description, imageIds })
+      setCollections(nextCollections)
+      setCollectionsError(null)
+      return nextCollections
+    } catch (error) {
+      setCollectionsError(`Sammlung konnte nicht erstellt werden: ${getErrorMessage(error)}`)
+      throw error
+    }
+  }, [setCollections, setCollectionsError])
+
+  const handleUpdateImageCollection = useCallback(async (
+    collectionId: string,
+    updates: Pick<ImageCollection, 'name'> & Partial<Pick<ImageCollection, 'description'>>
+  ): Promise<ImageCollections> => {
+    try {
+      const nextCollections = await updateImageCollection(collectionId, updates)
+      setCollections(nextCollections)
+      setCollectionsError(null)
+      return nextCollections
+    } catch (error) {
+      setCollectionsError(`Sammlung konnte nicht aktualisiert werden: ${getErrorMessage(error)}`)
+      throw error
+    }
+  }, [setCollections, setCollectionsError])
+
+  const handleDeleteImageCollection = useCallback(async (collectionId: string): Promise<ImageCollections> => {
+    try {
+      const nextCollections = await deleteImageCollection(collectionId)
+      setCollections(nextCollections)
+      setCollectionsError(null)
+      return nextCollections
+    } catch (error) {
+      setCollectionsError(`Sammlung konnte nicht geloescht werden: ${getErrorMessage(error)}`)
+      throw error
+    }
+  }, [setCollections, setCollectionsError])
+
+  const handleAddImageCollectionImages = useCallback(async (
+    collectionId: string,
+    imageIds: string[]
+  ): Promise<ImageCollections> => {
+    try {
+      const nextCollections = await addImageCollectionImages(collectionId, { imageIds })
+      setCollections(nextCollections)
+      setCollectionsError(null)
+      return nextCollections
+    } catch (error) {
+      setCollectionsError(`Bild konnte nicht zur Sammlung hinzugefuegt werden: ${getErrorMessage(error)}`)
+      throw error
+    }
+  }, [setCollections, setCollectionsError])
+
+  const handleRemoveImageCollectionImages = useCallback(async (
+    collectionId: string,
+    imageIds: string[]
+  ): Promise<ImageCollections> => {
+    try {
+      const nextCollections = await removeImageCollectionImages(collectionId, { imageIds })
+      setCollections(nextCollections)
+      setCollectionsError(null)
+      return nextCollections
+    } catch (error) {
+      setCollectionsError(`Bild konnte nicht aus der Sammlung entfernt werden: ${getErrorMessage(error)}`)
+      throw error
+    }
+  }, [setCollections, setCollectionsError])
 
   const handleCreateBackupFile = useCallback(async (): Promise<PuzzleDataBackupFile> => {
     return createPuzzleDataBackupFile()
@@ -1288,6 +1383,8 @@ export default function App() {
     setStatsError(null)
     setGallery(result.gallery)
     setGalleryError(null)
+    setCollections(result.collections)
+    setCollectionsError(null)
     setAppState('idle')
 
     return result
@@ -1297,6 +1394,8 @@ export default function App() {
     resetRunArtifacts,
     setGallery,
     setGalleryError,
+    setCollections,
+    setCollectionsError,
     setSavedGames,
     setSavedGamesError,
     setStatsError,
@@ -1900,6 +1999,15 @@ export default function App() {
         icon: 'image',
         keywords: ['motive', 'bilder', 'geloest'],
         onSelect: () => handleOpenUploadSurface('open-gallery'),
+      },
+      {
+        id: 'nav-collections',
+        title: 'Sammlungen oeffnen',
+        detail: `${collections?.totalCollections ?? 0} eigene Kollektionen fuer Lieblingsmotive ansehen.`,
+        section: 'Navigation',
+        icon: 'archive',
+        keywords: ['sammlungen', 'kollektionen', 'favoriten'],
+        onSelect: () => handleOpenUploadSurface('open-collections'),
       }
     )
 
@@ -1953,7 +2061,7 @@ export default function App() {
       {
         id: 'data-export-backup',
         title: 'Backup exportieren',
-        detail: 'Spielstaende, Statistik und Galerie als lokales Backup sichern.',
+        detail: 'Spielstaende, Statistik, Galerie und Sammlungen als lokales Backup sichern.',
         section: 'Daten',
         icon: 'archive',
         keywords: ['backup', 'export', 'sichern'],
@@ -2058,6 +2166,7 @@ export default function App() {
     appState,
     beginSession,
     closeHelp,
+    collections?.totalCollections,
     croppedImage,
     gallery,
     handleContinueLatestSavedGame,
@@ -2173,6 +2282,9 @@ export default function App() {
                 isLoadingGallery={isLoadingGallery}
                 isResettingGallery={isResettingGallery}
                 galleryError={galleryError}
+                collections={collections}
+                isLoadingCollections={isLoadingCollections}
+                collectionsError={collectionsError}
                 isFetchingRandom={isFetchingRandom}
                 randomImageError={randomImageError}
                 onFetchRandomImage={handleFetchRandomImage}
@@ -2183,6 +2295,11 @@ export default function App() {
                 onResetGallery={handleResetGallery}
                 onReplayGalleryEntry={handleReplayGalleryEntry}
                 onDeleteGalleryEntries={handleDeleteGalleryEntries}
+                onCreateImageCollection={handleCreateImageCollection}
+                onUpdateImageCollection={handleUpdateImageCollection}
+                onDeleteImageCollection={handleDeleteImageCollection}
+                onAddImageCollectionImages={handleAddImageCollectionImages}
+                onRemoveImageCollectionImages={handleRemoveImageCollectionImages}
                 onCreateBackupFile={handleCreateBackupFile}
                 onDeleteBackupFile={handleDeleteBackupFile}
                 onImportBackupFile={handleImportBackupFile}

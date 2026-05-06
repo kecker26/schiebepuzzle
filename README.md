@@ -1,6 +1,6 @@
 # Schiebepuzzle Web-App
 
-Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von Schiebepuzzles. Die App ist inzwischen mehr als ein MVP: Sie umfasst Startscreen, Bild-Upload, Zufallsbilder, Crop-Werkzeug, Canvas-Spielansicht, Hinweise, Solver, Autosave, Wiederherstellung, Statistik, Galerie, Backup-Import/-Export und Musik.
+Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von Schiebepuzzles. Die App ist inzwischen mehr als ein MVP: Sie umfasst Startscreen, Bild-Upload, Zufallsbilder, Crop-Werkzeug, Canvas-Spielansicht, Hinweise, Solver, Autosave, Wiederherstellung, Statistik, Galerie, Sammlungen, Backup-Import/-Export und Musik.
 
 ## Funktionsumfang
 
@@ -13,7 +13,8 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Autosave, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
 - Statistik mit Bestzeiten, Zugzahlen, Assistenzprofilen und Verlauf.
 - Galerie geloester Motive inklusive Replay-Funktion.
-- Lokale Backups fuer Spielstaende, Statistik und Galerie.
+- Bild-Sammlungen fuer Lieblingsmotive aus der Galerie.
+- Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
 - Musik- und Sound-Unterstuetzung mit lokalen Fallback-Tracks.
 - Command Palette, globale Hilfe, Kontextmenues, Theme-Umschaltung und Motion-Animationen.
 
@@ -74,7 +75,7 @@ Der Dev-Server ist in `vite.config.ts` auf `http://127.0.0.1:5173/` mit `strictP
 
 Die App arbeitet lokal. Die Vite-Middleware in `localApi.ts` verwaltet die Daten direkt im Projektordner:
 
-- `spielstaende/`: gespeicherte Partien, `__stats.json` und `__gallery.json`
+- `spielstaende/`: gespeicherte Partien, `__stats.json`, `__gallery.json` und `__collections.json`
 - `backups/`: lokale Backup-Dateien mit der Endung `.spbkp`
 - `public/audio/`: lokale Musik- und Sound-Assets
 - `public/fonts/`: eingebundene Fonts
@@ -88,6 +89,7 @@ Die Frontend-Services greifen ueber lokale API-Routen auf die Middleware zu:
 - `/api/saves`: Spielstaende erstellen, laden, aktualisieren und loeschen.
 - `/api/stats`: Statistik laden, zuruecksetzen und Abschluesse aufzeichnen.
 - `/api/gallery`: Galerie geloester Motive laden, erweitern und bereinigen.
+- `/api/collections`: Bild-Sammlungen laden, erstellen, bearbeiten und mit Galerie-Motiven verknuepfen.
 - `/api/backup`: Daten exportieren, importieren und lokale Backup-Dateien verwalten.
 - `/api/clipboard`: Clipboard-Hilfen fuer lokale Ablage.
 - `/api/music`: Musiktracks anhand des gewaehlten Stils auswaehlen.
@@ -104,7 +106,7 @@ src/
   contexts/    React-Kontexte, aktuell vor allem Theme-Zustand
   motion/      Motion-Komponenten, Tokens, Varianten und Dialog-A11y
   screens/     Start-, Upload-, Crop- und Puzzle-Ansichten
-  services/    Puzzle-, Save-, Stats-, Galerie-, Backup-, Musik- und Bildprovider-Logik
+  services/    Puzzle-, Save-, Stats-, Galerie-, Sammlungs-, Backup-, Musik- und Bildprovider-Logik
   styles/      Globale, Komponenten- und Screen-CSS-Dateien
   test/        Vitest-Tests und Test-Setup
   types/       Zentrale TypeScript-Typen
@@ -115,7 +117,7 @@ src/
 Wichtige Einstiegspunkte:
 
 - `src/App.tsx`: zentraler App-Flow, Lazy-Loading, Autosave, Recovery und Screen-Wechsel.
-- `src/screens/UploadScreen.tsx`: Workspace fuer Upload, Saves, Statistik, Galerie und Backups.
+- `src/screens/UploadScreen.tsx`: Workspace fuer Upload, Saves, Statistik, Galerie, Sammlungen und Backups.
 - `src/screens/CropScreen.tsx`: Zuschnitt und Puzzle-Konfiguration.
 - `src/screens/PuzzleScreen.tsx`: Spielansicht und Puzzle-Interaktion.
 - `src/services/PuzzleEngine.ts`: Kernlogik fuer Board, Moves, Shuffle und Hinweise.
@@ -130,12 +132,13 @@ Wichtige Einstiegspunkte:
 3. Motiv zuschneiden und Puzzle-Groesse waehlen.
 4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
 5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
-6. Spielstaende, Galerie und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
+6. Lieblingsmotive aus der Galerie optional in Sammlungen organisieren.
+7. Spielstaende, Galerie, Sammlungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
 
 ## Entwicklungshinweise
 
 - Bestehende deutsche UI-Texte beibehalten, sofern kein Rewriting gewuenscht ist.
-- Persistierte Daten defensiv lesen, damit alte Spielstaende, Statistik-, Galerie- und Backup-Dateien weiter funktionieren.
+- Persistierte Daten defensiv lesen, damit alte Spielstaende, Statistik-, Galerie-, Sammlungs- und Backup-Dateien weiter funktionieren.
 - Solver-, Canvas- und Worker-Aenderungen immer gegen `PuzzleState`, `Tile`, Worker-Protokolle und Tests pruefen.
 - UI-Aenderungen sollten vorhandene CSS-Struktur, Icon-Komponenten und Motion-Bausteine wiederverwenden.
 - Fuer groessere oder riskantere Aenderungen vorab klaeren, ob ein eigener Git-Branch sinnvoll ist.
