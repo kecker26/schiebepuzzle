@@ -40,6 +40,7 @@ interface UploadStatsHistorySectionProps {
   onHistoryFilterChange: (value: HistoryFilter) => void
   onReloadView: () => void
   onBackToStart: () => void
+  defaultOpen?: boolean
 }
 
 interface HistoryDifficultyReportSummary {
@@ -241,6 +242,7 @@ export default function UploadStatsHistorySection({
   onHistoryFilterChange,
   onReloadView,
   onBackToStart,
+  defaultOpen = true,
 }: UploadStatsHistorySectionProps) {
   const announceAccessibility = useAccessibilityAnnouncer()
   const historyContentRef = useRef<HTMLDivElement>(null)
@@ -447,7 +449,7 @@ export default function UploadStatsHistorySection({
         </>
       }
       collapsible
-      defaultOpen
+      defaultOpen={defaultOpen}
       onReloadView={onReloadView}
       onBackToStart={onBackToStart}
     >

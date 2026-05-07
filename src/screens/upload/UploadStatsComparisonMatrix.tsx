@@ -23,6 +23,7 @@ interface UploadStatsComparisonMatrixProps {
   standardDifficultyStats: StandardDifficultyStatsEntry[]
   onReloadView: () => void
   onBackToStart: () => void
+  defaultOpen?: boolean
   summaryButtonRef?: RefObject<HTMLButtonElement>
 }
 
@@ -74,6 +75,7 @@ export default function UploadStatsComparisonMatrix({
   standardDifficultyStats,
   onReloadView,
   onBackToStart,
+  defaultOpen = true,
   summaryButtonRef,
 }: UploadStatsComparisonMatrixProps) {
   const difficultyRows = buildDifficultyReportRows(standardDifficultyStats, completionHistory)
@@ -241,7 +243,7 @@ export default function UploadStatsComparisonMatrix({
         </>
       }
       collapsible
-      defaultOpen
+      defaultOpen={defaultOpen}
       onReloadView={onReloadView}
       onBackToStart={onBackToStart}
         summaryButtonRef={summaryButtonRef}

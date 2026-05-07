@@ -36,6 +36,7 @@ interface UploadStatsDifficultyTableProps {
   standardDifficultyStats: StandardDifficultyStatsEntry[]
   onReloadView: () => void
   onBackToStart: () => void
+  defaultOpen?: boolean
 }
 
 function compareNullableNumbers(left: number | null, right: number | null, direction: SortDirection): number {
@@ -136,6 +137,7 @@ export default function UploadStatsDifficultyTable({
   standardDifficultyStats,
   onReloadView,
   onBackToStart,
+  defaultOpen = true,
 }: UploadStatsDifficultyTableProps) {
   const [sortKey, setSortKey] = useState<DifficultySortKey>('solveCount')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -236,7 +238,7 @@ export default function UploadStatsDifficultyTable({
         </>
       }
       collapsible
-      defaultOpen
+      defaultOpen={defaultOpen}
       onReloadView={onReloadView}
       onBackToStart={onBackToStart}
     >

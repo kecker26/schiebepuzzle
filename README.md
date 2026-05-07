@@ -11,7 +11,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Loesbare Shuffle-Logik, Hinweise und Solver-Unterstuetzung.
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
 - Autosave, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
-- Statistik mit Bestzeiten, Zugzahlen, Assistenzprofilen und Verlauf.
+- Statistik mit visuellen Ansichten fuer Ueberblick, Schwierigkeiten, Verlauf, Rekorde, Assistenzprofile und Rohdaten.
 - Galerie geloester Motive inklusive Replay-Funktion.
 - Bild-Sammlungen fuer Lieblingsmotive aus der Galerie.
 - Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
