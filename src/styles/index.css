@@ -153,6 +153,7 @@
   --border-radius-lg: 28px;
   --border-radius-md: 20px;
   --border-radius-btn: 14px;
+  --button-disabled-opacity: 0.78;
   --motion-duration-fast: 180ms;
   --motion-duration-base: 280ms;
   --motion-duration-slow: 420ms;
@@ -334,6 +335,7 @@
   --secondary-border: rgba(147, 170, 214, 0.22);
   --secondary-shadow: 0 14px 30px rgba(2, 6, 23, 0.2);
   --secondary-shadow-hover: 0 18px 36px rgba(2, 6, 23, 0.28);
+  --button-disabled-opacity: 0.62;
 
   --preview-bg:
     radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 52%),
@@ -647,7 +649,7 @@ textarea:focus-visible {
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: var(--button-disabled-opacity);
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
