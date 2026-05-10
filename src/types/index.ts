@@ -338,6 +338,15 @@ export interface PuzzleDataBackupFile {
   retentionLimit: number
 }
 
+export interface PuzzleStatsExportFile {
+  fileName: string
+  directory: string
+  relativePath: string
+  size: number
+  savedAt: string
+  mimeType: 'text/csv' | 'application/json'
+}
+
 export interface RecordPuzzleCompletionPayload extends PuzzleRunMetrics {
   config: PuzzleConfig
   moves: number

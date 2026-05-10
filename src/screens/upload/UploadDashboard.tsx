@@ -22,6 +22,7 @@ import UploadGalleryPanel from './UploadGalleryPanel.tsx'
 import UploadCollectionsPanel from './UploadCollectionsPanel.tsx'
 import { countUniqueGalleryEntries, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
 import UploadStatsReport from './UploadStatsReport.tsx'
+import type { VisualStatsView } from './UploadStatsVisualReport.tsx'
 import UploadSavedGamesPanel from './UploadSavedGamesPanel.tsx'
 import UploadWorkspaceSideNav from './UploadWorkspaceSideNav.tsx'
 import {
@@ -82,6 +83,8 @@ interface UploadDashboardProps {
 
 type DifficultyOption = (typeof DIFFICULTY_OPTIONS)[number]
 const WORKSPACE_NAV_FOCUS_SHORTCUT_KEY = 'v'
+const WORKSPACE_SIDE_CARD_HIDDEN_CLASS = 'is-hidden-by-side-nav'
+const WORKSPACE_SIDE_NAV_TOUCH_BUFFER_PX = 2
 
 function getDashboardMetricIconName(label: string): UploadScreenIconName {
   switch (label) {
@@ -139,6 +142,7 @@ export default function UploadDashboard({
   onDeleteAllRequest,
 }: UploadDashboardProps) {
   const [statsViewReloadKey, setStatsViewReloadKey] = useState(0)
+  const [statsVisualView, setStatsVisualView] = useState<VisualStatsView>('overview')
   const savedGamesNavButtonRef = useRef<HTMLButtonElement>(null)
   const statsNavButtonRef = useRef<HTMLButtonElement>(null)
   const galleryNavButtonRef = useRef<HTMLButtonElement>(null)
@@ -424,6 +428,80 @@ export default function UploadDashboard({
     }
   }, [])
 
+  useEffect(() => {
+    let frameId = 0
+
+    const getAsideCards = (aside: HTMLElement) => Array.from(aside.children).filter(
+      (child): child is HTMLElement => child instanceof HTMLElement
+        && child.classList.contains('workspace-window-card'),
+    )
+
+    const updateSideCardVisibility = () => {
+      frameId = 0
+
+      const shell = document.querySelector<HTMLElement>('.workspace-window-shell')
+      const asides = shell?.querySelectorAll<HTMLElement>('.workspace-window-aside') ?? []
+
+      asides.forEach((aside) => {
+        const sideNav = aside.querySelector<HTMLElement>('.workspace-window-side-nav')
+        const cards = getAsideCards(aside)
+
+        if (!sideNav) {
+          cards.forEach((card) => card.classList.remove(WORKSPACE_SIDE_CARD_HIDDEN_CLASS))
+          return
+        }
+
+        const sideNavRect = sideNav.getBoundingClientRect()
+
+        cards.forEach((card) => {
+          const cardRect = card.getBoundingClientRect()
+          const isTouchingSideNav = cardRect.top <= sideNavRect.bottom + WORKSPACE_SIDE_NAV_TOUCH_BUFFER_PX
+            && cardRect.bottom >= sideNavRect.top
+
+          card.classList.toggle(WORKSPACE_SIDE_CARD_HIDDEN_CLASS, isTouchingSideNav)
+        })
+      })
+    }
+
+    const scheduleSideCardVisibilityUpdate = () => {
+      if (frameId > 0) {
+        return
+      }
+
+      frameId = window.requestAnimationFrame(updateSideCardVisibility)
+    }
+
+    const overlay = document.querySelector<HTMLElement>('.workspace-window-overlay')
+    const shell = document.querySelector<HTMLElement>('.workspace-window-shell')
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(scheduleSideCardVisibilityUpdate)
+
+    overlay?.addEventListener('scroll', scheduleSideCardVisibilityUpdate, { passive: true })
+    window.addEventListener('resize', scheduleSideCardVisibilityUpdate)
+
+    if (resizeObserver && shell) {
+      resizeObserver.observe(shell)
+      shell.querySelectorAll<HTMLElement>('.workspace-window-aside, .workspace-window-side-nav, .workspace-window-card')
+        .forEach((element) => resizeObserver.observe(element))
+    }
+
+    scheduleSideCardVisibilityUpdate()
+
+    return () => {
+      if (frameId > 0) {
+        window.cancelAnimationFrame(frameId)
+      }
+
+      overlay?.removeEventListener('scroll', scheduleSideCardVisibilityUpdate)
+      window.removeEventListener('resize', scheduleSideCardVisibilityUpdate)
+      resizeObserver?.disconnect()
+      document
+        .querySelectorAll<HTMLElement>(`.${WORKSPACE_SIDE_CARD_HIDDEN_CLASS}`)
+        .forEach((card) => card.classList.remove(WORKSPACE_SIDE_CARD_HIDDEN_CLASS))
+    }
+  }, [activeWindow, collectionsCount, galleryCardCount, savedGamesCount, stats?.totalSolved])
+
   const workspaceSideNav = (
     <UploadWorkspaceSideNav
       activeWindow={activeWindow}
@@ -603,12 +681,53 @@ export default function UploadDashboard({
                       onHistoryFilterChange={onHistoryFilterChange}
                       onReloadView={handleReloadStatsView}
                       onBackToStart={handleReturnToStart}
+                      activeVisualView={statsVisualView}
+                      onActiveVisualViewChange={setStatsVisualView}
                     />
                   </motion.div>
                 </motion.div>
 
                 <motion.aside className="workspace-window-aside" variants={staggerContainerVariants}>
                   {workspaceSideNav}
+
+                  <motion.article className="workspace-window-card" variants={staggerItemVariants}>
+                    <span className="saved-games-kicker">Ueberblick</span>
+                    <strong className="workspace-window-card-title">Deine Bilanz</strong>
+                    <p className="workspace-window-card-copy">
+                      {stats && stats.totalSolved > 0
+                        ? `${stats.totalSolved} Siege mit ${formatDuration(stats.totalTime)} Gesamtspielzeit und ${stats.totalMoves} Netto-Zuegen.`
+                        : 'Nach dem ersten Sieg erscheinen hier Gesamtzeit, Zuege und Streaks als schnelle Einordnung.'}
+                    </p>
+                    <div className="dashboard-inline-chips">
+                      <span className="saved-game-chip">{stats?.totalSolved ?? 0} Siege</span>
+                      <span className="saved-game-chip">{formatDuration(stats?.totalTime ?? 0)}</span>
+                      <span className="saved-game-chip">{stats?.activeDays ?? 0} Tage</span>
+                    </div>
+                  </motion.article>
+
+                  <motion.article className="workspace-window-card" variants={staggerItemVariants}>
+                    <span className="saved-games-kicker">Zuletzt geloest</span>
+                    {latestCompletion ? (
+                      <>
+                        <strong className="workspace-window-card-title">{formatDifficultyLabel(latestCompletion.config)}</strong>
+                        <p className="workspace-window-card-copy">
+                          Letzter Sieg am {formatDate(latestCompletion.completedAt)} mit {formatTime(latestCompletion.time)} und {latestCompletion.moves} Netto-Zuegen.
+                        </p>
+                        <div className="dashboard-inline-chips">
+                          <span className="saved-game-chip">{formatPuzzleSize(latestCompletion.config)}</span>
+                          <span className="saved-game-chip">{formatTime(latestCompletion.time)}</span>
+                          <span className="saved-game-chip">Streak {stats?.currentStreak ?? 0}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <strong className="workspace-window-card-title">Noch kein Lauf</strong>
+                        <p className="workspace-window-card-copy">
+                          Loese ein Puzzle und der neueste Lauf bleibt hier neben der Navigation sichtbar.
+                        </p>
+                      </>
+                    )}
+                  </motion.article>
                 </motion.aside>
               </div>
             </motion.div>

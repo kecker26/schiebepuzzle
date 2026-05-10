@@ -12,7 +12,6 @@ import {
   buildDifficultyReportRows,
   formatAssistanceModeLabel,
   formatDate,
-  formatProfileSourceLabel,
   formatTime,
   getCompletionExtraMoves,
 } from './uploadUtils.ts'
@@ -28,7 +27,6 @@ type HistorySortKey =
   | 'actionMoves'
   | 'extraMoves'
   | 'assistanceMode'
-  | 'profile'
 
 interface UploadStatsHistorySectionProps {
   isLoadingStats: boolean
@@ -40,6 +38,7 @@ interface UploadStatsHistorySectionProps {
   onHistoryFilterChange: (value: HistoryFilter) => void
   onReloadView: () => void
   onBackToStart: () => void
+  defaultOpen?: boolean
 }
 
 interface HistoryDifficultyReportSummary {
@@ -57,7 +56,6 @@ interface HistoryDisplayEntry {
   actionMovesValue: number | null
   extraMovesValue: number | null
   assistanceRank: number
-  profileRank: number
   isBestTime: boolean
   isWorstTime: boolean
   isBestMoves: boolean
@@ -71,10 +69,17 @@ const HISTORY_SORT_LABELS: Record<HistorySortKey, string> = {
   difficulty: 'Stufe',
   time: 'Zeit',
   moves: 'Netto-Zuege',
-  actionMoves: 'Aktionen',
-  extraMoves: 'Umwege',
+  actionMoves: 'Gesamt-Zuege',
+  extraMoves: 'Extra-Zuege',
   assistanceMode: 'Laufart',
-  profile: 'Datenquelle',
+}
+
+const HISTORY_COLUMN_HELP: Partial<Record<HistorySortKey, string>> = {
+  time: 'Die gespeicherte Laufzeit des einzelnen Siegs.',
+  moves: 'Netto-Zuege sind die eigentlichen Puzzle-Zuege bis zur Loesung.',
+  actionMoves: 'Gesamt-Zuege enthalten alle gezaehlten Aktionen inklusive Hilfen, soweit ein Laufprofil vorhanden ist.',
+  extraMoves: 'Extra-Zuege sind Gesamt-Zuege minus Netto-Zuege und zeigen Umwege oder Zusatzaktionen.',
+  assistanceMode: 'Clean bedeutet ohne Hilfe. Hinweise und Auto-Zug markieren unterstuetzte Laeufe. Legacy hat kein vollstaendiges Laufprofil.',
 }
 
 function getDifficultyKey(entry: Pick<PuzzleCompletionRecord, 'config'>): `${number}x${number}` {
@@ -158,6 +163,30 @@ function getSortIndicator(key: HistorySortKey, activeKey: HistorySortKey, direct
   return direction === 'asc' ? '\u2191' : '\u2193'
 }
 
+function renderHistoryHeaderLabel(label: string) {
+  return <span className="stats-table-label-text">{label}</span>
+}
+
+function getHistoryHelpHeaderProps(key: HistorySortKey) {
+  const help = HISTORY_COLUMN_HELP[key]
+
+  return help
+    ? {
+        className: 'has-stats-column-help',
+      }
+    : {}
+}
+
+function renderHistoryColumnHelpBadge(key: HistorySortKey) {
+  const help = HISTORY_COLUMN_HELP[key]
+
+  return help ? (
+    <span className="stats-table-help-badge" aria-hidden="true" title={help}>
+      ?
+    </span>
+  ) : null
+}
+
 function buildHistoryDisplayEntries(
   entries: PuzzleCompletionRecord[],
   difficultyReportMap: Map<string, HistoryDifficultyReportSummary>
@@ -177,7 +206,6 @@ function buildHistoryDisplayEntries(
       actionMovesValue: entry.hasDetailedProfile ? entry.actionMoves : null,
       extraMovesValue: entry.hasDetailedProfile ? getCompletionExtraMoves(entry) : null,
       assistanceRank: getAssistanceRank(entry),
-      profileRank: entry.hasDetailedProfile ? 1 : 0,
       isBestTime,
       isWorstTime,
       isBestMoves,
@@ -218,9 +246,6 @@ function sortHistoryEntries(
       case 'assistanceMode':
         result = compareNullableNumbers(left.assistanceRank, right.assistanceRank, direction)
         break
-      case 'profile':
-        result = compareNullableNumbers(left.profileRank, right.profileRank, direction)
-        break
       default:
         result = 0
         break
@@ -241,6 +266,7 @@ export default function UploadStatsHistorySection({
   onHistoryFilterChange,
   onReloadView,
   onBackToStart,
+  defaultOpen = true,
 }: UploadStatsHistorySectionProps) {
   const announceAccessibility = useAccessibilityAnnouncer()
   const historyContentRef = useRef<HTMLDivElement>(null)
@@ -447,7 +473,7 @@ export default function UploadStatsHistorySection({
         </>
       }
       collapsible
-      defaultOpen
+      defaultOpen={defaultOpen}
       onReloadView={onReloadView}
       onBackToStart={onBackToStart}
     >
@@ -507,7 +533,7 @@ export default function UploadStatsHistorySection({
                             onClick={() => handleSort('completedAt')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
-                            <span>Datum</span>
+                            {renderHistoryHeaderLabel('Datum')}
                             <span className="stats-table-sort-indicator" aria-hidden="true">
                               {getSortIndicator('completedAt', sortKey, sortDirection)}
                             </span>
@@ -524,7 +550,7 @@ export default function UploadStatsHistorySection({
                             onClick={() => handleSort('difficulty')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
-                            <span>Stufe</span>
+                            {renderHistoryHeaderLabel('Stufe')}
                             <span className="stats-table-sort-indicator" aria-hidden="true">
                               {getSortIndicator('difficulty', sortKey, sortDirection)}
                             </span>
@@ -533,6 +559,7 @@ export default function UploadStatsHistorySection({
                         <th
                           scope="col"
                           aria-sort={sortKey === 'time' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                          {...getHistoryHelpHeaderProps('time')}
                         >
                           <AnimatedButton
                             className="stats-table-sort"
@@ -541,15 +568,17 @@ export default function UploadStatsHistorySection({
                             onClick={() => handleSort('time')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
-                            <span>Zeit</span>
+                            {renderHistoryHeaderLabel('Zeit')}
                             <span className="stats-table-sort-indicator" aria-hidden="true">
                               {getSortIndicator('time', sortKey, sortDirection)}
                             </span>
                           </AnimatedButton>
+                          {renderHistoryColumnHelpBadge('time')}
                         </th>
                         <th
                           scope="col"
                           aria-sort={sortKey === 'moves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                          {...getHistoryHelpHeaderProps('moves')}
                         >
                           <AnimatedButton
                             className="stats-table-sort"
@@ -558,49 +587,57 @@ export default function UploadStatsHistorySection({
                             onClick={() => handleSort('moves')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
-                            <span>Netto-Zuege</span>
+                            {renderHistoryHeaderLabel('Netto-Zuege')}
                             <span className="stats-table-sort-indicator" aria-hidden="true">
                               {getSortIndicator('moves', sortKey, sortDirection)}
                             </span>
                           </AnimatedButton>
+                          {renderHistoryColumnHelpBadge('moves')}
                         </th>
                         <th
                           scope="col"
                           aria-sort={sortKey === 'actionMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                          {...getHistoryHelpHeaderProps('actionMoves')}
                         >
                           <AnimatedButton
                             className="stats-table-sort"
                             data-history-sort-key="actionMoves"
                             interaction="chip"
+                            title="Alle gezahlten Zuege inklusive Hilfen, soweit ein Laufprofil vorhanden ist"
                             onClick={() => handleSort('actionMoves')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
-                            <span>Aktionen</span>
+                            {renderHistoryHeaderLabel('Gesamt-Zuege')}
                             <span className="stats-table-sort-indicator" aria-hidden="true">
                               {getSortIndicator('actionMoves', sortKey, sortDirection)}
                             </span>
                           </AnimatedButton>
+                          {renderHistoryColumnHelpBadge('actionMoves')}
                         </th>
                         <th
                           scope="col"
                           aria-sort={sortKey === 'extraMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                          {...getHistoryHelpHeaderProps('extraMoves')}
                         >
                           <AnimatedButton
                             className="stats-table-sort"
                             data-history-sort-key="extraMoves"
                             interaction="chip"
+                            title="Differenz zwischen Gesamt- und Netto-Zuegen"
                             onClick={() => handleSort('extraMoves')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
-                            <span>Umwege</span>
+                            {renderHistoryHeaderLabel('Extra-Zuege')}
                             <span className="stats-table-sort-indicator" aria-hidden="true">
                               {getSortIndicator('extraMoves', sortKey, sortDirection)}
                             </span>
                           </AnimatedButton>
+                          {renderHistoryColumnHelpBadge('extraMoves')}
                         </th>
                         <th
                           scope="col"
                           aria-sort={sortKey === 'assistanceMode' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                          {...getHistoryHelpHeaderProps('assistanceMode')}
                         >
                           <AnimatedButton
                             className="stats-table-sort"
@@ -609,28 +646,12 @@ export default function UploadStatsHistorySection({
                             onClick={() => handleSort('assistanceMode')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
-                            <span>Laufart</span>
+                            {renderHistoryHeaderLabel('Laufart')}
                             <span className="stats-table-sort-indicator" aria-hidden="true">
                               {getSortIndicator('assistanceMode', sortKey, sortDirection)}
                             </span>
                           </AnimatedButton>
-                        </th>
-                        <th
-                          scope="col"
-                          aria-sort={sortKey === 'profile' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
-                        >
-                          <AnimatedButton
-                            className="stats-table-sort"
-                            data-history-sort-key="profile"
-                            interaction="chip"
-                            onClick={() => handleSort('profile')}
-                            onKeyDown={handleSortButtonKeyDown}
-                          >
-                            <span>Datenquelle</span>
-                            <span className="stats-table-sort-indicator" aria-hidden="true">
-                              {getSortIndicator('profile', sortKey, sortDirection)}
-                            </span>
-                          </AnimatedButton>
+                          {renderHistoryColumnHelpBadge('assistanceMode')}
                         </th>
                         </tr>
                       </thead>
@@ -639,7 +660,6 @@ export default function UploadStatsHistorySection({
                           <tr key={historyEntry.entry.id}>
                           <td>
                             <span className="stats-data-cell-main">{formatDate(historyEntry.entry.completedAt)}</span>
-                            <span className="stats-data-cell-copy">{historyEntry.entry.id.slice(0, 8)}</span>
                           </td>
                           <td>
                             <span className="stats-data-cell-main">{formatDifficultyLabel(historyEntry.entry.config)}</span>
@@ -687,13 +707,11 @@ export default function UploadStatsHistorySection({
                             <span className="stats-data-cell-main">
                               {historyEntry.actionMovesValue !== null ? `${historyEntry.actionMovesValue}` : '--'}
                             </span>
-                            <span className="stats-data-cell-copy">alle Aktionen</span>
                           </td>
                           <td>
                             <span className="stats-data-cell-main">
                               {historyEntry.extraMovesValue !== null ? `${historyEntry.extraMovesValue}` : '--'}
                             </span>
-                            <span className="stats-data-cell-copy">ueber Netto</span>
                           </td>
                           <td>
                             <span className="stats-data-cell-main">
@@ -705,14 +723,6 @@ export default function UploadStatsHistorySection({
                               {historyEntry.entry.hasDetailedProfile
                                 ? `${historyEntry.entry.hintCount} Hinweise, ${historyEntry.entry.suggestedMoveCount} Auto`
                                 : 'ohne Laufprofil'}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="stats-data-cell-main">
-                              {formatProfileSourceLabel(historyEntry.entry.hasDetailedProfile)}
-                            </span>
-                            <span className="stats-data-cell-copy">
-                              {historyEntry.entry.hasDetailedProfile ? 'voll erfasst' : 'nur Basiswerte'}
                             </span>
                           </td>
                           </tr>

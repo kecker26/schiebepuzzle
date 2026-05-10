@@ -5,7 +5,7 @@
 - Halte Aenderungen klein, nachvollziehbar und kompatibel mit dem bestehenden React-, TypeScript- und Vite-Setup.
 
 ## Projektueberblick
-- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, Sammlungen, Backup und Musik.
+- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, Sammlungen, Backup und Musik.
 - Frontend: React 18 + TypeScript.
 - Animationen: `motion` / `motion/react`.
 - Icons: `lucide-react` fuer React-SVG-Icons, plus kuratierte lokale SVGs unter `src/assets/system/`.
@@ -31,7 +31,7 @@
 - `src/services/ExactPuzzleSolver.ts` und `src/workers/exact-puzzle-solver.worker.ts`: exakte Solver-Variante und Worker.
 - `src/workers/puzzle-solver.worker.ts`: Worker fuer rechenintensive Solver-Aufgaben.
 - `src/services/SaveService.ts`, `StatsService.ts`, `GalleryService.ts`, `CollectionService.ts`, `BackupService.ts`, `MusicService.ts`: Frontend-Zugriff auf lokale `/api/*`-Routen.
-- `src/services/RandomImageService.ts` und Provider-Dateien wie `NasaImageProvider.ts`, `MetMuseumImageProvider.ts`, `PicsumImageProvider.ts`, `PixabayImageProvider.ts`, `PexelsImageProvider.ts`, `WikimediaImageProvider.ts`, `SmithsonianImageProvider.ts`, `ArtInstituteImageProvider.ts`, `GeneratedImageProvider.ts`: Zufallsbild-Quellen.
+- `src/services/RandomImageService.ts`, `PromptImageService.ts` und Provider-Dateien wie `NasaImageProvider.ts`, `MetMuseumImageProvider.ts`, `PicsumImageProvider.ts`, `PixabayImageProvider.ts`, `PexelsImageProvider.ts`, `WikimediaImageProvider.ts`, `SmithsonianImageProvider.ts`, `ArtInstituteImageProvider.ts`, `GeneratedImageProvider.ts`: Zufallsbild- und Prompt-Bild-Quellen.
 - `src/services/AudioService.ts`, `MusicPlaybackController.ts`, `services/music/` und `musicStyles.ts`: lokale und externe Musikauswahl, Fallback-Tracks und Wiedergabezustand.
 - `src/services/api/apiClient.ts`: gemeinsamer Fetch-/Fehler-Wrapper fuer Frontend-API-Calls.
 - `localApi.ts`: lokale Dateipersistenz und API-Routen fuer Saves, Stats, Galerie, Sammlungen, Backup, Clipboard und Musik.
@@ -48,7 +48,7 @@
 - Aenderungen an App-Flows immer gegen `src/App.tsx`, die betroffenen Hooks in `src/app/` und die jeweiligen Screen-Props pruefen.
 - Aenderungen an Spielmechanik immer gegen `PuzzleEngine`, `PuzzleStateService`, `PuzzleSolver`, `ExactPuzzleSolver`, Worker-Protokolle und betroffene Typen pruefen.
 - Aenderungen an Save-/Stats-/Gallery-/Collections-/Backup-Features immer auf Frontend-Service, `src/types/index.ts` und `localApi.ts` abstimmen.
-- Bestehende API-Pfade (`/api/saves`, `/api/stats`, `/api/gallery`, `/api/collections`, `/api/backup`, `/api/clipboard`, `/api/music`) nur aendern, wenn Frontend und lokale API gemeinsam angepasst werden.
+- Bestehende API-Pfade (`/api/saves`, `/api/stats`, `/api/gallery`, `/api/collections`, `/api/backup`, `/api/clipboard`, `/api/generated-image`, `/api/music`) nur aendern, wenn Frontend und lokale API gemeinsam angepasst werden.
 - Bei persistierten Formaten rueckwaertskompatibel bleiben; bestehende Saves, `__stats.json`, `__gallery.json`, `__collections.json` und `.spbkp`-Backups muessen weiter defensiv gelesen werden.
 - `dist/`, `node_modules/`, `spielstaende/`, `backups/`, `preview.*.txt`, temporaere Dateien und Office-Lockdateien nicht manuell bearbeiten, ausser die Aufgabe verlangt es explizit.
 - Bestehende deutsche UI-Texte beibehalten, sofern kein ausdrueckliches Rewriting gewuenscht ist.

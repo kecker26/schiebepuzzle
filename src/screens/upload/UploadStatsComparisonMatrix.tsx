@@ -23,6 +23,7 @@ interface UploadStatsComparisonMatrixProps {
   standardDifficultyStats: StandardDifficultyStatsEntry[]
   onReloadView: () => void
   onBackToStart: () => void
+  defaultOpen?: boolean
   summaryButtonRef?: RefObject<HTMLButtonElement>
 }
 
@@ -44,8 +45,6 @@ interface MatrixColumn {
 }
 
 type MatrixTone = 'neutral' | 'positive' | 'negative'
-
-type MatrixBadgeTone = 'positive' | 'negative'
 
 function scrollToReportSection(targetId: string) {
   const target = document.getElementById(targetId)
@@ -74,6 +73,7 @@ export default function UploadStatsComparisonMatrix({
   standardDifficultyStats,
   onReloadView,
   onBackToStart,
+  defaultOpen = true,
   summaryButtonRef,
 }: UploadStatsComparisonMatrixProps) {
   const difficultyRows = buildDifficultyReportRows(standardDifficultyStats, completionHistory)
@@ -130,8 +130,6 @@ export default function UploadStatsComparisonMatrix({
     label: string
     copy: string
     tone: MatrixTone
-    badgeLabel?: string
-    badgeTone?: MatrixBadgeTone
     renderValue: (column: MatrixColumn) => string
   }> = [
     {
@@ -143,7 +141,7 @@ export default function UploadStatsComparisonMatrix({
     },
     {
       id: 'cleanRate',
-      label: 'Clean-Quote',
+      label: 'Ohne Hilfe',
       copy: 'Anteil ohne Hilfen',
       tone: 'neutral',
       renderValue: (column) => formatPercent(column.cleanRate),
@@ -153,8 +151,6 @@ export default function UploadStatsComparisonMatrix({
       label: 'Bestzeit',
       copy: 'Schnellster Sieg',
       tone: 'positive',
-      badgeLabel: 'Bestzeit',
-      badgeTone: 'positive',
       renderValue: (column) => formatOptionalDuration(column.bestTime),
     },
     {
@@ -162,8 +158,6 @@ export default function UploadStatsComparisonMatrix({
       label: 'Langsamste Zeit',
       copy: 'Langsamster Sieg',
       tone: 'negative',
-      badgeLabel: 'Langsamste Zeit',
-      badgeTone: 'negative',
       renderValue: (column) => formatOptionalDuration(column.worstTime),
     },
     {
@@ -171,8 +165,6 @@ export default function UploadStatsComparisonMatrix({
       label: 'Wenigste Netto-Zuege',
       copy: 'Effizientester Sieg',
       tone: 'positive',
-      badgeLabel: 'Wenigste Zuege',
-      badgeTone: 'positive',
       renderValue: (column) => formatOptionalMoves(column.bestMoves),
     },
     {
@@ -180,8 +172,6 @@ export default function UploadStatsComparisonMatrix({
       label: 'Meiste Netto-Zuege',
       copy: 'Zaehester Sieg',
       tone: 'negative',
-      badgeLabel: 'Meiste Zuege',
-      badgeTone: 'negative',
       renderValue: (column) => formatOptionalMoves(column.worstMoves),
     },
     {
@@ -200,14 +190,14 @@ export default function UploadStatsComparisonMatrix({
     },
     {
       id: 'averageExtraMoves',
-      label: 'Umwege im Schnitt',
-      copy: 'Zusatzaktionen ueber Netto',
+      label: 'Extra-Zuege',
+      copy: 'Gesamt-Zuege minus Netto-Zuege im Schnitt',
       tone: 'neutral',
       renderValue: (column) => formatExtraMoves(column.averageExtraMoves),
     },
     {
       id: 'profileCoverage',
-      label: 'Profilabdeckung',
+      label: 'Datenqualitaet',
       copy: 'Volle Laufprofile verfuegbar',
       tone: 'neutral',
       renderValue: (column) => formatPercent(column.profileCoverage),
@@ -224,9 +214,9 @@ export default function UploadStatsComparisonMatrix({
   return (
     <UploadStatsSection
       id="stats-report-comparison"
-      kicker="Vergleichsmatrix"
-      title="Alle Stufen auf einen Blick"
-      copy="Die Matrix bleibt fest sortiert und stellt Gesamtwert, Schwierigkeit und Extremwerte direkt nebeneinander. Gruen markiert die besten Zeiten und wenigsten Zuege, Rot die langsamsten Zeiten und meisten Zuege."
+      kicker="Expertenansicht"
+      title="Erweiterte Vergleichsmatrix"
+      copy="Die Matrix stellt Gesamtwert, Schwierigkeit und Extremwerte direkt nebeneinander. Sie ist als Pruef- und Vergleichsansicht gedacht, wenn du alle Kennzahlen in einer Pivot-Tabelle sehen moechtest."
       summaryMeta={
         <>
           <span className="stats-report-summary-pill">
@@ -241,7 +231,7 @@ export default function UploadStatsComparisonMatrix({
         </>
       }
       collapsible
-      defaultOpen
+      defaultOpen={defaultOpen}
       onReloadView={onReloadView}
       onBackToStart={onBackToStart}
         summaryButtonRef={summaryButtonRef}
@@ -297,7 +287,6 @@ export default function UploadStatsComparisonMatrix({
                   </th>
                   {matrixColumns.map((column) => {
                     const value = row.renderValue(column)
-                    const showBadge = Boolean(row.badgeLabel) && value !== '--' && value !== '-'
 
                     return (
                       <td
@@ -305,13 +294,6 @@ export default function UploadStatsComparisonMatrix({
                         className={`stats-matrix-cell${row.tone === 'positive' ? ' is-positive' : row.tone === 'negative' ? ' is-negative' : ''}`}
                       >
                         <span className="stats-matrix-value">{value}</span>
-                        {showBadge ? (
-                          <div className="stats-data-badges">
-                            <span className={`stats-data-badge${row.badgeTone === 'positive' ? ' is-positive' : ' is-negative'}`}>
-                              {row.badgeLabel}
-                            </span>
-                          </div>
-                        ) : null}
                       </td>
                     )
                   })}

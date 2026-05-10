@@ -6,12 +6,13 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 
 - Eigene Bilder hochladen und als Puzzle-Motiv verwenden.
 - Zufallsbilder aus mehreren Quellen laden, mit lokalen und externen Providern.
+- KI-generierte Puzzle-Motive per Prompt ueber Pollinations Z-Image Turbo erstellen.
 - Bildzuschnitt mit Crop-Ansicht, Transform und Puzzle-Konfiguration.
 - Schiebepuzzle mit Canvas-Rendering, Drag-/Keyboard-Interaktion und visuellen Hervorhebungen.
 - Loesbare Shuffle-Logik, Hinweise und Solver-Unterstuetzung.
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
 - Autosave, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
-- Statistik mit Bestzeiten, Zugzahlen, Assistenzprofilen und Verlauf.
+- Statistik mit vier Hauptansichten fuer Ueberblick, Analyse, Verlauf und Rohdaten-Explorer; Analyse buendelt Stufen, Rekorde und Sauberkeit, der Rohdaten-Explorer speichert CSV-/JSON-Exporte direkt im Projektordner.
 - Galerie geloester Motive inklusive Replay-Funktion.
 - Bild-Sammlungen fuer Lieblingsmotive aus der Galerie.
 - Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
@@ -42,7 +43,15 @@ VITE_JAMENDO_CLIENT_ID=deine_jamendo_client_id
 VITE_PEXELS_API_KEY=dein_pexels_api_key
 VITE_PIXABAY_API_KEY=dein_pixabay_api_key
 VITE_SMITHSONIAN_API_KEY=dein_smithsonian_api_key
+POLLINATIONS_API_KEY=dein_pollinations_secret_key
+POLLINATIONS_IMAGE_MODEL=zimage
+CLOUDFLARE_ACCOUNT_ID=deine_cloudflare_account_id
+CLOUDFLARE_API_TOKEN=dein_cloudflare_workers_ai_token
+CLOUDFLARE_IMAGE_MODEL=@cf/black-forest-labs/flux-1-schnell
 ```
+
+`POLLINATIONS_API_KEY` ist ein serverseitiger Secret Key und wird nur von der lokalen Vite-Middleware genutzt. Er darf nicht als `VITE_`-Variable ins Frontend gegeben werden. `zimage` ist ein fuer den getesteten Key freigegebenes schnelles Pollinations-Bildmodell.
+`CLOUDFLARE_API_TOKEN` ist der serverseitige Fallback fuer KI-Bilder, wenn Pollinations fehlschlaegt. Der Token braucht Zugriff auf Workers AI fuer die angegebene `CLOUDFLARE_ACCOUNT_ID`; `CLOUDFLARE_IMAGE_MODEL` ist standardmaessig `@cf/black-forest-labs/flux-1-schnell`.
 
 ## Start und Befehle
 
@@ -77,6 +86,7 @@ Die App arbeitet lokal. Die Vite-Middleware in `localApi.ts` verwaltet die Daten
 
 - `spielstaende/`: gespeicherte Partien, `__stats.json`, `__gallery.json` und `__collections.json`
 - `backups/`: lokale Backup-Dateien mit der Endung `.spbkp`
+- `statistik-exporte/`: CSV- und JSON-Dateien aus dem Rohdaten-Explorer
 - `public/audio/`: lokale Musik- und Sound-Assets
 - `public/fonts/`: eingebundene Fonts
 
@@ -87,11 +97,12 @@ Diese Nutzdaten und Build-Artefakte sind fuer manuelle Bearbeitung tabu, sofern 
 Die Frontend-Services greifen ueber lokale API-Routen auf die Middleware zu:
 
 - `/api/saves`: Spielstaende erstellen, laden, aktualisieren und loeschen.
-- `/api/stats`: Statistik laden, zuruecksetzen und Abschluesse aufzeichnen.
+- `/api/stats`: Statistik laden, zuruecksetzen, Abschluesse aufzeichnen und Rohdaten-Exporte speichern.
 - `/api/gallery`: Galerie geloester Motive laden, erweitern und bereinigen.
 - `/api/collections`: Bild-Sammlungen laden, erstellen, bearbeiten und mit Galerie-Motiven verknuepfen.
 - `/api/backup`: Daten exportieren, importieren und lokale Backup-Dateien verwalten.
 - `/api/clipboard`: Clipboard-Hilfen fuer lokale Ablage.
+- `/api/generated-image`: KI-Motiv aus einem Prompt ueber Pollinations Z-Image Turbo erzeugen, mit Cloudflare Workers AI Flux Schnell als Fallback.
 - `/api/music`: Musiktracks anhand des gewaehlten Stils auswaehlen.
 
 Bei Aenderungen an diesen Routen muessen Frontend-Service, Typen und `localApi.ts` gemeinsam angepasst werden.

@@ -3,10 +3,7 @@ import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
 import { PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats } from '../../types/index'
-import UploadStatsComparisonMatrix from './UploadStatsComparisonMatrix.tsx'
-import UploadStatsDifficultyTable from './UploadStatsDifficultyTable.tsx'
-import UploadStatsHistorySection from './UploadStatsHistorySection.tsx'
-import UploadStatsRunComparison from './UploadStatsRunComparison.tsx'
+import UploadStatsVisualReport, { type VisualStatsView } from './UploadStatsVisualReport.tsx'
 import UploadStateNotice from './UploadStateNotice.tsx'
 import {
   HistoryFilter,
@@ -28,6 +25,8 @@ interface UploadStatsReportProps {
   onHistoryFilterChange: (filter: HistoryFilter) => void
   onReloadView: () => void
   onBackToStart: () => void
+  activeVisualView: VisualStatsView
+  onActiveVisualViewChange: (view: VisualStatsView) => void
   primaryFocusRef?: RefObject<HTMLButtonElement>
 }
 
@@ -45,6 +44,8 @@ export default function UploadStatsReport({
   onHistoryFilterChange,
   onReloadView,
   onBackToStart,
+  activeVisualView,
+  onActiveVisualViewChange,
   primaryFocusRef,
 }: UploadStatsReportProps) {
   const reportStateKey = isLoadingStats
@@ -75,42 +76,12 @@ export default function UploadStatsReport({
       ) : (
         <AnimatedStaggerGroup aria-label="Statistikbericht" className="stats-report-stack" level="medium">
           <AnimatedReveal level="medium">
-            <UploadStatsRunComparison
-              summaryButtonRef={primaryFocusRef}
-              stats={stats}
-              latestCompletion={latestCompletion}
-              completionHistory={completionHistory}
-              onReloadView={onReloadView}
-              onBackToStart={onBackToStart}
-            />
-          </AnimatedReveal>
-
-          <AnimatedReveal level="medium">
-            <UploadStatsComparisonMatrix
+            <UploadStatsVisualReport
+              primaryFocusRef={primaryFocusRef}
               stats={stats}
               latestCompletion={latestCompletion}
               favoriteDifficulty={favoriteDifficulty}
               fastestDifficulty={fastestDifficulty}
-              completionHistory={completionHistory}
-              standardDifficultyStats={standardDifficultyStats}
-              onReloadView={onReloadView}
-              onBackToStart={onBackToStart}
-            />
-          </AnimatedReveal>
-
-          <AnimatedReveal level="medium">
-            <UploadStatsDifficultyTable
-              stats={stats}
-              completionHistory={completionHistory}
-              standardDifficultyStats={standardDifficultyStats}
-              onReloadView={onReloadView}
-              onBackToStart={onBackToStart}
-            />
-          </AnimatedReveal>
-
-          <AnimatedReveal level="medium">
-            <UploadStatsHistorySection
-              isLoadingStats={isLoadingStats}
               completionHistory={completionHistory}
               filteredHistory={filteredHistory}
               historyFilter={historyFilter}
@@ -119,6 +90,8 @@ export default function UploadStatsReport({
               onHistoryFilterChange={onHistoryFilterChange}
               onReloadView={onReloadView}
               onBackToStart={onBackToStart}
+              activeView={activeVisualView}
+              onActiveViewChange={onActiveVisualViewChange}
             />
           </AnimatedReveal>
         </AnimatedStaggerGroup>
