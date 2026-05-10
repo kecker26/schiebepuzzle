@@ -1,4 +1,4 @@
-import type { FormEvent, Ref, RefObject } from 'react'
+import type { FormEvent, KeyboardEvent, Ref, RefObject } from 'react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import AnimatedCardButton from '../../motion/AnimatedCardButton.tsx'
@@ -6,6 +6,7 @@ import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
 
 interface UploadMenuCardsProps {
   fileInputRef: RefObject<HTMLInputElement>
+  promptInputRef?: RefObject<HTMLTextAreaElement>
   primaryActionRef?: Ref<HTMLButtonElement>
   isDragActive: boolean
   isFetchingRandom: boolean
@@ -18,6 +19,7 @@ interface UploadMenuCardsProps {
 
 export default function UploadMenuCards({
   fileInputRef,
+  promptInputRef,
   primaryActionRef,
   isDragActive,
   isFetchingRandom,
@@ -28,6 +30,15 @@ export default function UploadMenuCards({
   onGeneratePromptImage,
 }: UploadMenuCardsProps) {
   const handlePromptSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    void onGeneratePromptImage()
+  }
+
+  const handlePromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((event.key !== 'Enter' && event.key !== 'NumpadEnter') || event.shiftKey) {
+      return
+    }
+
     event.preventDefault()
     void onGeneratePromptImage()
   }
@@ -101,10 +112,13 @@ export default function UploadMenuCards({
           Beschreibe dein Wunschmotiv. Nano Banana erstellt daraus ein Puzzle-Bild.
         </span>
         <textarea
+          ref={promptInputRef}
           id="prompt-image-input"
+          data-upload-context="prompt-field"
           className="prompt-image-input"
           value={promptValue}
           onChange={(event) => onPromptValueChange(event.target.value)}
+          onKeyDown={handlePromptKeyDown}
           rows={3}
           maxLength={1000}
           placeholder="z. B. leuchtende Berglandschaft bei Sonnenaufgang"

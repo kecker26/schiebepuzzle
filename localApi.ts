@@ -37,6 +37,7 @@ const POLLINATIONS_GENERATED_IMAGE_MODEL = 'zimage'
 const POLLINATIONS_GENERATED_IMAGE_WIDTH = 1280
 const POLLINATIONS_GENERATED_IMAGE_HEIGHT = 960
 const POLLINATIONS_GENERATED_IMAGE_TIMEOUT_MS = 120000
+const GENERATED_IMAGE_MAX_SEED = 999999999
 const CLOUDFLARE_BASE_URL = 'https://api.cloudflare.com'
 const CLOUDFLARE_GENERATED_IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell'
 const CLOUDFLARE_GENERATED_IMAGE_STEPS = 4
@@ -96,6 +97,13 @@ const POWERSHELL_CLIPBOARD_IMAGE_READ_SCRIPT = [
   '  $stream.Dispose()',
   "  if ($image -is [System.IDisposable]) { $image.Dispose() }",
   '}',
+].join('\n')
+
+const POWERSHELL_CLIPBOARD_TEXT_READ_SCRIPT = [
+  "$ErrorActionPreference = 'Stop'",
+  '$text = Get-Clipboard -Raw -Format Text -ErrorAction SilentlyContinue',
+  'if ($null -eq $text) { exit 0 }',
+  '[Console]::Out.Write($text)',
 ].join('\n')
 
 interface StoredPuzzleConfig {
@@ -370,6 +378,10 @@ interface ClipboardImageResponse {
   imageDataUrl: string
 }
 
+interface ClipboardTextResponse {
+  text: string
+}
+
 interface RecordCompletionResponse {
   stats: StatsResponse
   completion: StoredCompletionRecord
@@ -631,6 +643,10 @@ function normalizeGeneratedImagePrompt(prompt: string): string {
   return prompt.trim().replace(/\s+/g, ' ')
 }
 
+function createGeneratedImageSeed(): number {
+  return Math.floor(Math.random() * GENERATED_IMAGE_MAX_SEED)
+}
+
 function getErrorDetail(error: unknown): string {
   return error instanceof Error ? error.message : 'Unbekannter Fehler'
 }
@@ -676,12 +692,15 @@ async function generatePollinationsImage(
   url.searchParams.set('model', config.model)
   url.searchParams.set('width', `${POLLINATIONS_GENERATED_IMAGE_WIDTH}`)
   url.searchParams.set('height', `${POLLINATIONS_GENERATED_IMAGE_HEIGHT}`)
+  url.searchParams.set('seed', `${createGeneratedImageSeed()}`)
 
   try {
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
+        'Cache-Control': 'no-cache',
       },
+      cache: 'no-store',
       signal: controller.signal,
     })
 
@@ -740,7 +759,7 @@ async function generateCloudflareImage(
       body: JSON.stringify({
         prompt,
         steps: CLOUDFLARE_GENERATED_IMAGE_STEPS,
-        seed: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER),
+        seed: createGeneratedImageSeed(),
       }),
       signal: controller.signal,
     })
@@ -2714,9 +2733,9 @@ async function removeCollectionImages(
   return updateCollection(collectionId, { imageIds: nextImageIds })
 }
 
-async function runPowerShellClipboardCommand(script: string): Promise<string> {
+async function runPowerShellClipboardCommand(script: string, shouldTrimOutput = true): Promise<string> {
   if (process.platform !== 'win32') {
-    throw new Error('Zwischenablage-Bilder werden nur unter Windows unterstuetzt')
+    throw new Error('Zwischenablage-Zugriff wird nur unter Windows unterstuetzt')
   }
 
   const { stdout } = await execFileAsync(
@@ -2729,7 +2748,7 @@ async function runPowerShellClipboardCommand(script: string): Promise<string> {
     }
   )
 
-  return stdout.trim()
+  return shouldTrimOutput ? stdout.trim() : stdout
 }
 
 async function hasClipboardImage(): Promise<boolean> {
@@ -2748,6 +2767,11 @@ async function readClipboardImageDataUrl(): Promise<string | null> {
 
     throw error
   }
+}
+
+async function readClipboardText(): Promise<string | null> {
+  const text = await runPowerShellClipboardCommand(POWERSHELL_CLIPBOARD_TEXT_READ_SCRIPT, false)
+  return text.length > 0 ? text : null
 }
 
 async function handleClipboardApi(
@@ -2787,6 +2811,18 @@ async function handleClipboardApi(
       }
 
       const response: ClipboardImageResponse = { imageDataUrl }
+      sendJson(res, 200, response)
+      return
+    }
+
+    if (req.method === 'GET' && parts.length === 3 && parts[2] === 'text') {
+      const text = await readClipboardText()
+      if (!text) {
+        sendJson(res, 404, { error: 'In der Zwischenablage befindet sich kein Text' })
+        return
+      }
+
+      const response: ClipboardTextResponse = { text }
       sendJson(res, 200, response)
       return
     }

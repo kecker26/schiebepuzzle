@@ -19,7 +19,7 @@ import {
 } from '../types/index'
 import { getErrorMessage, scrollViewportToTop } from '../app/appUtils.ts'
 import { listPuzzleDataBackupFiles } from '../services/BackupService.ts'
-import { hasClipboardImage, readClipboardImageDataUrl } from '../services/ClipboardService.ts'
+import { hasClipboardImage, readClipboardImageDataUrl, readClipboardText } from '../services/ClipboardService.ts'
 import { generatePromptImage } from '../services/PromptImageService.ts'
 import type { RandomImageSourceInfo } from '../services/RandomImageService.ts'
 import UploadBackupBrowserDialog from './upload/UploadBackupBrowserDialog.tsx'
@@ -104,7 +104,7 @@ function hasDraggedFiles(dataTransfer: DataTransfer | null | undefined): boolean
   return Array.from(dataTransfer.types).includes('Files')
 }
 
-type UploadContextMenuScope = 'screen' | 'uploadCard'
+type UploadContextMenuScope = 'screen' | 'uploadCard' | 'promptField'
 type UploadClipboardPasteStatus = 'idle' | 'checking' | 'ready' | 'unavailable'
 
 interface UploadContextMenuState extends ContextMenuPosition {
@@ -131,6 +131,16 @@ function getSingleImageFileFromClipboardData(items: DataTransferItemList | null 
   if (imageItems.length !== 1) return null
 
   return imageItems[0].getAsFile()
+}
+
+function isTextEntryTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(
+    'input:not([type="hidden"]), textarea, select, option, [contenteditable="true"], [contenteditable="plaintext-only"]'
+  ) !== null
+}
+
+function isPromptFieldContextTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('[data-upload-context="prompt-field"]') !== null
 }
 
 async function createFileFromImageDataUrl(imageDataUrl: string): Promise<File> {
@@ -188,6 +198,7 @@ export default function UploadScreen({
 }: UploadScreenProps) {
   const screenRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const promptInputRef = useRef<HTMLTextAreaElement>(null)
   const primaryUploadCardRef = useRef<HTMLButtonElement>(null)
   const savedGamesLauncherRef = useRef<HTMLButtonElement>(null)
   const statsLauncherRef = useRef<HTMLButtonElement>(null)
@@ -398,6 +409,10 @@ export default function UploadScreen({
 
   const handlePaste = useCallback(
     (event: ClipboardEvent) => {
+      if (isTextEntryTarget(event.target)) {
+        return
+      }
+
       const file = getSingleImageFileFromClipboardData(event.clipboardData?.items)
       if (!file) {
         const hasAnyItems = event.clipboardData?.items && event.clipboardData.items.length > 0
@@ -606,6 +621,32 @@ export default function UploadScreen({
       setTimedError(`Bild konnte nicht aus der Zwischenablage eingefuegt werden: ${getErrorMessage(clipboardError)}`)
     }
   }, [loadImageFile, setTimedError])
+
+  const handlePastePromptFromClipboard = useCallback(async () => {
+    try {
+      const clipboardText = await readClipboardText()
+      if (!clipboardText) {
+        setTimedError('In der Zwischenablage befindet sich kein Text.')
+        return
+      }
+
+      clearError()
+      const promptInput = promptInputRef.current
+      const selectionStart = promptInput?.selectionStart ?? promptImagePrompt.length
+      const selectionEnd = promptInput?.selectionEnd ?? promptImagePrompt.length
+      const nextPrompt = `${promptImagePrompt.slice(0, selectionStart)}${clipboardText}${promptImagePrompt.slice(selectionEnd)}`
+      const nextCursorPosition = selectionStart + clipboardText.length
+
+      setPromptImagePrompt(nextPrompt)
+
+      window.requestAnimationFrame(() => {
+        promptInput?.focus({ preventScroll: true })
+        promptInput?.setSelectionRange(nextCursorPosition, nextCursorPosition)
+      })
+    } catch (clipboardError) {
+      setTimedError(`Prompt konnte nicht eingefuegt werden: ${getErrorMessage(clipboardError)}`)
+    }
+  }, [clearError, promptImagePrompt, setTimedError])
 
   const handleGeneratePromptImage = useCallback(async () => {
     const prompt = promptImagePrompt.trim()
@@ -1029,7 +1070,8 @@ export default function UploadScreen({
   ]
 
   const openContextWindow = useCallback((request: AppContextMenuRequest) => {
-    if (shouldPreserveNativeContextMenu(request.target) || isBlockingDialogOpen) return
+    const isPromptFieldContext = isPromptFieldContextTarget(request.target)
+    if ((shouldPreserveNativeContextMenu(request.target) && !isPromptFieldContext) || isBlockingDialogOpen) return
 
     request.preventDefault?.()
 
@@ -1040,10 +1082,10 @@ export default function UploadScreen({
     setContextMenuState({
       x: request.clientX,
       y: request.clientY,
-      scope: isUploadCardContext ? 'uploadCard' : 'screen',
+      scope: isPromptFieldContext ? 'promptField' : isUploadCardContext ? 'uploadCard' : 'screen',
     })
 
-    if (isUploadCardContext) {
+    if (isUploadCardContext || isPromptFieldContext) {
       void refreshUploadClipboardState()
       return
     }
@@ -1097,6 +1139,36 @@ export default function UploadScreen({
       meta: 'F1',
       onClick: onOpenHelp,
     },
+    ...(contextMenuState?.scope === 'promptField'
+      ? [
+          {
+            groupTitle: 'Prompt',
+          } satisfies ContextMenuItem,
+          {
+            label: 'Prompt einfuegen',
+            icon: 'clipboard',
+            meta:
+              uploadClipboardPasteStatus === 'checking'
+                ? 'Prueft ...'
+                : uploadClipboardPasteStatus === 'ready'
+                  ? 'Bild in Ablage'
+                  : 'Text',
+            onClick: () => {
+              void handlePastePromptFromClipboard()
+            },
+            disabled: uploadClipboardPasteStatus !== 'unavailable',
+          } satisfies ContextMenuItem,
+          {
+            label: 'Bild erstellen',
+            icon: 'play',
+            meta: 'Enter',
+            onClick: () => {
+              void handleGeneratePromptImage()
+            },
+            disabled: isGeneratingPromptImage,
+          } satisfies ContextMenuItem,
+        ]
+      : []),
     {
       groupTitle: 'Bild',
     },
@@ -1248,6 +1320,7 @@ export default function UploadScreen({
           <AnimatedReveal level="medium">
             <UploadMenuCards
               fileInputRef={fileInputRef}
+              promptInputRef={promptInputRef}
               primaryActionRef={primaryUploadCardRef}
               isDragActive={isDragActive}
               isFetchingRandom={isFetchingRandom}

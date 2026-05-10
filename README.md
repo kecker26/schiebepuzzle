@@ -101,7 +101,7 @@ Die Frontend-Services greifen ueber lokale API-Routen auf die Middleware zu:
 - `/api/gallery`: Galerie geloester Motive laden, erweitern und bereinigen.
 - `/api/collections`: Bild-Sammlungen laden, erstellen, bearbeiten und mit Galerie-Motiven verknuepfen.
 - `/api/backup`: Daten exportieren, importieren und lokale Backup-Dateien verwalten.
-- `/api/clipboard`: Clipboard-Hilfen fuer lokale Ablage.
+- `/api/clipboard`: Clipboard-Hilfen fuer lokale Bild- und Textablage.
 - `/api/generated-image`: KI-Motiv aus einem Prompt ueber Pollinations Z-Image Turbo erzeugen, mit Cloudflare Workers AI Flux Schnell als Fallback.
 - `/api/music`: Musiktracks anhand des gewaehlten Stils auswaehlen.
 

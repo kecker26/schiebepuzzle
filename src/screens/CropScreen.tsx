@@ -561,6 +561,20 @@ export default function CropScreen({
                 <h2>Einstellungen</h2>
               </div>
             </div>
+            {isRandomImage && randomImageSource?.label && (
+              <div className="crop-source-row">
+                <p className="crop-random-source">
+                  Quelle:{' '}
+                  {randomImageSource.url ? (
+                    <a href={randomImageSource.url} target="_blank" rel="noreferrer" tabIndex={-1}>
+                      {randomImageSource.label}
+                    </a>
+                  ) : (
+                    randomImageSource.label
+                  )}
+                </p>
+              </div>
+            )}
             <div className="crop-header-summary" aria-label="Aktuelle Auswahl">
               <span>{selectedDifficultyLabel}</span>
               <span>{useFullImage ? 'Komplettes Bild' : 'Ausschnitt aktiv'}</span>
@@ -569,21 +583,6 @@ export default function CropScreen({
         </AnimatedReveal>
 
         <ErrorToast message={randomImageError || null} />
-
-        {isRandomImage && randomImageSource?.label && (
-          <AnimatedReveal className="crop-source-row" level="medium">
-            <p className="crop-random-source">
-              Quelle:{' '}
-              {randomImageSource.url ? (
-                <a href={randomImageSource.url} target="_blank" rel="noreferrer" tabIndex={-1}>
-                  {randomImageSource.label}
-                </a>
-              ) : (
-                randomImageSource.label
-              )}
-            </p>
-          </AnimatedReveal>
-        )}
 
         <div className="crop-side-panel">
           <AnimatedStaggerGroup className="crop-controls" level="medium">
