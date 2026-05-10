@@ -8,6 +8,10 @@ interface ClipboardImageResponse {
   imageDataUrl: string
 }
 
+interface ClipboardTextResponse {
+  text: string
+}
+
 export async function hasClipboardImage(): Promise<boolean> {
   const response = await requestJson<ClipboardImageStatusResponse>('/api/clipboard/image/status')
   return response.hasImage
@@ -16,4 +20,9 @@ export async function hasClipboardImage(): Promise<boolean> {
 export async function readClipboardImageDataUrl(): Promise<string> {
   const response = await requestJson<ClipboardImageResponse>('/api/clipboard/image')
   return response.imageDataUrl
+}
+
+export async function readClipboardText(): Promise<string> {
+  const response = await requestJson<ClipboardTextResponse>('/api/clipboard/text')
+  return response.text
 }

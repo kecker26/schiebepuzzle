@@ -4,6 +4,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { listPuzzleDataBackupFiles } from '../services/BackupService.ts'
+import * as ClipboardService from '../services/ClipboardService.ts'
+import type { AppContextMenuHandler } from '../app/appContextMenu.ts'
 import AccessibilityAnnouncerHost, { useAccessibilityAnnouncer } from '../app/accessibilityAnnouncer.tsx'
 import { getDefaultHelpContext, getHelpView } from '../app/helpRegistry.ts'
 import { getPuzzleHelpContextForTarget, getUploadHelpContextForTarget } from '../app/helpContextTargets.ts'
@@ -956,6 +958,34 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.keyDown(galleryButton, { key: 'Home' })
     expect(document.activeElement).toBe(savedGamesButton)
+  })
+
+  it('submits the prompt image field with Enter and keeps Shift+Enter for line breaks', () => {
+    const fileInputRef = {
+      current: document.createElement('input'),
+    } as React.RefObject<HTMLInputElement>
+    const onGeneratePromptImage = vi.fn()
+
+    render(
+      <UploadMenuCards
+        fileInputRef={fileInputRef}
+        isDragActive={false}
+        isFetchingRandom={false}
+        isGeneratingPromptImage={false}
+        promptValue="Leuchtende Berglandschaft"
+        onFetchRandomImage={vi.fn()}
+        onPromptValueChange={vi.fn()}
+        onGeneratePromptImage={onGeneratePromptImage}
+      />
+    )
+
+    const promptInput = screen.getByLabelText(/Bild per Prompt/i)
+
+    fireEvent.keyDown(promptInput, { key: 'Enter' })
+    expect(onGeneratePromptImage).toHaveBeenCalledTimes(1)
+
+    fireEvent.keyDown(promptInput, { key: 'Enter', shiftKey: true })
+    expect(onGeneratePromptImage).toHaveBeenCalledTimes(1)
   })
 
   it('focuses workspace navigation cards and jumps to the first navigation item with V', async () => {
@@ -3101,6 +3131,178 @@ describe('keyboard smoke tests', () => {
     fireEvent.keyDown(window, { key: 'Escape' })
 
     expect(onGoToStartScreen).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the app context menu for the prompt field and pastes text without triggering image paste errors', async () => {
+    let contextHandler: AppContextMenuHandler | null = null
+    const hasClipboardImageSpy = vi
+      .spyOn(ClipboardService, 'hasClipboardImage')
+      .mockResolvedValue(false)
+    const readClipboardTextSpy = vi
+      .spyOn(ClipboardService, 'readClipboardText')
+      .mockResolvedValue('Leuchtende Berglandschaft')
+
+    render(
+      <UploadScreen
+        onImageLoaded={vi.fn()}
+        onGoToStartScreen={vi.fn()}
+        onOpenHelp={vi.fn()}
+        onHelpContextChange={vi.fn()}
+        registerAppContextMenuHandler={(handler) => {
+          contextHandler = handler
+        }}
+        savedGames={[]}
+        isLoadingSavedGames={false}
+        savedGamesError={null}
+        stats={null}
+        isLoadingStats={false}
+        isResettingStats={false}
+        statsError={null}
+        gallery={null}
+        isLoadingGallery={false}
+        isResettingGallery={false}
+        galleryError={null}
+        isFetchingRandom={false}
+        randomImageError={null}
+        onFetchRandomImage={vi.fn()}
+        onLoadSavedGame={vi.fn()}
+        onDeleteSavedGame={vi.fn()}
+        onDeleteAllSavedGames={vi.fn()}
+        onResetStats={vi.fn()}
+        onResetGallery={vi.fn()}
+        onReplayGalleryEntry={vi.fn()}
+        onDeleteGalleryEntries={vi.fn()}
+        onCreateBackupFile={vi.fn()}
+        onDeleteBackupFile={vi.fn()}
+        onImportBackupFile={vi.fn()}
+      />
+    )
+
+    const promptInput = await screen.findByLabelText(/Bild per Prompt/i)
+    fireEvent.paste(promptInput, {
+      clipboardData: {
+        items: [
+          {
+            type: 'text/plain',
+            getAsFile: () => null,
+          },
+        ],
+      },
+    })
+
+    expect(screen.queryByRole('alert')).toBeNull()
+
+    await waitFor(() => {
+      expect(contextHandler).not.toBeNull()
+    })
+
+    const preventDefault = vi.fn()
+    const registeredContextHandler = contextHandler as AppContextMenuHandler | null
+    if (!registeredContextHandler) {
+      throw new Error('App-Kontextmenue wurde nicht registriert')
+    }
+
+    registeredContextHandler({
+      clientX: 12,
+      clientY: 18,
+      target: promptInput,
+      preventDefault,
+    })
+
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+    await screen.findByRole('menuitem', { name: /Prompt einfuegen/i })
+
+    await waitFor(() => {
+      expect(hasClipboardImageSpy).toHaveBeenCalledTimes(1)
+      expect((screen.getByRole('menuitem', { name: /Prompt einfuegen/i }) as HTMLButtonElement).disabled).toBe(false)
+    })
+
+    await userEvent.click(screen.getByRole('menuitem', { name: /Prompt einfuegen/i }))
+
+    await waitFor(() => {
+      expect(readClipboardTextSpy).toHaveBeenCalledTimes(1)
+      expect((screen.getByLabelText(/Bild per Prompt/i) as HTMLTextAreaElement).value).toBe('Leuchtende Berglandschaft')
+    })
+
+    hasClipboardImageSpy.mockRestore()
+    readClipboardTextSpy.mockRestore()
+  })
+
+  it('disables prompt paste in the prompt context menu when the clipboard contains an image', async () => {
+    let contextHandler: AppContextMenuHandler | null = null
+    const hasClipboardImageSpy = vi
+      .spyOn(ClipboardService, 'hasClipboardImage')
+      .mockResolvedValue(true)
+    const readClipboardTextSpy = vi
+      .spyOn(ClipboardService, 'readClipboardText')
+      .mockResolvedValue('Leuchtende Berglandschaft')
+
+    render(
+      <UploadScreen
+        onImageLoaded={vi.fn()}
+        onGoToStartScreen={vi.fn()}
+        onOpenHelp={vi.fn()}
+        onHelpContextChange={vi.fn()}
+        registerAppContextMenuHandler={(handler) => {
+          contextHandler = handler
+        }}
+        savedGames={[]}
+        isLoadingSavedGames={false}
+        savedGamesError={null}
+        stats={null}
+        isLoadingStats={false}
+        isResettingStats={false}
+        statsError={null}
+        gallery={null}
+        isLoadingGallery={false}
+        isResettingGallery={false}
+        galleryError={null}
+        isFetchingRandom={false}
+        randomImageError={null}
+        onFetchRandomImage={vi.fn()}
+        onLoadSavedGame={vi.fn()}
+        onDeleteSavedGame={vi.fn()}
+        onDeleteAllSavedGames={vi.fn()}
+        onResetStats={vi.fn()}
+        onResetGallery={vi.fn()}
+        onReplayGalleryEntry={vi.fn()}
+        onDeleteGalleryEntries={vi.fn()}
+        onCreateBackupFile={vi.fn()}
+        onDeleteBackupFile={vi.fn()}
+        onImportBackupFile={vi.fn()}
+      />
+    )
+
+    const promptInput = await screen.findByLabelText(/Bild per Prompt/i)
+
+    await waitFor(() => {
+      expect(contextHandler).not.toBeNull()
+    })
+
+    const registeredContextHandler = contextHandler as AppContextMenuHandler | null
+    if (!registeredContextHandler) {
+      throw new Error('App-Kontextmenue wurde nicht registriert')
+    }
+
+    registeredContextHandler({
+      clientX: 12,
+      clientY: 18,
+      target: promptInput,
+      preventDefault: vi.fn(),
+    })
+
+    const pastePromptItem = await screen.findByRole('menuitem', { name: /Prompt einfuegen/i })
+
+    await waitFor(() => {
+      expect(hasClipboardImageSpy).toHaveBeenCalledTimes(1)
+      expect((screen.getByRole('menuitem', { name: /Prompt einfuegen/i }) as HTMLButtonElement).disabled).toBe(true)
+    })
+
+    await userEvent.click(pastePromptItem)
+    expect(readClipboardTextSpy).not.toHaveBeenCalled()
+
+    hasClipboardImageSpy.mockRestore()
+    readClipboardTextSpy.mockRestore()
   })
 
   it('restores the last statistics view and filter from a session command', async () => {
