@@ -7,11 +7,12 @@ import { UploadWorkspaceWindow } from './uploadUtils.ts'
 type WorkspacePage = Exclude<UploadWorkspaceWindow, 'start'>
 
 interface WorkspaceNavItem {
-  window: WorkspacePage
+  window: UploadWorkspaceWindow
   label: string
   iconName: UploadScreenIconName
   copy: string
-  buttonRef: RefObject<HTMLButtonElement>
+  buttonRef?: RefObject<HTMLButtonElement>
+  isReturn?: boolean
 }
 
 interface UploadWorkspaceSideNavProps {
@@ -72,6 +73,13 @@ export default function UploadWorkspaceSideNav({
       copy: `${galleryCardCount} Motive`,
       buttonRef: galleryNavButtonRef,
     },
+    {
+      window: 'start',
+      label: 'Auswahl',
+      iconName: 'home',
+      copy: 'Zur Auswahlseite',
+      isReturn: true,
+    },
   ]
 
   return (
@@ -94,7 +102,7 @@ export default function UploadWorkspaceSideNav({
         <AnimatedButton
           key={item.window}
           ref={item.buttonRef}
-          className={`workspace-window-nav-button${activeWindow === item.window ? ' is-active' : ''}`}
+          className={`workspace-window-nav-button${activeWindow === item.window ? ' is-active' : ''}${item.isReturn ? ' is-return' : ''}`}
           interaction="surface"
           data-workspace-window-nav={item.window}
           aria-current={activeWindow === item.window ? 'page' : undefined}

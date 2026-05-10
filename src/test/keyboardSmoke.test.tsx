@@ -907,7 +907,11 @@ describe('keyboard smoke tests', () => {
           fileInputRef={fileInputRef}
           isDragActive={false}
           isFetchingRandom={false}
+          isGeneratingPromptImage={false}
+          promptValue=""
           onFetchRandomImage={vi.fn()}
+          onPromptValueChange={vi.fn()}
+          onGeneratePromptImage={vi.fn()}
         />
         <UploadWorkspaceLauncher
           savedGamesCount={2}
@@ -1203,6 +1207,14 @@ describe('keyboard smoke tests', () => {
 
     const resetButton = await screen.findByRole('button', { name: 'Statistik loeschen' })
     const headerStartButton = screen.getByRole('button', { name: 'Auswahl' })
+
+    resetButton.focus()
+    fireEvent.keyDown(resetButton, { key: 'End' })
+    expect(document.activeElement).toBe(headerStartButton)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Rohdaten' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Expertenmatrix' }))
+
     const detailsButton = screen.getByRole('button', { name: 'Detailtabelle' })
     const comparisonSection = detailsButton.closest<HTMLElement>('.stats-report-section, .stats-report-section-collapsible')
     expect(comparisonSection).toBeTruthy()
@@ -1213,11 +1225,6 @@ describe('keyboard smoke tests', () => {
     const summaryButtons = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.stats-report-section-summary'))
     const historySectionSummary = summaryButtons[summaryButtons.length - 1]
     expect(historySectionSummary).toBeTruthy()
-
-    resetButton.focus()
-    fireEvent.keyDown(resetButton, { key: 'End' })
-    expect(document.activeElement).toBe(headerStartButton)
-    expect(document.activeElement).not.toBe(historySectionSummary)
 
     detailsButton.focus()
     fireEvent.keyDown(detailsButton, { key: 'End' })
@@ -2813,7 +2820,7 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(difficultyFilterButton)
 
     const sortButtons = screen.getAllByRole('button', {
-      name: /datum|stufe|zeit|netto-zuege|aktionen|umwege|laufart|datenquelle/i,
+      name: /datum|stufe|zeit|netto-zuege|gesamt-zuege|extra-zuege|laufart/i,
     })
     const firstSortButton = sortButtons[0]!
     const secondSortButton = sortButtons[1]!
@@ -3157,6 +3164,9 @@ describe('keyboard smoke tests', () => {
         onImportBackupFile={vi.fn()}
       />
     )
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Rohdaten' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Einzellauf-Historie' }))
 
     await waitFor(() => {
       expect(screen.getByText('1 von 2 Eintraegen sichtbar')).toBeTruthy()

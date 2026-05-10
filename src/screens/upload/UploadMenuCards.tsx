@@ -1,4 +1,4 @@
-import type { Ref, RefObject } from 'react'
+import type { FormEvent, Ref, RefObject } from 'react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import AnimatedCardButton from '../../motion/AnimatedCardButton.tsx'
@@ -9,7 +9,11 @@ interface UploadMenuCardsProps {
   primaryActionRef?: Ref<HTMLButtonElement>
   isDragActive: boolean
   isFetchingRandom: boolean
+  isGeneratingPromptImage: boolean
+  promptValue: string
   onFetchRandomImage: () => Promise<void> | void
+  onPromptValueChange: (value: string) => void
+  onGeneratePromptImage: () => Promise<void> | void
 }
 
 export default function UploadMenuCards({
@@ -17,8 +21,17 @@ export default function UploadMenuCards({
   primaryActionRef,
   isDragActive,
   isFetchingRandom,
+  isGeneratingPromptImage,
+  promptValue,
   onFetchRandomImage,
+  onPromptValueChange,
+  onGeneratePromptImage,
 }: UploadMenuCardsProps) {
+  const handlePromptSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    void onGeneratePromptImage()
+  }
+
   return (
     <AnimatedStaggerGroup className="menu-grid" level="medium" onKeyDown={handleDirectionalFocusNavigation}>
       <AnimatedCardButton
@@ -74,6 +87,34 @@ export default function UploadMenuCards({
           Direkt starten
         </span>
       </AnimatedCardButton>
+
+      <form className="menu-card menu-card-prompt" onSubmit={handlePromptSubmit}>
+        <span className="menu-card-glow" aria-hidden="true" />
+        <span className="menu-card-eyebrow">KI-generiert</span>
+        <span className="menu-card-icon" aria-hidden="true">
+          <UploadScreenIcon name="sparkles" className="menu-card-icon-symbol" />
+        </span>
+        <label className="menu-card-title" htmlFor="prompt-image-input">
+          Bild per Prompt
+        </label>
+        <span className="menu-card-desc">
+          Beschreibe dein Wunschmotiv. Nano Banana erstellt daraus ein Puzzle-Bild.
+        </span>
+        <textarea
+          id="prompt-image-input"
+          className="prompt-image-input"
+          value={promptValue}
+          onChange={(event) => onPromptValueChange(event.target.value)}
+          rows={3}
+          maxLength={1000}
+          placeholder="z. B. leuchtende Berglandschaft bei Sonnenaufgang"
+          disabled={isGeneratingPromptImage}
+        />
+        <button className="menu-card-arrow prompt-image-submit" type="submit" disabled={isGeneratingPromptImage}>
+          <UploadScreenIcon name="sparkles" className="menu-card-arrow-icon" />
+          {isGeneratingPromptImage ? 'Erstelle...' : 'Bild erstellen'}
+        </button>
+      </form>
     </AnimatedStaggerGroup>
   )
 }

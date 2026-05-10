@@ -20,6 +20,8 @@ import {
 import { getErrorMessage, scrollViewportToTop } from '../app/appUtils.ts'
 import { listPuzzleDataBackupFiles } from '../services/BackupService.ts'
 import { hasClipboardImage, readClipboardImageDataUrl } from '../services/ClipboardService.ts'
+import { generatePromptImage } from '../services/PromptImageService.ts'
+import type { RandomImageSourceInfo } from '../services/RandomImageService.ts'
 import UploadBackupBrowserDialog from './upload/UploadBackupBrowserDialog.tsx'
 import UploadConfirmDialog from './upload/UploadConfirmDialog.tsx'
 import { type UploadCommandRequest } from './upload/uploadCommandRequest.ts'
@@ -46,7 +48,7 @@ import ErrorToast from '../components/ErrorToast.tsx'
 import '../styles/screens/upload.css'
 
 interface UploadScreenProps {
-  onImageLoaded: (imgSrc: string, isRandom?: boolean) => void
+  onImageLoaded: (imgSrc: string, isRandom?: boolean, source?: RandomImageSourceInfo | null) => void
   onGoToStartScreen: () => void
   onOpenHelp: () => void
   onHelpContextChange: (context: HelpContext) => void
@@ -225,6 +227,8 @@ export default function UploadScreen({
   const [pendingBackupImport, setPendingBackupImport] = useState<PuzzleDataBackupFile | null>(null)
   const [contextMenuState, setContextMenuState] = useState<UploadContextMenuState | null>(null)
   const [uploadClipboardPasteStatus, setUploadClipboardPasteStatus] = useState<UploadClipboardPasteStatus>('idle')
+  const [promptImagePrompt, setPromptImagePrompt] = useState('')
+  const [isGeneratingPromptImage, setIsGeneratingPromptImage] = useState(false)
 
   const alignSelectionViewportToTop = useCallback(() => {
     screenRef.current?.scrollIntoView({ block: 'start', inline: 'nearest' })
@@ -602,6 +606,26 @@ export default function UploadScreen({
       setTimedError(`Bild konnte nicht aus der Zwischenablage eingefuegt werden: ${getErrorMessage(clipboardError)}`)
     }
   }, [loadImageFile, setTimedError])
+
+  const handleGeneratePromptImage = useCallback(async () => {
+    const prompt = promptImagePrompt.trim()
+    if (!prompt) {
+      setTimedError('Bitte gib zuerst einen Prompt fuer das KI-Bild ein.')
+      return
+    }
+
+    clearError()
+    setIsGeneratingPromptImage(true)
+
+    try {
+      const generatedImage = await generatePromptImage(prompt)
+      onImageLoaded(generatedImage.imageSrc, true, generatedImage.source)
+    } catch (promptImageError) {
+      setTimedError(`KI-Bild konnte nicht erstellt werden: ${getErrorMessage(promptImageError)}`)
+    } finally {
+      setIsGeneratingPromptImage(false)
+    }
+  }, [clearError, onImageLoaded, promptImagePrompt, setTimedError])
 
   const handleOpenSavedGamesWindow = () => {
     handleWindowChange('savedGames')
@@ -1227,7 +1251,11 @@ export default function UploadScreen({
               primaryActionRef={primaryUploadCardRef}
               isDragActive={isDragActive}
               isFetchingRandom={isFetchingRandom}
+              isGeneratingPromptImage={isGeneratingPromptImage}
+              promptValue={promptImagePrompt}
               onFetchRandomImage={onFetchRandomImage}
+              onPromptValueChange={setPromptImagePrompt}
+              onGeneratePromptImage={handleGeneratePromptImage}
             />
           </AnimatedReveal>
 

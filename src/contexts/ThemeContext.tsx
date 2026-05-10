@@ -24,6 +24,86 @@ const DEFAULT_IMAGE_THEME: ImageThemePalette = {
   primaryShadowHover: 'rgba(37, 99, 235, 0.38)',
 }
 
+interface RgbColor {
+  r: number
+  g: number
+  b: number
+}
+
+function clampColorChannel(value: number): number {
+  return Math.min(255, Math.max(0, Math.round(value)))
+}
+
+function parseCssColor(color: string): RgbColor | null {
+  const trimmed = color.trim()
+
+  if (trimmed.startsWith('#')) {
+    const hex = trimmed.slice(1)
+    const normalized = hex.length === 3
+      ? hex.split('').map((character) => character + character).join('')
+      : hex
+
+    if (normalized.length !== 6) return null
+
+    const value = Number.parseInt(normalized, 16)
+    if (Number.isNaN(value)) return null
+
+    return {
+      r: (value >> 16) & 255,
+      g: (value >> 8) & 255,
+      b: value & 255,
+    }
+  }
+
+  const rgbMatch = trimmed.match(/^rgba?\(([^)]+)\)$/i)
+  if (!rgbMatch) return null
+
+  const channels = rgbMatch[1]
+    .split(',')
+    .slice(0, 3)
+    .map((channel) => Number.parseFloat(channel.trim()))
+
+  if (channels.length !== 3 || channels.some((channel) => Number.isNaN(channel))) return null
+
+  return {
+    r: clampColorChannel(channels[0]),
+    g: clampColorChannel(channels[1]),
+    b: clampColorChannel(channels[2]),
+  }
+}
+
+function getRelativeLuminance({ r, g, b }: RgbColor): number {
+  const channels = [r, g, b].map((channel) => {
+    const normalized = channel / 255
+    return normalized <= 0.03928
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4
+  })
+
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722
+}
+
+function getContrastRatio(first: RgbColor, second: RgbColor): number {
+  const firstLuminance = getRelativeLuminance(first)
+  const secondLuminance = getRelativeLuminance(second)
+  const lighter = Math.max(firstLuminance, secondLuminance)
+  const darker = Math.min(firstLuminance, secondLuminance)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+function getTextOnPrimaryColor(primaryColor: string, primaryHover: string): string {
+  const primary = parseCssColor(primaryColor)
+  const hover = parseCssColor(primaryHover)
+  if (!primary || !hover) return '#ffffff'
+
+  const lightText = { r: 255, g: 255, b: 255 }
+  const darkText = { r: 15, g: 23, b: 42 }
+  const lightContrast = Math.min(getContrastRatio(primary, lightText), getContrastRatio(hover, lightText))
+  const darkContrast = Math.min(getContrastRatio(primary, darkText), getContrastRatio(hover, darkText))
+
+  return darkContrast > lightContrast ? '#0f172a' : '#ffffff'
+}
+
 function getStoredMode(): ThemeMode {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_MODE)
@@ -76,6 +156,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--primary-hover', activeImageTheme.primaryHover)
     root.style.setProperty('--primary-shadow', activeImageTheme.primaryShadow)
     root.style.setProperty('--primary-shadow-hover', activeImageTheme.primaryShadowHover)
+    root.style.setProperty(
+      '--text-on-primary',
+      getTextOnPrimaryColor(activeImageTheme.primaryColor, activeImageTheme.primaryHover)
+    )
   }, [mode, imagePalette])
 
   return (

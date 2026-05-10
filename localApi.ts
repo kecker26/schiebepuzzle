@@ -14,6 +14,7 @@ import type { MusicProviderId } from './src/services/music/types.ts'
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const SAVES_DIR = path.join(ROOT_DIR, 'spielstaende')
 const BACKUPS_DIR = path.join(ROOT_DIR, 'backups')
+const STATS_EXPORTS_DIR = path.join(ROOT_DIR, 'statistik-exporte')
 const STATS_FILE = path.join(SAVES_DIR, '__stats.json')
 const GALLERY_FILE = path.join(SAVES_DIR, '__gallery.json')
 const COLLECTIONS_FILE = path.join(SAVES_DIR, '__collections.json')
@@ -22,6 +23,7 @@ const COMPRESSED_BACKUP_FILE_EXTENSION = '.spbkp.gz'
 const BACKUP_FILE_EXTENSION = COMPRESSED_BACKUP_FILE_EXTENSION
 const SAVE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
 const BACKUP_FILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.spbkp(?:\.gz)?$/
+const STATS_EXPORT_FILE_NAME_PATTERN = /^schiebepuzzle-statistik-[a-zA-Z0-9._-]+\.(?:csv|json)$/
 const MAX_BODY_SIZE = 40 * 1024 * 1024
 const MAX_BACKUP_FILES = 3
 const BACKUP_FORMAT_VERSION = 3
@@ -30,10 +32,45 @@ const RECENT_MEDIAN_SAMPLE_SIZE = 5
 const GZIP_MAGIC_BYTE_1 = 0x1f
 const GZIP_MAGIC_BYTE_2 = 0x8b
 const CLIPBOARD_COMMAND_MAX_BUFFER = 64 * 1024 * 1024
+const POLLINATIONS_BASE_URL = 'https://gen.pollinations.ai'
+const POLLINATIONS_GENERATED_IMAGE_MODEL = 'zimage'
+const POLLINATIONS_GENERATED_IMAGE_WIDTH = 1280
+const POLLINATIONS_GENERATED_IMAGE_HEIGHT = 960
+const POLLINATIONS_GENERATED_IMAGE_TIMEOUT_MS = 120000
+const CLOUDFLARE_BASE_URL = 'https://api.cloudflare.com'
+const CLOUDFLARE_GENERATED_IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell'
+const CLOUDFLARE_GENERATED_IMAGE_STEPS = 4
+const CLOUDFLARE_GENERATED_IMAGE_TIMEOUT_MS = 120000
+const MAX_GENERATED_IMAGE_PROMPT_LENGTH = 1000
 const POWERSHELL_PATH = process.platform === 'win32'
   ? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
   : 'powershell'
 const execFileAsync = promisify(execFile)
+
+interface LocalApiPluginOptions {
+  jamendoClientId?: string
+  pollinationsApiKey?: string
+  pollinationsImageModel?: string
+  cloudflareAccountId?: string
+  cloudflareApiToken?: string
+  cloudflareImageModel?: string
+}
+
+interface PollinationsGeneratedImageConfig {
+  apiKey: string
+  model: string
+}
+
+interface CloudflareGeneratedImageConfig {
+  accountId: string
+  apiToken: string
+  model: string
+}
+
+interface GeneratedImageConfig {
+  pollinations: PollinationsGeneratedImageConfig
+  cloudflare: CloudflareGeneratedImageConfig
+}
 
 const POWERSHELL_CLIPBOARD_IMAGE_STATUS_SCRIPT = [
   "$ErrorActionPreference = 'Stop'",
@@ -346,10 +383,45 @@ interface RecordCompletionResponse {
   isNewBestCleanTime: boolean
 }
 
+interface StatsExportFileResponse {
+  fileName: string
+  directory: string
+  relativePath: string
+  size: number
+  savedAt: string
+  mimeType: 'text/csv' | 'application/json'
+}
+
+interface GeneratedImageRequest {
+  prompt: string
+}
+
+interface GeneratedImageResponse {
+  imageSrc: string
+  source: {
+    label: string
+    url: string
+  }
+}
+
+interface CloudflareAiResponse {
+  success?: boolean
+  errors?: Array<{ message?: string }>
+  messages?: Array<{ message?: string }>
+  result?: {
+    image?: string
+    dataURI?: string
+  }
+}
+
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
   res.statusCode = statusCode
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
   res.end(JSON.stringify(payload))
+}
+
+function bufferToDataUrl(buffer: Buffer, contentType: string): string {
+  return `data:${contentType};base64,${buffer.toString('base64')}`
 }
 
 function isValidSaveId(id: string): boolean {
@@ -429,6 +501,10 @@ async function ensureBackupsDir(): Promise<void> {
   await mkdir(BACKUPS_DIR, { recursive: true })
 }
 
+async function ensureStatsExportsDir(): Promise<void> {
+  await mkdir(STATS_EXPORTS_DIR, { recursive: true })
+}
+
 function legacySaveFilePath(saveId: string): string {
   if (!isValidSaveId(saveId)) {
     throw new Error('Ungueltige Spielstand-ID')
@@ -471,6 +547,18 @@ function backupFilePath(fileName: string): string {
   }
 
   return path.join(BACKUPS_DIR, fileName)
+}
+
+function isValidStatsExportFileName(fileName: string): boolean {
+  return STATS_EXPORT_FILE_NAME_PATTERN.test(fileName)
+}
+
+function statsExportFilePath(fileName: string): string {
+  if (!isValidStatsExportFileName(fileName)) {
+    throw new Error('Ungueltiger Statistik-Export-Dateiname')
+  }
+
+  return path.join(STATS_EXPORTS_DIR, fileName)
 }
 
 function isCompressedBackupFileName(fileName: string): boolean {
@@ -531,6 +619,179 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
 
     req.on('error', reject)
   })
+}
+
+function isGeneratedImageRequest(value: unknown): value is GeneratedImageRequest {
+  if (!value || typeof value !== 'object') return false
+  const input = value as { prompt?: unknown }
+  return typeof input.prompt === 'string'
+}
+
+function normalizeGeneratedImagePrompt(prompt: string): string {
+  return prompt.trim().replace(/\s+/g, ' ')
+}
+
+function getErrorDetail(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unbekannter Fehler'
+}
+
+async function parsePollinationsError(response: Response): Promise<string> {
+  try {
+    const payload = await response.json() as {
+      error?: string | { message?: string }
+      message?: string
+    }
+
+    if (typeof payload.error === 'string') return payload.error
+    if (payload.error?.message) return payload.error.message
+    if (payload.message) return payload.message
+  } catch {
+    // Fall through to a generic status message.
+  }
+
+  return `Pollinations API antwortete mit Fehler ${response.status}`
+}
+
+async function parseCloudflareError(response: Response): Promise<string> {
+  try {
+    const payload = await response.json() as CloudflareAiResponse
+    const errorMessage = payload.errors?.map((entry) => entry.message).filter(Boolean).join('; ')
+    if (errorMessage) return errorMessage
+    const message = payload.messages?.map((entry) => entry.message).filter(Boolean).join('; ')
+    if (message) return message
+  } catch {
+    // Fall through to a generic status message.
+  }
+
+  return `Cloudflare Workers AI antwortete mit Fehler ${response.status}`
+}
+
+async function generatePollinationsImage(
+  prompt: string,
+  config: PollinationsGeneratedImageConfig
+): Promise<GeneratedImageResponse> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), POLLINATIONS_GENERATED_IMAGE_TIMEOUT_MS)
+  const url = new URL(`/image/${encodeURIComponent(prompt)}`, POLLINATIONS_BASE_URL)
+  url.searchParams.set('model', config.model)
+  url.searchParams.set('width', `${POLLINATIONS_GENERATED_IMAGE_WIDTH}`)
+  url.searchParams.set('height', `${POLLINATIONS_GENERATED_IMAGE_HEIGHT}`)
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(await parsePollinationsError(response))
+    }
+
+    const contentType = response.headers.get('content-type') ?? 'image/jpeg'
+    if (!contentType.startsWith('image/')) {
+      throw new Error('Pollinations hat kein Bild zurueckgegeben')
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    const imageBuffer = Buffer.from(arrayBuffer)
+    if (imageBuffer.length === 0) {
+      throw new Error('Pollinations hat ein leeres Bild zurueckgegeben')
+    }
+
+    return {
+      imageSrc: bufferToDataUrl(imageBuffer, contentType.split(';')[0] || 'image/jpeg'),
+      source: {
+        label: 'Pollinations Z-Image Turbo',
+        url: 'https://gen.pollinations.ai/image/models',
+      },
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Pollinations hat zu lange fuer die Bildgenerierung gebraucht')
+    }
+
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function generateCloudflareImage(
+  prompt: string,
+  config: CloudflareGeneratedImageConfig
+): Promise<GeneratedImageResponse> {
+  if (!config.accountId || !config.apiToken) {
+    throw new Error('CLOUDFLARE_ACCOUNT_ID oder CLOUDFLARE_API_TOKEN ist nicht konfiguriert')
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), CLOUDFLARE_GENERATED_IMAGE_TIMEOUT_MS)
+  const url = `${CLOUDFLARE_BASE_URL}/client/v4/accounts/${encodeURIComponent(config.accountId)}/ai/run/${config.model}`
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        steps: CLOUDFLARE_GENERATED_IMAGE_STEPS,
+        seed: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER),
+      }),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(await parseCloudflareError(response))
+    }
+
+    const payload = await response.json() as CloudflareAiResponse
+    if (payload.success === false) {
+      const message = payload.errors?.map((entry) => entry.message).filter(Boolean).join('; ')
+      throw new Error(message || 'Cloudflare Workers AI konnte kein Bild erzeugen')
+    }
+
+    const image = payload.result?.image
+    if (!image) {
+      throw new Error('Cloudflare Workers AI hat kein Bild zurueckgegeben')
+    }
+
+    return {
+      imageSrc: image.startsWith('data:')
+        ? image
+        : `data:image/jpeg;charset=utf-8;base64,${image}`,
+      source: {
+        label: 'Cloudflare Workers AI Flux Schnell',
+        url: 'https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/',
+      },
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Cloudflare Workers AI hat zu lange fuer die Bildgenerierung gebraucht')
+    }
+
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function generateImageWithFallback(prompt: string, config: GeneratedImageConfig): Promise<GeneratedImageResponse> {
+  try {
+    return await generatePollinationsImage(prompt, config.pollinations)
+  } catch (pollinationsError) {
+    try {
+      return await generateCloudflareImage(prompt, config.cloudflare)
+    } catch (cloudflareError) {
+      throw new Error(
+        `Pollinations fehlgeschlagen: ${getErrorDetail(pollinationsError)}. Cloudflare Workers AI fehlgeschlagen: ${getErrorDetail(cloudflareError)}`
+      )
+    }
+  }
 }
 
 async function readJsonFile<T>(filePath: string): Promise<T | null> {
@@ -2173,6 +2434,55 @@ function validateCompletionPayload(payload: unknown): payload is {
   )
 }
 
+function getStatsExportMimeType(fileName: string): 'text/csv' | 'application/json' {
+  return fileName.endsWith('.csv') ? 'text/csv' : 'application/json'
+}
+
+function validateStatsExportPayload(payload: unknown): payload is {
+  fileName: string
+  contents: string
+  mimeType: string
+} {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as Record<string, unknown>
+  if (
+    typeof input.fileName !== 'string' ||
+    typeof input.contents !== 'string' ||
+    typeof input.mimeType !== 'string' ||
+    !isValidStatsExportFileName(input.fileName)
+  ) {
+    return false
+  }
+
+  const expectedMimeType = getStatsExportMimeType(input.fileName)
+  return input.mimeType.startsWith(expectedMimeType)
+}
+
+async function createStatsExportFile(input: {
+  fileName: string
+  contents: string
+  mimeType: string
+}): Promise<StatsExportFileResponse> {
+  const normalizedMimeType = getStatsExportMimeType(input.fileName)
+  const filePath = statsExportFilePath(input.fileName)
+  const savedAt = new Date().toISOString()
+
+  await ensureStatsExportsDir()
+  await writeFile(filePath, input.contents, 'utf-8')
+
+  const fileStats = await stat(filePath)
+
+  return {
+    fileName: input.fileName,
+    directory: 'statistik-exporte',
+    relativePath: path.join('statistik-exporte', input.fileName),
+    size: fileStats.size,
+    savedAt,
+    mimeType: normalizedMimeType,
+  }
+}
+
 function validateGalleryPayload(payload: unknown): payload is {
   id?: string
   completedAt?: string | null
@@ -2890,6 +3200,58 @@ async function handleCollectionsApi(
     sendJson(res, 500, { error: message })
   }
 }
+
+async function handleGeneratedImageApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void,
+  config: GeneratedImageConfig
+): Promise<void> {
+  const reqUrl = req.url ?? '/'
+  const url = new URL(reqUrl, 'http://localhost')
+
+  if (!url.pathname.startsWith('/api/generated-image')) {
+    next()
+    return
+  }
+
+  if (req.method === 'OPTIONS') {
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
+  const parts = url.pathname.split('/').filter(Boolean)
+
+  try {
+    if (req.method === 'POST' && parts.length === 2) {
+      const body = await readJsonBody(req)
+      if (!isGeneratedImageRequest(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer KI-Bildgenerierung' })
+        return
+      }
+
+      const prompt = normalizeGeneratedImagePrompt(body.prompt)
+      if (!prompt) {
+        sendJson(res, 400, { error: 'Bitte gib zuerst einen Prompt ein' })
+        return
+      }
+
+      if (prompt.length > MAX_GENERATED_IMAGE_PROMPT_LENGTH) {
+        sendJson(res, 400, { error: `Der Prompt darf maximal ${MAX_GENERATED_IMAGE_PROMPT_LENGTH} Zeichen lang sein` })
+        return
+      }
+
+      sendJson(res, 201, await generateImageWithFallback(prompt, config))
+      return
+    }
+
+    sendJson(res, 405, { error: 'Methode nicht erlaubt' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler'
+    sendJson(res, 500, { error: message })
+  }
+}
+
 async function handleStatsApi(
   req: IncomingMessage,
   res: ServerResponse,
@@ -2911,6 +3273,17 @@ async function handleStatsApi(
   const parts = url.pathname.split('/').filter(Boolean)
 
   try {
+    if (req.method === 'POST' && parts.length === 3 && parts[2] === 'exports') {
+      const body = await readJsonBody(req)
+      if (!validateStatsExportPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Statistik-Export' })
+        return
+      }
+
+      sendJson(res, 201, await createStatsExportFile(body))
+      return
+    }
+
     if (req.method === 'GET' && parts.length === 2) {
       const stats = await readStatsFile()
       sendJson(res, 200, toStatsResponse(stats))
@@ -3149,7 +3522,8 @@ async function handleApiRequest(
   req: IncomingMessage,
   res: ServerResponse,
   next: () => void,
-  musicProviderCoordinator: MusicProviderCoordinator
+  musicProviderCoordinator: MusicProviderCoordinator,
+  generatedImageConfig: GeneratedImageConfig
 ): Promise<void> {
   const reqUrl = req.url ?? '/'
   const url = new URL(reqUrl, 'http://localhost')
@@ -3184,6 +3558,11 @@ async function handleApiRequest(
     return
   }
 
+  if (url.pathname.startsWith('/api/generated-image')) {
+    await handleGeneratedImageApi(req, res, next, generatedImageConfig)
+    return
+  }
+
   if (url.pathname.startsWith('/api/music')) {
     await handleMusicApi(req, res, next, musicProviderCoordinator)
     return
@@ -3192,19 +3571,30 @@ async function handleApiRequest(
   next()
 }
 
-export function apiPlugin(options: { jamendoClientId?: string } = {}): Plugin {
+export function apiPlugin(options: LocalApiPluginOptions = {}): Plugin {
   const musicProviderCoordinator = new MusicProviderCoordinator(options.jamendoClientId ?? '')
+  const generatedImageConfig: GeneratedImageConfig = {
+    pollinations: {
+      apiKey: options.pollinationsApiKey ?? '',
+      model: options.pollinationsImageModel || POLLINATIONS_GENERATED_IMAGE_MODEL,
+    },
+    cloudflare: {
+      accountId: options.cloudflareAccountId ?? '',
+      apiToken: options.cloudflareApiToken ?? '',
+      model: options.cloudflareImageModel || CLOUDFLARE_GENERATED_IMAGE_MODEL,
+    },
+  }
 
   return {
     name: 'schiebepuzzle-local-api',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        void handleApiRequest(req, res, next, musicProviderCoordinator)
+        void handleApiRequest(req, res, next, musicProviderCoordinator, generatedImageConfig)
       })
     },
     configurePreviewServer(server) {
       server.middlewares.use((req, res, next) => {
-        void handleApiRequest(req, res, next, musicProviderCoordinator)
+        void handleApiRequest(req, res, next, musicProviderCoordinator, generatedImageConfig)
       })
     },
   }

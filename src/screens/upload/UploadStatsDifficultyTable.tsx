@@ -19,16 +19,22 @@ type SortDirection = 'asc' | 'desc'
 type DifficultySortKey =
   | 'difficulty'
   | 'solveCount'
-  | 'cleanRate'
   | 'bestTime'
-  | 'worstTime'
   | 'bestMoves'
-  | 'worstMoves'
   | 'medianTime'
   | 'medianMoves'
   | 'averageExtraMoves'
-  | 'profileCoverage'
   | 'lastCompletedAt'
+
+const DIFFICULTY_COLUMN_HELP: Partial<Record<DifficultySortKey, string>> = {
+  solveCount: 'Alle abgeschlossenen Siege dieser Stufe. Der Zellhinweis nennt den Anteil ohne Hilfe.',
+  bestTime: 'Die schnellste bisher gespeicherte Siegzeit dieser Stufe.',
+  bestMoves: 'Die niedrigste Zahl an Netto-Zuegen, also reine Puzzle-Zuege ohne Zusatzaktionen.',
+  medianTime: 'Der mittlere Zeitwert dieser Stufe. Ausreisser zaehlen dadurch weniger stark als beim Durchschnitt.',
+  medianMoves: 'Der mittlere Wert der Netto-Zuege dieser Stufe.',
+  averageExtraMoves: 'Durchschnittliche Differenz zwischen Gesamt-Zuegen und Netto-Zuegen. Nur mit Laufprofilen berechenbar.',
+  lastCompletedAt: 'Der zuletzt gespeicherte Sieg dieser Stufe mit Zeit und Netto-Zuegen.',
+}
 
 interface UploadStatsDifficultyTableProps {
   stats: PuzzleStats | null
@@ -76,6 +82,30 @@ function getSortIndicator(key: DifficultySortKey, activeKey: DifficultySortKey, 
   return direction === 'asc' ? '↑' : '↓'
 }
 
+function renderHeaderLabel(label: string) {
+  return <span className="stats-table-label-text">{label}</span>
+}
+
+function getHelpHeaderProps(key: DifficultySortKey) {
+  const help = DIFFICULTY_COLUMN_HELP[key]
+
+  return help
+    ? {
+        className: 'has-stats-column-help',
+      }
+    : {}
+}
+
+function renderColumnHelpBadge(key: DifficultySortKey) {
+  const help = DIFFICULTY_COLUMN_HELP[key]
+
+  return help ? (
+    <span className="stats-table-help-badge" aria-hidden="true" title={help}>
+      ?
+    </span>
+  ) : null
+}
+
 function sortDifficultyRows(
   rows: DifficultyReportRow[],
   sortKey: DifficultySortKey,
@@ -91,20 +121,11 @@ function sortDifficultyRows(
       case 'solveCount':
         result = compareNullableNumbers(left.solveCount, right.solveCount, direction)
         break
-      case 'cleanRate':
-        result = compareNullableNumbers(left.cleanRate, right.cleanRate, direction)
-        break
       case 'bestTime':
         result = compareNullableNumbers(left.bestTime, right.bestTime, direction)
         break
-      case 'worstTime':
-        result = compareNullableNumbers(left.worstTime, right.worstTime, direction)
-        break
       case 'bestMoves':
         result = compareNullableNumbers(left.bestMoves, right.bestMoves, direction)
-        break
-      case 'worstMoves':
-        result = compareNullableNumbers(left.worstMoves, right.worstMoves, direction)
         break
       case 'medianTime':
         result = compareNullableNumbers(left.medianTime, right.medianTime, direction)
@@ -114,9 +135,6 @@ function sortDifficultyRows(
         break
       case 'averageExtraMoves':
         result = compareNullableNumbers(left.averageExtraMoves, right.averageExtraMoves, direction)
-        break
-      case 'profileCoverage':
-        result = compareNullableNumbers(left.profileCoverage, right.profileCoverage, direction)
         break
       case 'lastCompletedAt':
         result = compareNullableDates(left.lastCompletedAt, right.lastCompletedAt, direction)
@@ -226,7 +244,7 @@ export default function UploadStatsDifficultyTable({
       id="stats-report-difficulties"
       kicker="Detailtabelle"
       title="Sortierbarer Vergleich je Schwierigkeit"
-      copy="Jede Spalte laesst sich sortieren. So kannst du schnell nach Bestzeiten, schwankenden Laeufen, Profilabdeckung oder zaehen Schwierigkeitsstufen suchen."
+      copy="Jede Spalte laesst sich sortieren. Die Tabelle konzentriert sich auf Siege, typische Werte, Rekorde und den letzten Abschluss je Stufe."
       summaryMeta={
         <>
           <span className="stats-report-summary-pill">
@@ -248,99 +266,74 @@ export default function UploadStatsDifficultyTable({
             <tr>
               <th scope="col" aria-sort={sortKey === 'difficulty' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
                 <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('difficulty')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Stufe</span>
+                  {renderHeaderLabel('Stufe')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('difficulty', sortKey, sortDirection)}
                   </span>
                 </AnimatedButton>
               </th>
-              <th scope="col" aria-sort={sortKey === 'solveCount' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+              <th scope="col" aria-sort={sortKey === 'solveCount' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('solveCount')}>
                 <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('solveCount')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Siege</span>
+                  {renderHeaderLabel('Siege')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('solveCount', sortKey, sortDirection)}
                   </span>
                 </AnimatedButton>
+                {renderColumnHelpBadge('solveCount')}
               </th>
-              <th scope="col" aria-sort={sortKey === 'cleanRate' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('cleanRate')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Clean</span>
-                  <span className="stats-table-sort-indicator" aria-hidden="true">
-                    {getSortIndicator('cleanRate', sortKey, sortDirection)}
-                  </span>
-                </AnimatedButton>
-              </th>
-              <th scope="col" aria-sort={sortKey === 'bestTime' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('bestTime')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Bestzeit</span>
+              <th scope="col" aria-sort={sortKey === 'bestTime' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('bestTime')}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" title="Schnellster Sieg dieser Stufe" onClick={() => handleSort('bestTime')} onKeyDown={handleSortButtonKeyDown}>
+                  {renderHeaderLabel('Bestzeit')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('bestTime', sortKey, sortDirection)}
                   </span>
                 </AnimatedButton>
+                {renderColumnHelpBadge('bestTime')}
               </th>
-              <th scope="col" aria-sort={sortKey === 'worstTime' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('worstTime')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Langsamste</span>
-                  <span className="stats-table-sort-indicator" aria-hidden="true">
-                    {getSortIndicator('worstTime', sortKey, sortDirection)}
-                  </span>
-                </AnimatedButton>
-              </th>
-              <th scope="col" aria-sort={sortKey === 'bestMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('bestMoves')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Wenigste Zuege</span>
+              <th scope="col" aria-sort={sortKey === 'bestMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('bestMoves')}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" title="Wenigste Netto-Zuege dieser Stufe" onClick={() => handleSort('bestMoves')} onKeyDown={handleSortButtonKeyDown}>
+                  {renderHeaderLabel('Wenigste Zuege')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('bestMoves', sortKey, sortDirection)}
                   </span>
                 </AnimatedButton>
+                {renderColumnHelpBadge('bestMoves')}
               </th>
-              <th scope="col" aria-sort={sortKey === 'worstMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('worstMoves')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Meiste Zuege</span>
-                  <span className="stats-table-sort-indicator" aria-hidden="true">
-                    {getSortIndicator('worstMoves', sortKey, sortDirection)}
-                  </span>
-                </AnimatedButton>
-              </th>
-              <th scope="col" aria-sort={sortKey === 'medianTime' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('medianTime')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Medianzeit</span>
+              <th scope="col" aria-sort={sortKey === 'medianTime' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('medianTime')}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" title="Typische Zeit dieser Stufe" onClick={() => handleSort('medianTime')} onKeyDown={handleSortButtonKeyDown}>
+                  {renderHeaderLabel('Medianzeit')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('medianTime', sortKey, sortDirection)}
                   </span>
                 </AnimatedButton>
+                {renderColumnHelpBadge('medianTime')}
               </th>
-              <th scope="col" aria-sort={sortKey === 'medianMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('medianMoves')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Median-Zuege</span>
+              <th scope="col" aria-sort={sortKey === 'medianMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('medianMoves')}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" title="Typische Netto-Zuege dieser Stufe" onClick={() => handleSort('medianMoves')} onKeyDown={handleSortButtonKeyDown}>
+                  {renderHeaderLabel('Median-Zuege')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('medianMoves', sortKey, sortDirection)}
                   </span>
                 </AnimatedButton>
+                {renderColumnHelpBadge('medianMoves')}
               </th>
-              <th scope="col" aria-sort={sortKey === 'averageExtraMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('averageExtraMoves')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Umwege</span>
+              <th scope="col" aria-sort={sortKey === 'averageExtraMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('averageExtraMoves')}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" title="Durchschnittliche Differenz zwischen Gesamt- und Netto-Zuegen" onClick={() => handleSort('averageExtraMoves')} onKeyDown={handleSortButtonKeyDown}>
+                  {renderHeaderLabel('Extra-Zuege')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('averageExtraMoves', sortKey, sortDirection)}
                   </span>
                 </AnimatedButton>
+                {renderColumnHelpBadge('averageExtraMoves')}
               </th>
-              <th scope="col" aria-sort={sortKey === 'profileCoverage' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('profileCoverage')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Profil</span>
-                  <span className="stats-table-sort-indicator" aria-hidden="true">
-                    {getSortIndicator('profileCoverage', sortKey, sortDirection)}
-                  </span>
-                </AnimatedButton>
-              </th>
-              <th scope="col" aria-sort={sortKey === 'lastCompletedAt' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+              <th scope="col" aria-sort={sortKey === 'lastCompletedAt' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('lastCompletedAt')}>
                 <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('lastCompletedAt')} onKeyDown={handleSortButtonKeyDown}>
-                  <span>Letzter Sieg</span>
+                  {renderHeaderLabel('Letzter Sieg')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('lastCompletedAt', sortKey, sortDirection)}
                   </span>
                 </AnimatedButton>
+                {renderColumnHelpBadge('lastCompletedAt')}
               </th>
             </tr>
           </thead>
@@ -354,67 +347,25 @@ export default function UploadStatsDifficultyTable({
                 <td>
                   <span className="stats-data-cell-main">{row.solveCount}</span>
                   <span className="stats-data-cell-copy">
-                    {row.cleanSolveCount} clean, {row.assistedSolveCount} unterstuetzt
-                  </span>
-                </td>
-                <td>
-                  <span className="stats-data-cell-main">{formatPercent(row.cleanRate)}</span>
-                  <span className="stats-data-cell-copy">
-                    {row.cleanSolveCount}/{row.solveCount || 0} clean
+                    {row.solveCount > 0 ? `${row.cleanSolveCount} ohne Hilfe` : 'noch keine Siege'}
                   </span>
                 </td>
                 <td className="is-positive">
                   <span className="stats-data-cell-main">{formatOptionalDuration(row.bestTime)}</span>
-                  <span className="stats-data-cell-copy">schnellster Sieg</span>
-                  {row.bestTime !== null ? (
-                    <div className="stats-data-badges">
-                      <span className="stats-data-badge is-positive">Bestzeit</span>
-                    </div>
-                  ) : null}
-                </td>
-                <td className="is-negative">
-                  <span className="stats-data-cell-main">{formatOptionalDuration(row.worstTime)}</span>
-                  <span className="stats-data-cell-copy">langsamster Sieg</span>
-                  {row.worstTime !== null ? (
-                    <div className="stats-data-badges">
-                      <span className="stats-data-badge is-negative">Langsamste Zeit</span>
-                    </div>
-                  ) : null}
                 </td>
                 <td className="is-positive">
                   <span className="stats-data-cell-main">{formatOptionalMoves(row.bestMoves)}</span>
-                  <span className="stats-data-cell-copy">effizientester Sieg</span>
-                  {row.bestMoves !== null ? (
-                    <div className="stats-data-badges">
-                      <span className="stats-data-badge is-positive">Wenigste Zuege</span>
-                    </div>
-                  ) : null}
-                </td>
-                <td className="is-negative">
-                  <span className="stats-data-cell-main">{formatOptionalMoves(row.worstMoves)}</span>
-                  <span className="stats-data-cell-copy">zaehester Sieg</span>
-                  {row.worstMoves !== null ? (
-                    <div className="stats-data-badges">
-                      <span className="stats-data-badge is-negative">Meiste Zuege</span>
-                    </div>
-                  ) : null}
                 </td>
                 <td>
                   <span className="stats-data-cell-main">{formatOptionalDuration(row.medianTime)}</span>
-                  <span className="stats-data-cell-copy">zuletzt {formatOptionalDuration(row.recentMedianTime)}</span>
                 </td>
                 <td>
                   <span className="stats-data-cell-main">{formatOptionalMoves(row.medianMoves)}</span>
-                  <span className="stats-data-cell-copy">zuletzt {formatOptionalMoves(row.recentMedianMoves)}</span>
                 </td>
                 <td>
                   <span className="stats-data-cell-main">{formatExtraMoves(row.averageExtraMoves)}</span>
-                  <span className="stats-data-cell-copy">Zusatzaktionen im Schnitt</span>
-                </td>
-                <td>
-                  <span className="stats-data-cell-main">{formatPercent(row.profileCoverage)}</span>
                   <span className="stats-data-cell-copy">
-                    {row.profiledSolveCount} Profil, {row.legacySolveCount} Legacy
+                    {row.profiledSolveCount > 0 ? `${formatPercent(row.profileCoverage)} Datenqualitaet` : 'kein Laufprofil'}
                   </span>
                 </td>
                 <td>

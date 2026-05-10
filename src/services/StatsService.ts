@@ -1,4 +1,5 @@
 import {
+  PuzzleStatsExportFile,
   PuzzleStats,
   RecordPuzzleCompletionPayload,
   RecordPuzzleCompletionResult,
@@ -21,5 +22,16 @@ export async function recordPuzzleCompletion(
 export async function resetPuzzleStats(): Promise<PuzzleStats> {
   return requestJson<PuzzleStats>('/api/stats', {
     method: 'DELETE',
+  })
+}
+
+export async function savePuzzleStatsExportFile(payload: {
+  fileName: string
+  contents: string
+  mimeType: string
+}): Promise<PuzzleStatsExportFile> {
+  return requestJson<PuzzleStatsExportFile>('/api/stats/exports', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   })
 }
