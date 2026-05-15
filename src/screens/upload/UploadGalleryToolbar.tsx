@@ -9,19 +9,33 @@ import {
 } from './uploadUtils.ts'
 import { handleSelectEnterKeyDown } from '../../app/formControlUtils.ts'
 
+export interface GalleryTagFilterOption {
+  id: string
+  label: string
+  count: number
+}
+
 interface UploadGalleryToolbarProps {
   difficultyFilter: GalleryDifficultyFilter
   difficultyOptions: GallerySelectOption<GalleryDifficultyFilter>[]
   assistanceFilter: GalleryAssistanceFilter
+  tagFilter: string
+  tagOptions: GalleryTagFilterOption[]
   sortOption: GallerySortOption
   visibleCount: number
   totalCount: number
+  activeTagCollectionCount: number
+  tagCollectionActionLabel: string
+  isCreatingTagCollection: boolean
   onDifficultyFilterChange: (value: GalleryDifficultyFilter) => void
   onAssistanceFilterChange: (value: GalleryAssistanceFilter) => void
+  onTagFilterChange: (value: string) => void
   onSortOptionChange: (value: GallerySortOption) => void
+  onCreateCollectionFromTag: () => void
   onReset: () => void
   difficultySelectRef?: RefObject<HTMLSelectElement>
   assistanceSelectRef?: RefObject<HTMLSelectElement>
+  tagSelectRef?: RefObject<HTMLSelectElement>
   sortSelectRef?: RefObject<HTMLSelectElement>
   resetButtonRef?: RefObject<HTMLButtonElement>
 }
@@ -30,19 +44,33 @@ export default function UploadGalleryToolbar({
   difficultyFilter,
   difficultyOptions,
   assistanceFilter,
+  tagFilter,
+  tagOptions,
   sortOption,
   visibleCount,
   totalCount,
+  activeTagCollectionCount,
+  tagCollectionActionLabel,
+  isCreatingTagCollection,
   onDifficultyFilterChange,
   onAssistanceFilterChange,
+  onTagFilterChange,
   onSortOptionChange,
+  onCreateCollectionFromTag,
   onReset,
   difficultySelectRef,
   assistanceSelectRef,
+  tagSelectRef,
   sortSelectRef,
   resetButtonRef,
 }: UploadGalleryToolbarProps) {
-  const hasActiveCriteria = difficultyFilter !== 'all' || assistanceFilter !== 'all' || sortOption !== 'latest'
+  const activeTagOption = tagOptions.find((option) => option.id === tagFilter) ?? null
+  const hasActiveTagCollection = tagFilter !== 'all' && activeTagCollectionCount > 0
+  const hasActiveCriteria =
+    difficultyFilter !== 'all' ||
+    assistanceFilter !== 'all' ||
+    tagFilter !== 'all' ||
+    sortOption !== 'latest'
 
   return (
     <div className="gallery-toolbar" role="group" aria-label="Galerie filtern und sortieren">
@@ -88,6 +116,24 @@ export default function UploadGalleryToolbar({
           </select>
         </label>
 
+        <label className="gallery-toolbar-field gallery-toolbar-field-tag">
+          <span>KI-Tag</span>
+          <select
+            ref={tagSelectRef}
+            value={tagFilter}
+            onKeyDown={handleSelectEnterKeyDown}
+            onChange={(event) => onTagFilterChange(event.target.value)}
+            disabled={tagOptions.length === 0}
+          >
+            <option value="all">Alle Tags</option>
+            {tagOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                #{option.label} ({option.count})
+              </option>
+            ))}
+          </select>
+        </label>
+
         <label className="gallery-toolbar-field">
           <span>Sortierung</span>
           <select
@@ -103,6 +149,20 @@ export default function UploadGalleryToolbar({
             ))}
           </select>
         </label>
+
+        <button
+          type="button"
+          className="secondary gallery-toolbar-tag-collection"
+          onClick={onCreateCollectionFromTag}
+          disabled={!hasActiveTagCollection || isCreatingTagCollection}
+          title={
+            activeTagOption
+              ? `Sammlung fuer #${activeTagOption.label} mit ${activeTagCollectionCount} Motiven erstellen`
+              : 'Waehle zuerst einen KI-Tag'
+          }
+        >
+          {isCreatingTagCollection ? 'Sortiere ...' : tagCollectionActionLabel}
+        </button>
 
         <button
           ref={resetButtonRef}

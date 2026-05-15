@@ -15,6 +15,8 @@ export default defineConfig(({ mode }) => {
         cloudflareAccountId: env.CLOUDFLARE_ACCOUNT_ID ?? '',
         cloudflareApiToken: env.CLOUDFLARE_API_TOKEN ?? '',
         cloudflareImageModel: env.CLOUDFLARE_IMAGE_MODEL ?? '',
+        geminiApiKey: env.GEMINI_API_KEY ?? '',
+        geminiGalleryModel: env.GEMINI_GALLERY_MODEL ?? '',
       }),
     ],
     server: {

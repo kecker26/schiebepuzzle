@@ -42,6 +42,12 @@ const CLOUDFLARE_BASE_URL = 'https://api.cloudflare.com'
 const CLOUDFLARE_GENERATED_IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell'
 const CLOUDFLARE_GENERATED_IMAGE_STEPS = 4
 const CLOUDFLARE_GENERATED_IMAGE_TIMEOUT_MS = 120000
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com'
+const GEMINI_GALLERY_MODEL = 'gemini-2.5-flash'
+const GEMINI_GALLERY_TIMEOUT_MS = 45000
+const GEMINI_GALLERY_MAX_INLINE_IMAGE_BYTES = 18 * 1024 * 1024
+const GALLERY_AI_TAG_LIMIT = 8
+const GALLERY_AI_COLLECTION_SUGGESTION_LIMIT = 4
 const MAX_GENERATED_IMAGE_PROMPT_LENGTH = 1000
 const POWERSHELL_PATH = process.platform === 'win32'
   ? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
@@ -55,6 +61,8 @@ interface LocalApiPluginOptions {
   cloudflareAccountId?: string
   cloudflareApiToken?: string
   cloudflareImageModel?: string
+  geminiApiKey?: string
+  geminiGalleryModel?: string
 }
 
 interface PollinationsGeneratedImageConfig {
@@ -71,6 +79,11 @@ interface CloudflareGeneratedImageConfig {
 interface GeneratedImageConfig {
   pollinations: PollinationsGeneratedImageConfig
   cloudflare: CloudflareGeneratedImageConfig
+}
+
+interface GeminiGalleryConfig {
+  apiKey: string
+  model: string
 }
 
 const POWERSHELL_CLIPBOARD_IMAGE_STATUS_SCRIPT = [
@@ -223,6 +236,35 @@ interface StoredGalleryEntry {
   actionMoves: number
   assistanceMode: StoredAssistanceMode
   hasDetailedProfile: boolean
+  tags?: StoredGalleryImageTag[]
+  aiTagging?: StoredGalleryAiTagging
+}
+
+type StoredGalleryTagSource = 'gemini' | 'imported'
+
+interface StoredGalleryImageTag {
+  label: string
+  confidence: number
+  source: StoredGalleryTagSource
+}
+
+type StoredGalleryAiTaggingStatus = 'tagged' | 'failed' | 'unavailable' | 'pending'
+
+interface StoredGalleryCollectionSuggestion {
+  collectionId: string
+  collectionName: string
+  reason: string
+  confidence: number
+  source: 'gemini'
+}
+
+interface StoredGalleryAiTagging {
+  status: StoredGalleryAiTaggingStatus
+  provider: 'gemini'
+  model: string | null
+  generatedAt: string | null
+  error: string | null
+  collectionSuggestions: StoredGalleryCollectionSuggestion[]
 }
 
 interface StoredGalleryFile {
@@ -424,6 +466,27 @@ interface CloudflareAiResponse {
     image?: string
     dataURI?: string
   }
+}
+
+interface GeminiGenerateContentResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>
+    }
+  }>
+  error?: {
+    message?: string
+  }
+}
+
+interface GeminiGalleryAnalysisPayload {
+  tags?: unknown
+  collectionSuggestions?: unknown
+}
+
+interface AnalyzeGalleryEntryResponse {
+  gallery: GalleryResponse
+  entry: StoredGalleryEntry
 }
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
@@ -810,6 +873,221 @@ async function generateImageWithFallback(prompt: string, config: GeneratedImageC
         `Pollinations fehlgeschlagen: ${getErrorDetail(pollinationsError)}. Cloudflare Workers AI fehlgeschlagen: ${getErrorDetail(cloudflareError)}`
       )
     }
+  }
+}
+
+async function parseGeminiError(response: Response): Promise<string> {
+  try {
+    const payload = await response.json() as GeminiGenerateContentResponse
+    if (payload.error?.message) return payload.error.message
+  } catch {
+    // Fall through to a generic status message.
+  }
+
+  return `Gemini API antwortete mit Fehler ${response.status}`
+}
+
+function extractGeminiText(payload: GeminiGenerateContentResponse): string {
+  return payload.candidates
+    ?.flatMap((candidate) => candidate.content?.parts ?? [])
+    .map((part) => part.text)
+    .filter((text): text is string => typeof text === 'string' && text.length > 0)
+    .join('\n')
+    .trim() ?? ''
+}
+
+function parseGeminiJson(text: string): GeminiGalleryAnalysisPayload {
+  const trimmedText = text.trim()
+  const unfencedText = trimmedText
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim()
+
+  return JSON.parse(unfencedText) as GeminiGalleryAnalysisPayload
+}
+
+function createGalleryAnalysisPrompt(
+  entry: StoredGalleryEntry,
+  collections: StoredImageCollection[]
+): string {
+  const collectionContext = collections.length > 0
+    ? collections
+      .map((collection) => {
+        const description = collection.description ? ` - ${collection.description}` : ''
+        return `- ${collection.id}: ${collection.name}${description}`
+      })
+      .join('\n')
+    : '- Keine bestehenden Sammlungen vorhanden.'
+
+  return [
+    'Analysiere dieses geloeste Schiebepuzzle-Motiv fuer eine lokale deutsche Galerie.',
+    'Erzeuge kurze deutsche Motiv-Tags ohne fuehrendes #, zum Beispiel Landschaft, Architektur, Dunkel, Portrait, Natur, Stadt, Kunst, Tiere, Wasser oder Nacht.',
+    'Nutze nur sichtbare Bildinhalte und offensichtliche Stimmung/Farbwirkung. Keine personenbezogenen sensiblen Vermutungen.',
+    'Schlage nur bestehende Sammlungen vor, wenn das Bild gut dazu passt. Nutze dabei exakt die vorhandenen collectionId-Werte.',
+    '',
+    `Puzzle-Groesse: ${entry.config.rows}x${entry.config.cols}`,
+    'Bestehende Sammlungen:',
+    collectionContext,
+    '',
+    `Antwortformat: JSON mit maximal ${GALLERY_AI_TAG_LIMIT} tags und maximal ${GALLERY_AI_COLLECTION_SUGGESTION_LIMIT} collectionSuggestions.`,
+  ].join('\n')
+}
+
+function createGeminiGallerySchema(): object {
+  return {
+    type: 'object',
+    properties: {
+      tags: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            label: { type: 'string' },
+            confidence: { type: 'number' },
+          },
+          required: ['label', 'confidence'],
+        },
+      },
+      collectionSuggestions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            collectionId: { type: 'string' },
+            collectionName: { type: 'string' },
+            reason: { type: 'string' },
+            confidence: { type: 'number' },
+          },
+          required: ['collectionId', 'collectionName', 'reason', 'confidence'],
+        },
+      },
+    },
+    required: ['tags', 'collectionSuggestions'],
+  }
+}
+
+async function analyzeGalleryImageWithGemini(
+  entry: StoredGalleryEntry,
+  collections: StoredImageCollection[],
+  config: GeminiGalleryConfig
+): Promise<Pick<StoredGalleryEntry, 'tags' | 'aiTagging'>> {
+  if (!config.apiKey) {
+    return {
+      tags: entry.tags,
+      aiTagging: {
+        status: 'unavailable',
+        provider: 'gemini',
+        model: config.model,
+        generatedAt: new Date().toISOString(),
+        error: 'GEMINI_API_KEY ist nicht konfiguriert',
+        collectionSuggestions: [],
+      },
+    }
+  }
+
+  const image = parseDataUrlImage(entry.previewImage ?? entry.sourceImage ?? '')
+  if (!image) {
+    return {
+      tags: entry.tags,
+      aiTagging: {
+        status: 'failed',
+        provider: 'gemini',
+        model: config.model,
+        generatedAt: new Date().toISOString(),
+        error: 'Kein unterstuetztes Galerie-Bild fuer KI-Tagging gefunden',
+        collectionSuggestions: [],
+      },
+    }
+  }
+
+  if (image.byteLength > GEMINI_GALLERY_MAX_INLINE_IMAGE_BYTES) {
+    return {
+      tags: entry.tags,
+      aiTagging: {
+        status: 'failed',
+        provider: 'gemini',
+        model: config.model,
+        generatedAt: new Date().toISOString(),
+        error: 'Galerie-Bild ist zu gross fuer Gemini Inline-Analyse',
+        collectionSuggestions: [],
+      },
+    }
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), GEMINI_GALLERY_TIMEOUT_MS)
+  const url = `${GEMINI_BASE_URL}/v1beta/models/${encodeURIComponent(config.model)}:generateContent`
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': config.apiKey,
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            {
+              inline_data: {
+                mime_type: image.mimeType,
+                data: image.base64Data,
+              },
+            },
+            { text: createGalleryAnalysisPrompt(entry, collections) },
+          ],
+        }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: createGeminiGallerySchema(),
+        },
+      }),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(await parseGeminiError(response))
+    }
+
+    const payload = await response.json() as GeminiGenerateContentResponse
+    const text = extractGeminiText(payload)
+    if (!text) {
+      throw new Error('Gemini hat keine Analyse zurueckgegeben')
+    }
+
+    const analysis = parseGeminiJson(text)
+    const tags = normalizeGalleryTags(analysis.tags)
+    const collectionSuggestions = normalizeGalleryCollectionSuggestions(analysis.collectionSuggestions, collections)
+
+    return {
+      tags,
+      aiTagging: {
+        status: 'tagged',
+        provider: 'gemini',
+        model: config.model,
+        generatedAt: new Date().toISOString(),
+        error: null,
+        collectionSuggestions,
+      },
+    }
+  } catch (error) {
+    const message = error instanceof DOMException && error.name === 'AbortError'
+      ? 'Gemini hat zu lange fuer das Galerie-Tagging gebraucht'
+      : getErrorDetail(error)
+
+    return {
+      tags: entry.tags,
+      aiTagging: {
+        status: 'failed',
+        provider: 'gemini',
+        model: config.model,
+        generatedAt: new Date().toISOString(),
+        error: message,
+        collectionSuggestions: [],
+      },
+    }
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
@@ -1497,6 +1775,151 @@ function sanitizeOptionalPreviewImage(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null
 }
 
+function clampConfidence(value: unknown): number {
+  const numericValue = typeof value === 'number' && Number.isFinite(value) ? value : 0
+  return Math.max(0, Math.min(1, numericValue))
+}
+
+function sanitizeGalleryTagLabel(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+
+  const normalizedLabel = value
+    .replace(/^#+/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 40)
+
+  if (!normalizedLabel) return null
+
+  return normalizedLabel.charAt(0).toLocaleUpperCase('de-DE') + normalizedLabel.slice(1)
+}
+
+function normalizeGalleryTags(value: unknown): StoredGalleryImageTag[] {
+  if (!Array.isArray(value)) return []
+
+  const tags = new Map<string, StoredGalleryImageTag>()
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue
+
+    const input = item as {
+      label?: unknown
+      confidence?: unknown
+      source?: unknown
+    }
+    const label = sanitizeGalleryTagLabel(input.label)
+    if (!label) continue
+
+    const key = label.toLocaleLowerCase('de-DE')
+    const tag: StoredGalleryImageTag = {
+      label,
+      confidence: clampConfidence(input.confidence),
+      source: input.source === 'imported' ? 'imported' : 'gemini',
+    }
+
+    const existing = tags.get(key)
+    if (!existing || tag.confidence > existing.confidence) {
+      tags.set(key, tag)
+    }
+  }
+
+  return Array.from(tags.values())
+    .sort((a, b) => b.confidence - a.confidence || a.label.localeCompare(b.label, 'de'))
+    .slice(0, GALLERY_AI_TAG_LIMIT)
+}
+
+function sanitizeGallerySuggestionReason(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  return value.replace(/\s+/g, ' ').trim().slice(0, 140)
+}
+
+function normalizeGalleryCollectionSuggestions(
+  value: unknown,
+  collections?: StoredImageCollection[] | null
+): StoredGalleryCollectionSuggestion[] {
+  if (!Array.isArray(value)) return []
+
+  const hasCollectionContext = Array.isArray(collections) && collections.length > 0
+  const collectionsById = new Map((collections ?? []).map((collection) => [collection.id, collection]))
+  const collectionsByName = new Map(
+    (collections ?? []).map((collection) => [collection.name.toLocaleLowerCase('de-DE'), collection])
+  )
+  const suggestions = new Map<string, StoredGalleryCollectionSuggestion>()
+
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue
+
+    const input = item as {
+      collectionId?: unknown
+      collectionName?: unknown
+      reason?: unknown
+      confidence?: unknown
+    }
+    const collectionId = typeof input.collectionId === 'string' ? input.collectionId : ''
+    const collectionName = typeof input.collectionName === 'string' ? input.collectionName.trim() : ''
+    const collection =
+      collectionsById.get(collectionId)
+      ?? collectionsByName.get(collectionName.toLocaleLowerCase('de-DE'))
+
+    if (!collection && hasCollectionContext) continue
+
+    const resolvedCollectionId = collection?.id ?? collectionId
+    const resolvedCollectionName = collection?.name ?? collectionName
+    if (!resolvedCollectionId || !resolvedCollectionName || suggestions.has(resolvedCollectionId)) continue
+
+    suggestions.set(resolvedCollectionId, {
+      collectionId: resolvedCollectionId,
+      collectionName: resolvedCollectionName,
+      reason: sanitizeGallerySuggestionReason(input.reason),
+      confidence: clampConfidence(input.confidence),
+      source: 'gemini',
+    })
+  }
+
+  return Array.from(suggestions.values())
+    .sort((a, b) => b.confidence - a.confidence || a.collectionName.localeCompare(b.collectionName, 'de'))
+    .slice(0, GALLERY_AI_COLLECTION_SUGGESTION_LIMIT)
+}
+
+function normalizeGalleryAiTagging(value: unknown): StoredGalleryAiTagging | undefined {
+  if (!value || typeof value !== 'object') return undefined
+
+  const input = value as {
+    status?: unknown
+    provider?: unknown
+    model?: unknown
+    generatedAt?: unknown
+    error?: unknown
+    collectionSuggestions?: unknown
+  }
+
+  const status: StoredGalleryAiTaggingStatus =
+    input.status === 'failed' || input.status === 'unavailable' || input.status === 'tagged' || input.status === 'pending'
+      ? input.status
+      : 'tagged'
+
+  return {
+    status,
+    provider: 'gemini',
+    model: typeof input.model === 'string' && input.model.length > 0 ? input.model : null,
+    generatedAt: typeof input.generatedAt === 'string' && input.generatedAt.length > 0 ? input.generatedAt : null,
+    error: typeof input.error === 'string' && input.error.length > 0 ? input.error.slice(0, 240) : null,
+    collectionSuggestions: normalizeGalleryCollectionSuggestions(input.collectionSuggestions),
+  }
+}
+
+function parseDataUrlImage(value: string): { mimeType: string; base64Data: string; byteLength: number } | null {
+  const match = /^data:(image\/(?:png|jpeg|jpg|webp));base64,([a-zA-Z0-9+/=]+)$/i.exec(value)
+  if (!match) return null
+
+  const mimeType = match[1].toLocaleLowerCase() === 'image/jpg' ? 'image/jpeg' : match[1].toLocaleLowerCase()
+  const base64Data = match[2]
+  return {
+    mimeType,
+    base64Data,
+    byteLength: Buffer.byteLength(base64Data, 'base64'),
+  }
+}
+
 function isBackupImageAssetRef(value: unknown): value is BackupImageAssetRef {
   return (
     !!value
@@ -1816,7 +2239,7 @@ function normalizeDifficultyStats(entry: unknown): StoredDifficultyStats | null 
       generalValue: bestTime,
       cleanCount: cleanSolveCount,
       assistedCount: assistedSolveCount,
-      autoAssistedCount: autoAssistedSolveCount,
+      autoAssistedSolveCount: autoAssistedSolveCount,
     }),
     lastCompletedAt: typeof input.lastCompletedAt === 'string' ? input.lastCompletedAt : null,
   }
@@ -1924,7 +2347,7 @@ function normalizeStatsFile(payload: unknown, assets: BackupAssetMap = {}): Stor
       generalValue: bestTime,
       cleanCount: cleanSolvedCount,
       assistedCount: assistedSolvedCount,
-      autoAssistedCount: autoAssistedSolvedCount,
+      autoAssistedSolvedCount: autoAssistedSolvedCount,
       derivedValue: derivedBestCleanTime,
     }),
     byDifficulty,
@@ -1961,6 +2384,8 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     actionMoves?: unknown
     assistanceMode?: unknown
     hasDetailedProfile?: unknown
+    tags?: unknown
+    aiTagging?: unknown
   }
 
   if (typeof input.id !== 'string' || typeof input.completedAt !== 'string' || !isValidPuzzleConfig(input.config)) {
@@ -1970,6 +2395,8 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
   const moves = sanitizeCount(input.moves)
   const previewImage = resolveBackupImageValue(input.previewImage, assets)
   const sourceImage = resolveBackupImageValue(input.sourceImage, assets) ?? previewImage
+  const tags = normalizeGalleryTags(input.tags)
+  const aiTagging = normalizeGalleryAiTagging(input.aiTagging)
 
   return {
     id: input.id,
@@ -1982,6 +2409,8 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     actionMoves: Math.max(moves, sanitizeCount(input.actionMoves)),
     assistanceMode: sanitizeAssistanceMode(input.assistanceMode, { hintCount: 0, suggestedMoveCount: 0 }),
     hasDetailedProfile: input.hasDetailedProfile === false ? false : true,
+    ...(tags.length > 0 ? { tags } : {}),
+    ...(aiTagging ? { aiTagging } : {}),
   }
 }
 
@@ -2200,6 +2629,36 @@ function toCollectionsResponse(collectionsFile: StoredImageCollectionsFile): Ima
     lastUpdatedAt: collectionsFile.lastUpdatedAt ?? sortedCollections[0]?.updatedAt ?? null,
   }
 }
+
+async function analyzeGalleryEntry(
+  entryId: string,
+  config: GeminiGalleryConfig
+): Promise<AnalyzeGalleryEntryResponse | null> {
+  const gallery = await readGalleryFile()
+  const entry = gallery.entries.find((galleryEntry) => galleryEntry.id === entryId)
+  if (!entry) return null
+
+  const collections = await readCollectionsFile(gallery)
+  const analysis = await analyzeGalleryImageWithGemini(entry, collections.collections, config)
+  const nowIso = new Date().toISOString()
+  const nextEntry: StoredGalleryEntry = {
+    ...entry,
+    ...(analysis.tags && analysis.tags.length > 0 ? { tags: analysis.tags } : {}),
+    ...(analysis.aiTagging ? { aiTagging: analysis.aiTagging } : {}),
+  }
+  const nextGallery: StoredGalleryFile = {
+    entries: gallery.entries.map((galleryEntry) => galleryEntry.id === entryId ? nextEntry : galleryEntry),
+    lastUpdatedAt: nowIso,
+  }
+
+  await writeGalleryFile(nextGallery)
+
+  return {
+    gallery: toGalleryResponse(nextGallery),
+    entry: nextEntry,
+  }
+}
+
 function calculateMedian(values: number[]): number {
   if (values.length === 0) return 0
 
@@ -3047,7 +3506,8 @@ async function handleBackupApi(
 async function handleGalleryApi(
   req: IncomingMessage,
   res: ServerResponse,
-  next: () => void
+  next: () => void,
+  geminiGalleryConfig: GeminiGalleryConfig
 ): Promise<void> {
   const reqUrl = req.url ?? '/'
   const url = new URL(reqUrl, 'http://localhost')
@@ -3068,6 +3528,23 @@ async function handleGalleryApi(
     if (req.method === 'GET' && parts.length === 2) {
       const gallery = await readGalleryFile()
       sendJson(res, 200, toGalleryResponse(gallery))
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 4 && parts[3] === 'analyze') {
+      const entryId = decodeURIComponent(parts[2])
+      if (!isValidSaveId(entryId)) {
+        sendJson(res, 400, { error: 'Ungueltige Galerie-ID' })
+        return
+      }
+
+      const analysis = await analyzeGalleryEntry(entryId, geminiGalleryConfig)
+      if (!analysis) {
+        sendJson(res, 404, { error: 'Galerie-Eintrag nicht gefunden' })
+        return
+      }
+
+      sendJson(res, 200, analysis)
       return
     }
 
@@ -3119,6 +3596,14 @@ async function handleGalleryApi(
         actionMoves: Math.max(moves, sanitizeCount(body.actionMoves)),
         assistanceMode: body.assistanceMode,
         hasDetailedProfile: body.hasDetailedProfile,
+        aiTagging: {
+          status: 'pending',
+          provider: 'gemini',
+          model: geminiGalleryConfig.model,
+          generatedAt: null,
+          error: null,
+          collectionSuggestions: [],
+        },
       }
 
       const nextGallery: StoredGalleryFile = {
@@ -3559,7 +4044,8 @@ async function handleApiRequest(
   res: ServerResponse,
   next: () => void,
   musicProviderCoordinator: MusicProviderCoordinator,
-  generatedImageConfig: GeneratedImageConfig
+  generatedImageConfig: GeneratedImageConfig,
+  geminiGalleryConfig: GeminiGalleryConfig
 ): Promise<void> {
   const reqUrl = req.url ?? '/'
   const url = new URL(reqUrl, 'http://localhost')
@@ -3585,7 +4071,7 @@ async function handleApiRequest(
   }
 
   if (url.pathname.startsWith('/api/gallery')) {
-    await handleGalleryApi(req, res, next)
+    await handleGalleryApi(req, res, next, geminiGalleryConfig)
     return
   }
 
@@ -3620,17 +4106,21 @@ export function apiPlugin(options: LocalApiPluginOptions = {}): Plugin {
       model: options.cloudflareImageModel || CLOUDFLARE_GENERATED_IMAGE_MODEL,
     },
   }
+  const geminiGalleryConfig: GeminiGalleryConfig = {
+    apiKey: options.geminiApiKey ?? '',
+    model: options.geminiGalleryModel || GEMINI_GALLERY_MODEL,
+  }
 
   return {
     name: 'schiebepuzzle-local-api',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        void handleApiRequest(req, res, next, musicProviderCoordinator, generatedImageConfig)
+        void handleApiRequest(req, res, next, musicProviderCoordinator, generatedImageConfig, geminiGalleryConfig)
       })
     },
     configurePreviewServer(server) {
       server.middlewares.use((req, res, next) => {
-        void handleApiRequest(req, res, next, musicProviderCoordinator, generatedImageConfig)
+        void handleApiRequest(req, res, next, musicProviderCoordinator, generatedImageConfig, geminiGalleryConfig)
       })
     },
   }

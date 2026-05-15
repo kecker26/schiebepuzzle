@@ -13,8 +13,8 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
 - Autosave, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
 - Statistik mit vier visuellen Hauptansichten fuer Ueberblick, Analyse, Verlauf und Rohdaten-Explorer; Analyse buendelt Stufen, Rekorde und Sauberkeit, der Rohdaten-Explorer speichert CSV-/JSON-Exporte direkt im Projektordner.
-- Galerie geloester Motive inklusive Replay-Funktion.
-- Bild-Sammlungen fuer Lieblingsmotive aus der Galerie.
+- Galerie geloester Motive inklusive Replay-Funktion, optionalem Gemini-Tagging und klickbaren Tag-Filtern.
+- Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit KI-Sammlungsvorschlaegen und Sammlungen aus Tag-Treffern.
 - Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
 - Musik- und Sound-Unterstuetzung mit lokalen Fallback-Tracks.
 - Command Palette, globale Hilfe, Kontextmenues, Theme-Umschaltung und Motion-Animationen.
@@ -48,10 +48,13 @@ POLLINATIONS_IMAGE_MODEL=zimage
 CLOUDFLARE_ACCOUNT_ID=deine_cloudflare_account_id
 CLOUDFLARE_API_TOKEN=dein_cloudflare_workers_ai_token
 CLOUDFLARE_IMAGE_MODEL=@cf/black-forest-labs/flux-1-schnell
+GEMINI_API_KEY=dein_gemini_api_key
+GEMINI_GALLERY_MODEL=gemini-2.5-flash
 ```
 
 `POLLINATIONS_API_KEY` ist ein serverseitiger Secret Key und wird nur von der lokalen Vite-Middleware genutzt. Er darf nicht als `VITE_`-Variable ins Frontend gegeben werden. `zimage` ist ein fuer den getesteten Key freigegebenes schnelles Pollinations-Bildmodell.
 `CLOUDFLARE_API_TOKEN` ist der serverseitige Fallback fuer KI-Bilder, wenn Pollinations fehlschlaegt. Der Token braucht Zugriff auf Workers AI fuer die angegebene `CLOUDFLARE_ACCOUNT_ID`; `CLOUDFLARE_IMAGE_MODEL` ist standardmaessig `@cf/black-forest-labs/flux-1-schnell`.
+`GEMINI_API_KEY` ist ein serverseitiger Secret Key fuer automatische Galerie-Tags und Sammlungsvorschlaege. Ohne Key speichert die App geloeste Bilder weiterhin normal, markiert das KI-Tagging aber als nicht konfiguriert. `GEMINI_GALLERY_MODEL` ist standardmaessig `gemini-2.5-flash`.
 
 ## Start und Befehle
 
@@ -99,6 +102,7 @@ Die Frontend-Services greifen ueber lokale API-Routen auf die Middleware zu:
 - `/api/saves`: Spielstaende erstellen, laden, aktualisieren und loeschen.
 - `/api/stats`: Statistik laden, zuruecksetzen, Abschluesse aufzeichnen und Rohdaten-Exporte speichern.
 - `/api/gallery`: Galerie geloester Motive laden, erweitern und bereinigen.
+- `/api/gallery/:entryId/analyze`: Galerie-Motiv mit Gemini taggen und Sammlungsvorschlaege speichern.
 - `/api/collections`: Bild-Sammlungen laden, erstellen, bearbeiten und mit Galerie-Motiven verknuepfen.
 - `/api/backup`: Daten exportieren, importieren und lokale Backup-Dateien verwalten.
 - `/api/clipboard`: Clipboard-Hilfen fuer lokale Bild- und Textablage.
@@ -143,7 +147,7 @@ Wichtige Einstiegspunkte:
 3. Motiv zuschneiden und Puzzle-Groesse waehlen.
 4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
 5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
-6. Lieblingsmotive aus der Galerie optional in Sammlungen organisieren.
+6. Neue Galerie-Motive optional automatisch mit Gemini taggen, per Tag filtern und Tag-Treffer als Sammlung uebernehmen.
 7. Spielstaende, Galerie, Sammlungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
 
 ## Entwicklungshinweise

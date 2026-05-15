@@ -68,7 +68,7 @@ interface UploadDashboardProps {
   onRequestGalleryReset: () => void
   onReplayGalleryEntry: (entry: SolvedGalleryEntry) => void
   onDeleteGalleryEntries: (entryIds: string[]) => Promise<void>
-  onCreateImageCollection?: (name: string, imageIds: string[]) => Promise<void>
+  onCreateImageCollection?: (name: string, imageIds: string[], description?: string) => Promise<void>
   onUpdateImageCollection?: (
     collectionId: string,
     updates: Pick<ImageCollection, 'name'> & Partial<Pick<ImageCollection, 'description'>>

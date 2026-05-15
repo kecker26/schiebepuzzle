@@ -3348,7 +3348,7 @@
 
 .gallery-toolbar-controls {
   display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
   gap: 12px;
   align-items: end;
 }
@@ -3406,9 +3406,19 @@
   box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
 }
 
+.gallery-toolbar-field select:disabled {
+  cursor: not-allowed;
+  opacity: 0.66;
+}
+
+.gallery-toolbar-tag-collection,
 .gallery-toolbar-reset {
   width: 100%;
   min-width: 0;
+}
+
+.gallery-toolbar-tag-collection {
+  min-height: 48px;
 }
 
 .gallery-empty-state-filtered {
@@ -3604,6 +3614,80 @@
   background: color-mix(in srgb, var(--primary-color) 10%, transparent);
 }
 
+.gallery-card-ai,
+.gallery-detail-ai {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gallery-card-ai-tags,
+.gallery-detail-ai-tags,
+.gallery-card-ai-suggestions,
+.gallery-detail-ai-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.gallery-card-ai-tags button,
+.gallery-card-ai-tags span,
+.gallery-detail-ai-tags span,
+.gallery-card-ai-status,
+.gallery-detail-ai-suggestions span {
+  min-height: 24px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 28%, var(--chip-border));
+  color: color-mix(in srgb, var(--primary-color) 72%, var(--text-main));
+  background: color-mix(in srgb, var(--primary-color) 9%, transparent);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.gallery-card-ai-tags button {
+  appearance: none;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.gallery-card-ai-tags button:hover:not(:disabled),
+.gallery-card-ai-tags button:focus-visible {
+  border-color: color-mix(in srgb, var(--primary-color) 54%, var(--chip-border));
+  color: color-mix(in srgb, var(--primary-color) 86%, var(--text-main));
+  background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+  transform: translateY(-1px);
+}
+
+.gallery-card-ai-tags button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.gallery-card-ai-tags button:disabled {
+  cursor: default;
+}
+
+.gallery-card-ai-status {
+  justify-self: start;
+  color: var(--text-muted);
+}
+
+.gallery-card-ai-suggestion {
+  min-height: 30px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .workspace-window-shell.is-gallery {
   height: auto;
   min-height: 0;
@@ -3716,6 +3800,7 @@
     grid-template-columns: 1fr;
   }
 
+  .gallery-toolbar-tag-collection,
   .gallery-toolbar-reset {
     width: 100%;
   }

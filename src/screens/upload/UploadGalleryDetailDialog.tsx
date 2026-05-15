@@ -57,6 +57,9 @@ export default function UploadGalleryDetailDialog({
       ? `Motivweit ueber alle Stufen liegen ${motifSolveCountLabel} auf ${motifDifficultyCount} ${motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'} vor; ${motifReplayableCount} davon haben ein Replay-Bild.`
       : `Motivweit ueber alle Stufen liegen ${motifSolveCountLabel} vor, derzeit aber ohne gespeichertes Replay-Bild.`
   const replayActions = getGalleryReplayActions(entry)
+  const aiTags = representativeEntry.tags ?? []
+  const aiTagging = representativeEntry.aiTagging ?? null
+  const aiCollectionSuggestions = aiTagging?.collectionSuggestions ?? []
   const timelineEntries = motifReplaySummary.allEntries.length > 0
     ? motifReplaySummary.allEntries
     : entry.allEntries
@@ -174,6 +177,40 @@ export default function UploadGalleryDetailDialog({
             ) : null}
             {!representativeEntry.hasDetailedProfile ? <span className="saved-game-chip">Legacy-Profil</span> : null}
           </div>
+
+          {aiTags.length > 0 || aiTagging ? (
+            <section className="gallery-detail-ai" aria-labelledby="gallery-detail-ai-title">
+              <div className="gallery-detail-replay-header">
+                <span id="gallery-detail-ai-title" className="saved-games-kicker">KI-Sortierung</span>
+                <p className="gallery-detail-replay-copy">
+                  {aiTagging?.status === 'tagged'
+                    ? 'Gemini hat Tags und passende Sammlungsvorschlaege fuer dieses Motiv erstellt.'
+                    : aiTagging?.status === 'unavailable'
+                      ? 'Gemini-Tagging ist noch nicht konfiguriert.'
+                      : 'Gemini konnte dieses Motiv noch nicht taggen.'}
+                </p>
+              </div>
+
+              {aiTags.length > 0 ? (
+                <div className="gallery-detail-ai-tags" aria-label="KI-Tags">
+                  {aiTags.map((tag) => (
+                    <span key={tag.label}>#{tag.label}</span>
+                  ))}
+                </div>
+              ) : null}
+
+              {aiCollectionSuggestions.length > 0 ? (
+                <div className="gallery-detail-ai-suggestions" aria-label="KI-Sammlungsvorschlaege">
+                  {aiCollectionSuggestions.map((suggestion) => (
+                    <span key={suggestion.collectionId}>
+                      {suggestion.collectionName}
+                      {suggestion.reason ? `: ${suggestion.reason}` : ''}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
           <div className="gallery-detail-metrics">
             <article className="gallery-detail-metric">
