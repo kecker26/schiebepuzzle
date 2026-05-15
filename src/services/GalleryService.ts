@@ -1,4 +1,5 @@
-﻿import {
+import {
+  AnalyzeSolvedGalleryEntryResult,
   RecordSolvedGalleryEntryPayload,
   SolvedGallery,
 } from '../types/index'
@@ -28,4 +29,11 @@ export async function deleteSolvedGalleryEntries(entryIds: string[]): Promise<So
     method: 'DELETE',
     body: JSON.stringify({ ids: entryIds }),
   })
+}
+
+export async function analyzeSolvedGalleryEntry(entryId: string): Promise<AnalyzeSolvedGalleryEntryResult> {
+  return requestJson<AnalyzeSolvedGalleryEntryResult>(
+    `/api/gallery/${encodeURIComponent(entryId)}/analyze`,
+    { method: 'POST' }
+  )
 }

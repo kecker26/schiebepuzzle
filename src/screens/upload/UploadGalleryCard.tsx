@@ -6,7 +6,7 @@ import {
 import { getDirectionalFocusTarget } from '../../app/directionalFocusNavigation.ts'
 import GlobalUiIcon from '../../components/GlobalUiIcon.tsx'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
-import { SolvedGalleryEntry } from '../../types/index'
+import { ImageCollection, SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
 import { getGalleryCardComparisonHints } from './galleryComparisonHints.ts'
@@ -22,6 +22,10 @@ interface UploadGalleryCardProps {
   onOpenDetails: (entry: GalleryDisplayEntry) => void
   onReplayEntry: (entry: SolvedGalleryEntry) => void
   onCollectEntry?: (entry: GalleryDisplayEntry) => void
+  onTagFilter?: (tagLabel: string) => void
+  onAddSuggestedCollection?: (collectionId: string, entry: GalleryDisplayEntry) => void
+  collections?: ImageCollection[]
+  suggestedCollectionBusyKey?: string | null
   onDeleteEntry: (entry: GalleryDisplayEntry) => void
   isDeleting: boolean
 }
@@ -31,6 +35,10 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   onOpenDetails,
   onReplayEntry,
   onCollectEntry,
+  onTagFilter,
+  onAddSuggestedCollection,
+  collections = [],
+  suggestedCollectionBusyKey = null,
   onDeleteEntry,
   isDeleting,
 }: UploadGalleryCardProps) {
@@ -51,6 +59,15 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   const primaryReplayAction = replayActions[0] ?? null
   const secondaryReplayAction = replayActions[1] ?? null
   const comparisonHints = getGalleryCardComparisonHints(entry)
+  const aiTags = representativeEntry.tags ?? []
+  const aiTagging = representativeEntry.aiTagging ?? null
+  const collectionSuggestions = (aiTagging?.collectionSuggestions ?? [])
+    .map((suggestion) => ({
+      suggestion,
+      collection: collections.find((collection) => collection.id === suggestion.collectionId) ?? null,
+    }))
+    .filter(({ collection }) => collection && !collection.imageIds.includes(representativeEntry.id))
+    .slice(0, 2)
   const replaySummaryCopy =
     motifReplayableCount > 0
       ? `Motivweit ueber ${motifDifficultyCount} ${motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'} ${motifReplayableCount} spielbare ${motifReplayableCount === 1 ? 'Loesung' : 'Loesungen'}${motifBestTimeLabel ? `, Bestzeit gesamt ${motifBestTimeLabel}` : ''}.`
@@ -258,6 +275,62 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                 {hint.label}
               </span>
             ))}
+          </div>
+        ) : null}
+
+        {aiTags.length > 0 || aiTagging ? (
+          <div className="gallery-card-ai" aria-label="KI-Tags und Sammlungsvorschlaege">
+            {aiTags.length > 0 ? (
+              <div className="gallery-card-ai-tags">
+                {aiTags.slice(0, 5).map((tag) => (
+                  <button
+                    key={tag.label}
+                    type="button"
+                    data-gallery-action="tag"
+                    data-gallery-entry-id={entry.id}
+                    onClick={() => onTagFilter?.(tag.label)}
+                    onKeyDown={handleActionKeyDown}
+                    disabled={isDeleting || !onTagFilter}
+                    title={`Galerie nach #${tag.label} filtern`}
+                  >
+                    #{tag.label}
+                  </button>
+                ))}
+              </div>
+            ) : aiTagging?.status === 'failed' || aiTagging?.status === 'unavailable' || aiTagging?.status === 'pending' ? (
+              <span className="gallery-card-ai-status">
+                {aiTagging.status === 'unavailable'
+                  ? 'KI-Tags nicht konfiguriert'
+                  : aiTagging.status === 'pending'
+                    ? 'KI-Tagging laeuft ...'
+                    : 'KI-Tagging fehlgeschlagen'}
+              </span>
+            ) : null}
+
+            {collectionSuggestions.length > 0 ? (
+              <div className="gallery-card-ai-suggestions">
+                {collectionSuggestions.map(({ suggestion, collection }) => {
+                  if (!collection) return null
+
+                  const busyKey = `${entry.id}:${collection.id}`
+                  const isBusy = suggestedCollectionBusyKey === busyKey
+
+                  return (
+                    <button
+                      key={collection.id}
+                      type="button"
+                      className="gallery-card-ai-suggestion"
+                      onClick={() => onAddSuggestedCollection?.(collection.id, entry)}
+                      disabled={isDeleting || isBusy || !onAddSuggestedCollection}
+                      title={suggestion.reason || `Vorschlag fuer ${collection.name}`}
+                    >
+                      <UploadScreenIcon name="sparkles" className="gallery-card-action-icon" />
+                      <span>{isBusy ? 'Sortiere ...' : collection.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

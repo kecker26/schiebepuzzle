@@ -64,7 +64,7 @@ import {
   loadSavedGame,
   updateSavedGame,
 } from './services/SaveService.ts'
-import { addSolvedGalleryEntry, deleteSolvedGalleryEntries } from './services/GalleryService.ts'
+import { addSolvedGalleryEntry, analyzeSolvedGalleryEntry, deleteSolvedGalleryEntries } from './services/GalleryService.ts'
 import {
   addImageCollectionImages,
   createImageCollection,
@@ -99,6 +99,14 @@ const DEFAULT_CONFIG: PuzzleConfig = DEFAULT_PUZZLE_CONFIG
 const SAVE_DEBOUNCE_MS = 3000
 const SAVE_MAX_INTERVAL_MS = 10000
 type GlobalOverlayKind = 'help' | 'commandPalette'
+
+function createClientId(prefix: string): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
 
 function formatCommandTime(seconds: number | null | undefined): string {
   if (typeof seconds !== 'number' || !Number.isFinite(seconds)) {
@@ -292,6 +300,7 @@ export default function App() {
     galleryError,
     setGallery,
     setGalleryError,
+    refreshGallery,
     resetGallery,
   } = useSolvedGallery()
   const {
@@ -1494,6 +1503,7 @@ export default function App() {
 
   const createGalleryEntryPayload = useCallback(
     async (stats: WinStats, completedConfig: PuzzleConfig): Promise<RecordSolvedGalleryEntryPayload> => ({
+      id: createClientId('gallery'),
       config: completedConfig,
       moves: stats.moves,
       time: stats.time,
@@ -1505,6 +1515,27 @@ export default function App() {
     }),
     [croppedImage, image]
   )
+
+  const scheduleGalleryAiAnalysis = useCallback((entryId: string, sessionId: number) => {
+    void analyzeSolvedGalleryEntry(entryId)
+      .then((result) => {
+        if (activeSessionRef.current !== sessionId) {
+          // Fallback: If session changed, we still want to ensure the UI has the latest tags from the background task
+          void refreshGallery(false)
+          return
+        }
+
+        setGallery(result.gallery)
+        setGalleryError(null)
+      })
+      .catch((error) => {
+        if (activeSessionRef.current !== sessionId) {
+          return
+        }
+
+        setGalleryError(`KI-Tags konnten nicht erstellt werden: ${getErrorMessage(error)}`)
+      })
+  }, [refreshGallery, setGallery, setGalleryError])
 
   const handleWin = useCallback(
     (stats: WinStats) => {
@@ -1549,12 +1580,18 @@ export default function App() {
           if (galleryOutcome.status === 'fulfilled') {
             setGallery(galleryOutcome.value)
             setGalleryError(null)
+            if (galleryPayload.id) {
+              scheduleGalleryAiAnalysis(galleryPayload.id, sessionId)
+            }
           } else {
             // Silent retry: transient failures should not permanently lose the gallery entry
             try {
               const retryResult = await addSolvedGalleryEntry(galleryPayload)
               setGallery(retryResult)
               setGalleryError(null)
+              if (galleryPayload.id) {
+                scheduleGalleryAiAnalysis(galleryPayload.id, sessionId)
+              }
             } catch (retryError) {
               setGalleryError(`Galerie konnte nicht aktualisiert werden: ${getErrorMessage(retryError)}`)
             }
@@ -1589,6 +1626,7 @@ export default function App() {
       setSavedGamesError,
       setStatsError,
       setStatsOverview,
+      scheduleGalleryAiAnalysis,
       clearDeletedSaveFromLastSession,
     ]
   )

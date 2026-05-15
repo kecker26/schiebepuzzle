@@ -173,6 +173,35 @@ export interface SolvedGalleryEntry {
   actionMoves: number
   assistanceMode: PuzzleAssistanceMode
   hasDetailedProfile: boolean
+  tags?: GalleryImageTag[]
+  aiTagging?: GalleryAiTagging
+}
+
+export type GalleryTagSource = 'gemini' | 'imported'
+
+export interface GalleryImageTag {
+  label: string
+  confidence: number
+  source: GalleryTagSource
+}
+
+export type GalleryAiTaggingStatus = 'tagged' | 'failed' | 'unavailable' | 'pending'
+
+export interface GalleryCollectionSuggestion {
+  collectionId: string
+  collectionName: string
+  reason: string
+  confidence: number
+  source: 'gemini'
+}
+
+export interface GalleryAiTagging {
+  status: GalleryAiTaggingStatus
+  provider: 'gemini'
+  model: string | null
+  generatedAt: string | null
+  error: string | null
+  collectionSuggestions: GalleryCollectionSuggestion[]
 }
 
 export interface PuzzleDifficultyStats {
@@ -365,6 +394,11 @@ export interface RecordSolvedGalleryEntryPayload {
   actionMoves: number
   assistanceMode: PuzzleAssistanceMode
   hasDetailedProfile: boolean
+}
+
+export interface AnalyzeSolvedGalleryEntryResult {
+  gallery: SolvedGallery
+  entry: SolvedGalleryEntry
 }
 
 export interface RecordPuzzleCompletionResult {

@@ -1018,9 +1018,9 @@ export default function UploadScreen({
     )
   }, [completionHistory, historyFilter])
 
-  const handleCreateCollection = useCallback(async (name: string, imageIds: string[]) => {
+  const handleCreateCollection = useCallback(async (name: string, imageIds: string[], description?: string) => {
     if (!onCreateImageCollection) return
-    await onCreateImageCollection(name, imageIds)
+    await onCreateImageCollection(name, imageIds, description)
   }, [onCreateImageCollection])
 
   const handleUpdateCollection = useCallback(async (
