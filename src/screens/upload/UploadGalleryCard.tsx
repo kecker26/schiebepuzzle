@@ -23,9 +23,11 @@ interface UploadGalleryCardProps {
   onReplayEntry: (entry: SolvedGalleryEntry) => void
   onCollectEntry?: (entry: GalleryDisplayEntry) => void
   onTagFilter?: (tagLabel: string) => void
+  onRetryTagging?: (entry: SolvedGalleryEntry) => Promise<void>
   onAddSuggestedCollection?: (collectionId: string, entry: GalleryDisplayEntry) => void
   collections?: ImageCollection[]
   suggestedCollectionBusyKey?: string | null
+  retryingTagEntryId?: string | null
   onDeleteEntry: (entry: GalleryDisplayEntry) => void
   isDeleting: boolean
 }
@@ -36,9 +38,11 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   onReplayEntry,
   onCollectEntry,
   onTagFilter,
+  onRetryTagging,
   onAddSuggestedCollection,
   collections = [],
   suggestedCollectionBusyKey = null,
+  retryingTagEntryId = null,
   onDeleteEntry,
   isDeleting,
 }: UploadGalleryCardProps) {
@@ -61,6 +65,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   const comparisonHints = getGalleryCardComparisonHints(entry)
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
+  const canRetryAiTagging = aiTagging?.status === 'failed' || aiTagging?.status === 'unavailable'
+  const isRetryingTagging = retryingTagEntryId === representativeEntry.id
   const collectionSuggestions = (aiTagging?.collectionSuggestions ?? [])
     .map((suggestion) => ({
       suggestion,
@@ -184,6 +190,10 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
     onCollectEntry?.(entry)
   }, [entry, onCollectEntry])
 
+  const handleRetryTagging = useCallback(() => {
+    void onRetryTagging?.(representativeEntry)
+  }, [onRetryTagging, representativeEntry])
+
   return (
     <article className="gallery-card">
       <button
@@ -298,13 +308,29 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                 ))}
               </div>
             ) : aiTagging?.status === 'failed' || aiTagging?.status === 'unavailable' || aiTagging?.status === 'pending' ? (
-              <span className="gallery-card-ai-status">
-                {aiTagging.status === 'unavailable'
-                  ? 'KI-Tags nicht konfiguriert'
-                  : aiTagging.status === 'pending'
-                    ? 'KI-Tagging laeuft ...'
-                    : 'KI-Tagging fehlgeschlagen'}
-              </span>
+              <div className="gallery-card-ai-status-row">
+                <span className="gallery-card-ai-status" title={aiTagging.error ?? undefined}>
+                  {aiTagging.status === 'unavailable'
+                    ? 'KI-Tags nicht konfiguriert'
+                    : aiTagging.status === 'pending'
+                      ? 'KI-Tagging laeuft ...'
+                      : 'KI-Tagging fehlgeschlagen'}
+                </span>
+                {canRetryAiTagging ? (
+                  <button
+                    type="button"
+                    className="gallery-card-ai-retry"
+                    data-gallery-action="retry-tagging"
+                    data-gallery-entry-id={entry.id}
+                    onClick={handleRetryTagging}
+                    onKeyDown={handleActionKeyDown}
+                    disabled={isDeleting || isRetryingTagging || !onRetryTagging}
+                    title={aiTagging.error ? `Erneut versuchen: ${aiTagging.error}` : 'KI-Tagging erneut versuchen'}
+                  >
+                    {isRetryingTagging ? 'Prueft ...' : 'Erneut'}
+                  </button>
+                ) : null}
+              </div>
             ) : null}
 
             {collectionSuggestions.length > 0 ? (

@@ -72,8 +72,23 @@ function isReplayableGalleryEntry(entry: Pick<SolvedGalleryEntry, 'sourceImage' 
   return Boolean(entry.sourceImage ?? entry.previewImage)
 }
 
-function getGalleryMotifKey(entry: SolvedGalleryEntry): string {
+export function getGalleryMotifKey(entry: SolvedGalleryEntry): string {
   return entry.sourceImage ?? entry.previewImage ?? `missing:${entry.id}`
+}
+
+export function getUniqueGalleryMotifEntryIds(entries: SolvedGalleryEntry[]): string[] {
+  const seenMotifs = new Set<string>()
+  const entryIds: string[] = []
+
+  for (const entry of entries) {
+    const motifKey = getGalleryMotifKey(entry)
+    if (seenMotifs.has(motifKey)) continue
+
+    seenMotifs.add(motifKey)
+    entryIds.push(entry.id)
+  }
+
+  return entryIds
 }
 
 function getGalleryGroupKey(entry: SolvedGalleryEntry): string {

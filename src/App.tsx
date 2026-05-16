@@ -50,7 +50,7 @@ import {
   upsertSummary,
 } from './app/appUtils.ts'
 import StartScreen from './screens/StartScreen.tsx'
-import { createDefaultCropTransform } from './services/CropService.ts'
+import { createDefaultCropTransform, type CropTransform } from './services/CropService.ts'
 import {
   createPuzzleDataBackupFile,
   deletePuzzleDataBackupFile,
@@ -64,7 +64,12 @@ import {
   loadSavedGame,
   updateSavedGame,
 } from './services/SaveService.ts'
-import { addSolvedGalleryEntry, analyzeSolvedGalleryEntry, deleteSolvedGalleryEntries } from './services/GalleryService.ts'
+import {
+  addSolvedGalleryEntry,
+  analyzeSolvedGalleryEntry,
+  deleteSolvedGalleryEntries,
+  updateSolvedGalleryTags,
+} from './services/GalleryService.ts'
 import {
   addImageCollectionImages,
   createImageCollection,
@@ -270,6 +275,7 @@ export default function App() {
   const [deferredRecoverySaveId, setDeferredRecoverySaveId] = useState<string | null>(null)
   const [ignoredRecoverySaveId, setIgnoredRecoverySaveId] = useState<string | null>(() => readIgnoredRecoverySaveId())
   const [cropDraftSnapshot, setCropDraftSnapshot] = useState<CropDraftSnapshot | null>(() => readCropDraftSessionSnapshot())
+  const [replayCropTransform, setReplayCropTransform] = useState<CropTransform | null>(null)
   const [lastSessionSnapshot, setLastSessionSnapshot] = useState<LastSessionSnapshot | null>(() => readLastSessionSnapshot())
   const [uploadCommandRequest, setUploadCommandRequest] = useState<UploadCommandRequest | null>(null)
   const wasHelpOpenRef = useRef(false)
@@ -318,6 +324,7 @@ export default function App() {
   const deferredRecoverySaveIdRef = useRef<string | null>(deferredRecoverySaveId)
   const ignoredRecoverySaveIdRef = useRef<string | null>(ignoredRecoverySaveId)
   const cropDraftSnapshotRef = useRef<CropDraftSnapshot | null>(cropDraftSnapshot)
+  const confirmedCropSnapshotRef = useRef<CropDraftSnapshot | null>(null)
   const lastSessionSnapshotRef = useRef<LastSessionSnapshot | null>(lastSessionSnapshot)
   const activeSessionRef = useRef(0)
   const saveDebounceTimerRef = useRef<number | null>(null)
@@ -1065,6 +1072,8 @@ export default function App() {
     commitCropDraftSnapshot(snapshot, {
       immediate: true,
     })
+    confirmedCropSnapshotRef.current = null
+    setReplayCropTransform(null)
     setConfig(snapshot.config)
     setImage(snapshot.image)
     setIsRandomImage(snapshot.isRandomImage)
@@ -1148,6 +1157,8 @@ export default function App() {
     commitCropDraftSnapshot(initialCropDraft, {
       immediate: true,
     })
+    confirmedCropSnapshotRef.current = null
+    setReplayCropTransform(null)
     setImage(imgSrc)
     setIsRandomImage(isRandom)
     setRandomImageSource(isRandom ? source : null)
@@ -1165,6 +1176,8 @@ export default function App() {
       commitCropDraftSnapshot(null, {
         immediate: true,
       })
+      confirmedCropSnapshotRef.current = null
+      setReplayCropTransform(null)
       setDeferredRecoverySaveId(null)
       clearIgnoredRecoverySave(saveId)
 
@@ -1297,6 +1310,32 @@ export default function App() {
     }
   }, [refreshCollections, setGallery, setGalleryError])
 
+  const handleUpdateGalleryTags = useCallback(async (
+    action: 'rename' | 'remove',
+    sourceLabel: string,
+    targetLabel?: string
+  ): Promise<void> => {
+    try {
+      const nextGallery = await updateSolvedGalleryTags({ action, sourceLabel, targetLabel })
+      setGallery(nextGallery)
+      setGalleryError(null)
+    } catch (error) {
+      setGalleryError(`Galerie-Tags konnten nicht aktualisiert werden: ${getErrorMessage(error)}`)
+      throw error
+    }
+  }, [setGallery, setGalleryError])
+
+  const handleRetryGalleryTagging = useCallback(async (entryId: string): Promise<void> => {
+    try {
+      const result = await analyzeSolvedGalleryEntry(entryId)
+      setGallery(result.gallery)
+      setGalleryError(null)
+    } catch (error) {
+      setGalleryError(`KI-Tags konnten nicht erneut erstellt werden: ${getErrorMessage(error)}`)
+      throw error
+    }
+  }, [setGallery, setGalleryError])
+
   const handleCreateImageCollection = useCallback(async (
     name: string,
     imageIds: string[],
@@ -1382,6 +1421,7 @@ export default function App() {
     commitCropDraftSnapshot(null, {
       immediate: true,
     })
+    confirmedCropSnapshotRef.current = null
     setDeferredRecoverySaveId(null)
     setImage(null)
     setIsRandomImage(false)
@@ -1459,7 +1499,13 @@ export default function App() {
     }, 180)
   }, [appState, flushPendingSave])
 
-  const handleCropConfirmed = (croppedSrc: string) => {
+  const handleCropConfirmed = (croppedSrc: string, confirmedCropDraft?: {
+    transform: CropDraftSnapshot['transform']
+    useFullImage: boolean
+  }) => {
+    confirmedCropSnapshotRef.current = confirmedCropDraft
+      ? buildCropDraftSnapshot(confirmedCropDraft)
+      : cropDraftSnapshotRef.current
     beginSession()
     resetRunArtifacts()
     commitCropDraftSnapshot(null, {
@@ -1502,17 +1548,23 @@ export default function App() {
   )
 
   const createGalleryEntryPayload = useCallback(
-    async (stats: WinStats, completedConfig: PuzzleConfig): Promise<RecordSolvedGalleryEntryPayload> => ({
-      id: createClientId('gallery'),
-      config: completedConfig,
-      moves: stats.moves,
-      time: stats.time,
-      actionMoves: stats.actionMoves,
-      assistanceMode: stats.assistanceMode,
-      hasDetailedProfile: true,
-      previewImage: croppedImage ? await createGalleryPreviewImage(croppedImage) : null,
-      sourceImage: image ?? croppedImage ?? null,
-    }),
+    async (stats: WinStats, completedConfig: PuzzleConfig): Promise<RecordSolvedGalleryEntryPayload> => {
+      const completedCropSnapshot = confirmedCropSnapshotRef.current ?? cropDraftSnapshotRef.current
+
+      return {
+        id: createClientId('gallery'),
+        config: completedConfig,
+        moves: stats.moves,
+        time: stats.time,
+        actionMoves: stats.actionMoves,
+        assistanceMode: stats.assistanceMode,
+        hasDetailedProfile: true,
+        previewImage: croppedImage ? await createGalleryPreviewImage(croppedImage) : null,
+        sourceImage: completedCropSnapshot?.image ?? image ?? croppedImage ?? null,
+        cropTransform: completedCropSnapshot?.transform ?? null,
+        useFullImage: completedCropSnapshot?.useFullImage ?? false,
+      }
+    },
     [croppedImage, image]
   )
 
@@ -1694,18 +1746,20 @@ export default function App() {
       config: entry.config,
       isRandomImage: false,
       randomImageSource: null,
-      transform: createDefaultCropTransform(),
-      useFullImage: false,
+      transform: entry.cropTransform ?? createDefaultCropTransform(),
+      useFullImage: entry.useFullImage ?? false,
     }), {
       immediate: true,
     })
+    confirmedCropSnapshotRef.current = null
+    setReplayCropTransform(entry.cropTransform ?? null)
     setConfig(entry.config)
-      setImage(replayImage)
-      setCroppedImage(null)
-      setIsRandomImage(false)
-      setRandomImageSource(null)
-      setGalleryError(null)
-      setAppState('imageLoaded')
+    setImage(replayImage)
+    setCroppedImage(null)
+    setIsRandomImage(false)
+    setRandomImageSource(null)
+    setGalleryError(null)
+    setAppState('imageLoaded')
   }, [beginSession, commitCropDraftSnapshot, resetRunArtifacts, setGalleryError])
 
   const navigateToTopLevelScreen = useCallback(async (targetState: AppState) => {
@@ -1720,6 +1774,8 @@ export default function App() {
     audioService.stopTransientEffects()
     resetRunArtifacts()
     setQuitHint(null)
+    confirmedCropSnapshotRef.current = null
+    setReplayCropTransform(null)
     setImage(null)
     setIsRandomImage(false)
     setRandomImageSource(null)
@@ -1808,6 +1864,8 @@ export default function App() {
     }), {
       immediate: true,
     })
+    confirmedCropSnapshotRef.current = null
+    setReplayCropTransform(null)
     setCroppedImage(null)
     setAppState('imageLoaded')
   }, [
@@ -2333,6 +2391,8 @@ export default function App() {
                 onResetGallery={handleResetGallery}
                 onReplayGalleryEntry={handleReplayGalleryEntry}
                 onDeleteGalleryEntries={handleDeleteGalleryEntries}
+                onUpdateGalleryTags={handleUpdateGalleryTags}
+                onRetryGalleryTagging={handleRetryGalleryTagging}
                 onCreateImageCollection={handleCreateImageCollection}
                 onUpdateImageCollection={handleUpdateImageCollection}
                 onDeleteImageCollection={handleDeleteImageCollection}
@@ -2369,6 +2429,7 @@ export default function App() {
                     onFetchNewRandomImage={handleFetchRandomImage}
                     initialTransform={cropDraftSnapshotRef.current?.transform ?? cropDraftSnapshot?.transform ?? null}
                     initialUseFullImage={cropDraftSnapshotRef.current?.useFullImage ?? cropDraftSnapshot?.useFullImage ?? false}
+                    replayCropTransform={replayCropTransform}
                     onSessionDraftChange={handleCropSessionDraftChange}
                     onConfigChange={handleConfigChange}
                     onCropConfirmed={handleCropConfirmed}

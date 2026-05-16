@@ -238,9 +238,18 @@ interface StoredGalleryEntry {
   hasDetailedProfile: boolean
   tags?: StoredGalleryImageTag[]
   aiTagging?: StoredGalleryAiTagging
+  cropTransform?: StoredCropTransform | null
+  useFullImage?: boolean
 }
 
 type StoredGalleryTagSource = 'gemini' | 'imported'
+
+interface StoredCropTransform {
+  zoom: number
+  rotationDeg: number
+  offsetX: number
+  offsetY: number
+}
 
 interface StoredGalleryImageTag {
   label: string
@@ -488,6 +497,8 @@ interface AnalyzeGalleryEntryResponse {
   gallery: GalleryResponse
   entry: StoredGalleryEntry
 }
+
+type UpdateGalleryTagsAction = 'rename' | 'remove'
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
   res.statusCode = statusCode
@@ -1447,7 +1458,7 @@ async function importBackupPayload(payload: {
   const importedGallery = payload.gallery === null || payload.gallery === undefined
     ? createGalleryFileFromCompletionHistory(importedStats.completionHistory, importedStats.lastUpdatedAt)
     : normalizeGalleryFile(payload.gallery, assets)
-  const importedCollections = normalizeCollectionsFile(payload.collections, getValidGalleryEntryIds(importedGallery))
+  const importedCollections = normalizeCollectionsFile(payload.collections, importedGallery)
 
   await deleteAllSaves()
   await Promise.all(importedSaves.map((save) => writeStructuredSave(save)))
@@ -1907,6 +1918,10 @@ function normalizeGalleryAiTagging(value: unknown): StoredGalleryAiTagging | und
   }
 }
 
+function getGalleryTagMatchKey(label: string): string {
+  return label.trim().toLocaleLowerCase('de-DE')
+}
+
 function parseDataUrlImage(value: string): { mimeType: string; base64Data: string; byteLength: number } | null {
   const match = /^data:(image\/(?:png|jpeg|jpg|webp));base64,([a-zA-Z0-9+/=]+)$/i.exec(value)
   if (!match) return null
@@ -2128,6 +2143,22 @@ function hasDetailedProfileData(input: {
     || input.suggestedMoveCount !== undefined
     || input.assistanceMode !== undefined
   )
+}
+
+function sanitizeCropTransform(value: unknown): StoredCropTransform | undefined {
+  if (!value || typeof value !== 'object') return undefined
+
+  const input = value as Record<string, unknown>
+  const zoom = typeof input.zoom === 'number' && Number.isFinite(input.zoom) ? input.zoom : null
+  const rotationDeg = typeof input.rotationDeg === 'number' && Number.isFinite(input.rotationDeg) ? input.rotationDeg : null
+  const offsetX = typeof input.offsetX === 'number' && Number.isFinite(input.offsetX) ? input.offsetX : null
+  const offsetY = typeof input.offsetY === 'number' && Number.isFinite(input.offsetY) ? input.offsetY : null
+
+  if (zoom === null || rotationDeg === null || offsetX === null || offsetY === null) {
+    return undefined
+  }
+
+  return { zoom, rotationDeg, offsetX, offsetY }
 }
 
 function normalizeCompletionRecord(entry: unknown, assets: BackupAssetMap = {}): StoredCompletionRecord | null {
@@ -2386,6 +2417,8 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     hasDetailedProfile?: unknown
     tags?: unknown
     aiTagging?: unknown
+    cropTransform?: unknown
+    useFullImage?: unknown
   }
 
   if (typeof input.id !== 'string' || typeof input.completedAt !== 'string' || !isValidPuzzleConfig(input.config)) {
@@ -2397,6 +2430,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
   const sourceImage = resolveBackupImageValue(input.sourceImage, assets) ?? previewImage
   const tags = normalizeGalleryTags(input.tags)
   const aiTagging = normalizeGalleryAiTagging(input.aiTagging)
+  const cropTransform = sanitizeCropTransform(input.cropTransform)
 
   return {
     id: input.id,
@@ -2411,6 +2445,8 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     hasDetailedProfile: input.hasDetailedProfile === false ? false : true,
     ...(tags.length > 0 ? { tags } : {}),
     ...(aiTagging ? { aiTagging } : {}),
+    ...(cropTransform ? { cropTransform } : {}),
+    ...(typeof input.useFullImage === 'boolean' ? { useFullImage: input.useFullImage } : {}),
   }
 }
 
@@ -2482,11 +2518,36 @@ function normalizeCollectionImageIds(value: unknown, validImageIds?: Set<string>
   return Array.from(uniqueIds)
 }
 
+function getGalleryMotifKeyForCollection(entry: StoredGalleryEntry): string {
+  return entry.sourceImage ?? entry.previewImage ?? `missing:${entry.id}`
+}
+
+function normalizeCollectionImageIdsByMotif(value: unknown, gallery: StoredGalleryFile): string[] {
+  const galleryEntriesById = new Map(gallery.entries.map((entry) => [entry.id, entry]))
+  const imageIdsByMotif = new Map<string, { imageId: string; order: number; completedAt: number }>()
+
+  normalizeCollectionImageIds(value, getValidGalleryEntryIds(gallery)).forEach((imageId, order) => {
+    const entry = galleryEntriesById.get(imageId)
+    if (!entry) return
+
+    const motifKey = getGalleryMotifKeyForCollection(entry)
+    const completedAt = getIsoTimestampValue(entry.completedAt)
+    const existing = imageIdsByMotif.get(motifKey)
+    if (existing && existing.completedAt >= completedAt) return
+
+    imageIdsByMotif.set(motifKey, { imageId, order: existing?.order ?? order, completedAt })
+  })
+
+  return Array.from(imageIdsByMotif.values())
+    .sort((a, b) => a.order - b.order)
+    .map(({ imageId }) => imageId)
+}
+
 function normalizeImageCollection(
   collection: unknown,
   index: number,
   usedIds: Set<string>,
-  validImageIds?: Set<string>
+  gallery?: StoredGalleryFile
 ): StoredImageCollection | null {
   if (!collection || typeof collection !== 'object') return null
 
@@ -2515,13 +2576,15 @@ function normalizeImageCollection(
     ...(description ? { description } : {}),
     createdAt,
     updatedAt,
-    imageIds: normalizeCollectionImageIds(input.imageIds, validImageIds),
+    imageIds: gallery
+      ? normalizeCollectionImageIdsByMotif(input.imageIds, gallery)
+      : normalizeCollectionImageIds(input.imageIds),
   }
 }
 
 function normalizeCollectionsFile(
   payload: unknown,
-  validImageIds?: Set<string>
+  gallery?: StoredGalleryFile
 ): StoredImageCollectionsFile {
   if (!payload || typeof payload !== 'object') {
     return createEmptyCollectionsFile()
@@ -2534,7 +2597,7 @@ function normalizeCollectionsFile(
   const usedIds = new Set<string>()
   const collections = Array.isArray(input.collections)
     ? input.collections
-      .map((collection, index) => normalizeImageCollection(collection, index, usedIds, validImageIds))
+      .map((collection, index) => normalizeImageCollection(collection, index, usedIds, gallery))
       .filter((collection): collection is StoredImageCollection => collection !== null)
       .sort((a, b) => getIsoTimestampValue(b.updatedAt) - getIsoTimestampValue(a.updatedAt))
     : []
@@ -2591,13 +2654,12 @@ async function readCollectionsFile(gallery?: StoredGalleryFile): Promise<StoredI
   await ensureSavesDir()
 
   const currentGallery = gallery ?? await readGalleryFile()
-  const validImageIds = getValidGalleryEntryIds(currentGallery)
   const rawCollections = await readJsonFile<StoredImageCollectionsFile>(COLLECTIONS_FILE)
   if (!rawCollections) {
     return createEmptyCollectionsFile()
   }
 
-  return normalizeCollectionsFile(rawCollections, validImageIds)
+  return normalizeCollectionsFile(rawCollections, currentGallery)
 }
 
 async function writeCollectionsFile(collections: StoredImageCollectionsFile): Promise<void> {
@@ -2657,6 +2719,68 @@ async function analyzeGalleryEntry(
     gallery: toGalleryResponse(nextGallery),
     entry: nextEntry,
   }
+}
+
+async function updateGalleryTags(input: {
+  action: UpdateGalleryTagsAction
+  sourceLabel: string
+  targetLabel?: string
+}): Promise<StoredGalleryFile> {
+  const sourceLabel = sanitizeGalleryTagLabel(input.sourceLabel)
+  const targetLabel = input.action === 'rename' ? sanitizeGalleryTagLabel(input.targetLabel) : null
+  if (!sourceLabel || (input.action === 'rename' && !targetLabel)) {
+    return readGalleryFile()
+  }
+
+  const sourceKey = getGalleryTagMatchKey(sourceLabel)
+  const gallery = await readGalleryFile()
+  let didChange = false
+
+  const entries = gallery.entries.map((entry) => {
+    if (!entry.tags || entry.tags.length === 0) return entry
+
+    let didEntryChange = false
+    const nextTags = entry.tags.flatMap((tag) => {
+      if (getGalleryTagMatchKey(tag.label) !== sourceKey) {
+        return [tag]
+      }
+
+      didChange = true
+      didEntryChange = true
+      if (input.action === 'remove') {
+        return []
+      }
+
+      return [{
+        ...tag,
+        label: targetLabel ?? tag.label,
+      }]
+    })
+
+    if (!didEntryChange) return entry
+
+    const normalizedTags = normalizeGalleryTags(nextTags)
+    const nextEntry: StoredGalleryEntry = {
+      ...entry,
+    }
+    if (normalizedTags.length > 0) {
+      nextEntry.tags = normalizedTags
+    } else {
+      delete nextEntry.tags
+    }
+
+    return nextEntry
+  })
+
+  if (!didChange) return gallery
+
+  const nextGallery: StoredGalleryFile = {
+    entries,
+    lastUpdatedAt: new Date().toISOString(),
+  }
+
+  await writeGalleryFile(nextGallery)
+  return nextGallery
 }
 
 function calculateMedian(values: number[]): number {
@@ -2972,6 +3096,8 @@ function validateGalleryPayload(payload: unknown): payload is {
   actionMoves: number
   assistanceMode: StoredAssistanceMode
   hasDetailedProfile: boolean
+  cropTransform?: StoredCropTransform | null
+  useFullImage?: boolean
 } {
   if (!payload || typeof payload !== 'object') return false
 
@@ -3004,6 +3130,25 @@ function validateGalleryDeletePayload(payload: unknown): payload is { ids: strin
     Array.isArray(input.ids) &&
     input.ids.length > 0 &&
     input.ids.every((id) => typeof id === 'string' && id.length > 0)
+  )
+}
+
+function validateGalleryTagsUpdatePayload(payload: unknown): payload is {
+  action: UpdateGalleryTagsAction
+  sourceLabel: string
+  targetLabel?: string
+} {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as { action?: unknown; sourceLabel?: unknown; targetLabel?: unknown }
+  return (
+    (input.action === 'rename' || input.action === 'remove') &&
+    typeof input.sourceLabel === 'string' &&
+    sanitizeGalleryTagLabel(input.sourceLabel) !== null &&
+    (
+      input.action === 'remove' ||
+      (typeof input.targetLabel === 'string' && sanitizeGalleryTagLabel(input.targetLabel) !== null)
+    )
   )
 }
 
@@ -3071,7 +3216,7 @@ function validateCollectionImagesPayload(payload: unknown): payload is { imageId
 }
 
 function getValidCollectionImageIds(payloadImageIds: unknown, gallery: StoredGalleryFile): string[] {
-  return normalizeCollectionImageIds(payloadImageIds, getValidGalleryEntryIds(gallery))
+  return normalizeCollectionImageIdsByMotif(payloadImageIds, gallery)
 }
 
 async function createCollection(payload: {
@@ -3548,6 +3693,18 @@ async function handleGalleryApi(
       return
     }
 
+    if (req.method === 'PUT' && parts.length === 3 && parts[2] === 'tags') {
+      const body = await readJsonBody(req)
+      if (!validateGalleryTagsUpdatePayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Galerie-Tags' })
+        return
+      }
+
+      const nextGallery = await updateGalleryTags(body)
+      sendJson(res, 200, toGalleryResponse(nextGallery))
+      return
+    }
+
     if (req.method === 'DELETE' && parts.length === 3 && parts[2] === 'entries') {
       const body = await readJsonBody(req)
       if (!validateGalleryDeletePayload(body)) {
@@ -3596,6 +3753,8 @@ async function handleGalleryApi(
         actionMoves: Math.max(moves, sanitizeCount(body.actionMoves)),
         assistanceMode: body.assistanceMode,
         hasDetailedProfile: body.hasDetailedProfile,
+        cropTransform: sanitizeCropTransform(body.cropTransform),
+        useFullImage: typeof body.useFullImage === 'boolean' ? body.useFullImage : undefined,
         aiTagging: {
           status: 'pending',
           provider: 'gemini',

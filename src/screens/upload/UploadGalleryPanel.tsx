@@ -7,12 +7,14 @@ import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import UploadConfirmDialog from './UploadConfirmDialog.tsx'
 import UploadGalleryCard from './UploadGalleryCard.tsx'
 import UploadGalleryDetailDialog from './UploadGalleryDetailDialog.tsx'
+import UploadGalleryTagManagerDialog from './UploadGalleryTagManagerDialog.tsx'
 import UploadCollectionPickerDialog from './UploadCollectionPickerDialog.tsx'
 import {
   buildGalleryDisplayEntriesFromGroups,
   buildGalleryDisplayGroups,
   formatGallerySolveCount,
   GalleryDisplayEntry,
+  getGalleryMotifKey,
   sortGalleryDisplayEntries,
 } from './UploadGalleryDisplayUtils.ts'
 import UploadGalleryToolbar, { type GalleryTagFilterOption } from './UploadGalleryToolbar.tsx'
@@ -32,6 +34,8 @@ interface UploadGalleryPanelProps {
   isLoadingCollections?: boolean
   onReplayEntry: (entry: SolvedGalleryEntry) => void
   onDeleteEntries: (entryIds: string[]) => Promise<void>
+  onUpdateTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
+  onRetryTagging?: (entryId: string) => Promise<void>
   onCreateCollection?: (name: string, imageIds: string[], description?: string) => Promise<void>
   onAddCollectionImages?: (collectionId: string, imageIds: string[]) => Promise<void>
   titleId?: string
@@ -63,10 +67,6 @@ function entryMatchesGalleryTag(entry: SolvedGalleryEntry, tagKey: string): bool
   return (entry.tags ?? []).some((tag) => getGalleryTagKey(tag.label) === tagKey)
 }
 
-function getUniqueGalleryEntryIds(entries: SolvedGalleryEntry[]): string[] {
-  return Array.from(new Set(entries.map((entry) => entry.id)))
-}
-
 export default function UploadGalleryPanel({
   gallery,
   collections = [],
@@ -74,6 +74,8 @@ export default function UploadGalleryPanel({
   isLoadingCollections = false,
   onReplayEntry,
   onDeleteEntries,
+  onUpdateTags = async () => undefined,
+  onRetryTagging = async () => undefined,
   onCreateCollection = async () => undefined,
   onAddCollectionImages = async () => undefined,
   titleId = 'workspace-window-gallery-title',
@@ -96,6 +98,9 @@ export default function UploadGalleryPanel({
   const [sortOption, setSortOption] = useState<GallerySortOption>('latest')
   const [selectedEntry, setSelectedEntry] = useState<GalleryDisplayEntry | null>(null)
   const [collectingEntry, setCollectingEntry] = useState<GalleryDisplayEntry | null>(null)
+  const [isManagingTags, setIsManagingTags] = useState(false)
+  const [isUpdatingTags, setIsUpdatingTags] = useState(false)
+  const [retryingTagEntryId, setRetryingTagEntryId] = useState<string | null>(null)
   const [isSavingCollection, setIsSavingCollection] = useState(false)
   const [isCreatingTagCollection, setIsCreatingTagCollection] = useState(false)
   const [suggestedCollectionBusyKey, setSuggestedCollectionBusyKey] = useState<string | null>(null)
@@ -108,6 +113,14 @@ export default function UploadGalleryPanel({
 
   const difficultyOptions = useMemo(() => getGalleryDifficultyFilterOptions(), [])
   const galleryGroups = useMemo(() => buildGalleryDisplayGroups(entries), [entries])
+  const motifIdByEntryId = useMemo(() => {
+    const motifIds = new Map<string, string>()
+    for (const entry of entries) {
+      motifIds.set(entry.id, getGalleryMotifKey(entry))
+    }
+
+    return motifIds
+  }, [entries])
   const groupedEntries = useMemo(
     () =>
       buildGalleryDisplayEntriesFromGroups(galleryGroups, {
@@ -137,11 +150,13 @@ export default function UploadGalleryPanel({
           const current = tagCounts.get(key)
           if (current) {
             current.count += 1
+            current.entryIds = [...(current.entryIds ?? []), entry.id]
           } else {
             tagCounts.set(key, {
               id: key,
               label: tag.label,
               count: 1,
+              entryIds: [entry.id],
             })
           }
         }
@@ -151,6 +166,34 @@ export default function UploadGalleryPanel({
     return Array.from(tagCounts.values())
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'de'))
   }, [baseFilteredEntries])
+  const allTagOptions = useMemo<GalleryTagFilterOption[]>(() => {
+    const tagCounts = new Map<string, GalleryTagFilterOption>()
+
+    for (const entry of entries) {
+      const seenTagsForEntry = new Set<string>()
+      for (const tag of entry.tags ?? []) {
+        const key = getGalleryTagKey(tag.label)
+        if (!key || seenTagsForEntry.has(key)) continue
+
+        seenTagsForEntry.add(key)
+        const current = tagCounts.get(key)
+        if (current) {
+          current.count += 1
+          current.entryIds = [...(current.entryIds ?? []), entry.id]
+        } else {
+          tagCounts.set(key, {
+            id: key,
+            label: tag.label,
+            count: 1,
+            entryIds: [entry.id],
+          })
+        }
+      }
+    }
+
+    return Array.from(tagCounts.values())
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'de'))
+  }, [entries])
   const visibleEntries = useMemo(() => {
     const filteredEntries = tagFilter === ALL_GALLERY_TAGS_FILTER
       ? baseFilteredEntries
@@ -173,18 +216,34 @@ export default function UploadGalleryPanel({
   const matchingTagImageIds = useMemo(() => {
     if (tagFilter === ALL_GALLERY_TAGS_FILTER) return []
 
-    return getUniqueGalleryEntryIds(
-      visibleEntries.flatMap((entry) =>
-        entry.visibleEntries.filter((galleryEntry) => entryMatchesGalleryTag(galleryEntry, tagFilter))
-      )
-    )
+    const seenMotifs = new Set<string>()
+    const imageIds: string[] = []
+    for (const entry of visibleEntries) {
+      if (!entry.visibleEntries.some((galleryEntry) => entryMatchesGalleryTag(galleryEntry, tagFilter))) {
+        continue
+      }
+
+      if (seenMotifs.has(entry.motifId)) continue
+
+      seenMotifs.add(entry.motifId)
+      imageIds.push(entry.representativeEntry.id)
+    }
+
+    return imageIds
   }, [tagFilter, visibleEntries])
   const tagCollectionImageIds = useMemo(() => {
     if (!activeTagCollection) return matchingTagImageIds
 
-    const existingIds = new Set(activeTagCollection.imageIds)
-    return matchingTagImageIds.filter((imageId) => !existingIds.has(imageId))
-  }, [activeTagCollection, matchingTagImageIds])
+    const existingMotifIds = new Set(
+      activeTagCollection.imageIds
+        .map((imageId) => motifIdByEntryId.get(imageId))
+        .filter((motifId): motifId is string => Boolean(motifId))
+    )
+    return matchingTagImageIds.filter((imageId) => {
+      const motifId = motifIdByEntryId.get(imageId)
+      return motifId ? !existingMotifIds.has(motifId) : true
+    })
+  }, [activeTagCollection, matchingTagImageIds, motifIdByEntryId])
   const tagCollectionActionLabel = activeTagCollection ? 'Tag-Motive ergaenzen' : 'Sammlung aus Tag'
 
   useEffect(() => {
@@ -494,7 +553,7 @@ export default function UploadGalleryPanel({
     visibleEntries.length === 0
       ? `filtered-empty:${difficultyFilter}:${assistanceFilter}:${tagFilter}:${sortOption}`
       : `grid:${difficultyFilter}:${assistanceFilter}:${tagFilter}:${sortOption}`
-  const collectingImageIds = collectingEntry?.allEntries.map((entry) => entry.id) ?? []
+  const collectingImageIds = collectingEntry ? [collectingEntry.representativeEntry.id] : []
   const collectingRepresentativeEntry = collectingEntry?.representativeEntry ?? null
   const collectingImageLabel = collectingRepresentativeEntry
     ? `${formatDifficultyLabel(collectingRepresentativeEntry.config)} vom ${formatDate(collectingRepresentativeEntry.completedAt)}`
@@ -548,6 +607,33 @@ export default function UploadGalleryPanel({
       setIsCreatingTagCollection(false)
     }
   }, [activeTagCollection, activeTagOption, onAddCollectionImages, onCreateCollection, tagCollectionImageIds])
+
+  const handleRenameTag = useCallback(async (sourceLabel: string, targetLabel: string) => {
+    setIsUpdatingTags(true)
+    try {
+      await onUpdateTags('rename', sourceLabel, targetLabel)
+    } finally {
+      setIsUpdatingTags(false)
+    }
+  }, [onUpdateTags])
+
+  const handleRemoveTag = useCallback(async (sourceLabel: string) => {
+    setIsUpdatingTags(true)
+    try {
+      await onUpdateTags('remove', sourceLabel)
+    } finally {
+      setIsUpdatingTags(false)
+    }
+  }, [onUpdateTags])
+
+  const handleRetryTagging = useCallback(async (entry: SolvedGalleryEntry) => {
+    setRetryingTagEntryId(entry.id)
+    try {
+      await onRetryTagging(entry.id)
+    } finally {
+      setRetryingTagEntryId((current) => current === entry.id ? null : current)
+    }
+  }, [onRetryTagging])
 
   return (
     <>
@@ -609,6 +695,7 @@ export default function UploadGalleryPanel({
                 activeTagCollectionCount={tagCollectionImageIds.length}
                 tagCollectionActionLabel={tagCollectionActionLabel}
                 isCreatingTagCollection={isCreatingTagCollection}
+                canManageTags={allTagOptions.length > 0}
                 onDifficultyFilterChange={handleDifficultyFilterChange}
                 onAssistanceFilterChange={handleAssistanceFilterChange}
                 onTagFilterChange={handleTagFilterChange}
@@ -616,6 +703,7 @@ export default function UploadGalleryPanel({
                 onCreateCollectionFromTag={() => {
                   void handleCreateCollectionFromTag()
                 }}
+                onManageTags={() => setIsManagingTags(true)}
                 onReset={handleResetFilters}
               />
 
@@ -638,9 +726,11 @@ export default function UploadGalleryPanel({
                         onReplayEntry={onReplayEntry}
                         onCollectEntry={handleCollectEntryRequest}
                         onTagFilter={handleTagFilterRequest}
+                        onRetryTagging={handleRetryTagging}
                         onAddSuggestedCollection={handleAddSuggestedCollection}
                         collections={collections}
                         suggestedCollectionBusyKey={suggestedCollectionBusyKey}
+                        retryingTagEntryId={retryingTagEntryId}
                         onDeleteEntry={handleDeleteEntryRequest}
                         isDeleting={deletingEntryId === entry.id}
                       />
@@ -658,6 +748,8 @@ export default function UploadGalleryPanel({
           entry={selectedEntry}
           onReplayEntry={onReplayEntry}
           onCollectEntry={handleCollectEntryFromDetails}
+          onRetryTagging={handleRetryTagging}
+          isRetryingTagging={retryingTagEntryId === selectedEntry.representativeEntry.id}
           onClose={() => setSelectedEntry(null)}
         />
       )}
@@ -694,6 +786,20 @@ export default function UploadGalleryPanel({
           onClose={() => {
             if (!isSavingCollection) {
               setCollectingEntry(null)
+            }
+          }}
+        />
+      )}
+
+      {isManagingTags && (
+        <UploadGalleryTagManagerDialog
+          tagOptions={allTagOptions}
+          isBusy={isUpdatingTags}
+          onRenameTag={handleRenameTag}
+          onRemoveTag={handleRemoveTag}
+          onClose={() => {
+            if (!isUpdatingTags) {
+              setIsManagingTags(false)
             }
           }}
         />

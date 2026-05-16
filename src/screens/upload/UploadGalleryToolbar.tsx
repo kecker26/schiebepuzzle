@@ -13,6 +13,7 @@ export interface GalleryTagFilterOption {
   id: string
   label: string
   count: number
+  entryIds?: string[]
 }
 
 interface UploadGalleryToolbarProps {
@@ -27,11 +28,13 @@ interface UploadGalleryToolbarProps {
   activeTagCollectionCount: number
   tagCollectionActionLabel: string
   isCreatingTagCollection: boolean
+  canManageTags: boolean
   onDifficultyFilterChange: (value: GalleryDifficultyFilter) => void
   onAssistanceFilterChange: (value: GalleryAssistanceFilter) => void
   onTagFilterChange: (value: string) => void
   onSortOptionChange: (value: GallerySortOption) => void
   onCreateCollectionFromTag: () => void
+  onManageTags: () => void
   onReset: () => void
   difficultySelectRef?: RefObject<HTMLSelectElement>
   assistanceSelectRef?: RefObject<HTMLSelectElement>
@@ -52,11 +55,13 @@ export default function UploadGalleryToolbar({
   activeTagCollectionCount,
   tagCollectionActionLabel,
   isCreatingTagCollection,
+  canManageTags,
   onDifficultyFilterChange,
   onAssistanceFilterChange,
   onTagFilterChange,
   onSortOptionChange,
   onCreateCollectionFromTag,
+  onManageTags,
   onReset,
   difficultySelectRef,
   assistanceSelectRef,
@@ -162,6 +167,15 @@ export default function UploadGalleryToolbar({
           }
         >
           {isCreatingTagCollection ? 'Sortiere ...' : tagCollectionActionLabel}
+        </button>
+
+        <button
+          type="button"
+          className="secondary gallery-toolbar-tag-manager"
+          onClick={onManageTags}
+          disabled={!canManageTags}
+        >
+          Tags verwalten
         </button>
 
         <button

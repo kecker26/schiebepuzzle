@@ -13,8 +13,8 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
 - Autosave, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
 - Statistik mit vier visuellen Hauptansichten fuer Ueberblick, Analyse, Verlauf und Rohdaten-Explorer; Analyse buendelt Stufen, Rekorde und Sauberkeit, der Rohdaten-Explorer speichert CSV-/JSON-Exporte direkt im Projektordner.
-- Galerie geloester Motive inklusive Replay-Funktion, optionalem Gemini-Tagging und klickbaren Tag-Filtern.
-- Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit KI-Sammlungsvorschlaegen und Sammlungen aus Tag-Treffern.
+- Galerie geloester Motive inklusive Replay-Funktion mit gespeichertem Originalzuschnitt, optionalem Gemini-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und Tag-Verwaltung.
+- Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit KI-Sammlungsvorschlaegen und motivweit deduplizierten Sammlungen aus Tag-Treffern.
 - Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
 - Musik- und Sound-Unterstuetzung mit lokalen Fallback-Tracks.
 - Command Palette, globale Hilfe, Kontextmenues, Theme-Umschaltung und Motion-Animationen.
@@ -144,10 +144,10 @@ Wichtige Einstiegspunkte:
 
 1. Startscreen oeffnen und optional letzte Sitzung fortsetzen.
 2. Bild hochladen, Zufallsbild laden oder Galerie-/Save-Eintrag wiederverwenden.
-3. Motiv zuschneiden und Puzzle-Groesse waehlen.
+3. Motiv zuschneiden und Puzzle-Groesse waehlen; bei Galerie-Replays optional den gespeicherten Originalzuschnitt wiederherstellen.
 4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
 5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
-6. Neue Galerie-Motive optional automatisch mit Gemini taggen, per Tag filtern und Tag-Treffer als Sammlung uebernehmen.
+6. Neue Galerie-Motive optional automatisch mit Gemini taggen, fehlgeschlagene Taggings erneut versuchen, Tags bereinigen, per Tag filtern und Tag-Treffer als Sammlung uebernehmen.
 7. Spielstaende, Galerie, Sammlungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
 
 ## Entwicklungshinweise

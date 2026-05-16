@@ -68,6 +68,8 @@ interface UploadDashboardProps {
   onRequestGalleryReset: () => void
   onReplayGalleryEntry: (entry: SolvedGalleryEntry) => void
   onDeleteGalleryEntries: (entryIds: string[]) => Promise<void>
+  onUpdateGalleryTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
+  onRetryGalleryTagging?: (entryId: string) => Promise<void>
   onCreateImageCollection?: (name: string, imageIds: string[], description?: string) => Promise<void>
   onUpdateImageCollection?: (
     collectionId: string,
@@ -132,6 +134,8 @@ export default function UploadDashboard({
   onRequestGalleryReset,
   onReplayGalleryEntry,
   onDeleteGalleryEntries,
+  onUpdateGalleryTags = async () => undefined,
+  onRetryGalleryTagging = async () => undefined,
   onCreateImageCollection = async () => undefined,
   onUpdateImageCollection = async () => undefined,
   onDeleteImageCollection = async () => undefined,
@@ -744,6 +748,8 @@ export default function UploadDashboard({
                       isLoadingCollections={isLoadingCollections}
                       onReplayEntry={onReplayGalleryEntry}
                       onDeleteEntries={onDeleteGalleryEntries}
+                      onUpdateTags={onUpdateGalleryTags}
+                      onRetryTagging={onRetryGalleryTagging}
                       onCreateCollection={onCreateImageCollection}
                       onAddCollectionImages={onAddImageCollectionImages}
                       titleId="workspace-window-gallery-title"

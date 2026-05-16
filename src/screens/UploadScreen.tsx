@@ -82,6 +82,8 @@ interface UploadScreenProps {
   onResetGallery: () => Promise<void>
   onReplayGalleryEntry: (entry: SolvedGalleryEntry) => void
   onDeleteGalleryEntries: (entryIds: string[]) => Promise<void>
+  onUpdateGalleryTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
+  onRetryGalleryTagging?: (entryId: string) => Promise<void>
   onCreateImageCollection?: (name: string, imageIds: string[], description?: string) => Promise<ImageCollections>
   onUpdateImageCollection?: (
     collectionId: string,
@@ -187,6 +189,8 @@ export default function UploadScreen({
   onResetGallery,
   onReplayGalleryEntry,
   onDeleteGalleryEntries,
+  onUpdateGalleryTags,
+  onRetryGalleryTagging,
   onCreateImageCollection,
   onUpdateImageCollection,
   onDeleteImageCollection,
@@ -1411,6 +1415,8 @@ export default function UploadScreen({
               onRequestGalleryReset={handleRequestGalleryReset}
               onReplayGalleryEntry={onReplayGalleryEntry}
               onDeleteGalleryEntries={onDeleteGalleryEntries}
+              onUpdateGalleryTags={onUpdateGalleryTags}
+              onRetryGalleryTagging={onRetryGalleryTagging}
               onCreateImageCollection={handleCreateCollection}
               onUpdateImageCollection={handleUpdateCollection}
               onDeleteImageCollection={handleDeleteCollection}
