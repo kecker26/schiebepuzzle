@@ -1,21 +1,22 @@
-import { useCallback, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
 import { SolvedGalleryEntry } from '../../types/index'
+import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
 import { getGalleryTimelineComparisonHints } from './galleryComparisonHints.ts'
-import { getGalleryReplayActions } from './galleryReplayActions.ts'
 import {
   formatAssistanceModeLabel,
   formatDate,
   formatProfileSourceLabel,
   formatTime,
 } from './uploadUtils.ts'
+import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 
 interface UploadGalleryDetailDialogProps {
   entry: GalleryDisplayEntry
-  onReplayEntry: (entry: SolvedGalleryEntry) => void
+  onReplayEntry: GalleryReplayRequestHandler
   onCollectEntry?: (entry: GalleryDisplayEntry) => void
   onRetryTagging?: (entry: SolvedGalleryEntry) => Promise<void>
   isRetryingTagging?: boolean
@@ -60,7 +61,6 @@ export default function UploadGalleryDetailDialog({
     motifReplayableCount > 0
       ? `Motivweit ueber alle Stufen liegen ${motifSolveCountLabel} auf ${motifDifficultyCount} ${motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'} vor; ${motifReplayableCount} davon haben ein Replay-Bild.`
       : `Motivweit ueber alle Stufen liegen ${motifSolveCountLabel} vor, derzeit aber ohne gespeichertes Replay-Bild.`
-  const replayActions = getGalleryReplayActions(entry)
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
   const canRetryAiTagging = aiTagging?.status === 'failed' || aiTagging?.status === 'unavailable'
@@ -68,8 +68,12 @@ export default function UploadGalleryDetailDialog({
   const timelineEntries = motifReplaySummary.allEntries.length > 0
     ? motifReplaySummary.allEntries
     : entry.allEntries
+  const motifReplayEntry = representativeEntry.sourceImage || representativeEntry.previewImage
+    ? representativeEntry
+    : motifReplaySummary.lastReplayableEntry
+  const canReplayMotif = Boolean(motifReplayEntry?.sourceImage ?? motifReplayEntry?.previewImage)
   const descriptionId = 'gallery-detail-description'
-  const initialFocusRef = replayActions.length > 0
+  const initialFocusRef = canReplayMotif
     ? replayButtonRef
     : onCollectEntry
       ? collectButtonRef
@@ -123,6 +127,20 @@ export default function UploadGalleryDetailDialog({
     }
   }, [])
 
+  useEffect(() => {
+    if (!canReplayMotif || typeof window === 'undefined') {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      replayButtonRef.current?.focus({ preventScroll: true })
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+    }
+  }, [canReplayMotif])
+
   if (typeof document === 'undefined') {
     return null
   }
@@ -153,6 +171,29 @@ export default function UploadGalleryDetailDialog({
               <span className="gallery-detail-image-mark">Bild</span>
             </div>
           )}
+          <button
+            ref={canReplayMotif ? replayButtonRef : undefined}
+            type="button"
+            className="gallery-detail-motif-replay-tile"
+            disabled={!canReplayMotif || !motifReplayEntry}
+            onClick={() => {
+              if (motifReplayEntry) {
+                onReplayEntry(motifReplayEntry, 'motif')
+              }
+            }}
+            aria-label={
+              motifReplayEntry
+                ? `Motiv ${formatDifficultyLabel(motifReplayEntry.config)} vom ${formatDate(motifReplayEntry.completedAt)} komplett neu spielen`
+                : 'Motiv neu spielen derzeit nicht verfuegbar'
+            }
+            data-page-primary-focus={canReplayMotif ? 'true' : undefined}
+          >
+            <span className="gallery-detail-motif-replay-kicker">Motiv</span>
+            <strong>Neu spielen</strong>
+            <span>
+              Schwierigkeit im Zuschnitt frei waehlen
+            </span>
+          </button>
         </div>
 
         <div className="gallery-detail-body">
@@ -275,8 +316,10 @@ export default function UploadGalleryDetailDialog({
                 {timelineEntries.map((timelineEntry) => {
                   const isCurrentEntry = timelineEntry.id === representativeEntry.id
                   const isDifferentDifficulty = getConfigKey(timelineEntry) !== getConfigKey(representativeEntry)
+                  const hasChallengeSetup = hasGalleryChallengeSetup(timelineEntry)
                   const timelineMarkers = [
                     isCurrentEntry ? 'Aktuell' : null,
+                    hasChallengeSetup ? 'Challenge-Start' : null,
                     motifReplaySummary.bestTimeEntry?.id === timelineEntry.id ? 'Bestzeit' : null,
                     motifReplaySummary.bestMovesEntry?.id === timelineEntry.id ? 'Bestweg' : null,
                     motifReplaySummary.bestCleanTimeEntry?.id === timelineEntry.id ? 'Clean' : null,
@@ -293,6 +336,7 @@ export default function UploadGalleryDetailDialog({
                     motifReplaySummary,
                     representativeEntry
                   )
+                  const timelinePreviewImage = timelineEntry.previewImage ?? timelineEntry.sourceImage
 
                   return (
                     <article
@@ -331,51 +375,40 @@ export default function UploadGalleryDetailDialog({
                         ) : null}
                       </div>
 
-                      <button
-                        type="button"
-                        className="gallery-detail-timeline-action"
-                        disabled={!canReplayTimelineEntry}
-                        onClick={() => onReplayEntry(timelineEntry)}
-                        onKeyDown={handleActionKeyDown}
-                        aria-label={`Lauf ${formatDifficultyLabel(timelineEntry.config)} vom ${formatDate(timelineEntry.completedAt)} spielen`}
-                      >
-                        {canReplayTimelineEntry
-                          ? (timelineEntry.cropTransform ? 'Diesen Lauf' : 'Motiv spielen')
-                          : 'Archiv'}
-                      </button>
+                      <div className="gallery-detail-timeline-action-stack">
+                        <div className="gallery-detail-timeline-preview" aria-hidden="true">
+                          {timelinePreviewImage ? (
+                            <img
+                              src={timelinePreviewImage}
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          ) : (
+                            <span>Archiv</span>
+                          )}
+                        </div>
+
+                        <div className="gallery-detail-timeline-action-buttons">
+                          <button
+                            type="button"
+                            className="gallery-detail-timeline-action"
+                            disabled={!canReplayTimelineEntry}
+                            onClick={() => onReplayEntry(timelineEntry, 'run')}
+                            onKeyDown={handleActionKeyDown}
+                            aria-label={`Lauf ${formatDifficultyLabel(timelineEntry.config)} vom ${formatDate(timelineEntry.completedAt)} spielen`}
+                          >
+                            {canReplayTimelineEntry
+                              ? hasChallengeSetup
+                                ? 'Diesen Lauf spielen'
+                                : (timelineEntry.cropTransform ? 'Ausschnitt spielen' : 'Motiv spielen')
+                              : 'Archiv'}
+                          </button>
+                        </div>
+                      </div>
                     </article>
                   )
                 })}
-              </div>
-            </section>
-          ) : null}
-
-          {replayActions.length > 0 ? (
-            <section className="gallery-detail-replay">
-              <div className="gallery-detail-replay-header">
-                <span className="saved-games-kicker">Schnellstarts</span>
-                <p className="gallery-detail-replay-copy">
-                  Waehle direkt den Wiedereinstieg, den du fuer dieses Motiv als Naechstes angehen willst.
-                </p>
-              </div>
-
-              <div className="gallery-detail-replay-grid" data-gallery-detail-action-group="true">
-                {replayActions.map((action, index) => (
-                  <button
-                    key={action.id}
-                    ref={index === 0 ? replayButtonRef : undefined}
-                    type="button"
-                    className={`gallery-detail-replay-action${index === 0 ? ' is-primary' : ''}`}
-                    data-page-primary-focus={index === 0 ? 'true' : undefined}
-                    onClick={() => onReplayEntry(action.entry)}
-                    onKeyDown={handleActionKeyDown}
-                    aria-label={`${action.label}, ${action.summary}`}
-                  >
-                    <span className="gallery-detail-replay-label">{action.label}</span>
-                    <strong className="gallery-detail-replay-value">{action.summary}</strong>
-                    <span className="gallery-detail-replay-copy">{action.description}</span>
-                  </button>
-                ))}
               </div>
             </section>
           ) : null}
@@ -386,7 +419,7 @@ export default function UploadGalleryDetailDialog({
                 ref={collectButtonRef}
                 type="button"
                 className="secondary"
-                data-page-primary-focus={replayActions.length === 0 ? 'true' : undefined}
+                data-page-primary-focus={canReplayMotif ? undefined : 'true'}
                 onClick={() => onCollectEntry(entry)}
                 onKeyDown={handleActionKeyDown}
                 aria-label={`Galerie-Bild ${formatDifficultyLabel(representativeEntry.config)} vom ${formatDate(representativeEntry.completedAt)} zu einer Sammlung hinzufuegen`}
@@ -398,7 +431,7 @@ export default function UploadGalleryDetailDialog({
               ref={closeButtonRef}
               type="button"
               className="secondary"
-              data-page-primary-focus={replayActions.length === 0 ? 'true' : undefined}
+              data-page-primary-focus={canReplayMotif || onCollectEntry ? undefined : 'true'}
               onClick={onClose}
               onKeyDown={handleActionKeyDown}
             >

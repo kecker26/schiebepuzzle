@@ -1,10 +1,11 @@
 import { SolvedGalleryEntry } from '../../types/index'
+import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import type { GalleryDisplayEntry } from './UploadGalleryDisplayUtils.ts'
 import { formatDate, formatTime } from './uploadUtils.ts'
 
 export interface GalleryReplayAction {
-  id: 'current' | 'latest-replayable' | 'best-time' | 'best-clean-time' | 'best-moves'
+  id: 'current' | 'latest-replayable'
   label: string
   entry: SolvedGalleryEntry
   summary: string
@@ -48,47 +49,24 @@ export function getGalleryReplayActions(entry: GalleryDisplayEntry): GalleryRepl
   if (isReplayableEntry(representativeEntry)) {
     pushAction(
       'current',
-      'Nochmal spielen',
+      'Spielen',
       representativeEntry,
-      `Startet genau den angezeigten Lauf vom ${formatDate(representativeEntry.completedAt)} erneut.`
+      hasGalleryChallengeSetup(representativeEntry)
+        ? `Startet den gespeicherten Startzustand vom ${formatDate(representativeEntry.completedAt)} erneut.`
+        : `Startet das Motiv vom ${formatDate(representativeEntry.completedAt)} mit gespeicherter Stufe${representativeEntry.cropTransform ? ' und gespeichertem Ausschnitt' : ''} neu.`
     )
   } else {
     pushAction(
       'latest-replayable',
-      'Letzten Replay-Lauf',
+      'Spielen',
       motifReplaySummary.lastReplayableEntry,
       motifReplaySummary.lastReplayableEntry
-        ? `Startet den juengsten noch spielbaren Lauf vom ${formatDate(motifReplaySummary.lastReplayableEntry.completedAt)}.`
+        ? hasGalleryChallengeSetup(motifReplaySummary.lastReplayableEntry)
+          ? `Startet den juengsten gespeicherten Startzustand vom ${formatDate(motifReplaySummary.lastReplayableEntry.completedAt)} erneut.`
+          : `Startet den juengsten noch spielbaren Galerie-Eintrag vom ${formatDate(motifReplaySummary.lastReplayableEntry.completedAt)} neu.`
         : ''
     )
   }
-
-  pushAction(
-    'best-time',
-    'Bestzeit spielen',
-    motifReplaySummary.bestTimeEntry,
-    motifReplaySummary.bestTimeEntry
-      ? `Startet den Lauf vom ${formatDate(motifReplaySummary.bestTimeEntry.completedAt)} mit motivweiter Bestzeit ${formatTime(motifReplaySummary.bestTimeEntry.time)}.`
-      : ''
-  )
-
-  pushAction(
-    'best-clean-time',
-    'Clean spielen',
-    motifReplaySummary.bestCleanTimeEntry,
-    motifReplaySummary.bestCleanTimeEntry
-      ? `Startet den schnellsten cleanen Lauf vom ${formatDate(motifReplaySummary.bestCleanTimeEntry.completedAt)} auf ${formatDifficultyLabel(motifReplaySummary.bestCleanTimeEntry.config)}.`
-      : ''
-  )
-
-  pushAction(
-    'best-moves',
-    'Bestweg spielen',
-    motifReplaySummary.bestMovesEntry,
-    motifReplaySummary.bestMovesEntry
-      ? `Startet den Lauf vom ${formatDate(motifReplaySummary.bestMovesEntry.completedAt)} mit ${motifReplaySummary.bestMovesEntry.moves} Netto-Zuegen.`
-      : ''
-  )
 
   return actions
 }

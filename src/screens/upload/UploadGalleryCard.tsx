@@ -10,7 +10,6 @@ import { ImageCollection, SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
 import { getGalleryCardComparisonHints } from './galleryComparisonHints.ts'
-import { getGalleryReplayActions } from './galleryReplayActions.ts'
 import {
   formatAssistanceModeLabel,
   formatDate,
@@ -20,7 +19,6 @@ import {
 interface UploadGalleryCardProps {
   entry: GalleryDisplayEntry
   onOpenDetails: (entry: GalleryDisplayEntry) => void
-  onReplayEntry: (entry: SolvedGalleryEntry) => void
   onCollectEntry?: (entry: GalleryDisplayEntry) => void
   onTagFilter?: (tagLabel: string) => void
   onRetryTagging?: (entry: SolvedGalleryEntry) => Promise<void>
@@ -35,7 +33,6 @@ interface UploadGalleryCardProps {
 const UploadGalleryCard = memo(function UploadGalleryCard({
   entry,
   onOpenDetails,
-  onReplayEntry,
   onCollectEntry,
   onTagFilter,
   onRetryTagging,
@@ -59,9 +56,6 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   const motifBestTimeLabel = motifReplaySummary.bestTimeEntry
     ? formatTime(motifReplaySummary.bestTimeEntry.time)
     : null
-  const replayActions = getGalleryReplayActions(entry)
-  const primaryReplayAction = replayActions[0] ?? null
-  const secondaryReplayAction = replayActions[1] ?? null
   const comparisonHints = getGalleryCardComparisonHints(entry)
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
@@ -165,22 +159,6 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   const handleOpenDetails = useCallback(() => {
     onOpenDetails(entry)
   }, [entry, onOpenDetails])
-
-  const handlePrimaryReplay = useCallback(() => {
-    if (!primaryReplayAction) {
-      return
-    }
-
-    onReplayEntry(primaryReplayAction.entry)
-  }, [onReplayEntry, primaryReplayAction])
-
-  const handleSecondaryReplay = useCallback(() => {
-    if (!secondaryReplayAction) {
-      return
-    }
-
-    onReplayEntry(secondaryReplayAction.entry)
-  }, [onReplayEntry, secondaryReplayAction])
 
   const handleDelete = useCallback(() => {
     onDeleteEntry(entry)
@@ -360,52 +338,19 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
           </div>
         ) : null}
 
-        <div className={`gallery-card-actions${secondaryReplayAction ? '' : ' is-compact'}`}>
+        <div className="gallery-card-actions is-compact">
           <button
             type="button"
-            data-gallery-action="play-primary"
-            data-gallery-entry-id={entry.id}
-            {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
-            onClick={handlePrimaryReplay}
-            onKeyDown={handleActionKeyDown}
-            disabled={isDeleting || !primaryReplayAction}
-            aria-label={
-              primaryReplayAction
-                ? `Puzzle ${formatDifficultyLabel(primaryReplayAction.entry.config)} erneut spielen`
-                : `Puzzle ${difficultyLabel} kann aktuell nicht erneut gespielt werden`
-            }
-          >
-            <UploadScreenIcon name="playCircle" className="gallery-card-action-icon" />
-            <span>{primaryReplayAction?.label ?? 'Bild fehlt'}</span>
-          </button>
-          {secondaryReplayAction ? (
-            <button
-              type="button"
-              className="secondary"
-              data-gallery-action="play-secondary"
-              data-gallery-entry-id={entry.id}
-              {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
-              onClick={handleSecondaryReplay}
-              onKeyDown={handleActionKeyDown}
-              disabled={isDeleting}
-              aria-label={`Motivweiten Schnellstart ${secondaryReplayAction.label.toLowerCase()}`}
-            >
-              <UploadScreenIcon name="listRestart" className="gallery-card-action-icon" />
-              <span>{secondaryReplayAction.label}</span>
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="secondary"
             data-gallery-action="details"
             data-gallery-entry-id={entry.id}
             {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
             onClick={handleOpenDetails}
             onKeyDown={handleActionKeyDown}
             disabled={isDeleting}
+            aria-label={`Spielen und Details zu ${difficultyLabel} vom ${completedAtLabel} oeffnen`}
           >
-            <UploadScreenIcon name="info" className="gallery-card-action-icon" />
-            <span>Details</span>
+            <UploadScreenIcon name="playCircle" className="gallery-card-action-icon" />
+            <span>Spielen + Details</span>
           </button>
           <button
             type="button"

@@ -162,6 +162,61 @@ export default class PuzzleEngine {
     }
   }
 
+  createStateFromBoard(baseState: PuzzleState, board: number[], emptyIndex: number): PuzzleState | null {
+    if (board.length !== this.tileCount || emptyIndex < 0 || emptyIndex >= this.tileCount) {
+      return null
+    }
+
+    const seen = new Set<number>()
+    for (const value of board) {
+      if (!Number.isInteger(value) || value < 0 || value >= this.tileCount || seen.has(value)) {
+        return null
+      }
+      seen.add(value)
+    }
+
+    if (board[emptyIndex] !== this.emptyValue) {
+      return null
+    }
+
+    const sourceTilesByValue = new Map(baseState.tiles.map((tile) => [tile.correctIndex, tile]))
+    const tiles: Tile[] = []
+
+    for (let position = 0; position < board.length; position++) {
+      const value = board[position]
+      const sourceTile = sourceTilesByValue.get(value)
+      if (!sourceTile) {
+        return null
+      }
+
+      const row = Math.floor(position / this.config.cols)
+      const col = position % this.config.cols
+      tiles.push({
+        ...sourceTile,
+        row,
+        col,
+        index: position,
+        isDragging: false,
+        canMove: undefined,
+      })
+    }
+
+    const normalizedState = normalizePuzzleState({
+      tiles,
+      board: [...board],
+      emptyIndex,
+      emptyRow: Math.floor(emptyIndex / this.config.cols),
+      emptyCol: emptyIndex % this.config.cols,
+      moveCount: 0,
+      startTime: Date.now(),
+      isSolved: false,
+      isAnimating: false,
+      dragState: null,
+    }, this.config)
+
+    return this.isSolved(normalizedState) ? null : normalizedState
+  }
+
   getValidMoves(state: PuzzleState): string[] {
     return getMovableTileValues(this.config, state.board, state.emptyIndex)
       .map((value) => this.getTileIdByValue(state, value))

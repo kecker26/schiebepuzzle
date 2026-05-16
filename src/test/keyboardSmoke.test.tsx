@@ -1276,14 +1276,12 @@ describe('keyboard smoke tests', () => {
         <UploadGalleryCard
           entry={firstEntry}
           onOpenDetails={vi.fn()}
-          onReplayEntry={vi.fn()}
           onDeleteEntry={vi.fn()}
           isDeleting={false}
         />
         <UploadGalleryCard
           entry={secondEntry}
           onOpenDetails={vi.fn()}
-          onReplayEntry={vi.fn()}
           onDeleteEntry={vi.fn()}
           isDeleting={false}
         />
@@ -1292,27 +1290,27 @@ describe('keyboard smoke tests', () => {
 
     const galleryCards = Array.from(container.querySelectorAll<HTMLElement>('.gallery-card'))
     const firstPreviewButton = within(galleryCards[0]!).getByRole('button', {
-      name: /details zu normal 4x4 vom/i,
+      name: /^details zu normal 4x4 vom/i,
     })
-    const firstReplayButton = within(galleryCards[0]!).getByRole('button', {
-      name: /puzzle normal 4x4 erneut spielen/i,
+    const firstDetailsActionButton = within(galleryCards[0]!).getByRole('button', {
+      name: /spielen und details zu normal 4x4 vom/i,
     })
-    const secondReplayButton = within(galleryCards[1]!).getByRole('button', {
-      name: /puzzle normal 4x4 erneut spielen/i,
+    const secondDetailsActionButton = within(galleryCards[1]!).getByRole('button', {
+      name: /spielen und details zu normal 4x4 vom/i,
     })
     const secondPreviewButton = within(galleryCards[1]!).getByRole('button', {
-      name: /details zu normal 4x4 vom/i,
+      name: /^details zu normal 4x4 vom/i,
     })
 
     firstPreviewButton.focus()
     fireEvent.keyDown(firstPreviewButton, { key: 'ArrowRight' })
-    expect(document.activeElement).toBe(firstReplayButton)
+    expect(document.activeElement).toBe(firstDetailsActionButton)
 
-    fireEvent.keyDown(firstReplayButton, { key: 'ArrowLeft' })
+    fireEvent.keyDown(firstDetailsActionButton, { key: 'ArrowLeft' })
     expect(document.activeElement).toBe(firstPreviewButton)
 
-    secondReplayButton.focus()
-    fireEvent.keyDown(secondReplayButton, { key: 'ArrowLeft' })
+    secondDetailsActionButton.focus()
+    fireEvent.keyDown(secondDetailsActionButton, { key: 'ArrowLeft' })
     expect(document.activeElement).toBe(secondPreviewButton)
 
     fireEvent.keyDown(secondPreviewButton, { key: 'Home' })
@@ -1333,28 +1331,24 @@ describe('keyboard smoke tests', () => {
         <UploadGalleryCard
           entry={firstEntry}
           onOpenDetails={vi.fn()}
-          onReplayEntry={vi.fn()}
           onDeleteEntry={vi.fn()}
           isDeleting={false}
         />
         <UploadGalleryCard
           entry={secondEntry}
           onOpenDetails={vi.fn()}
-          onReplayEntry={vi.fn()}
           onDeleteEntry={vi.fn()}
           isDeleting={false}
         />
         <UploadGalleryCard
           entry={thirdEntry}
           onOpenDetails={vi.fn()}
-          onReplayEntry={vi.fn()}
           onDeleteEntry={vi.fn()}
           isDeleting={false}
         />
         <UploadGalleryCard
           entry={fourthEntry}
           onOpenDetails={vi.fn()}
-          onReplayEntry={vi.fn()}
           onDeleteEntry={vi.fn()}
           isDeleting={false}
         />
@@ -1363,21 +1357,21 @@ describe('keyboard smoke tests', () => {
 
     const galleryCards = Array.from(container.querySelectorAll<HTMLElement>('.gallery-card'))
     const firstPreviewButton = within(galleryCards[0]!).getByRole('button', {
-      name: /details zu normal 4x4 vom/i,
+      name: /^details zu normal 4x4 vom/i,
     })
     const secondPreviewButton = within(galleryCards[1]!).getByRole('button', {
-      name: /details zu normal 4x4 vom/i,
+      name: /^details zu normal 4x4 vom/i,
     })
     const thirdPreviewButton = within(galleryCards[2]!).getByRole('button', {
-      name: /details zu normal 4x4 vom/i,
+      name: /^details zu normal 4x4 vom/i,
     })
     const fourthPreviewButton = within(galleryCards[3]!).getByRole('button', {
-      name: /details zu normal 4x4 vom/i,
+      name: /^details zu normal 4x4 vom/i,
     })
-    const firstDetailsButton = within(galleryCards[0]!).getByRole('button', { name: 'Details' })
-    const secondDetailsButton = within(galleryCards[1]!).getByRole('button', { name: 'Details' })
-    const thirdDetailsButton = within(galleryCards[2]!).getByRole('button', { name: 'Details' })
-    const fourthDetailsButton = within(galleryCards[3]!).getByRole('button', { name: 'Details' })
+    const firstDetailsButton = within(galleryCards[0]!).getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })
+    const secondDetailsButton = within(galleryCards[1]!).getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })
+    const thirdDetailsButton = within(galleryCards[2]!).getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })
+    const fourthDetailsButton = within(galleryCards[3]!).getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })
 
     mockElementRect(firstPreviewButton, { left: 0, top: 0, width: 180, height: 120 })
     mockElementRect(secondPreviewButton, { left: 220, top: 0, width: 180, height: 120 })
@@ -1408,7 +1402,7 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(thirdDetailsButton)
   })
 
-  it('renders a secondary gallery quick-start when the motif has another strong replay target', () => {
+  it('keeps gallery cards to one replay action even when the motif has another strong replay target', () => {
     const entry = createGalleryDisplayEntry('7', '2026-04-11T10:00:00.000Z')
     const bestTimeEntry = {
       ...createSolvedGalleryEntry('8', '2026-04-11T09:00:00.000Z'),
@@ -1430,14 +1424,15 @@ describe('keyboard smoke tests', () => {
         <UploadGalleryCard
           entry={entry}
           onOpenDetails={vi.fn()}
-          onReplayEntry={vi.fn()}
           onDeleteEntry={vi.fn()}
           isDeleting={false}
         />
       </div>
     )
 
-    expect(screen.getByRole('button', { name: /motivweiten schnellstart bestzeit spielen/i })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /motivweiten schnellstart/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /bestzeit spielen/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })).toBeTruthy()
     expect(screen.getByText('+0:17 zur Bestzeit')).toBeTruthy()
   })
 
@@ -1454,7 +1449,6 @@ describe('keyboard smoke tests', () => {
             <UploadGalleryCard
               entry={firstEntry}
               onOpenDetails={vi.fn()}
-              onReplayEntry={vi.fn()}
               onDeleteEntry={vi.fn()}
               isDeleting={false}
             />
@@ -1477,10 +1471,10 @@ describe('keyboard smoke tests', () => {
 
     const galleryCard = container.querySelector<HTMLElement>('.gallery-card')!
     const previewButton = within(galleryCard).getByRole('button', {
-      name: /details zu normal 4x4 vom/i,
+      name: /^details zu normal 4x4 vom/i,
     })
     const replayButton = within(galleryCard).getByRole('button', {
-      name: /puzzle normal 4x4 erneut spielen/i,
+      name: /spielen und details zu normal 4x4 vom/i,
     })
     const replayScrollIntoView = vi.fn()
 
@@ -2543,7 +2537,7 @@ describe('keyboard smoke tests', () => {
     })
   })
 
-  it('focuses replay first in gallery details and restores focus after closing', async () => {
+  it('focuses the first timeline replay in gallery details and restores focus after closing', async () => {
     function GalleryDetailHarness() {
       const [isOpen, setIsOpen] = React.useState(false)
       const detailEntry = createGalleryDisplayEntry('9', '2026-04-11T12:00:00.000Z')
@@ -2591,17 +2585,6 @@ describe('keyboard smoke tests', () => {
     opener.focus()
     fireEvent.click(opener)
 
-    const replayButton = await screen.findByRole('button', { name: /nochmal spielen/i })
-    expect(document.activeElement).toBe(replayButton)
-
-    const bestTimeButton = screen.getByRole('button', { name: /bestzeit spielen/i })
-
-    fireEvent.keyDown(replayButton, { key: 'ArrowRight' })
-    expect(document.activeElement).toBe(bestTimeButton)
-
-    fireEvent.keyDown(bestTimeButton, { key: 'ArrowLeft' })
-    expect(document.activeElement).toBe(replayButton)
-
     const collectButton = screen.getByRole('button', { name: /zu einer Sammlung hinzufuegen/i })
     const closeButton = screen.getByRole('button', { name: 'Schliessen' })
     collectButton.focus()
@@ -2616,8 +2599,16 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('+0:19 zur Bestzeit')).toBeTruthy()
     expect(screen.getAllByText(/vs\. vorher/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText('gleiche Stufe').length).toBeGreaterThan(0)
+    expect(document.querySelectorAll('.gallery-detail-timeline-preview img')).toHaveLength(3)
+    expect(screen.queryByText('Schnellstarts')).toBeNull()
+    expect(screen.queryByRole('button', { name: /bestzeit spielen/i })).toBeNull()
     const timelineButtons = screen.getAllByRole('button', { name: /lauf normal 4x4 vom/i })
+    const motifNewButtons = screen.getAllByRole('button', { name: /motiv normal 4x4 vom/i })
     expect(timelineButtons).toHaveLength(2)
+    expect(motifNewButtons).toHaveLength(1)
+    await waitFor(() => {
+      expect(document.activeElement).toBe(motifNewButtons[0])
+    })
     timelineButtons[0].focus()
     fireEvent.keyDown(timelineButtons[0], { key: 'ArrowDown' })
     expect(document.activeElement).toBe(timelineButtons[1])

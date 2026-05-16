@@ -50,7 +50,13 @@ import {
   upsertSummary,
 } from './app/appUtils.ts'
 import StartScreen from './screens/StartScreen.tsx'
-import { createDefaultCropTransform, type CropTransform } from './services/CropService.ts'
+import {
+  createDefaultCropTransform,
+  exportCroppedImage,
+  exportFullImage,
+  getCropViewportSize,
+  type CropTransform,
+} from './services/CropService.ts'
 import {
   createPuzzleDataBackupFile,
   deletePuzzleDataBackupFile,
@@ -82,6 +88,7 @@ import { recordPuzzleCompletion } from './services/StatsService.ts'
 import { useTheme } from './contexts/ThemeContext.tsx'
 import { getMusicStyleDefinition, MUSIC_STYLE_DEFINITIONS } from './services/musicStyles.ts'
 import { type UploadCommandRequest, type UploadCommandRequestAction } from './screens/upload/uploadCommandRequest.ts'
+import { type GalleryReplayMode } from './screens/upload/galleryReplayRequest.ts'
 import { type HistoryFilter, type UploadWorkspaceWindow } from './screens/upload/uploadUtils.ts'
 import {
   AppState,
@@ -89,6 +96,8 @@ import {
   PuzzleDataBackupFile,
   PuzzleDataImportResult,
   PuzzleConfig,
+  GalleryChallengeTarget,
+  GalleryReplaySetup,
   RecordPuzzleCompletionPayload,
   RecordPuzzleCompletionResult,
   RecordSolvedGalleryEntryPayload,
@@ -99,10 +108,15 @@ import {
   WinStats,
 } from './types/index'
 import { DEFAULT_PUZZLE_CONFIG, getNextDifficultyOption } from './utils/puzzleDifficulty.ts'
+import {
+  createGalleryChallengeTarget,
+  isGalleryReplaySetupCompatible,
+} from './utils/galleryReplaySetup.ts'
 
 const DEFAULT_CONFIG: PuzzleConfig = DEFAULT_PUZZLE_CONFIG
 const SAVE_DEBOUNCE_MS = 3000
 const SAVE_MAX_INTERVAL_MS = 10000
+const CROP_TRANSFORM_MATCH_EPSILON = 0.0001
 type GlobalOverlayKind = 'help' | 'commandPalette'
 
 function createClientId(prefix: string): string {
@@ -111,6 +125,40 @@ function createClientId(prefix: string): string {
   }
 
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function areCropTransformsEquivalent(
+  left: CropTransform | null | undefined,
+  right: CropTransform | null | undefined
+): boolean {
+  if (!left || !right) {
+    return !left && !right
+  }
+
+  return Math.abs(left.zoom - right.zoom) <= CROP_TRANSFORM_MATCH_EPSILON
+    && Math.abs(left.rotationDeg - right.rotationDeg) <= CROP_TRANSFORM_MATCH_EPSILON
+    && Math.abs(left.offsetX - right.offsetX) <= CROP_TRANSFORM_MATCH_EPSILON
+    && Math.abs(left.offsetY - right.offsetY) <= CROP_TRANSFORM_MATCH_EPSILON
+}
+
+function loadCropSourceImage(imageSrc: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const loadedImage = new Image()
+    loadedImage.onload = () => resolve(loadedImage)
+    loadedImage.onerror = () => reject(new Error('Bild konnte nicht fuer den gespeicherten Lauf vorbereitet werden.'))
+    loadedImage.src = imageSrc
+  })
+}
+
+async function createGalleryReplayCroppedImage(
+  imageSrc: string,
+  cropTransform: CropTransform,
+  useFullImage: boolean
+): Promise<string> {
+  const loadedImage = await loadCropSourceImage(imageSrc)
+  return useFullImage
+    ? exportFullImage(loadedImage, cropTransform.rotationDeg)
+    : exportCroppedImage(loadedImage, 1, cropTransform, getCropViewportSize(1))
 }
 
 function formatCommandTime(seconds: number | null | undefined): string {
@@ -276,6 +324,12 @@ export default function App() {
   const [ignoredRecoverySaveId, setIgnoredRecoverySaveId] = useState<string | null>(() => readIgnoredRecoverySaveId())
   const [cropDraftSnapshot, setCropDraftSnapshot] = useState<CropDraftSnapshot | null>(() => readCropDraftSessionSnapshot())
   const [replayCropTransform, setReplayCropTransform] = useState<CropTransform | null>(null)
+  const [pendingGalleryReplayConfig, setPendingGalleryReplayConfig] = useState<PuzzleConfig | null>(null)
+  const [pendingGalleryReplayUseFullImage, setPendingGalleryReplayUseFullImage] = useState<boolean | null>(null)
+  const [pendingGalleryReplaySetup, setPendingGalleryReplaySetup] = useState<GalleryReplaySetup | null>(null)
+  const [pendingGalleryChallengeTarget, setPendingGalleryChallengeTarget] = useState<GalleryChallengeTarget | null>(null)
+  const [activeGalleryReplaySetup, setActiveGalleryReplaySetup] = useState<GalleryReplaySetup | null>(null)
+  const [activeGalleryChallengeTarget, setActiveGalleryChallengeTarget] = useState<GalleryChallengeTarget | null>(null)
   const [lastSessionSnapshot, setLastSessionSnapshot] = useState<LastSessionSnapshot | null>(() => readLastSessionSnapshot())
   const [uploadCommandRequest, setUploadCommandRequest] = useState<UploadCommandRequest | null>(null)
   const wasHelpOpenRef = useRef(false)
@@ -610,6 +664,15 @@ export default function App() {
     setRandomImageError(null)
     resetCompletionFeedback()
   }, [resetCompletionFeedback])
+
+  const clearGalleryChallengeState = useCallback(() => {
+    setPendingGalleryReplayConfig(null)
+    setPendingGalleryReplayUseFullImage(null)
+    setPendingGalleryReplaySetup(null)
+    setPendingGalleryChallengeTarget(null)
+    setActiveGalleryReplaySetup(null)
+    setActiveGalleryChallengeTarget(null)
+  }, [])
 
   const restartPuzzleRun = useCallback(() => {
     setPuzzleRunKey((prev) => prev + 1)
@@ -1068,6 +1131,7 @@ export default function App() {
     beginSession()
     audioService.stopTransientEffects()
     resetRunArtifacts()
+    clearGalleryChallengeState()
     setQuitHint(null)
     commitCropDraftSnapshot(snapshot, {
       immediate: true,
@@ -1083,6 +1147,7 @@ export default function App() {
   }, [
     appState,
     beginSession,
+    clearGalleryChallengeState,
     commitCropDraftSnapshot,
     cropDraftSnapshot,
     flushPendingSave,
@@ -1154,6 +1219,7 @@ export default function App() {
 
     beginSession()
     resetRunArtifacts()
+    clearGalleryChallengeState()
     commitCropDraftSnapshot(initialCropDraft, {
       immediate: true,
     })
@@ -1166,13 +1232,14 @@ export default function App() {
     setRandomImageError(null)
     setCroppedImage(null)
     setAppState('imageLoaded')
-  }, [beginSession, commitCropDraftSnapshot, config, resetRunArtifacts])
+  }, [beginSession, clearGalleryChallengeState, commitCropDraftSnapshot, config, resetRunArtifacts])
 
   const handleLoadSavedGame = useCallback(async (saveId: string): Promise<void> => {
     try {
       const loaded = await loadSavedGame(saveId)
       beginSession()
       restartPuzzleRun()
+      clearGalleryChallengeState()
       commitCropDraftSnapshot(null, {
         immediate: true,
       })
@@ -1197,7 +1264,7 @@ export default function App() {
     } catch (error) {
       setSavedGamesError(`Spielstand konnte nicht geladen werden: ${getErrorMessage(error)}`)
     }
-  }, [beginSession, clearIgnoredRecoverySave, commitCropDraftSnapshot, resetCompletionFeedback, restartPuzzleRun, setSavedGamesError])
+  }, [beginSession, clearGalleryChallengeState, clearIgnoredRecoverySave, commitCropDraftSnapshot, resetCompletionFeedback, restartPuzzleRun, setSavedGamesError])
 
   const handleDismissRecoveryResumePrompt = useCallback(() => {
     setDeferredRecoverySaveId(recoveryResumePrompt?.save.id ?? null)
@@ -1459,6 +1526,17 @@ export default function App() {
     const nextConfig = { rows, cols }
     setConfig(nextConfig)
 
+    if (
+      pendingGalleryReplaySetup
+      && (
+        !isGalleryReplaySetupCompatible(pendingGalleryReplaySetup, nextConfig)
+        || pendingGalleryReplayConfig?.rows !== nextConfig.rows
+        || pendingGalleryReplayConfig?.cols !== nextConfig.cols
+      )
+    ) {
+      clearGalleryChallengeState()
+    }
+
     if (appState !== 'imageLoaded') {
       return
     }
@@ -1471,7 +1549,14 @@ export default function App() {
         syncState: false,
       })
     }
-  }, [appState, buildCropDraftSnapshot, commitCropDraftSnapshot])
+  }, [
+    appState,
+    buildCropDraftSnapshot,
+    clearGalleryChallengeState,
+    commitCropDraftSnapshot,
+    pendingGalleryReplayConfig,
+    pendingGalleryReplaySetup,
+  ])
 
   const handleEnterApp = useCallback(() => {
     releaseAppFocus()
@@ -1503,15 +1588,32 @@ export default function App() {
     transform: CropDraftSnapshot['transform']
     useFullImage: boolean
   }) => {
-    confirmedCropSnapshotRef.current = confirmedCropDraft
+    const completedCropSnapshot = confirmedCropDraft
       ? buildCropDraftSnapshot(confirmedCropDraft)
       : cropDraftSnapshotRef.current
+    const canStartGalleryChallenge = Boolean(
+      pendingGalleryReplaySetup
+      && pendingGalleryChallengeTarget
+      && isGalleryReplaySetupCompatible(pendingGalleryReplaySetup, config)
+      && pendingGalleryReplayConfig?.rows === config.rows
+      && pendingGalleryReplayConfig?.cols === config.cols
+      && (completedCropSnapshot?.useFullImage ?? false) === pendingGalleryReplayUseFullImage
+      && areCropTransformsEquivalent(completedCropSnapshot?.transform ?? null, replayCropTransform)
+    )
+
+    confirmedCropSnapshotRef.current = completedCropSnapshot
     beginSession()
     resetRunArtifacts()
     commitCropDraftSnapshot(null, {
       immediate: true,
     })
     setCroppedImage(croppedSrc)
+    setActiveGalleryReplaySetup(canStartGalleryChallenge ? pendingGalleryReplaySetup : null)
+    setActiveGalleryChallengeTarget(canStartGalleryChallenge ? pendingGalleryChallengeTarget : null)
+    setPendingGalleryReplayConfig(null)
+    setPendingGalleryReplayUseFullImage(null)
+    setPendingGalleryReplaySetup(null)
+    setPendingGalleryChallengeTarget(null)
     restartPuzzleRun()
     setAppState('playing')
   }
@@ -1563,6 +1665,7 @@ export default function App() {
         sourceImage: completedCropSnapshot?.image ?? image ?? croppedImage ?? null,
         cropTransform: completedCropSnapshot?.transform ?? null,
         useFullImage: completedCropSnapshot?.useFullImage ?? false,
+        replaySetup: stats.replaySetup,
       }
     },
     [croppedImage, image]
@@ -1731,28 +1834,97 @@ export default function App() {
     }
   }, [handleImageLoaded])
 
-  const handleReplayGalleryEntry = useCallback((entry: SolvedGalleryEntry) => {
+  const handleReplayGalleryEntry = useCallback((entry: SolvedGalleryEntry, mode: GalleryReplayMode = 'motif') => {
     const replayImage = entry.sourceImage ?? entry.previewImage
     if (!replayImage) {
       setGalleryError('Dieses Galerie-Bild kann nicht erneut gespielt werden, weil kein Bild gespeichert ist.')
       return
     }
 
+    const replayTransform = entry.cropTransform ?? createDefaultCropTransform()
+    const replaySetup = isGalleryReplaySetupCompatible(entry.replaySetup, entry.config)
+      ? entry.replaySetup
+      : null
+
+    if (mode === 'run' && replaySetup) {
+      scrollViewportToTop()
+      const sessionId = beginSession()
+      resetRunArtifacts()
+      clearGalleryChallengeState()
+      setGalleryError(null)
+
+      void (async () => {
+        try {
+          const directCroppedImage = await createGalleryReplayCroppedImage(
+            replayImage,
+            replayTransform,
+            entry.useFullImage ?? false
+          )
+          if (activeSessionRef.current !== sessionId) {
+            return
+          }
+
+          confirmedCropSnapshotRef.current = {
+            version: 1,
+            updatedAt: Date.now(),
+            image: replayImage,
+            config: entry.config,
+            isRandomImage: false,
+            randomImageSource: null,
+            transform: replayTransform,
+            useFullImage: entry.useFullImage ?? false,
+          }
+          commitCropDraftSnapshot(null, {
+            immediate: true,
+          })
+          setReplayCropTransform(null)
+          setPendingGalleryReplayConfig(null)
+          setPendingGalleryReplayUseFullImage(null)
+          setPendingGalleryReplaySetup(null)
+          setPendingGalleryChallengeTarget(null)
+          setActiveGalleryReplaySetup(replaySetup)
+          setActiveGalleryChallengeTarget(createGalleryChallengeTarget(entry))
+          setConfig(entry.config)
+          setImage(replayImage)
+          setCroppedImage(directCroppedImage)
+          setIsRandomImage(false)
+          setRandomImageSource(null)
+          restartPuzzleRun()
+          setAppState('playing')
+        } catch (error) {
+          if (activeSessionRef.current === sessionId) {
+            setGalleryError(`Gespeicherter Lauf konnte nicht gestartet werden: ${getErrorMessage(error)}`)
+            clearGalleryChallengeState()
+          }
+        }
+      })()
+      return
+    }
+
     scrollViewportToTop()
     beginSession()
     resetRunArtifacts()
+    if (mode === 'motif') {
+      clearGalleryChallengeState()
+    }
     commitCropDraftSnapshot(writeCropDraftSessionSnapshot({
       image: replayImage,
       config: entry.config,
       isRandomImage: false,
       randomImageSource: null,
-      transform: entry.cropTransform ?? createDefaultCropTransform(),
-      useFullImage: entry.useFullImage ?? false,
+      transform: mode === 'run' ? replayTransform : createDefaultCropTransform(),
+      useFullImage: mode === 'run' ? (entry.useFullImage ?? false) : false,
     }), {
       immediate: true,
     })
     confirmedCropSnapshotRef.current = null
-    setReplayCropTransform(entry.cropTransform ?? null)
+    setReplayCropTransform(mode === 'run' ? (entry.cropTransform ?? null) : null)
+    setPendingGalleryReplayConfig(mode === 'run' ? entry.config : null)
+    setPendingGalleryReplayUseFullImage(mode === 'run' ? (entry.useFullImage ?? false) : null)
+    setPendingGalleryReplaySetup(mode === 'run' ? replaySetup : null)
+    setPendingGalleryChallengeTarget(mode === 'run' && replaySetup ? createGalleryChallengeTarget(entry) : null)
+    setActiveGalleryReplaySetup(null)
+    setActiveGalleryChallengeTarget(null)
     setConfig(entry.config)
     setImage(replayImage)
     setCroppedImage(null)
@@ -1760,7 +1932,14 @@ export default function App() {
     setRandomImageSource(null)
     setGalleryError(null)
     setAppState('imageLoaded')
-  }, [beginSession, commitCropDraftSnapshot, resetRunArtifacts, setGalleryError])
+  }, [
+    beginSession,
+    clearGalleryChallengeState,
+    commitCropDraftSnapshot,
+    resetRunArtifacts,
+    restartPuzzleRun,
+    setGalleryError,
+  ])
 
   const navigateToTopLevelScreen = useCallback(async (targetState: AppState) => {
     if (appState === 'playing') {
@@ -1773,6 +1952,7 @@ export default function App() {
     beginSession()
     audioService.stopTransientEffects()
     resetRunArtifacts()
+    clearGalleryChallengeState()
     setQuitHint(null)
     confirmedCropSnapshotRef.current = null
     setReplayCropTransform(null)
@@ -1782,7 +1962,7 @@ export default function App() {
     setCroppedImage(null)
     setAppState(targetState)
     void refreshSavedGames(false)
-  }, [appState, beginSession, flushPendingSave, refreshSavedGames, releaseAppFocus, resetRunArtifacts])
+  }, [appState, beginSession, clearGalleryChallengeState, flushPendingSave, refreshSavedGames, releaseAppFocus, resetRunArtifacts])
 
   const handleReset = useCallback(() => {
     navigateToTopLevelScreen('idle')
@@ -1853,6 +2033,7 @@ export default function App() {
     beginSession()
     audioService.stopTransientEffects()
     resetRunArtifacts()
+    clearGalleryChallengeState()
     setQuitHint(null)
     commitCropDraftSnapshot(writeCropDraftSessionSnapshot({
       image,
@@ -1871,6 +2052,7 @@ export default function App() {
   }, [
     appState,
     beginSession,
+    clearGalleryChallengeState,
     commitCropDraftSnapshot,
     config,
     flushPendingSave,
@@ -2322,6 +2504,7 @@ export default function App() {
     restartPuzzleRun()
     resetRunArtifacts()
     setConfig({ rows: nextDifficulty.rows, cols: nextDifficulty.cols })
+    clearGalleryChallengeState()
     setAppState('playing')
   }
 
@@ -2460,6 +2643,8 @@ export default function App() {
                       onHelpContextChange={setHelpContext}
                       registerAppContextMenuHandler={registerAppContextMenuHandler}
                       initialProgress={savedProgress}
+                      initialReplaySetup={activeGalleryReplaySetup}
+                      challengeTarget={activeGalleryChallengeTarget}
                       onProgressChange={handleProgressChange}
                       onWin={handleWin}
                       onQuit={handleReset}

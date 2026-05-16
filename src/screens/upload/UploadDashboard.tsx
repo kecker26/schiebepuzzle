@@ -4,7 +4,6 @@ import {
   PuzzleStats,
   SavedGameSummary,
   SolvedGallery,
-  SolvedGalleryEntry,
   ImageCollection,
 } from '../../types/index'
 import { motion } from 'motion/react'
@@ -36,6 +35,7 @@ import {
   getLatestGalleryEntry,
   getLatestSavedGame,
 } from './uploadUtils.ts'
+import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 
 interface UploadDashboardProps {
   activeWindow: Exclude<UploadWorkspaceWindow, 'start'>
@@ -66,7 +66,7 @@ interface UploadDashboardProps {
   onHistoryFilterChange: (filter: HistoryFilter) => void
   onRequestStatsReset: () => void
   onRequestGalleryReset: () => void
-  onReplayGalleryEntry: (entry: SolvedGalleryEntry) => void
+  onReplayGalleryEntry: GalleryReplayRequestHandler
   onDeleteGalleryEntries: (entryIds: string[]) => Promise<void>
   onUpdateGalleryTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
   onRetryGalleryTagging?: (entryId: string) => Promise<void>

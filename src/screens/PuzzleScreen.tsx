@@ -22,6 +22,8 @@ import PuzzleRenderer, {
 import { type PuzzleProgressMetrics } from '../services/PuzzleSolver.ts'
 import {
   type GhostPreviewMode,
+  GalleryChallengeTarget,
+  GalleryReplaySetup,
   OptimalStartMoveCountKind,
   PersistedPuzzleProgress,
   PuzzleConfig,
@@ -33,6 +35,7 @@ import {
   TileMoveAnimation,
   WinStats,
 } from '../types/index'
+import { isGalleryReplaySetupCompatible } from '../utils/galleryReplaySetup.ts'
 import { formatDifficultyLabel, shouldUseFastSuggestion } from '../utils/puzzleDifficulty.ts'
 import PuzzleLeftPanel from './puzzle/PuzzleLeftPanel.tsx'
 import PuzzleContextMenu, { type ContextMenuPosition } from './puzzle/PuzzleContextMenu.tsx'
@@ -43,6 +46,7 @@ import {
   CORRECT_TILE_PULSE_DURATION_MS,
   createMoveRecordForStates,
   EXACT_SOLUTION_NODE_LIMIT,
+  formatElapsedTime,
   GHOST_PREVIEW_MODE_DEFAULT,
   getKeyboardMoveDirection,
   GHOST_PREVIEW_WEIGHT_DEFAULT,
@@ -75,6 +79,8 @@ interface PuzzleScreenProps {
   onHelpContextChange: (context: HelpContext) => void
   registerAppContextMenuHandler: (handler: AppContextMenuHandler | null) => void
   initialProgress?: PersistedPuzzleProgress | null
+  initialReplaySetup?: GalleryReplaySetup | null
+  challengeTarget?: GalleryChallengeTarget | null
   onProgressChange?: (progress: PersistedPuzzleProgress | null) => void
   onWin: (stats: WinStats) => void
   onQuit: () => void
@@ -167,7 +173,9 @@ function createLoadingStartOptimalMoveCountState(): StartOptimalMoveCountState {
 }
 
 function normalizeStoredOptimalStartMoveCountResult(
-  progress: PersistedPuzzleProgress | null | undefined
+  progress: Pick<PersistedPuzzleProgress,
+    'optimalStartMoveCount' | 'optimalStartMoveCountKind' | 'optimalStartMoveCountSolverVersion'
+  > | null | undefined
 ): ExactStartMoveCountResult | undefined {
   if (!progress) return undefined
 
@@ -220,6 +228,37 @@ function normalizeStoredOptimalStartMoveCountResult(
   return undefined
 }
 
+function createReplaySetupFromStartState(
+  startState: PuzzleState | null,
+  shuffleMoves: string[],
+  optimalState: StartOptimalMoveCountState
+): GalleryReplaySetup | undefined {
+  if (!startState) return undefined
+
+  return {
+    version: 1,
+    startBoard: [...startState.board],
+    emptyIndex: startState.emptyIndex,
+    shuffleMoves: [...shuffleMoves],
+    optimalStartMoveCount: optimalState.status === 'loading' ? undefined : optimalState.moveCount,
+    optimalStartMoveCountKind: optimalState.status === 'loading' ? undefined : optimalState.status,
+    optimalStartMoveCountSolverVersion: optimalState.status === 'loading' ? undefined : optimalState.solverVersion,
+  }
+}
+
+function formatChallengeTargetSummary(challengeTarget: GalleryChallengeTarget | null | undefined): string | null {
+  if (!challengeTarget) return null
+
+  const optimalText =
+    typeof challengeTarget.optimalStartMoveCount === 'number'
+      ? challengeTarget.optimalStartMoveCountKind === 'lower-bound'
+        ? `min. ${challengeTarget.optimalStartMoveCount}`
+        : `${challengeTarget.optimalStartMoveCount}`
+      : 'unbekannt'
+
+  return `Vorlage: ${formatElapsedTime(challengeTarget.time)}, ${challengeTarget.actionMoves} Netto-Zuege, optimal ${optimalText}.`
+}
+
 export default function PuzzleScreen({
   image,
   config,
@@ -228,6 +267,8 @@ export default function PuzzleScreen({
   onHelpContextChange,
   registerAppContextMenuHandler,
   initialProgress,
+  initialReplaySetup,
+  challengeTarget,
   onProgressChange,
   onWin,
   onQuit,
@@ -237,6 +278,7 @@ export default function PuzzleScreen({
   const announceAccessibility = useAccessibilityAnnouncer()
   const puzzleRootRef = useRef<HTMLDivElement>(null)
   const initialProgressRef = useRef(initialProgress)
+  const initialReplaySetupRef = useRef(initialReplaySetup)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const celebrationCanvasRef = useRef<HTMLCanvasElement>(null)
   const boardViewportRef = useRef<HTMLDivElement>(null)
@@ -255,6 +297,7 @@ export default function PuzzleScreen({
   const solutionQueueRef = useRef<string[]>([])
   const lastSuggestionMoveRef = useRef<string | null>(null)
   const shuffleMovesRef = useRef<string[]>([])
+  const runStartStateRef = useRef<PuzzleState | null>(null)
   const knownSolutionMovesFromStartRef = useRef<string[]>([])
   const knownSolutionPathHashesRef = useRef<string[]>([])
   const knownSolutionPathIndexByHashRef = useRef<Map<string, number>>(new Map())
@@ -859,6 +902,7 @@ export default function PuzzleScreen({
     stopAnimationFrame()
     cancelSuggestionFlow()
     shuffleMovesRef.current = []
+    runStartStateRef.current = null
     knownSolutionMovesFromStartRef.current = []
     knownSolutionPathHashesRef.current = []
     knownSolutionPathIndexByHashRef.current = new Map()
@@ -896,7 +940,9 @@ export default function PuzzleScreen({
 
       const resolveStartOptimalMoveCount = async (
         startState: PuzzleState,
-        restoredProgress?: PersistedPuzzleProgress | null,
+        restoredProgress?: Pick<PersistedPuzzleProgress,
+          'optimalStartMoveCount' | 'optimalStartMoveCountKind' | 'optimalStartMoveCountSolverVersion'
+        > | null,
         allowFreshComputation: boolean = true
       ) => {
         const persistedOptimalStartMoveCount = normalizeStoredOptimalStartMoveCountResult(restoredProgress)
@@ -1041,6 +1087,7 @@ export default function PuzzleScreen({
 
         const restoredMoveCount = Math.max(0, restoredProgress.moveCount)
         const restoredStartState = restoreTrackedPath(restoredState, restoredProgress.solverProgress)
+        runStartStateRef.current = restoredStartState
         setPuzzleState(restoredState)
         startBoardIntro()
         setMoveCount(restoredMoveCount)
@@ -1067,9 +1114,35 @@ export default function PuzzleScreen({
         return
       }
 
+      const replaySetup = initialReplaySetupRef.current
+      if (replaySetup && isGalleryReplaySetupCompatible(replaySetup, config)) {
+        const replayState = engine.createStateFromBoard(initial, replaySetup.startBoard, replaySetup.emptyIndex)
+        if (replayState) {
+          const normalizedReplayState = normalizePuzzleState(replayState, config)
+          initializeTrackedPath(normalizedReplayState, replaySetup.shuffleMoves)
+          runStartStateRef.current = normalizedReplayState
+          setPuzzleState(normalizedReplayState)
+          startBoardIntro()
+          setMoveCount(0)
+          setElapsedTime(0)
+          setKnownStartSolutionMoveCount(replaySetup.shuffleMoves.length > 0 ? replaySetup.shuffleMoves.length : null)
+          setRunMetrics(createEmptyRunMetrics())
+          setMoveHistory([])
+          setRedoHistory([])
+          setIsPreviewVisible(true)
+          setIsGhostPreviewVisible(false)
+          setIsHeatmapOverlayVisible(false)
+          setGhostPreviewMode(GHOST_PREVIEW_MODE_DEFAULT)
+          setGhostPreviewWeight(GHOST_PREVIEW_WEIGHT_DEFAULT)
+          void resolveStartOptimalMoveCount(normalizedReplayState, replaySetup)
+          return
+        }
+      }
+
       const shuffledResult = engine.shuffleWithMoves(initial, 100)
       const shuffledState = normalizePuzzleState(shuffledResult.state, config)
       initializeTrackedPath(shuffledState, shuffledResult.moves)
+      runStartStateRef.current = shuffledState
       setPuzzleState(shuffledState)
       startBoardIntro()
       setMoveCount(0)
@@ -1097,6 +1170,7 @@ export default function PuzzleScreen({
       solutionQueueRef.current = []
       lastSuggestionMoveRef.current = null
       shuffleMovesRef.current = []
+      runStartStateRef.current = null
       knownSolutionMovesFromStartRef.current = []
       knownSolutionPathHashesRef.current = []
       knownSolutionPathIndexByHashRef.current = new Map()
@@ -1383,8 +1457,13 @@ export default function PuzzleScreen({
       time: elapsedTime,
       ...runMetrics,
       assistanceMode: deriveAssistanceModeFromRunMetrics(runMetrics),
+      replaySetup: createReplaySetupFromStartState(
+        runStartStateRef.current,
+        shuffleMovesRef.current,
+        optimalStartMoveCountState
+      ),
     })
-  }, [elapsedTime, moveCount, puzzleState?.isSolved, runMetrics, startWinCelebration])
+  }, [elapsedTime, moveCount, optimalStartMoveCountState, puzzleState?.isSolved, runMetrics, startWinCelebration])
 
   const isMoveAnimating = Boolean(moveAnimation)
   const isInteractionLocked = isMoveAnimating || isCelebratingWin || isComputingSuggestion
@@ -1424,6 +1503,7 @@ export default function PuzzleScreen({
       : optimalStartMoveCountState.status === 'loading'
         ? 'Optimal wird berechnet ...'
         : 'Optimal momentan nicht verfuegbar'
+  const challengeSummary = formatChallengeTargetSummary(challengeTarget)
 
   const resolveSuggestedQueue = async (
     puzzleSnapshot: PuzzleState
@@ -2112,6 +2192,7 @@ export default function PuzzleScreen({
               config={config}
               moveCount={moveCount}
             optimalMoveSummary={optimalMoveSummary}
+            challengeSummary={challengeSummary}
             elapsedTime={elapsedTime}
             progressMetrics={progressMetrics}
             hintPreview={hintPreview}

@@ -26,13 +26,14 @@ import {
   formatDate,
   getGalleryDifficultyFilterOptions,
 } from './uploadUtils.ts'
+import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 
 interface UploadGalleryPanelProps {
   gallery: SolvedGallery | null
   collections?: ImageCollection[]
   isLoadingGallery: boolean
   isLoadingCollections?: boolean
-  onReplayEntry: (entry: SolvedGalleryEntry) => void
+  onReplayEntry: GalleryReplayRequestHandler
   onDeleteEntries: (entryIds: string[]) => Promise<void>
   onUpdateTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
   onRetryTagging?: (entryId: string) => Promise<void>
@@ -43,7 +44,7 @@ interface UploadGalleryPanelProps {
   primaryFilterRef?: RefObject<HTMLSelectElement>
 }
 
-type GalleryAction = 'preview' | 'play-primary' | 'play-secondary' | 'details' | 'collect' | 'tag' | 'delete'
+type GalleryAction = 'preview' | 'play-primary' | 'details' | 'collect' | 'tag' | 'delete'
 
 interface PendingGalleryDeletionFocus {
   entryId: string
@@ -723,7 +724,6 @@ export default function UploadGalleryPanel({
                         key={entry.id}
                         entry={entry}
                         onOpenDetails={setSelectedEntry}
-                        onReplayEntry={onReplayEntry}
                         onCollectEntry={handleCollectEntryRequest}
                         onTagFilter={handleTagFilterRequest}
                         onRetryTagging={handleRetryTagging}
