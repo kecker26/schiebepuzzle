@@ -36,12 +36,16 @@ interface CropScreenProps {
   onFetchNewRandomImage?: () => void
   initialTransform?: CropTransform | null
   initialUseFullImage?: boolean
+  replayCropTransform?: CropTransform | null
   onSessionDraftChange?: (draft: {
     transform: CropTransform
     useFullImage: boolean
   }) => void
   onConfigChange: (rows: number, cols: number) => void
-  onCropConfirmed: (originalImageSrc: string) => void
+  onCropConfirmed: (croppedImageSrc: string, cropDraft: {
+    transform: CropTransform
+    useFullImage: boolean
+  }) => void
   onBack: () => void
   onGoToStartScreen: () => void
 }
@@ -58,6 +62,7 @@ export default function CropScreen({
   onFetchNewRandomImage,
   initialTransform = null,
   initialUseFullImage = false,
+  replayCropTransform = null,
   onSessionDraftChange,
   onConfigChange,
   onCropConfirmed,
@@ -78,6 +83,11 @@ export default function CropScreen({
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
   const [transform, setTransform] = useState<CropTransform>(() => initialTransform ?? createDefaultCropTransform())
   const [useFullImage, setUseFullImage] = useState(initialUseFullImage)
+  const transformRef = useRef(transform)
+  const useFullImageRef = useRef(useFullImage)
+  const replayCropTransformRef = useRef<CropTransform | null>(replayCropTransform)
+  const replayUseFullImageRef = useRef(initialUseFullImage)
+  const [isUsingOriginalCrop, setIsUsingOriginalCrop] = useState(Boolean(replayCropTransform))
   const [isDragging, setIsDragging] = useState(false)
   const [imageLoadError, setImageLoadError] = useState(false)
   const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null)
@@ -94,11 +104,29 @@ export default function CropScreen({
     : `${config.rows}x${config.cols}`
   const previewTileCount = config.rows * config.cols
   const fullImageRotationDeg = ((transform.rotationDeg % 360) + 360) % 360
+  const hasReplayCrop = replayCropTransform !== null
 
   useEffect(() => {
     initialTransformRef.current = initialTransform
     initialUseFullImageRef.current = initialUseFullImage
   }, [initialTransform, initialUseFullImage])
+
+  useEffect(() => {
+    if (replayCropTransformRef.current !== replayCropTransform) {
+      replayCropTransformRef.current = replayCropTransform
+      replayUseFullImageRef.current = initialUseFullImage
+    }
+
+    setIsUsingOriginalCrop(Boolean(replayCropTransform))
+  }, [initialUseFullImage, replayCropTransform])
+
+  useEffect(() => {
+    transformRef.current = transform
+  }, [transform])
+
+  useEffect(() => {
+    useFullImageRef.current = useFullImage
+  }, [useFullImage])
 
   useEffect(() => {
     let isCancelled = false
@@ -108,7 +136,10 @@ export default function CropScreen({
       if (isCancelled) return
       setSourceImage(loadedImage)
       setImageLoadError(false)
-      setTransform(initialTransformRef.current ?? createDefaultCropTransform())
+      const nextTransform = initialTransformRef.current ?? createDefaultCropTransform()
+      transformRef.current = nextTransform
+      useFullImageRef.current = initialUseFullImageRef.current
+      setTransform(nextTransform)
       setUseFullImage(initialUseFullImageRef.current)
       dragRef.current = null
       setIsDragging(false)
@@ -189,6 +220,7 @@ export default function CropScreen({
         Math.abs(next.offsetY - transform.offsetY) > 0.0001
 
       if (hasChanged) {
+        transformRef.current = next
         setTransform(next)
       }
     } catch {
@@ -229,9 +261,19 @@ export default function CropScreen({
 
   const handleConfirm = () => {
     if (!sourceImage) return
-    if (useFullImage) {
+    const confirmedTransform = transformRef.current
+    const confirmedUseFullImage = useFullImageRef.current
+
+    if (confirmedUseFullImage) {
+      const fullImageTransform = {
+        ...confirmedTransform,
+        rotationDeg: fullImageRotationDeg,
+      }
       if (fullImageRotationDeg === 0) {
-        onCropConfirmed(image)
+        onCropConfirmed(image, {
+          transform: fullImageTransform,
+          useFullImage: true,
+        })
         return
       }
 
@@ -241,9 +283,15 @@ export default function CropScreen({
           quality: 0.9,
           mimeType: 'image/jpeg',
         })
-        onCropConfirmed(rotated)
+        onCropConfirmed(rotated, {
+          transform: fullImageTransform,
+          useFullImage: true,
+        })
       } catch {
-        onCropConfirmed(image)
+        onCropConfirmed(image, {
+          transform: fullImageTransform,
+          useFullImage: true,
+        })
       }
       return
     }
@@ -252,7 +300,7 @@ export default function CropScreen({
       sourceImage,
       viewportSize.width,
       viewportSize.height,
-      transform
+      confirmedTransform
     ).transform
 
     try {
@@ -261,9 +309,15 @@ export default function CropScreen({
         quality: 0.9,
         mimeType: 'image/jpeg',
       })
-      onCropConfirmed(cropped)
+      onCropConfirmed(cropped, {
+        transform: bounded,
+        useFullImage: false,
+      })
     } catch {
-      onCropConfirmed(image)
+      onCropConfirmed(image, {
+        transform: bounded,
+        useFullImage: false,
+      })
     }
   }
 
@@ -281,10 +335,15 @@ export default function CropScreen({
   }
 
   const updateTransform = (updater: (prev: CropTransform) => CropTransform) => {
-    setTransform((prev) => applyClampedTransform(updater(prev)))
+    setIsUsingOriginalCrop(false)
+    const nextTransform = applyClampedTransform(updater(transformRef.current))
+    transformRef.current = nextTransform
+    setTransform(nextTransform)
   }
 
   const setCropMode = (nextUseFullImage: boolean) => {
+    setIsUsingOriginalCrop(false)
+    useFullImageRef.current = nextUseFullImage
     setUseFullImage(nextUseFullImage)
     dragRef.current = null
     setIsDragging(false)
@@ -297,7 +356,34 @@ export default function CropScreen({
   const handleResetCrop = () => {
     dragRef.current = null
     setIsDragging(false)
-    setTransform(applyClampedTransform(createDefaultCropTransform()))
+    setIsUsingOriginalCrop(false)
+    const nextTransform = applyClampedTransform(createDefaultCropTransform())
+    transformRef.current = nextTransform
+    setTransform(nextTransform)
+  }
+
+  const handleUseReplayCrop = () => {
+    if (!replayCropTransform) return
+
+    dragRef.current = null
+    setIsDragging(false)
+    useFullImageRef.current = replayUseFullImageRef.current
+    setUseFullImage(replayUseFullImageRef.current)
+    const nextTransform = applyClampedTransform(replayCropTransform)
+    transformRef.current = nextTransform
+    setTransform(nextTransform)
+    setIsUsingOriginalCrop(true)
+  }
+
+  const handleRecropReplayImage = () => {
+    dragRef.current = null
+    setIsDragging(false)
+    useFullImageRef.current = false
+    setUseFullImage(false)
+    const nextTransform = applyClampedTransform(createDefaultCropTransform())
+    transformRef.current = nextTransform
+    setTransform(nextTransform)
+    setIsUsingOriginalCrop(false)
   }
 
   const handleRotateCrop = (deltaDeg: number) => {
@@ -368,11 +454,14 @@ export default function CropScreen({
     dragRef.current.lastX = event.clientX
     dragRef.current.lastY = event.clientY
 
-    setTransform((prev) => ({
-      ...prev,
-      offsetX: prev.offsetX + deltaX,
-      offsetY: prev.offsetY + deltaY,
-    }))
+    setIsUsingOriginalCrop(false)
+    const nextTransform = {
+      ...transformRef.current,
+      offsetX: transformRef.current.offsetX + deltaX,
+      offsetY: transformRef.current.offsetY + deltaY,
+    }
+    transformRef.current = nextTransform
+    setTransform(nextTransform)
   }
 
   const handlePointerUp = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -584,6 +673,35 @@ export default function CropScreen({
 
         <ErrorToast message={randomImageError || null} />
 
+        {hasReplayCrop && (
+          <AnimatedReveal className="crop-replay-banner" level="medium">
+            <div className="crop-replay-banner-content">
+              <span className="crop-replay-banner-icon-shell" aria-hidden="true">
+                <CropScreenIcon name="refreshCw" className="crop-replay-banner-icon" />
+              </span>
+              <span className="crop-replay-banner-text">Replay</span>
+            </div>
+            <div className="crop-replay-banner-actions">
+              <button
+                type="button"
+                className={`crop-replay-banner-button${isUsingOriginalCrop ? ' is-active' : ''}`}
+                onClick={handleUseReplayCrop}
+                disabled={!sourceImage}
+              >
+                Original
+              </button>
+              <button
+                type="button"
+                className={`crop-replay-banner-button${!isUsingOriginalCrop ? ' is-active' : ''}`}
+                onClick={handleRecropReplayImage}
+                disabled={!sourceImage}
+              >
+                Neu
+              </button>
+            </div>
+          </AnimatedReveal>
+        )}
+
         <div className="crop-side-panel">
           <AnimatedStaggerGroup className="crop-controls" level="medium">
             <AnimatedReveal className="config-selector crop-control-block" level="medium">
@@ -658,83 +776,6 @@ export default function CropScreen({
             </select>
           </AnimatedReveal>
 
-          {!useFullImage && (
-            <AnimatedReveal className="crop-control-block" level="medium">
-              <label htmlFor="crop-zoom" className="crop-control-label">
-                <span className="crop-control-label-head">
-                  <span className="crop-control-label-icon-shell" aria-hidden="true">
-                    <CropScreenIcon name="zoomIn" className="crop-control-label-icon" />
-                  </span>
-                  <span>
-                    Zoom: {zoomPercent > 0 ? `+${zoomPercent}%` : `${zoomPercent}%`} ({transform.zoom.toFixed(2)}x)
-                  </span>
-                </span>
-              </label>
-              <input
-                id="crop-zoom"
-                type="range"
-                min={0}
-                max={300}
-                step={1}
-                value={zoomPercent}
-                onChange={(event) => handleZoomPercentChange(Number(event.target.value))}
-                disabled={!sourceImage}
-              />
-            </AnimatedReveal>
-          )}
-
-          <AnimatedReveal className="crop-control-block" level="medium">
-            <label className="crop-control-label">
-              <span className="crop-control-label-head">
-                <span className="crop-control-label-icon-shell" aria-hidden="true">
-                  <CropScreenIcon name="rotateCw" className="crop-control-label-icon" />
-                </span>
-                <span>Rotation:</span>
-              </span>
-            </label>
-            <AnimatedStaggerGroup
-              className="crop-rotation-buttons"
-              level="subtle"
-              onKeyDown={handleDirectionalFocusNavigation}
-            >
-              <AnimatedButton
-                className="secondary"
-                onClick={() => handleRotateCrop(-90)}
-                disabled={!sourceImage}
-                reveal
-                revealLevel="subtle"
-              >
-                <span className="crop-inline-button-content">
-                  <CropScreenIcon name="rotateCcw" className="crop-inline-button-icon" />
-                  <span>-90 Grad</span>
-                </span>
-              </AnimatedButton>
-              <AnimatedButton
-                className="secondary"
-                onClick={() => handleRotateCrop(90)}
-                disabled={!sourceImage}
-                reveal
-                revealLevel="subtle"
-              >
-                <span className="crop-inline-button-content">
-                  <CropScreenIcon name="rotateCw" className="crop-inline-button-icon" />
-                  <span>+90 Grad</span>
-                </span>
-              </AnimatedButton>
-              <AnimatedButton
-                className="secondary"
-                onClick={handleResetCrop}
-                disabled={!sourceImage}
-                reveal
-                revealLevel="subtle"
-              >
-                <span className="crop-inline-button-content">
-                  <CropScreenIcon name="refreshCw" className="crop-inline-button-icon" />
-                  <span>Reset</span>
-                </span>
-              </AnimatedButton>
-            </AnimatedStaggerGroup>
-          </AnimatedReveal>
           </AnimatedStaggerGroup>
 
           <AnimatedReveal className="crop-hint-row" level="medium">
@@ -841,6 +882,61 @@ export default function CropScreen({
             <div className="crop-loading">Bild wird geladen ...</div>
           )}
         </AnimatedReveal>
+
+        {sourceImage && (
+          <AnimatedReveal className="crop-image-toolbar" level="medium">
+            {!useFullImage && (
+              <label htmlFor="crop-zoom" className="crop-toolbar-zoom">
+                <span className="crop-toolbar-label">
+                  <CropScreenIcon name="zoomIn" className="crop-toolbar-icon" />
+                  <span>{zoomPercent > 0 ? `+${zoomPercent}%` : `${zoomPercent}%`}</span>
+                </span>
+                <input
+                  id="crop-zoom"
+                  type="range"
+                  min={0}
+                  max={300}
+                  step={1}
+                  value={zoomPercent}
+                  onChange={(event) => handleZoomPercentChange(Number(event.target.value))}
+                  disabled={!sourceImage}
+                />
+              </label>
+            )}
+            <div className="crop-toolbar-rotate" onKeyDown={handleDirectionalFocusNavigation}>
+              <AnimatedButton
+                className="secondary crop-toolbar-btn"
+                onClick={() => handleRotateCrop(-90)}
+                disabled={!sourceImage}
+                reveal
+                revealLevel="subtle"
+              >
+                <CropScreenIcon name="rotateCcw" className="crop-toolbar-icon" />
+                <span>-90°</span>
+              </AnimatedButton>
+              <AnimatedButton
+                className="secondary crop-toolbar-btn"
+                onClick={() => handleRotateCrop(90)}
+                disabled={!sourceImage}
+                reveal
+                revealLevel="subtle"
+              >
+                <CropScreenIcon name="rotateCw" className="crop-toolbar-icon" />
+                <span>+90°</span>
+              </AnimatedButton>
+              <AnimatedButton
+                className="secondary crop-toolbar-btn"
+                onClick={handleResetCrop}
+                disabled={!sourceImage}
+                reveal
+                revealLevel="subtle"
+              >
+                <CropScreenIcon name="refreshCw" className="crop-toolbar-icon" />
+                <span>Reset</span>
+              </AnimatedButton>
+            </div>
+          </AnimatedReveal>
+        )}
 
         <AnimatedStaggerGroup className="crop-actions" level="subtle" onKeyDown={handleDirectionalFocusNavigation}>
           {isRandomImage && onFetchNewRandomImage && (

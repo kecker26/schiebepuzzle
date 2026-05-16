@@ -17,6 +17,8 @@ interface UploadGalleryDetailDialogProps {
   entry: GalleryDisplayEntry
   onReplayEntry: (entry: SolvedGalleryEntry) => void
   onCollectEntry?: (entry: GalleryDisplayEntry) => void
+  onRetryTagging?: (entry: SolvedGalleryEntry) => Promise<void>
+  isRetryingTagging?: boolean
   onClose: () => void
 }
 
@@ -28,6 +30,8 @@ export default function UploadGalleryDetailDialog({
   entry,
   onReplayEntry,
   onCollectEntry,
+  onRetryTagging,
+  isRetryingTagging = false,
   onClose,
 }: UploadGalleryDetailDialogProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -59,6 +63,7 @@ export default function UploadGalleryDetailDialog({
   const replayActions = getGalleryReplayActions(entry)
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
+  const canRetryAiTagging = aiTagging?.status === 'failed' || aiTagging?.status === 'unavailable'
   const aiCollectionSuggestions = aiTagging?.collectionSuggestions ?? []
   const timelineEntries = motifReplaySummary.allEntries.length > 0
     ? motifReplaySummary.allEntries
@@ -189,6 +194,19 @@ export default function UploadGalleryDetailDialog({
                       ? 'Gemini-Tagging ist noch nicht konfiguriert.'
                       : 'Gemini konnte dieses Motiv noch nicht taggen.'}
                 </p>
+                {canRetryAiTagging ? (
+                  <button
+                    type="button"
+                    className="secondary gallery-detail-ai-retry"
+                    onClick={() => {
+                      void onRetryTagging?.(representativeEntry)
+                    }}
+                    disabled={isRetryingTagging || !onRetryTagging}
+                    title={aiTagging.error ?? undefined}
+                  >
+                    {isRetryingTagging ? 'Prueft ...' : 'KI-Tagging erneut versuchen'}
+                  </button>
+                ) : null}
               </div>
 
               {aiTags.length > 0 ? (
@@ -321,7 +339,9 @@ export default function UploadGalleryDetailDialog({
                         onKeyDown={handleActionKeyDown}
                         aria-label={`Lauf ${formatDifficultyLabel(timelineEntry.config)} vom ${formatDate(timelineEntry.completedAt)} spielen`}
                       >
-                        {canReplayTimelineEntry ? 'Diesen Lauf' : 'Archiv'}
+                        {canReplayTimelineEntry
+                          ? (timelineEntry.cropTransform ? 'Diesen Lauf' : 'Motiv spielen')
+                          : 'Archiv'}
                       </button>
                     </article>
                   )

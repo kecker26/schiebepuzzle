@@ -1,3 +1,5 @@
+import type { CropTransform } from '../services/CropService.ts'
+
 // App State Machine
 export type AppState = 'welcome' | 'idle' | 'imageLoaded' | 'playing' | 'solved'
 
@@ -175,6 +177,8 @@ export interface SolvedGalleryEntry {
   hasDetailedProfile: boolean
   tags?: GalleryImageTag[]
   aiTagging?: GalleryAiTagging
+  cropTransform?: CropTransform | null
+  useFullImage?: boolean
 }
 
 export type GalleryTagSource = 'gemini' | 'imported'
@@ -394,11 +398,21 @@ export interface RecordSolvedGalleryEntryPayload {
   actionMoves: number
   assistanceMode: PuzzleAssistanceMode
   hasDetailedProfile: boolean
+  cropTransform?: CropTransform | null
+  useFullImage?: boolean
 }
 
 export interface AnalyzeSolvedGalleryEntryResult {
   gallery: SolvedGallery
   entry: SolvedGalleryEntry
+}
+
+export type UpdateSolvedGalleryTagsAction = 'rename' | 'remove'
+
+export interface UpdateSolvedGalleryTagsPayload {
+  action: UpdateSolvedGalleryTagsAction
+  sourceLabel: string
+  targetLabel?: string
 }
 
 export interface RecordPuzzleCompletionResult {

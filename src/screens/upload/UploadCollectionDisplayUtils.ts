@@ -1,4 +1,5 @@
 import { ImageCollection, SolvedGalleryEntry } from '../../types/index'
+import { getGalleryMotifKey } from './UploadGalleryDisplayUtils.ts'
 
 export interface CollectionDisplayEntry {
   collection: ImageCollection
@@ -24,16 +25,24 @@ export function buildCollectionDisplayEntries(
   const galleryEntryMap = buildGalleryEntryMap(galleryEntries)
 
   return collections.map((collection) => {
-    const entries = collection.imageIds
+    const matchedEntries = collection.imageIds
       .map((imageId) => galleryEntryMap.get(imageId) ?? null)
       .filter((entry): entry is SolvedGalleryEntry => entry !== null)
       .sort((a, b) => parseTimestamp(b.completedAt) - parseTimestamp(a.completedAt))
+    const seenMotifs = new Set<string>()
+    const entries = matchedEntries.filter((entry) => {
+      const motifKey = getGalleryMotifKey(entry)
+      if (seenMotifs.has(motifKey)) return false
+
+      seenMotifs.add(motifKey)
+      return true
+    })
 
     return {
       collection,
       entries,
       previewEntry: entries[0] ?? null,
-      missingImageCount: Math.max(0, collection.imageIds.length - entries.length),
+      missingImageCount: Math.max(0, collection.imageIds.length - matchedEntries.length),
     }
   })
 }

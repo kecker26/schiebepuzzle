@@ -3412,12 +3412,14 @@
 }
 
 .gallery-toolbar-tag-collection,
+.gallery-toolbar-tag-manager,
 .gallery-toolbar-reset {
   width: 100%;
   min-width: 0;
 }
 
-.gallery-toolbar-tag-collection {
+.gallery-toolbar-tag-collection,
+.gallery-toolbar-tag-manager {
   min-height: 48px;
 }
 
@@ -3623,6 +3625,7 @@
 
 .gallery-card-ai-tags,
 .gallery-detail-ai-tags,
+.gallery-card-ai-status-row,
 .gallery-card-ai-suggestions,
 .gallery-detail-ai-suggestions {
   display: flex;
@@ -3633,6 +3636,7 @@
 
 .gallery-card-ai-tags button,
 .gallery-card-ai-tags span,
+.gallery-card-ai-retry,
 .gallery-detail-ai-tags span,
 .gallery-card-ai-status,
 .gallery-detail-ai-suggestions span {
@@ -3648,7 +3652,8 @@
   overflow-wrap: anywhere;
 }
 
-.gallery-card-ai-tags button {
+.gallery-card-ai-tags button,
+.gallery-card-ai-retry {
   appearance: none;
   cursor: pointer;
   transition:
@@ -3659,19 +3664,23 @@
 }
 
 .gallery-card-ai-tags button:hover:not(:disabled),
-.gallery-card-ai-tags button:focus-visible {
+.gallery-card-ai-tags button:focus-visible,
+.gallery-card-ai-retry:hover:not(:disabled),
+.gallery-card-ai-retry:focus-visible {
   border-color: color-mix(in srgb, var(--primary-color) 54%, var(--chip-border));
   color: color-mix(in srgb, var(--primary-color) 86%, var(--text-main));
   background: color-mix(in srgb, var(--primary-color) 15%, transparent);
   transform: translateY(-1px);
 }
 
-.gallery-card-ai-tags button:focus-visible {
+.gallery-card-ai-tags button:focus-visible,
+.gallery-card-ai-retry:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
 
-.gallery-card-ai-tags button:disabled {
+.gallery-card-ai-tags button:disabled,
+.gallery-card-ai-retry:disabled {
   cursor: default;
 }
 
@@ -3680,12 +3689,405 @@
   color: var(--text-muted);
 }
 
+.gallery-card-ai-retry {
+  color: var(--text-main);
+  border-color: color-mix(in srgb, var(--primary-color) 46%, var(--chip-border));
+  background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+}
+
 .gallery-card-ai-suggestion {
   min-height: 30px;
   padding: 7px 10px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 900;
+}
+
+.gallery-detail-ai-retry {
+  justify-self: start;
+}
+
+.gallery-tag-manager-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(2, 6, 23, 0.62);
+  backdrop-filter: blur(12px);
+}
+
+.gallery-tag-manager-dialog {
+  width: min(780px, 100%);
+  max-height: min(82vh, 760px);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 24px;
+  border: 1px solid var(--card-border);
+  background: var(--panel-bg);
+  box-shadow: var(--panel-shadow-hover);
+}
+
+.gallery-tag-manager-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gallery-tag-manager-header h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.gallery-tag-manager-header p {
+  margin: 0;
+  max-width: 360px;
+  color: var(--text-secondary);
+  text-align: right;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.gallery-tag-manager-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.gallery-tag-manager-search-field {
+  min-width: 0;
+}
+
+.gallery-tag-manager-search-field input,
+.gallery-tag-manager-detail-field input {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--input-border);
+  color: var(--text-main);
+  background: var(--input-bg);
+  font: inherit;
+  font-weight: 800;
+}
+
+.gallery-tag-manager-search-field input {
+  padding: 10px 12px 10px 36px;
+  background:
+    linear-gradient(transparent, transparent),
+    var(--input-bg);
+}
+
+.gallery-tag-manager-search-field {
+  position: relative;
+}
+
+.gallery-tag-manager-search-field::before {
+  content: "⌕";
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 18px;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.gallery-tag-manager-detail-field input {
+  padding: 10px 12px;
+}
+
+.gallery-tag-manager-search-field input:focus,
+.gallery-tag-manager-detail-field input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: var(--focus-ring);
+}
+
+.gallery-tag-manager-sort-button {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.gallery-tag-manager-body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(200px, 0.45fr) minmax(0, 0.55fr);
+  gap: 14px;
+}
+
+.gallery-tag-manager-list,
+.gallery-tag-manager-detail {
+  min-height: 0;
+  max-height: min(50vh, 440px);
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: color-mix(in srgb, var(--secondary-bg) 70%, transparent);
+}
+
+.gallery-tag-manager-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 10px;
+}
+
+.gallery-tag-manager-list::-webkit-scrollbar,
+.gallery-tag-manager-detail::-webkit-scrollbar {
+  width: 10px;
+}
+
+.gallery-tag-manager-list::-webkit-scrollbar-thumb,
+.gallery-tag-manager-detail::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-color) 36%, transparent);
+  background-clip: padding-box;
+}
+
+.gallery-tag-manager-list-item {
+  appearance: none;
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 18%, var(--card-border));
+  color: var(--text-main);
+  text-align: left;
+  background: color-mix(in srgb, var(--panel-bg) 78%, transparent);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.gallery-tag-manager-list-item:hover:not(:disabled),
+.gallery-tag-manager-list-item:focus-visible,
+.gallery-tag-manager-list-item.is-active {
+  border-color: color-mix(in srgb, var(--primary-color) 58%, var(--card-border));
+  background: color-mix(in srgb, var(--primary-color) 14%, var(--panel-bg));
+}
+
+.gallery-tag-manager-list-item:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.gallery-tag-manager-list-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.gallery-tag-manager-list-item-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gallery-tag-manager-list-item-main strong,
+.gallery-tag-manager-detail-header h4 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gallery-tag-manager-list-item-main strong {
+  font-size: 13px;
+}
+
+.gallery-tag-manager-list-item-main span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.gallery-tag-manager-list-item-meter,
+.gallery-tag-manager-detail-meter {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border-color) 42%, transparent);
+}
+
+.gallery-tag-manager-list-item-meter span,
+.gallery-tag-manager-detail-meter span {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary-color), color-mix(in srgb, var(--primary-color) 62%, var(--success-color)));
+}
+
+.gallery-tag-manager-detail {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 16px;
+}
+
+.gallery-tag-manager-back-button {
+  display: none;
+  justify-self: start;
+}
+
+.gallery-tag-manager-detail-header {
+  display: grid;
+  gap: 6px;
+}
+
+.gallery-tag-manager-detail-header h4 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 26px;
+  line-height: 1.05;
+}
+
+.gallery-tag-manager-detail-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.gallery-tag-manager-detail-frequency {
+  display: grid;
+  gap: 8px;
+}
+
+.gallery-tag-manager-detail-frequency div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gallery-tag-manager-detail-frequency span,
+.gallery-tag-manager-detail-field span {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gallery-tag-manager-detail-frequency strong {
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.gallery-tag-manager-detail-field {
+  display: grid;
+  gap: 7px;
+}
+
+.gallery-tag-manager-detail-similar,
+.gallery-tag-manager-confirm-remove,
+.gallery-tag-manager-feedback,
+.gallery-tag-manager-empty {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--card-border);
+  background: color-mix(in srgb, var(--panel-bg) 70%, transparent);
+}
+
+.gallery-tag-manager-detail-similar div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gallery-tag-manager-detail-similar div span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--primary-color) 74%, var(--text-main));
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  font-size: 11px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.gallery-tag-manager-detail-similar button {
+  justify-self: start;
+}
+
+.gallery-tag-manager-confirm-remove {
+  border-color: color-mix(in srgb, var(--danger-color) 40%, var(--card-border));
+  background: color-mix(in srgb, var(--danger-color) 10%, transparent);
+}
+
+.gallery-tag-manager-confirm-remove strong {
+  color: var(--text-main);
+}
+
+.gallery-tag-manager-confirm-remove p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.gallery-tag-manager-confirm-remove div,
+.gallery-tag-manager-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gallery-tag-manager-confirm-remove button {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--button-border);
+  color: var(--text-main);
+  background: var(--button-bg);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.gallery-tag-manager-confirm-remove button.danger {
+  border-color: color-mix(in srgb, var(--danger-color) 60%, var(--button-border));
+  background: color-mix(in srgb, var(--danger-color) 18%, var(--button-bg));
+}
+
+.gallery-tag-manager-confirm-remove button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.gallery-tag-manager-feedback {
+  border-color: color-mix(in srgb, var(--success-color) 40%, var(--card-border));
+  color: color-mix(in srgb, var(--success-color) 72%, var(--text-main));
+  background: color-mix(in srgb, var(--success-color) 12%, transparent);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.gallery-tag-manager-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.gallery-tag-manager-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .workspace-window-shell.is-gallery {
@@ -3801,8 +4203,78 @@
   }
 
   .gallery-toolbar-tag-collection,
+  .gallery-toolbar-tag-manager,
   .gallery-toolbar-reset {
     width: 100%;
+  }
+
+  .gallery-tag-manager-overlay {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .gallery-tag-manager-dialog {
+    max-height: none;
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .gallery-tag-manager-header {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .gallery-tag-manager-header p {
+    max-width: none;
+    text-align: left;
+  }
+
+  .gallery-tag-manager-search {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-tag-manager-sort-button {
+    width: 100%;
+  }
+
+  .gallery-tag-manager-body {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-tag-manager-body.is-detail-open .gallery-tag-manager-list {
+    display: none;
+  }
+
+  .gallery-tag-manager-body:not(.is-detail-open) .gallery-tag-manager-detail {
+    display: none;
+  }
+
+  .gallery-tag-manager-list,
+  .gallery-tag-manager-detail {
+    max-height: none;
+  }
+
+  .gallery-tag-manager-back-button {
+    display: inline-flex;
+  }
+
+  .gallery-tag-manager-detail-header h4 {
+    font-size: 22px;
+  }
+
+  .gallery-tag-manager-detail-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-tag-manager-actions {
+    justify-content: stretch;
+  }
+
+  .gallery-tag-manager-actions button {
+    flex: 1 1 100%;
   }
 }
 

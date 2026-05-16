@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { SolvedGalleryEntry } from '../types/index.ts'
-import { buildGalleryDisplayEntries } from '../screens/upload/UploadGalleryDisplayUtils.ts'
+import {
+  buildGalleryDisplayEntries,
+  getUniqueGalleryMotifEntryIds,
+} from '../screens/upload/UploadGalleryDisplayUtils.ts'
 
 function createGalleryEntry(
   id: string,
@@ -153,5 +156,29 @@ describe('UploadGalleryDisplayUtils', () => {
       bestMovesEntry: null,
       bestCleanTimeEntry: null,
     })
+  })
+
+  it('dedupliziert Galerie-Eintraege motivweit fuer Sammlungen', () => {
+    const ids = getUniqueGalleryMotifEntryIds([
+      createGalleryEntry('motif-a-latest', {
+        completedAt: '2026-04-24T12:00:00.000Z',
+        previewImage: 'preview-a',
+        sourceImage: 'source-a',
+        config: { rows: 4, cols: 4 },
+      }),
+      createGalleryEntry('motif-a-other-run', {
+        completedAt: '2026-04-23T12:00:00.000Z',
+        previewImage: 'preview-a',
+        sourceImage: 'source-a',
+        config: { rows: 5, cols: 5 },
+      }),
+      createGalleryEntry('motif-b', {
+        completedAt: '2026-04-22T12:00:00.000Z',
+        previewImage: 'preview-b',
+        sourceImage: 'source-b',
+      }),
+    ])
+
+    expect(ids).toEqual(['motif-a-latest', 'motif-b'])
   })
 })

@@ -59,6 +59,7 @@
 - Bei Galerie-KI-Tagging `GEMINI_API_KEY` serverseitig halten, grosse Bilder nicht ungeprueft senden und Fehler/fehlende Keys als nicht-blockierenden Galerie-Status speichern.
 - Nach Projektstruktur-, Workflow-, Befehls-, Persistenz- oder Architektur-Aenderungen diese `AGENTS.md` immer pruefen und bei Bedarf im selben Arbeitsgang aktualisieren.
 - Nach Aenderungen an Funktionsumfang, Setup, Befehlen, Datenhaltung, API, Projektstruktur oder Verifikation auch `README.md` immer pruefen und bei Bedarf im selben Arbeitsgang aktualisieren.
+- Nach jeder Aenderung dem Nutzer kurz erklaeren, wie diese Aenderungen getestet werden koennen.
 - Vor groesseren, riskanteren oder laenger laufenden Aenderungen den Nutzer fragen, ob dafuer ein neuer Git-Branch erstellt werden soll; bei kleinen, klar begrenzten Doku- oder Bugfix-Aenderungen ist ein Branch nicht noetig.
 - Bevorzuge kleine, lokale Fixes statt breiter Refactors.
 - Nach abgeschlossenen Codeaenderungen den Nutzer fragen, ob die Aenderungen nach GitHub gepusht werden sollen; wenn der Nutzer bereits ausdruecklich Push/Upload verlangt hat, committen und pushen.
