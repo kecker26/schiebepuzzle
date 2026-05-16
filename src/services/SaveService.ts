@@ -53,6 +53,12 @@ export async function updateSavedGame(
   })
 }
 
+export async function generateSavedGameTitle(id: string): Promise<SavedGameSummary> {
+  return requestJson<SavedGameSummary>(`/api/saves/${encodeURIComponent(id)}/title`, {
+    method: 'POST',
+  })
+}
+
 export async function deleteSavedGame(id: string): Promise<void> {
   await requestOk(`/api/saves/${encodeURIComponent(id)}`, {
     method: 'DELETE',
