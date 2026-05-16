@@ -57,11 +57,17 @@ function createDisplayEntry(
 }
 
 describe('galleryReplayActions', () => {
-  it('liefert eindeutige Replay-Ziele in sinnvoller Reihenfolge', () => {
+  it('liefert nur den primaeren Wiedereinstieg fuer die Motivkarte', () => {
     const current = createEntry('current', {
       completedAt: '2026-04-24T12:00:00.000Z',
       time: 120,
       moves: 42,
+      cropTransform: {
+        zoom: 1.2,
+        rotationDeg: 0,
+        offsetX: 10,
+        offsetY: -4,
+      },
     })
     const bestTime = createEntry('best-time', {
       completedAt: '2026-04-22T12:00:00.000Z',
@@ -85,9 +91,7 @@ describe('galleryReplayActions', () => {
     displayEntry.motifReplaySummary.bestCleanTimeEntry = bestClean
 
     expect(getGalleryReplayActions(displayEntry)).toMatchObject([
-      { id: 'current', label: 'Nochmal spielen', entry: { id: 'current' } },
-      { id: 'best-time', label: 'Bestzeit spielen', entry: { id: 'best-time' } },
-      { id: 'best-clean-time', label: 'Clean spielen', entry: { id: 'best-clean' } },
+      { id: 'current', label: 'Spielen', entry: { id: 'current' } },
     ])
   })
 
@@ -111,7 +115,32 @@ describe('galleryReplayActions', () => {
     displayEntry.motifReplaySummary.bestMovesEntry = latestReplayable
 
     expect(getGalleryReplayActions(displayEntry)).toMatchObject([
-      { id: 'latest-replayable', label: 'Letzten Replay-Lauf', entry: { id: 'latest-replayable' } },
+      { id: 'latest-replayable', label: 'Spielen', entry: { id: 'latest-replayable' } },
+    ])
+  })
+
+  it('beschreibt echte Challenge-Starts als gespeicherten Startzustand', () => {
+    const current = createEntry('current', {
+      replaySetup: {
+        version: 1,
+        startBoard: [1, 2, 0, 3],
+        emptyIndex: 3,
+        shuffleMoves: ['tile-1'],
+        optimalStartMoveCount: 1,
+        optimalStartMoveCountKind: 'exact',
+      },
+      config: { rows: 2, cols: 2 },
+    })
+
+    const displayEntry = createDisplayEntry(current, [current], [{ rows: 2, cols: 2 }])
+
+    expect(getGalleryReplayActions(displayEntry)).toMatchObject([
+      {
+        id: 'current',
+        label: 'Spielen',
+        entry: { id: 'current' },
+        description: expect.stringContaining('gespeicherten Startzustand'),
+      },
     ])
   })
 })

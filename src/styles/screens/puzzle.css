@@ -245,6 +245,39 @@
   white-space: nowrap;
 }
 
+.puzzle-challenge-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 34%, rgba(96, 165, 250, 0.24));
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--image-accent-soft) 28%, rgba(37, 99, 235, 0.18)),
+      rgba(10, 18, 34, 0.62)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 28px color-mix(in srgb, var(--image-accent-solid) 10%, rgba(2, 6, 23, 0.2));
+}
+
+.puzzle-challenge-badge-label {
+  color: var(--image-accent-solid);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.puzzle-challenge-badge-detail {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .puzzle-kicker,
 .puzzle-preview-kicker {
   display: inline-flex;

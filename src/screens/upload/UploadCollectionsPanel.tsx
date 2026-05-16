@@ -2,7 +2,7 @@ import type { AriaRole, RefObject } from 'react'
 import { useMemo, useState } from 'react'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
-import { ImageCollection, SolvedGallery, SolvedGalleryEntry } from '../../types/index'
+import { ImageCollection, SolvedGallery } from '../../types/index'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import UploadConfirmDialog from './UploadConfirmDialog.tsx'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
@@ -12,13 +12,14 @@ import {
   formatCollectionImageCount,
 } from './UploadCollectionDisplayUtils.ts'
 import { formatDate, formatTime } from './uploadUtils.ts'
+import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 import UploadStateNotice from './UploadStateNotice.tsx'
 
 interface UploadCollectionsPanelProps {
   collections: ImageCollection[]
   gallery: SolvedGallery | null
   isLoadingCollections: boolean
-  onReplayEntry: (entry: SolvedGalleryEntry) => void
+  onReplayEntry: GalleryReplayRequestHandler
   onUpdateCollection: (
     collectionId: string,
     updates: Pick<ImageCollection, 'name'> & Partial<Pick<ImageCollection, 'description'>>
@@ -283,7 +284,7 @@ function CollectionDetail({
 }: {
   entry: CollectionDisplayEntry
   busyCollectionId: string | null
-  onReplayEntry: (entry: SolvedGalleryEntry) => void
+  onReplayEntry: GalleryReplayRequestHandler
   onRename: () => void
   onDelete: () => void
   onRemoveImage: (collectionId: string, imageId: string) => Promise<void>

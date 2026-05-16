@@ -86,6 +86,7 @@ export interface WinStats extends PuzzleRunMetrics {
   moves: number
   time: number
   assistanceMode: PuzzleAssistanceMode
+  replaySetup?: GalleryReplaySetup
 }
 
 // Persistenter Spielstand (lokal gespeichert)
@@ -179,6 +180,28 @@ export interface SolvedGalleryEntry {
   aiTagging?: GalleryAiTagging
   cropTransform?: CropTransform | null
   useFullImage?: boolean
+  replaySetup?: GalleryReplaySetup
+}
+
+export interface GalleryReplaySetup {
+  version: 1
+  startBoard: number[]
+  emptyIndex: number
+  shuffleMoves: string[]
+  optimalStartMoveCount?: number | null
+  optimalStartMoveCountKind?: OptimalStartMoveCountKind
+  optimalStartMoveCountSolverVersion?: string
+}
+
+export interface GalleryChallengeTarget {
+  entryId: string
+  completedAt: string
+  time: number
+  moves: number
+  actionMoves: number
+  assistanceMode: PuzzleAssistanceMode
+  optimalStartMoveCount?: number | null
+  optimalStartMoveCountKind?: OptimalStartMoveCountKind
 }
 
 export type GalleryTagSource = 'gemini' | 'imported'
@@ -400,6 +423,7 @@ export interface RecordSolvedGalleryEntryPayload {
   hasDetailedProfile: boolean
   cropTransform?: CropTransform | null
   useFullImage?: boolean
+  replaySetup?: GalleryReplaySetup
 }
 
 export interface AnalyzeSolvedGalleryEntryResult {

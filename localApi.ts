@@ -240,6 +240,7 @@ interface StoredGalleryEntry {
   aiTagging?: StoredGalleryAiTagging
   cropTransform?: StoredCropTransform | null
   useFullImage?: boolean
+  replaySetup?: StoredGalleryReplaySetup
 }
 
 type StoredGalleryTagSource = 'gemini' | 'imported'
@@ -249,6 +250,16 @@ interface StoredCropTransform {
   rotationDeg: number
   offsetX: number
   offsetY: number
+}
+
+interface StoredGalleryReplaySetup {
+  version: 1
+  startBoard: number[]
+  emptyIndex: number
+  shuffleMoves: string[]
+  optimalStartMoveCount?: number | null
+  optimalStartMoveCountKind?: 'exact' | 'lower-bound' | 'unavailable'
+  optimalStartMoveCountSolverVersion?: string
 }
 
 interface StoredGalleryImageTag {
@@ -2161,6 +2172,74 @@ function sanitizeCropTransform(value: unknown): StoredCropTransform | undefined 
   return { zoom, rotationDeg, offsetX, offsetY }
 }
 
+function sanitizeStoredPuzzleBoard(value: unknown, tileCount: number): number[] | undefined {
+  if (!Array.isArray(value) || value.length !== tileCount) return undefined
+
+  const seen = new Set<number>()
+  const board: number[] = []
+  for (const entry of value) {
+    if (typeof entry !== 'number' || !Number.isInteger(entry) || entry < 0 || entry >= tileCount) {
+      return undefined
+    }
+
+    if (seen.has(entry)) {
+      return undefined
+    }
+
+    seen.add(entry)
+    board.push(entry)
+  }
+
+  return seen.size === tileCount ? board : undefined
+}
+
+function sanitizeOptimalStartMoveCountKind(value: unknown): StoredGalleryReplaySetup['optimalStartMoveCountKind'] | undefined {
+  return value === 'exact' || value === 'lower-bound' || value === 'unavailable'
+    ? value
+    : undefined
+}
+
+function sanitizeGalleryReplaySetup(value: unknown, config: StoredPuzzleConfig): StoredGalleryReplaySetup | undefined {
+  if (!value || typeof value !== 'object') return undefined
+
+  const input = value as Record<string, unknown>
+  if (input.version !== 1) return undefined
+
+  const tileCount = config.rows * config.cols
+  const startBoard = sanitizeStoredPuzzleBoard(input.startBoard, tileCount)
+  const emptyIndex = typeof input.emptyIndex === 'number' && Number.isInteger(input.emptyIndex)
+    ? input.emptyIndex
+    : -1
+
+  if (!startBoard || emptyIndex < 0 || emptyIndex >= tileCount || startBoard[emptyIndex] !== tileCount - 1) {
+    return undefined
+  }
+
+  const shuffleMoves = Array.isArray(input.shuffleMoves)
+    ? input.shuffleMoves.filter((move): move is string => typeof move === 'string' && move.length > 0)
+    : []
+  const optimalStartMoveCount = sanitizeOptionalCount(input.optimalStartMoveCount)
+  const optimalStartMoveCountKind = sanitizeOptimalStartMoveCountKind(input.optimalStartMoveCountKind)
+  const optimalStartMoveCountSolverVersion =
+    typeof input.optimalStartMoveCountSolverVersion === 'string' && input.optimalStartMoveCountSolverVersion.trim().length > 0
+      ? input.optimalStartMoveCountSolverVersion.trim()
+      : undefined
+
+  return {
+    version: 1,
+    startBoard,
+    emptyIndex,
+    shuffleMoves,
+    ...(input.optimalStartMoveCount === null
+      ? { optimalStartMoveCount: null }
+      : optimalStartMoveCount !== null
+        ? { optimalStartMoveCount }
+        : {}),
+    ...(optimalStartMoveCountKind ? { optimalStartMoveCountKind } : {}),
+    ...(optimalStartMoveCountSolverVersion ? { optimalStartMoveCountSolverVersion } : {}),
+  }
+}
+
 function normalizeCompletionRecord(entry: unknown, assets: BackupAssetMap = {}): StoredCompletionRecord | null {
   if (!entry || typeof entry !== 'object') return null
   const input = entry as {
@@ -2419,6 +2498,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     aiTagging?: unknown
     cropTransform?: unknown
     useFullImage?: unknown
+    replaySetup?: unknown
   }
 
   if (typeof input.id !== 'string' || typeof input.completedAt !== 'string' || !isValidPuzzleConfig(input.config)) {
@@ -2431,6 +2511,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
   const tags = normalizeGalleryTags(input.tags)
   const aiTagging = normalizeGalleryAiTagging(input.aiTagging)
   const cropTransform = sanitizeCropTransform(input.cropTransform)
+  const replaySetup = sanitizeGalleryReplaySetup(input.replaySetup, input.config)
 
   return {
     id: input.id,
@@ -2447,6 +2528,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     ...(aiTagging ? { aiTagging } : {}),
     ...(cropTransform ? { cropTransform } : {}),
     ...(typeof input.useFullImage === 'boolean' ? { useFullImage: input.useFullImage } : {}),
+    ...(replaySetup ? { replaySetup } : {}),
   }
 }
 
@@ -3098,6 +3180,7 @@ function validateGalleryPayload(payload: unknown): payload is {
   hasDetailedProfile: boolean
   cropTransform?: StoredCropTransform | null
   useFullImage?: boolean
+  replaySetup?: StoredGalleryReplaySetup
 } {
   if (!payload || typeof payload !== 'object') return false
 
@@ -3118,7 +3201,11 @@ function validateGalleryPayload(payload: unknown): payload is {
     Number.isFinite(input.actionMoves) &&
     input.actionMoves >= 0 &&
     (input.assistanceMode === 'clean' || input.assistanceMode === 'hinted' || input.assistanceMode === 'auto-assisted') &&
-    typeof input.hasDetailedProfile === 'boolean'
+    typeof input.hasDetailedProfile === 'boolean' &&
+    (
+      input.replaySetup === undefined ||
+      sanitizeGalleryReplaySetup(input.replaySetup, input.config as StoredPuzzleConfig) !== undefined
+    )
   )
 }
 
@@ -3755,6 +3842,7 @@ async function handleGalleryApi(
         hasDetailedProfile: body.hasDetailedProfile,
         cropTransform: sanitizeCropTransform(body.cropTransform),
         useFullImage: typeof body.useFullImage === 'boolean' ? body.useFullImage : undefined,
+        replaySetup: sanitizeGalleryReplaySetup(body.replaySetup, body.config),
         aiTagging: {
           status: 'pending',
           provider: 'gemini',

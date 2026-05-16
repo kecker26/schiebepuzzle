@@ -18,6 +18,7 @@ interface PuzzleLeftPanelProps {
   config: { rows: number; cols: number }
   moveCount: number
   optimalMoveSummary: string
+  challengeSummary?: string | null
   elapsedTime: number
   progressMetrics: PuzzleProgressMetrics | null
   hintPreview: SuggestedHintPreview | null
@@ -107,6 +108,7 @@ export default function PuzzleLeftPanel({
   config,
   moveCount,
   optimalMoveSummary,
+  challengeSummary,
   elapsedTime,
   progressMetrics,
   hintPreview,
@@ -190,6 +192,12 @@ export default function PuzzleLeftPanel({
               <span className="puzzle-header-shortcut-copy">Hilfe</span>
             </span>
           </div>
+          {challengeSummary && (
+            <div className="puzzle-challenge-badge" role="status" aria-label="Challenge-Start aktiv">
+              <span className="puzzle-challenge-badge-label">Challenge-Start</span>
+              <span className="puzzle-challenge-badge-detail">{challengeSummary}</span>
+            </div>
+          )}
         </div>
 
         <div className="puzzle-stats" aria-label="Aktuelle Spielstatistik">
