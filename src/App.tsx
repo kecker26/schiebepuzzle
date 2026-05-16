@@ -67,6 +67,7 @@ import {
   createSavedGame,
   deleteAllSavedGames,
   deleteSavedGame,
+  generateSavedGameTitle,
   loadSavedGame,
   updateSavedGame,
 } from './services/SaveService.ts'
@@ -1007,6 +1008,19 @@ export default function App() {
         })
 
         setSavedGames((prev) => upsertSummary(prev, created))
+        if (created.titleSource !== 'reused') {
+          void generateSavedGameTitle(created.id)
+            .then((titledSave) => {
+              setSavedGames((prev) => (
+                prev.some((entry) => entry.id === titledSave.id)
+                  ? prev.map((entry) => entry.id === titledSave.id ? titledSave : entry)
+                  : [titledSave, ...prev]
+              ))
+            })
+            .catch(() => {
+              // KI-Titel sind Komfort-Metadaten; Speichern und Spielen bleiben davon unabhaengig.
+            })
+        }
 
         if (activeSessionRef.current === sessionId) {
           currentSaveIdRef.current = created.id

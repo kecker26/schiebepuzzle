@@ -132,6 +132,18 @@ export interface PersistedPuzzleMeta {
   config: PuzzleConfig
 }
 
+export type SavedGameTitleSource = 'gemini' | 'reused' | 'fallback'
+export type SavedGameAiTitleStatus = 'generated' | 'reused' | 'failed' | 'unavailable' | 'pending'
+
+export interface SavedGameAiTitle {
+  status: SavedGameAiTitleStatus
+  provider: 'gemini'
+  model: string | null
+  generatedAt: string | null
+  error: string | null
+  reusedFromSaveId?: string | null
+}
+
 export interface SavedGameSummary {
   id: string
   name: string
@@ -141,6 +153,9 @@ export interface SavedGameSummary {
   config: PuzzleConfig
   moves: number
   elapsedTime: number
+  imageFingerprint?: string
+  titleSource?: SavedGameTitleSource
+  aiTitle?: SavedGameAiTitle
 }
 
 export interface SavedGameData extends SavedGameSummary {

@@ -5,7 +5,7 @@
 - Halte Aenderungen klein, nachvollziehbar und kompatibel mit dem bestehenden React-, TypeScript- und Vite-Setup.
 
 ## Projektueberblick
-- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, Gemini-Tagging, Sammlungen, Backup und Musik.
+- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, Gemini-Tagging, Gemini-Spielstandstiteln, Sammlungen, Backup und Musik.
 - Frontend: React 18 + TypeScript.
 - Animationen: `motion` / `motion/react`.
 - Icons: `lucide-react` fuer React-SVG-Icons, plus kuratierte lokale SVGs unter `src/assets/system/`.
@@ -48,7 +48,7 @@
 - Aenderungen an App-Flows immer gegen `src/App.tsx`, die betroffenen Hooks in `src/app/` und die jeweiligen Screen-Props pruefen.
 - Aenderungen an Spielmechanik immer gegen `PuzzleEngine`, `PuzzleStateService`, `PuzzleSolver`, `ExactPuzzleSolver`, Worker-Protokolle und betroffene Typen pruefen.
 - Aenderungen an Save-/Stats-/Gallery-/Collections-/Backup-Features immer auf Frontend-Service, `src/types/index.ts` und `localApi.ts` abstimmen.
-- Bestehende API-Pfade (`/api/saves`, `/api/stats`, `/api/gallery`, `/api/gallery/:entryId/analyze`, `/api/collections`, `/api/backup`, `/api/clipboard`, `/api/generated-image`, `/api/music`) nur aendern, wenn Frontend und lokale API gemeinsam angepasst werden.
+- Bestehende API-Pfade (`/api/saves`, `/api/saves/:saveId/title`, `/api/stats`, `/api/gallery`, `/api/gallery/:entryId/analyze`, `/api/collections`, `/api/backup`, `/api/clipboard`, `/api/generated-image`, `/api/music`) nur aendern, wenn Frontend und lokale API gemeinsam angepasst werden.
 - Bei persistierten Formaten rueckwaertskompatibel bleiben; bestehende Saves, `__stats.json`, `__gallery.json`, `__collections.json` und `.spbkp`-Backups muessen weiter defensiv gelesen werden.
 - `dist/`, `node_modules/`, `spielstaende/`, `backups/`, `preview.*.txt`, temporaere Dateien und Office-Lockdateien nicht manuell bearbeiten, ausser die Aufgabe verlangt es explizit.
 - Bestehende deutsche UI-Texte beibehalten, sofern kein ausdrueckliches Rewriting gewuenscht ist.
@@ -56,7 +56,7 @@
 - Bei Aenderungen an Tastatur, Fokus, Hilfe oder Command Palette die Hooks in `src/app/` und Barrierefreiheit mitdenken.
 - Bei Audio-/Musik-Aenderungen lokale Fallbacks, Provider-Ausfallpfade und `VITE_JAMENDO_CLIENT_ID` aus `.env.example` beachten.
 - Bei Zufallsbild-Features Provider-Ausfaelle und CORS-/Lizenz-/Attributionsdaten defensiv behandeln.
-- Bei Galerie-KI-Tagging `GEMINI_API_KEY` serverseitig halten, grosse Bilder nicht ungeprueft senden und Fehler/fehlende Keys als nicht-blockierenden Galerie-Status speichern.
+- Bei Galerie-KI-Tagging und Spielstand-Titeln `GEMINI_API_KEY` serverseitig halten, grosse Bilder nicht ungeprueft senden und Fehler/fehlende Keys als nicht-blockierende KI-Metadaten speichern.
 - Nach Projektstruktur-, Workflow-, Befehls-, Persistenz- oder Architektur-Aenderungen diese `AGENTS.md` immer pruefen und bei Bedarf im selben Arbeitsgang aktualisieren.
 - Nach Aenderungen an Funktionsumfang, Setup, Befehlen, Datenhaltung, API, Projektstruktur oder Verifikation auch `README.md` immer pruefen und bei Bedarf im selben Arbeitsgang aktualisieren.
 - Nach jeder Aenderung dem Nutzer kurz erklaeren, wie diese Aenderungen getestet werden koennen.

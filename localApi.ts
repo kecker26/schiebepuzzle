@@ -46,8 +46,11 @@ const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com'
 const GEMINI_GALLERY_MODEL = 'gemini-2.5-flash'
 const GEMINI_GALLERY_TIMEOUT_MS = 45000
 const GEMINI_GALLERY_MAX_INLINE_IMAGE_BYTES = 18 * 1024 * 1024
+const GEMINI_SAVE_TITLE_TIMEOUT_MS = 30000
+const GEMINI_SAVE_TITLE_MAX_INLINE_IMAGE_BYTES = 18 * 1024 * 1024
 const GALLERY_AI_TAG_LIMIT = 8
 const GALLERY_AI_COLLECTION_SUGGESTION_LIMIT = 4
+const SAVE_AI_TITLE_MAX_LENGTH = 64
 const MAX_GENERATED_IMAGE_PROMPT_LENGTH = 1000
 const POWERSHELL_PATH = process.platform === 'win32'
   ? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
@@ -134,6 +137,18 @@ interface StoredRunMetrics {
   suggestedMoveCount: number
 }
 
+type StoredSaveTitleSource = 'gemini' | 'reused' | 'fallback'
+type StoredSaveAiTitleStatus = 'generated' | 'reused' | 'failed' | 'unavailable' | 'pending'
+
+interface StoredSaveAiTitle {
+  status: StoredSaveAiTitleStatus
+  provider: 'gemini'
+  model: string | null
+  generatedAt: string | null
+  error: string | null
+  reusedFromSaveId?: string | null
+}
+
 interface StoredSaveProgress {
   moveCount: number
   elapsedTime: number
@@ -151,6 +166,9 @@ interface StoredSaveFile {
   previewImage: string
   config: StoredPuzzleConfig
   progress: StoredSaveProgress
+  imageFingerprint?: string
+  titleSource?: StoredSaveTitleSource
+  aiTitle?: StoredSaveAiTitle
 }
 
 interface StoredSaveMetaFile {
@@ -160,6 +178,9 @@ interface StoredSaveMetaFile {
   updatedAt: string
   previewImage: string
   config: StoredPuzzleConfig
+  imageFingerprint?: string
+  titleSource?: StoredSaveTitleSource
+  aiTitle?: StoredSaveAiTitle
 }
 
 interface StoredSaveProgressFile {
@@ -175,6 +196,9 @@ interface SaveSummary {
   config: StoredPuzzleConfig
   moves: number
   elapsedTime: number
+  imageFingerprint?: string
+  titleSource?: StoredSaveTitleSource
+  aiTitle?: StoredSaveAiTitle
 }
 
 interface StoredCompletionRecord {
@@ -502,6 +526,10 @@ interface GeminiGenerateContentResponse {
 interface GeminiGalleryAnalysisPayload {
   tags?: unknown
   collectionSuggestions?: unknown
+}
+
+interface GeminiSaveTitlePayload {
+  title?: unknown
 }
 
 interface AnalyzeGalleryEntryResponse {
@@ -918,14 +946,14 @@ function extractGeminiText(payload: GeminiGenerateContentResponse): string {
     .trim() ?? ''
 }
 
-function parseGeminiJson(text: string): GeminiGalleryAnalysisPayload {
+function parseGeminiJson<T>(text: string): T {
   const trimmedText = text.trim()
   const unfencedText = trimmedText
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/i, '')
     .trim()
 
-  return JSON.parse(unfencedText) as GeminiGalleryAnalysisPayload
+  return JSON.parse(unfencedText) as T
 }
 
 function createGalleryAnalysisPrompt(
@@ -1077,7 +1105,7 @@ async function analyzeGalleryImageWithGemini(
       throw new Error('Gemini hat keine Analyse zurueckgegeben')
     }
 
-    const analysis = parseGeminiJson(text)
+    const analysis = parseGeminiJson<GeminiGalleryAnalysisPayload>(text)
     const tags = normalizeGalleryTags(analysis.tags)
     const collectionSuggestions = normalizeGalleryCollectionSuggestions(analysis.collectionSuggestions, collections)
 
@@ -1106,6 +1134,153 @@ async function analyzeGalleryImageWithGemini(
         generatedAt: new Date().toISOString(),
         error: message,
         collectionSuggestions: [],
+      },
+    }
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+function createSaveTitlePrompt(config: StoredPuzzleConfig): string {
+  return [
+    'Gib diesem Schiebepuzzle-Motiv einen kurzen, kreativen deutschen Titel.',
+    'Der Titel soll 2 bis 6 Woerter haben, gut in eine Spielstandliste passen und auf sichtbaren Bildinhalten oder offensichtlicher Stimmung basieren.',
+    'Keine Dateinamen, keine technischen Begriffe, keine Anfuehrungszeichen, keine sensiblen personenbezogenen Vermutungen.',
+    '',
+    `Puzzle-Groesse: ${config.rows}x${config.cols}`,
+    'Antwortformat: JSON mit dem Feld title.',
+  ].join('\n')
+}
+
+function createGeminiSaveTitleSchema(): object {
+  return {
+    type: 'object',
+    properties: {
+      title: { type: 'string' },
+    },
+    required: ['title'],
+  }
+}
+
+async function generateSaveTitleWithGemini(
+  save: StoredSaveFile,
+  config: GeminiGalleryConfig
+): Promise<{
+  title: string | null
+  aiTitle: StoredSaveAiTitle
+}> {
+  const generatedAt = new Date().toISOString()
+
+  if (!config.apiKey) {
+    return {
+      title: null,
+      aiTitle: {
+        status: 'unavailable',
+        provider: 'gemini',
+        model: config.model,
+        generatedAt,
+        error: 'GEMINI_API_KEY ist nicht konfiguriert',
+      },
+    }
+  }
+
+  const image = parseDataUrlImage(save.previewImage || save.croppedImage || save.image)
+  if (!image) {
+    return {
+      title: null,
+      aiTitle: {
+        status: 'failed',
+        provider: 'gemini',
+        model: config.model,
+        generatedAt,
+        error: 'Kein unterstuetztes Spielstand-Bild fuer KI-Titel gefunden',
+      },
+    }
+  }
+
+  if (image.byteLength > GEMINI_SAVE_TITLE_MAX_INLINE_IMAGE_BYTES) {
+    return {
+      title: null,
+      aiTitle: {
+        status: 'failed',
+        provider: 'gemini',
+        model: config.model,
+        generatedAt,
+        error: 'Spielstand-Bild ist zu gross fuer Gemini Inline-Analyse',
+      },
+    }
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), GEMINI_SAVE_TITLE_TIMEOUT_MS)
+  const url = `${GEMINI_BASE_URL}/v1beta/models/${encodeURIComponent(config.model)}:generateContent`
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': config.apiKey,
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            {
+              inline_data: {
+                mime_type: image.mimeType,
+                data: image.base64Data,
+              },
+            },
+            { text: createSaveTitlePrompt(save.config) },
+          ],
+        }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: createGeminiSaveTitleSchema(),
+        },
+      }),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(await parseGeminiError(response))
+    }
+
+    const payload = await response.json() as GeminiGenerateContentResponse
+    const text = extractGeminiText(payload)
+    if (!text) {
+      throw new Error('Gemini hat keinen Spielstand-Titel zurueckgegeben')
+    }
+
+    const analysis = parseGeminiJson<GeminiSaveTitlePayload>(text)
+    const title = sanitizeGeneratedSaveTitle(analysis.title)
+    if (!title) {
+      throw new Error('Gemini hat keinen nutzbaren Spielstand-Titel erzeugt')
+    }
+
+    return {
+      title,
+      aiTitle: {
+        status: 'generated',
+        provider: 'gemini',
+        model: config.model,
+        generatedAt,
+        error: null,
+      },
+    }
+  } catch (error) {
+    const message = error instanceof DOMException && error.name === 'AbortError'
+      ? 'Gemini hat zu lange fuer den Spielstand-Titel gebraucht'
+      : getErrorDetail(error)
+
+    return {
+      title: null,
+      aiTitle: {
+        status: 'failed',
+        provider: 'gemini',
+        model: config.model,
+        generatedAt,
+        error: message,
       },
     }
   } finally {
@@ -1152,7 +1327,54 @@ function sanitizeProgress(progress: unknown): StoredSaveProgress {
   }
 }
 
+function sanitizeSaveTitleSource(value: unknown): StoredSaveTitleSource | undefined {
+  return value === 'gemini' || value === 'reused' || value === 'fallback'
+    ? value
+    : undefined
+}
+
+function sanitizeSaveAiTitle(value: unknown): StoredSaveAiTitle | undefined {
+  if (!value || typeof value !== 'object') return undefined
+
+  const input = value as {
+    status?: unknown
+    model?: unknown
+    generatedAt?: unknown
+    error?: unknown
+    reusedFromSaveId?: unknown
+  }
+  const status: StoredSaveAiTitleStatus =
+    input.status === 'generated'
+    || input.status === 'reused'
+    || input.status === 'failed'
+    || input.status === 'unavailable'
+    || input.status === 'pending'
+      ? input.status
+      : 'generated'
+
+  return {
+    status,
+    provider: 'gemini',
+    model: typeof input.model === 'string' && input.model.length > 0 ? input.model : null,
+    generatedAt: typeof input.generatedAt === 'string' && input.generatedAt.length > 0 ? input.generatedAt : null,
+    error: typeof input.error === 'string' && input.error.length > 0 ? input.error.slice(0, 240) : null,
+    reusedFromSaveId: typeof input.reusedFromSaveId === 'string' && input.reusedFromSaveId.length > 0
+      ? input.reusedFromSaveId
+      : null,
+  }
+}
+
+function sanitizeImageFingerprint(value: unknown): string | undefined {
+  return typeof value === 'string' && /^sha256:[a-f0-9]{64}$/i.test(value)
+    ? value.toLocaleLowerCase()
+    : undefined
+}
+
 function toSummary(save: Pick<StoredSaveFile, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'previewImage' | 'config' | 'progress'>): SaveSummary {
+  const titleSource = sanitizeSaveTitleSource((save as Partial<StoredSaveFile>).titleSource)
+  const aiTitle = sanitizeSaveAiTitle((save as Partial<StoredSaveFile>).aiTitle)
+  const imageFingerprint = sanitizeImageFingerprint((save as Partial<StoredSaveFile>).imageFingerprint)
+
   return {
     id: save.id,
     name: save.name,
@@ -1162,6 +1384,9 @@ function toSummary(save: Pick<StoredSaveFile, 'id' | 'name' | 'createdAt' | 'upd
     config: save.config,
     moves: sanitizeCount(save.progress?.moveCount),
     elapsedTime: sanitizeCount(save.progress?.elapsedTime),
+    ...(imageFingerprint ? { imageFingerprint } : {}),
+    ...(titleSource ? { titleSource } : {}),
+    ...(aiTitle ? { aiTitle } : {}),
   }
 }
 
@@ -1171,7 +1396,21 @@ async function readStructuredSaveMeta(saveId: string): Promise<StoredSaveMetaFil
     return null
   }
 
-  return meta
+  const imageFingerprint = sanitizeImageFingerprint(meta.imageFingerprint)
+  const titleSource = sanitizeSaveTitleSource(meta.titleSource)
+  const aiTitle = sanitizeSaveAiTitle(meta.aiTitle)
+
+  return {
+    id: meta.id,
+    name: sanitizeTextValue(meta.name, generateSaveName()),
+    createdAt: sanitizeTextValue(meta.createdAt, new Date().toISOString()),
+    updatedAt: sanitizeTextValue(meta.updatedAt, meta.createdAt),
+    previewImage: sanitizeTextValue(meta.previewImage, ''),
+    config: meta.config,
+    ...(imageFingerprint ? { imageFingerprint } : {}),
+    ...(titleSource ? { titleSource } : {}),
+    ...(aiTitle ? { aiTitle } : {}),
+  }
 }
 
 async function readStructuredSaveProgress(saveId: string): Promise<StoredSaveProgress> {
@@ -1223,6 +1462,9 @@ async function writeStructuredSave(save: StoredSaveFile): Promise<void> {
     updatedAt: save.updatedAt,
     previewImage: save.previewImage,
     config: save.config,
+    ...(save.imageFingerprint ? { imageFingerprint: save.imageFingerprint } : {}),
+    ...(save.titleSource ? { titleSource: save.titleSource } : {}),
+    ...(save.aiTitle ? { aiTitle: save.aiTitle } : {}),
   }
   const progressFile: StoredSaveProgressFile = {
     progress: sanitizeProgress(save.progress),
@@ -1340,6 +1582,52 @@ async function listAllSaveData(): Promise<StoredSaveFile[]> {
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
 }
 
+function hasReusableSaveTitle(save: Pick<StoredSaveFile, 'name'> & Partial<StoredSaveFile>): boolean {
+  const titleSource = sanitizeSaveTitleSource(save.titleSource)
+  const aiTitle = sanitizeSaveAiTitle(save.aiTitle)
+  return (
+    !!sanitizeGeneratedSaveTitle(save.name)
+    && titleSource !== 'fallback'
+    && (titleSource === 'gemini' || titleSource === 'reused' || aiTitle?.status === 'generated' || aiTitle?.status === 'reused')
+  )
+}
+
+async function findReusableSaveTitleByFingerprint(
+  imageFingerprint: string,
+  excludeSaveId?: string
+): Promise<SaveSummary | null> {
+  const saves = await listAllSaveSummaries()
+  return saves.find((save) => (
+    save.id !== excludeSaveId
+    && save.imageFingerprint === imageFingerprint
+    && hasReusableSaveTitle(save)
+  )) ?? null
+}
+
+async function updateSaveTitleMetadata(
+  saveId: string,
+  updates: {
+    name?: string
+    imageFingerprint?: string
+    titleSource?: StoredSaveTitleSource
+    aiTitle?: StoredSaveAiTitle
+  }
+): Promise<SaveSummary | null> {
+  const save = await readSaveById(saveId)
+  if (!save) return null
+
+  const nextSave: StoredSaveFile = {
+    ...save,
+    ...(updates.name ? { name: updates.name } : {}),
+    ...(updates.imageFingerprint ? { imageFingerprint: updates.imageFingerprint } : {}),
+    ...(updates.titleSource ? { titleSource: updates.titleSource } : {}),
+    ...(updates.aiTitle ? { aiTitle: updates.aiTitle } : {}),
+  }
+
+  await writeStructuredSave(nextSave)
+  return toSummary(nextSave)
+}
+
 function toBackupSaveResponse(
   save: StoredSaveFile,
   assetRegistry: ReturnType<typeof createBackupAssetRegistry>
@@ -1387,6 +1675,9 @@ function normalizeImportedSave(
   const createdAt = sanitizeTextValue(input.createdAt, new Date().toISOString())
   const updatedAt = sanitizeTextValue(input.updatedAt, createdAt)
   const previewImage = resolveBackupImageValue(input.previewImage, assets) ?? croppedImage
+  const imageFingerprint = sanitizeImageFingerprint(input.imageFingerprint) ?? createImageFingerprint(previewImage)
+  const titleSource = sanitizeSaveTitleSource(input.titleSource)
+  const aiTitle = sanitizeSaveAiTitle(input.aiTitle)
 
   return {
     id: saveId,
@@ -1398,6 +1689,9 @@ function normalizeImportedSave(
     previewImage,
     config: input.config,
     progress: sanitizeProgress(input.progress),
+    ...(imageFingerprint ? { imageFingerprint } : {}),
+    ...(titleSource ? { titleSource } : {}),
+    ...(aiTitle ? { aiTitle } : {}),
   }
 }
 
@@ -1944,6 +2238,35 @@ function parseDataUrlImage(value: string): { mimeType: string; base64Data: strin
     base64Data,
     byteLength: Buffer.byteLength(base64Data, 'base64'),
   }
+}
+
+function createImageFingerprint(value: string | null | undefined): string | undefined {
+  if (!value) return undefined
+
+  const image = parseDataUrlImage(value)
+  if (!image) return undefined
+
+  const hash = createHash('sha256')
+    .update(image.mimeType)
+    .update(':')
+    .update(image.base64Data)
+    .digest('hex')
+
+  return `sha256:${hash}`
+}
+
+function sanitizeGeneratedSaveTitle(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+
+  const title = value
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, SAVE_AI_TITLE_MAX_LENGTH)
+
+  if (title.length < 3) return null
+  if (/^spielstand\b/i.test(title)) return null
+  return title
 }
 
 function isBackupImageAssetRef(value: unknown): value is BackupImageAssetRef {
@@ -3528,7 +3851,8 @@ async function handleClipboardApi(
 async function handleSaveApi(
   req: IncomingMessage,
   res: ServerResponse,
-  next: () => void
+  next: () => void,
+  geminiGalleryConfig: GeminiGalleryConfig
 ): Promise<void> {
   const reqUrl = req.url ?? '/'
   const url = new URL(reqUrl, 'http://localhost')
@@ -3567,9 +3891,13 @@ async function handleSaveApi(
       }
 
       const nowIso = new Date().toISOString()
+      const imageFingerprint = createImageFingerprint(body.previewImage) ?? createImageFingerprint(body.croppedImage)
+      const reusableTitle = imageFingerprint
+        ? await findReusableSaveTitleByFingerprint(imageFingerprint)
+        : null
       const save: StoredSaveFile = {
         id: randomUUID(),
-        name: generateSaveName(),
+        name: reusableTitle?.name ?? generateSaveName(),
         createdAt: nowIso,
         updatedAt: nowIso,
         image: body.image,
@@ -3577,6 +3905,20 @@ async function handleSaveApi(
         previewImage: body.previewImage,
         config: body.config,
         progress: sanitizeProgress(body.progress),
+        ...(imageFingerprint ? { imageFingerprint } : {}),
+        ...(reusableTitle
+          ? {
+              titleSource: 'reused',
+              aiTitle: {
+                status: 'reused',
+                provider: 'gemini',
+                model: reusableTitle.aiTitle?.model ?? geminiGalleryConfig.model,
+                generatedAt: nowIso,
+                error: null,
+                reusedFromSaveId: reusableTitle.id,
+              },
+            }
+          : { titleSource: 'fallback' }),
       }
 
       await writeStructuredSave(save)
@@ -3619,6 +3961,54 @@ async function handleSaveApi(
       }
 
       sendJson(res, 200, updated)
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 4 && parts[3] === 'title') {
+      const existing = await readSaveById(saveId)
+      if (!existing) {
+        sendJson(res, 404, { error: 'Spielstand nicht gefunden' })
+        return
+      }
+
+      const imageFingerprint =
+        existing.imageFingerprint
+        ?? createImageFingerprint(existing.previewImage)
+        ?? createImageFingerprint(existing.croppedImage)
+      const reusableTitle = imageFingerprint
+        ? await findReusableSaveTitleByFingerprint(imageFingerprint, existing.id)
+        : null
+
+      if (reusableTitle) {
+        const updated = await updateSaveTitleMetadata(existing.id, {
+          name: reusableTitle.name,
+          ...(imageFingerprint ? { imageFingerprint } : {}),
+          titleSource: 'reused',
+          aiTitle: {
+            status: 'reused',
+            provider: 'gemini',
+            model: reusableTitle.aiTitle?.model ?? geminiGalleryConfig.model,
+            generatedAt: new Date().toISOString(),
+            error: null,
+            reusedFromSaveId: reusableTitle.id,
+          },
+        })
+        sendJson(res, 200, updated ?? toSummary(existing))
+        return
+      }
+
+      const titleResult = await generateSaveTitleWithGemini({
+        ...existing,
+        ...(imageFingerprint ? { imageFingerprint } : {}),
+      }, geminiGalleryConfig)
+      const updated = await updateSaveTitleMetadata(existing.id, {
+        ...(titleResult.title ? { name: titleResult.title } : {}),
+        ...(imageFingerprint ? { imageFingerprint } : {}),
+        titleSource: titleResult.title ? 'gemini' : 'fallback',
+        aiTitle: titleResult.aiTitle,
+      })
+
+      sendJson(res, 200, updated ?? toSummary(existing))
       return
     }
 
@@ -4298,7 +4688,7 @@ async function handleApiRequest(
   const url = new URL(reqUrl, 'http://localhost')
 
   if (url.pathname.startsWith('/api/saves')) {
-    await handleSaveApi(req, res, next)
+    await handleSaveApi(req, res, next, geminiGalleryConfig)
     return
   }
 
