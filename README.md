@@ -13,7 +13,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
 - Autosave, kreative Gemini-Titel fuer neue Spielstaende, motivbasierte Titel-Wiederverwendung, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
 - Statistik mit vier visuellen Hauptansichten fuer Ueberblick, Analyse, Verlauf und Rohdaten-Explorer; Analyse buendelt Stufen, Rekorde und Sauberkeit, der Rohdaten-Explorer speichert CSV-/JSON-Exporte direkt im Projektordner.
-- Galerie geloester Motive inklusive Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, optionalem Gemini-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und Tag-Verwaltung.
+- Galerie geloester Motive inklusive Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, optionalem Gemini-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und kategorisierter Tag-Verwaltung mit Mehrfachauswahl.
 - Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit KI-Sammlungsvorschlaegen und motivweit deduplizierten Sammlungen aus Tag-Treffern.
 - Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
 - Musik- und Sound-Unterstuetzung mit lokalen Fallback-Tracks.
@@ -148,7 +148,7 @@ Wichtige Einstiegspunkte:
 3. Motiv zuschneiden und Puzzle-Groesse waehlen; bei neuen Galerie-Wiedereinstiegen laesst sich der gespeicherte Startzustand direkt erneut herausfordern oder dasselbe Motiv komplett neu ueber den Crop-Flow starten, alte Eintraege fallen auf gespeicherten Ausschnitt mit neu gemischten Kacheln zurueck.
 4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
 5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
-6. Neue Galerie-Motive optional automatisch mit Gemini taggen, fehlgeschlagene Taggings erneut versuchen, Tags bereinigen, per Tag filtern und Tag-Treffer als Sammlung uebernehmen.
+6. Neue Galerie-Motive optional automatisch mit Gemini taggen, fehlgeschlagene Taggings erneut versuchen, Tags bereinigen, einzelne Tags direkt oder mehrere Tags ueber die Tagverwaltung als Und-Filter anwenden und Tag-Treffer als Sammlung uebernehmen.
 7. Neue Spielstaende erhalten im Hintergrund einen Gemini-Titel; taucht dasselbe Motiv mehrfach auf, wird der vorhandene Motivtitel wiederverwendet.
 8. Spielstaende, Galerie, Sammlungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
 

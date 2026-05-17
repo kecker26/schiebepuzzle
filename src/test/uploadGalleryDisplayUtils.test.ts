@@ -4,6 +4,7 @@ import {
   buildGalleryDisplayEntries,
   getUniqueGalleryMotifEntryIds,
 } from '../screens/upload/UploadGalleryDisplayUtils.ts'
+import { galleryDisplayEntryMatchesAllTagKeys, getGalleryTagKey } from '../screens/upload/UploadGalleryPanel.tsx'
 
 function createGalleryEntry(
   id: string,
@@ -180,5 +181,21 @@ describe('UploadGalleryDisplayUtils', () => {
     ])
 
     expect(ids).toEqual(['motif-a-latest', 'motif-b'])
+  })
+
+  it('filtert Galerie-Karten nur, wenn alle ausgewaehlten Tags am Motiv vorhanden sind', () => {
+    const entry = {
+      visibleEntries: [
+        createGalleryEntry('motif-a-latest', {
+          tags: [
+            { label: 'Wald', confidence: 0.92, source: 'gemini' },
+            { label: 'See', confidence: 0.88, source: 'gemini' },
+          ],
+        }),
+      ],
+    }
+
+    expect(galleryDisplayEntryMatchesAllTagKeys(entry, [getGalleryTagKey('wald'), getGalleryTagKey('see')])).toBe(true)
+    expect(galleryDisplayEntryMatchesAllTagKeys(entry, [getGalleryTagKey('wald'), getGalleryTagKey('stadt')])).toBe(false)
   })
 })

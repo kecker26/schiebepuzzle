@@ -56,16 +56,25 @@ interface PendingGalleryDeletionRequest extends PendingGalleryDeletionFocus {
   entry: GalleryDisplayEntry
 }
 
-type GalleryToolbarFocusTarget = 'difficulty' | 'assistance' | 'tag' | 'sort'
+type GalleryToolbarFocusTarget = 'difficulty' | 'assistance' | 'sort'
 
-const ALL_GALLERY_TAGS_FILTER = 'all'
-
-function getGalleryTagKey(label: string): string {
+export function getGalleryTagKey(label: string): string {
   return label.trim().toLocaleLowerCase('de-DE')
 }
 
 function entryMatchesGalleryTag(entry: SolvedGalleryEntry, tagKey: string): boolean {
   return (entry.tags ?? []).some((tag) => getGalleryTagKey(tag.label) === tagKey)
+}
+
+export function galleryDisplayEntryMatchesAllTagKeys(
+  entry: Pick<GalleryDisplayEntry, 'visibleEntries'>,
+  tagKeys: string[]
+): boolean {
+  if (tagKeys.length === 0) return true
+
+  return tagKeys.every((tagKey) =>
+    entry.visibleEntries.some((galleryEntry) => entryMatchesGalleryTag(galleryEntry, tagKey))
+  )
 }
 
 export default function UploadGalleryPanel({
@@ -86,7 +95,6 @@ export default function UploadGalleryPanel({
   const panelRef = useRef<HTMLDivElement>(null)
   const difficultySelectInternalRef = useRef<HTMLSelectElement>(null)
   const assistanceSelectRef = useRef<HTMLSelectElement>(null)
-  const tagSelectRef = useRef<HTMLSelectElement>(null)
   const sortSelectRef = useRef<HTMLSelectElement>(null)
   const resetButtonRef = useRef<HTMLButtonElement>(null)
   const entries = useMemo(() => gallery?.entries ?? [], [gallery])
@@ -95,7 +103,7 @@ export default function UploadGalleryPanel({
 
   const [difficultyFilter, setDifficultyFilter] = useState<GalleryDifficultyFilter>('all')
   const [assistanceFilter, setAssistanceFilter] = useState<GalleryAssistanceFilter>('all')
-  const [tagFilter, setTagFilter] = useState<string>(ALL_GALLERY_TAGS_FILTER)
+  const [tagFilters, setTagFilters] = useState<string[]>([])
   const [sortOption, setSortOption] = useState<GallerySortOption>('latest')
   const [selectedEntry, setSelectedEntry] = useState<GalleryDisplayEntry | null>(null)
   const [collectingEntry, setCollectingEntry] = useState<GalleryDisplayEntry | null>(null)
@@ -196,17 +204,15 @@ export default function UploadGalleryPanel({
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'de'))
   }, [entries])
   const visibleEntries = useMemo(() => {
-    const filteredEntries = tagFilter === ALL_GALLERY_TAGS_FILTER
+    const filteredEntries = tagFilters.length === 0
       ? baseFilteredEntries
-      : baseFilteredEntries.filter((entry) =>
-        entry.visibleEntries.some((galleryEntry) => entryMatchesGalleryTag(galleryEntry, tagFilter))
-      )
+      : baseFilteredEntries.filter((entry) => galleryDisplayEntryMatchesAllTagKeys(entry, tagFilters))
 
     return sortGalleryDisplayEntries(filteredEntries, sortOption)
-  }, [baseFilteredEntries, sortOption, tagFilter])
+  }, [baseFilteredEntries, sortOption, tagFilters])
   const activeTagOption = useMemo(
-    () => tagOptions.find((option) => option.id === tagFilter) ?? null,
-    [tagFilter, tagOptions]
+    () => tagFilters.length === 1 ? tagOptions.find((option) => option.id === tagFilters[0]) ?? null : null,
+    [tagFilters, tagOptions]
   )
   const activeTagCollection = useMemo(() => {
     if (!activeTagOption) return null
@@ -215,12 +221,12 @@ export default function UploadGalleryPanel({
     return collections.find((collection) => getGalleryTagKey(collection.name) === activeTagName) ?? null
   }, [activeTagOption, collections])
   const matchingTagImageIds = useMemo(() => {
-    if (tagFilter === ALL_GALLERY_TAGS_FILTER) return []
+    if (tagFilters.length !== 1) return []
 
     const seenMotifs = new Set<string>()
     const imageIds: string[] = []
     for (const entry of visibleEntries) {
-      if (!entry.visibleEntries.some((galleryEntry) => entryMatchesGalleryTag(galleryEntry, tagFilter))) {
+      if (!galleryDisplayEntryMatchesAllTagKeys(entry, tagFilters)) {
         continue
       }
 
@@ -231,7 +237,7 @@ export default function UploadGalleryPanel({
     }
 
     return imageIds
-  }, [tagFilter, visibleEntries])
+  }, [tagFilters, visibleEntries])
   const tagCollectionImageIds = useMemo(() => {
     if (!activeTagCollection) return matchingTagImageIds
 
@@ -252,11 +258,14 @@ export default function UploadGalleryPanel({
   }, [deletingEntryId])
 
   useEffect(() => {
-    if (tagFilter === ALL_GALLERY_TAGS_FILTER) return
-    if (tagOptions.some((option) => option.id === tagFilter)) return
+    if (tagFilters.length === 0) return
 
-    setTagFilter(ALL_GALLERY_TAGS_FILTER)
-  }, [tagFilter, tagOptions])
+    const availableTagKeys = new Set(tagOptions.map((option) => option.id))
+    const nextTagFilters = tagFilters.filter((tagFilter) => availableTagKeys.has(tagFilter))
+    if (nextTagFilters.length === tagFilters.length) return
+
+    setTagFilters(nextTagFilters)
+  }, [tagFilters, tagOptions])
 
   useEffect(() => {
     if (!selectedEntry) return
@@ -346,8 +355,6 @@ export default function UploadGalleryPanel({
         return getDifficultySelectTarget()
       case 'assistance':
         return assistanceSelectRef.current?.isConnected ? assistanceSelectRef.current : getDifficultySelectTarget()
-      case 'tag':
-        return tagSelectRef.current?.isConnected ? tagSelectRef.current : getDifficultySelectTarget()
       case 'sort':
         return sortSelectRef.current?.isConnected ? sortSelectRef.current : getDifficultySelectTarget()
     }
@@ -440,7 +447,7 @@ export default function UploadGalleryPanel({
     findToolbarFocusTarget,
     focusPanelElement,
     sortOption,
-    tagFilter,
+    tagFilters,
   ])
 
   const handleDifficultyFilterChange = useCallback((value: GalleryDifficultyFilter) => {
@@ -453,14 +460,15 @@ export default function UploadGalleryPanel({
     setAssistanceFilter(value)
   }, [])
 
-  const handleTagFilterChange = useCallback((value: string) => {
-    pendingToolbarFocusRef.current = 'tag'
-    setTagFilter(value)
+  const handleTagFilterRequest = useCallback((tagLabel: string) => {
+    pendingToolbarFocusRef.current = 'difficulty'
+    setTagFilters([getGalleryTagKey(tagLabel)])
   }, [])
 
-  const handleTagFilterRequest = useCallback((tagLabel: string) => {
-    pendingToolbarFocusRef.current = 'tag'
-    setTagFilter(getGalleryTagKey(tagLabel))
+  const handleApplyTagFilters = useCallback((tagKeys: string[]) => {
+    const normalizedTagKeys = Array.from(new Set(tagKeys.map((tagKey) => getGalleryTagKey(tagKey)).filter(Boolean)))
+    setTagFilters(normalizedTagKeys)
+    setIsManagingTags(false)
   }, [])
 
   const handleSortOptionChange = useCallback((value: GallerySortOption) => {
@@ -472,7 +480,7 @@ export default function UploadGalleryPanel({
     pendingToolbarFocusRef.current = 'difficulty'
     setDifficultyFilter('all')
     setAssistanceFilter('all')
-    setTagFilter(ALL_GALLERY_TAGS_FILTER)
+    setTagFilters([])
     setSortOption('latest')
   }
 
@@ -552,8 +560,8 @@ export default function UploadGalleryPanel({
       : 'content'
   const visibleGalleryStateKey =
     visibleEntries.length === 0
-      ? `filtered-empty:${difficultyFilter}:${assistanceFilter}:${tagFilter}:${sortOption}`
-      : `grid:${difficultyFilter}:${assistanceFilter}:${tagFilter}:${sortOption}`
+      ? `filtered-empty:${difficultyFilter}:${assistanceFilter}:${tagFilters.join('|')}:${sortOption}`
+      : `grid:${difficultyFilter}:${assistanceFilter}:${tagFilters.join('|')}:${sortOption}`
   const collectingImageIds = collectingEntry ? [collectingEntry.representativeEntry.id] : []
   const collectingRepresentativeEntry = collectingEntry?.representativeEntry ?? null
   const collectingImageLabel = collectingRepresentativeEntry
@@ -682,14 +690,13 @@ export default function UploadGalleryPanel({
               <UploadGalleryToolbar
                 difficultySelectRef={primaryFilterRef ?? difficultySelectInternalRef}
                 assistanceSelectRef={assistanceSelectRef}
-                tagSelectRef={tagSelectRef}
                 sortSelectRef={sortSelectRef}
                 resetButtonRef={resetButtonRef}
                 difficultyFilter={difficultyFilter}
                 difficultyOptions={difficultyOptions}
                 assistanceFilter={assistanceFilter}
-                tagFilter={tagFilter}
-                tagOptions={tagOptions}
+                activeTagFilterCount={tagFilters.length}
+                activeTagFilterLabel={activeTagOption?.label ?? null}
                 sortOption={sortOption}
                 visibleCount={visibleEntries.length}
                 totalCount={groupedEntries.length}
@@ -699,7 +706,6 @@ export default function UploadGalleryPanel({
                 canManageTags={allTagOptions.length > 0}
                 onDifficultyFilterChange={handleDifficultyFilterChange}
                 onAssistanceFilterChange={handleAssistanceFilterChange}
-                onTagFilterChange={handleTagFilterChange}
                 onSortOptionChange={handleSortOptionChange}
                 onCreateCollectionFromTag={() => {
                   void handleCreateCollectionFromTag()
@@ -714,7 +720,7 @@ export default function UploadGalleryPanel({
                     icon={'\u{1F50E}'}
                     iconName="search"
                     title="Mit den aktuellen Filtern ist gerade kein Galerie-Bild sichtbar."
-                    detail="Probiere eine andere Schwierigkeit, Laufart oder einen anderen KI-Tag, oder setze die Auswahl wieder auf alle Eintraege zurueck."
+                    detail="Probiere eine andere Schwierigkeit, Laufart oder andere Tags, oder setze die Auswahl wieder auf alle Eintraege zurueck."
                     className="gallery-empty-state-filtered"
                   />
                 ) : (
@@ -794,9 +800,11 @@ export default function UploadGalleryPanel({
       {isManagingTags && (
         <UploadGalleryTagManagerDialog
           tagOptions={allTagOptions}
+          activeTagFilterKeys={tagFilters}
           isBusy={isUpdatingTags}
           onRenameTag={handleRenameTag}
           onRemoveTag={handleRemoveTag}
+          onApplyTagFilters={handleApplyTagFilters}
           onClose={() => {
             if (!isUpdatingTags) {
               setIsManagingTags(false)
