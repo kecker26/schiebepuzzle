@@ -2223,6 +2223,56 @@
   gap: 14px;
 }
 
+.saved-games-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.saved-games-page-summary {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.saved-games-page-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.saved-games-page-link {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--secondary-border);
+  background: var(--secondary-bg);
+  box-shadow: var(--secondary-shadow);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.saved-games-page-link:not(:disabled):hover,
+.saved-games-page-link:not(:disabled):focus-visible {
+  color: var(--text-main);
+  border-color: color-mix(in srgb, var(--primary-color) 42%, var(--secondary-border));
+}
+
+.saved-games-page-link[aria-current='page'] {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  border-color: transparent;
+  color: var(--text-on-primary);
+}
+
 .saved-game-item {
   align-items: center;
 }

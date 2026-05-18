@@ -11,7 +11,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Schiebepuzzle mit Canvas-Rendering, Drag-/Keyboard-Interaktion und visuellen Hervorhebungen.
 - Loesbare Shuffle-Logik, Hinweise und Solver-Unterstuetzung.
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
-- Autosave, kreative Gemini-Titel fuer neue Spielstaende, motivbasierte Titel-Wiederverwendung, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
+- Autosave, kreative Gemini-Titel fuer neue Spielstaende, motivbasierte Titel-Wiederverwendung, maximal 30 aktive Spielstaende mit 5er-Seitennavigation, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
 - Statistik mit vier visuellen Hauptansichten fuer Ueberblick, Analyse, Verlauf und Rohdaten-Explorer; Analyse buendelt Stufen, Rekorde und Sauberkeit, der Rohdaten-Explorer speichert CSV-/JSON-Exporte direkt im Projektordner.
 - Galerie geloester Motive inklusive Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, optionalem Gemini-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und kategorisierter Tag-Verwaltung mit Mehrfachauswahl.
 - Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit KI-Sammlungsvorschlaegen und motivweit deduplizierten Sammlungen aus Tag-Treffern.
@@ -87,7 +87,7 @@ Der Dev-Server ist in `vite.config.ts` auf `http://127.0.0.1:5173/` mit `strictP
 
 Die App arbeitet lokal. Die Vite-Middleware in `localApi.ts` verwaltet die Daten direkt im Projektordner:
 
-- `spielstaende/`: gespeicherte Partien, `__stats.json`, `__gallery.json` und `__collections.json`
+- `spielstaende/`: bis zu 30 gespeicherte Partien, `__stats.json`, `__gallery.json` und `__collections.json`
 - `backups/`: lokale Backup-Dateien mit der Endung `.spbkp`
 - `statistik-exporte/`: CSV- und JSON-Dateien aus dem Rohdaten-Explorer
 - `public/audio/`: lokale Musik- und Sound-Assets
