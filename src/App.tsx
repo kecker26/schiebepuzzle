@@ -115,6 +115,7 @@ import {
 } from './utils/galleryReplaySetup.ts'
 
 const DEFAULT_CONFIG: PuzzleConfig = DEFAULT_PUZZLE_CONFIG
+const MAX_DISPLAYED_SAVED_GAMES = 30
 const SAVE_DEBOUNCE_MS = 3000
 const SAVE_MAX_INTERVAL_MS = 10000
 const CROP_TRANSFORM_MATCH_EPSILON = 0.0001
@@ -1007,14 +1008,14 @@ export default function App() {
           keepalive: options.keepalive,
         })
 
-        setSavedGames((prev) => upsertSummary(prev, created))
+        setSavedGames((prev) => upsertSummary(prev, created).slice(0, MAX_DISPLAYED_SAVED_GAMES))
         if (created.titleSource !== 'reused') {
           void generateSavedGameTitle(created.id)
             .then((titledSave) => {
               setSavedGames((prev) => (
                 prev.some((entry) => entry.id === titledSave.id)
                   ? prev.map((entry) => entry.id === titledSave.id ? titledSave : entry)
-                  : [titledSave, ...prev]
+                  : upsertSummary(prev, titledSave).slice(0, MAX_DISPLAYED_SAVED_GAMES)
               ))
             })
             .catch(() => {
@@ -1061,7 +1062,7 @@ export default function App() {
         const updated = await updateSavedGame(existingSaveId, { progress }, {
           keepalive: options.keepalive,
         })
-        setSavedGames((prev) => upsertSummary(prev, updated))
+        setSavedGames((prev) => upsertSummary(prev, updated).slice(0, MAX_DISPLAYED_SAVED_GAMES))
         if (
           activeSessionRef.current === sessionId
           && currentSaveIdRef.current === existingSaveId

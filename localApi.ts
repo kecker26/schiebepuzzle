@@ -25,6 +25,7 @@ const SAVE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
 const BACKUP_FILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.spbkp(?:\.gz)?$/
 const STATS_EXPORT_FILE_NAME_PATTERN = /^schiebepuzzle-statistik-[a-zA-Z0-9._-]+\.(?:csv|json)$/
 const MAX_BODY_SIZE = 40 * 1024 * 1024
+const MAX_SAVED_GAMES = 30
 const MAX_BACKUP_FILES = 3
 const BACKUP_FORMAT_VERSION = 3
 const RECENT_COMPLETION_PREVIEW_LIMIT = 8
@@ -1537,6 +1538,28 @@ async function deleteAllSaves(): Promise<void> {
   await Promise.all(deleteTasks)
 }
 
+async function deleteSaveById(saveId: string): Promise<void> {
+  await Promise.all([
+    rm(saveDirPath(saveId), { recursive: true, force: true }),
+    rm(legacySaveFilePath(saveId), { force: true }),
+  ])
+}
+
+async function pruneSavesToRetentionLimit(limit: number): Promise<string[]> {
+  if (limit < 1) {
+    return []
+  }
+
+  const summaries = await listAllSaveSummaries()
+  const savesToDelete = summaries.slice(limit)
+  if (savesToDelete.length === 0) {
+    return []
+  }
+
+  await Promise.all(savesToDelete.map((save) => deleteSaveById(save.id)))
+  return savesToDelete.map((save) => save.id)
+}
+
 async function listAllSaveSummaries(): Promise<SaveSummary[]> {
   await ensureSavesDir()
   const entries = await readdir(SAVES_DIR, { withFileTypes: true })
@@ -1569,7 +1592,7 @@ async function listAllSaveSummaries(): Promise<SaveSummary[]> {
     }
   }
 
-  summaries.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+  summaries.sort((a, b) => getIsoTimestampValue(b.updatedAt) - getIsoTimestampValue(a.updatedAt))
   return summaries
 }
 
@@ -1579,7 +1602,17 @@ async function listAllSaveData(): Promise<StoredSaveFile[]> {
 
   return loadedSaves
     .filter((save): save is StoredSaveFile => save !== null)
-    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+    .sort((a, b) => getIsoTimestampValue(b.updatedAt) - getIsoTimestampValue(a.updatedAt))
+}
+
+function limitSavesToRetention<T extends { updatedAt: string }>(saves: T[], limit: number): T[] {
+  if (limit < 1) {
+    return []
+  }
+
+  return [...saves]
+    .sort((a, b) => getIsoTimestampValue(b.updatedAt) - getIsoTimestampValue(a.updatedAt))
+    .slice(0, limit)
 }
 
 function hasReusableSaveTitle(save: Pick<StoredSaveFile, 'name'> & Partial<StoredSaveFile>): boolean {
@@ -1720,9 +1753,10 @@ async function buildBackupResponse(): Promise<BackupResponse> {
     readStatsFile(),
     readGalleryFile(),
   ])
+  const retainedSaves = limitSavesToRetention(saves, MAX_SAVED_GAMES)
   const collections = await readCollectionsFile(gallery)
   const assetRegistry = createBackupAssetRegistry()
-  const rawSavedGames = saves.map((save) => toBackupSaveResponse(save, assetRegistry))
+  const rawSavedGames = retainedSaves.map((save) => toBackupSaveResponse(save, assetRegistry))
   const rawStatsResponse = toBackupStatsResponse(stats, assetRegistry)
   const rawGalleryResponse = toBackupGalleryResponse(gallery, assetRegistry)
   assetRegistry.finalize()
@@ -1758,6 +1792,7 @@ async function importBackupPayload(payload: {
   const importedSaves = rawSaves
     .map((entry, index) => normalizeImportedSave(entry, index, usedIds, assets))
     .filter((entry): entry is StoredSaveFile => entry !== null)
+  const retainedImportedSaves = limitSavesToRetention(importedSaves, MAX_SAVED_GAMES)
 
   const importedStats = normalizeStatsFile(payload.stats, assets)
   const importedGallery = payload.gallery === null || payload.gallery === undefined
@@ -1766,7 +1801,7 @@ async function importBackupPayload(payload: {
   const importedCollections = normalizeCollectionsFile(payload.collections, importedGallery)
 
   await deleteAllSaves()
-  await Promise.all(importedSaves.map((save) => writeStructuredSave(save)))
+  await Promise.all(retainedImportedSaves.map((save) => writeStructuredSave(save)))
   await Promise.all([
     writeStatsFile(importedStats),
     writeGalleryFile(importedGallery),
@@ -1775,7 +1810,7 @@ async function importBackupPayload(payload: {
 
   return {
     importedAt,
-    savedGames: await listAllSaveSummaries(),
+    savedGames: (await listAllSaveSummaries()).slice(0, MAX_SAVED_GAMES),
     stats: toStatsResponse(importedStats),
     gallery: toGalleryResponse(importedGallery),
     collections: toCollectionsResponse(importedCollections),
@@ -3873,7 +3908,7 @@ async function handleSaveApi(
   try {
     if (req.method === 'GET' && parts.length === 2) {
       const saves = await listAllSaveSummaries()
-      sendJson(res, 200, saves)
+      sendJson(res, 200, saves.slice(0, MAX_SAVED_GAMES))
       return
     }
 
@@ -3922,6 +3957,7 @@ async function handleSaveApi(
       }
 
       await writeStructuredSave(save)
+      await pruneSavesToRetentionLimit(MAX_SAVED_GAMES)
       sendJson(res, 201, toSummary(save))
       return
     }
@@ -4013,10 +4049,7 @@ async function handleSaveApi(
     }
 
     if (req.method === 'DELETE' && parts.length === 3) {
-      await Promise.all([
-        rm(saveDirPath(saveId), { recursive: true, force: true }),
-        rm(legacySaveFilePath(saveId), { force: true }),
-      ])
+      await deleteSaveById(saveId)
       sendJson(res, 200, { ok: true })
       return
     }

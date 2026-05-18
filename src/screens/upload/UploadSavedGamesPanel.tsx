@@ -1,4 +1,13 @@
-import { type AriaRole, type KeyboardEvent as ReactKeyboardEvent, type RefObject, useCallback, useEffect, useRef } from 'react'
+import {
+  type AriaRole,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { ensureElementVisible } from '../../app/focusVisibility.ts'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
 import { SavedGameSummary } from '../../types/index'
@@ -25,6 +34,8 @@ interface PendingSavedGameDeletionFocus {
   savedIndex: number
 }
 
+const SAVED_GAMES_PER_PAGE = 5
+
 export default function UploadSavedGamesPanel({
   isLoadingSavedGames,
   savedGames,
@@ -44,16 +55,31 @@ export default function UploadSavedGamesPanel({
   const pendingDeleteAllFocusRef = useRef(false)
   const previousDeletingSaveIdRef = useRef<string | null>(null)
   const previousDeletingAllSavedGamesRef = useRef(isDeletingAllSavedGames)
+  const [currentPage, setCurrentPage] = useState(1)
   const isBulkActionDisabled =
     isLoadingSavedGames ||
     isDeletingAllSavedGames ||
     loadingSaveId !== null ||
     deletingSaveId !== null
+  const savedGamesPageCount = Math.max(1, Math.ceil(savedGames.length / SAVED_GAMES_PER_PAGE))
+  const activeSavedGamesPage = Math.min(currentPage, savedGamesPageCount)
+  const visibleSavedGames = useMemo(() => {
+    const startIndex = (activeSavedGamesPage - 1) * SAVED_GAMES_PER_PAGE
+    return savedGames.slice(startIndex, startIndex + SAVED_GAMES_PER_PAGE)
+  }, [activeSavedGamesPage, savedGames])
   const savedGamesStateKey = isLoadingSavedGames
     ? 'loading'
     : savedGames.length === 0
       ? 'empty'
-      : 'content'
+      : `content-${activeSavedGamesPage}`
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, savedGamesPageCount))
+  }, [savedGamesPageCount])
+
+  const handlePageClick = useCallback((page: number) => {
+    setCurrentPage(page)
+  }, [])
 
   const focusSavedGamesElement = useCallback((target: HTMLElement | null) => {
     if (!target) {
@@ -293,7 +319,7 @@ export default function UploadSavedGamesPanel({
         ) : (
           <div className="dashboard-saves-shell">
             <ul className="saved-games-list">
-              {savedGames.map((save) => {
+              {visibleSavedGames.map((save) => {
                 return (
                   <UploadSavedGameItem
                     key={save.id}
@@ -301,7 +327,7 @@ export default function UploadSavedGamesPanel({
                     isLoading={loadingSaveId === save.id}
                     isDeleting={deletingSaveId === save.id}
                     isDeletingAllSavedGames={isDeletingAllSavedGames}
-                    primaryActionRef={primaryActionRef && savedGames[0]?.id === save.id ? primaryActionRef : undefined}
+                    primaryActionRef={primaryActionRef && visibleSavedGames[0]?.id === save.id ? primaryActionRef : undefined}
                     onLoadSave={onLoadSave}
                     onDeleteRequest={onDeleteRequest}
                     onActionKeyDown={handleSaveActionKeyDown}
@@ -309,6 +335,31 @@ export default function UploadSavedGamesPanel({
                 )
               })}
             </ul>
+            {savedGamesPageCount > 1 && (
+              <nav className="saved-games-pagination" aria-label="Spielstandseiten">
+                <span className="saved-games-page-summary">
+                  Seite {activeSavedGamesPage} von {savedGamesPageCount}
+                </span>
+                <div className="saved-games-page-links">
+                  {Array.from({ length: savedGamesPageCount }, (_, index) => {
+                    const page = index + 1
+
+                    return (
+                      <button
+                        key={page}
+                        type="button"
+                        className="saved-games-page-link"
+                        aria-current={page === activeSavedGamesPage ? 'page' : undefined}
+                        onClick={() => handlePageClick(page)}
+                        disabled={isBulkActionDisabled}
+                      >
+                        {page}
+                      </button>
+                    )
+                  })}
+                </div>
+              </nav>
+            )}
           </div>
         )}
       </AnimatedStateSwap>
