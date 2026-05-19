@@ -1,5 +1,6 @@
 ﻿import {
   PersistedPuzzleProgress,
+  ImageThemePalette,
   PuzzleConfig,
   SavedGameData,
   SavedGameSummary,
@@ -12,6 +13,7 @@ interface CreateSavePayload {
   previewImage: string
   config: PuzzleConfig
   progress: PersistedPuzzleProgress
+  imageTheme?: ImageThemePalette | null
 }
 
 interface UpdateSavePayload {

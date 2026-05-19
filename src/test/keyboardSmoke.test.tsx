@@ -1433,7 +1433,7 @@ describe('keyboard smoke tests', () => {
     expect(screen.queryByRole('button', { name: /motivweiten schnellstart/i })).toBeNull()
     expect(screen.queryByRole('button', { name: /bestzeit spielen/i })).toBeNull()
     expect(screen.getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })).toBeTruthy()
-    expect(screen.getByText('+0:17 zur Bestzeit')).toBeTruthy()
+    expect(screen.queryByText('+0:17 zur Bestzeit')).toBeNull()
   })
 
   it('keeps the whole gallery card in view when tab focus moves to the next action', () => {

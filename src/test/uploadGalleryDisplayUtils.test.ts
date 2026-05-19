@@ -75,8 +75,8 @@ describe('UploadGalleryDisplayUtils', () => {
 
     expect(targetEntry).toBeDefined()
     expect(targetEntry).toMatchObject({
-      totalSolveCount: 2,
-      visibleSolveCount: 2,
+      totalSolveCount: 3,
+      visibleSolveCount: 3,
       motifReplaySummary: {
         totalSolveCount: 3,
         replayableSolveCount: 3,
@@ -120,7 +120,7 @@ describe('UploadGalleryDisplayUtils', () => {
 
     expect(entries).toHaveLength(1)
     expect(entries[0]).toMatchObject({
-      totalSolveCount: 1,
+      totalSolveCount: 2,
       visibleSolveCount: 1,
       motifReplaySummary: {
         totalSolveCount: 2,

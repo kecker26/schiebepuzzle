@@ -295,7 +295,7 @@ export default function App() {
   useGlobalGlowTracking()
 
   const announceAccessibility = useAccessibilityAnnouncer()
-  const { mode, toggleMode } = useTheme()
+  const { imagePalette: themeImagePalette, mode, setImagePalette, toggleMode } = useTheme()
   const isMusicMuted = useMusicMuted()
   const selectedMusicStyle = useSelectedMusicStyle()
   const [appState, setAppState] = useState<AppState>('welcome')
@@ -436,7 +436,8 @@ export default function App() {
     return null
   }, [appState, currentSaveId, isSaveStatusBusy, lastSuccessfulSaveAt, saveStatusError])
 
-  useImageThemePalette(image, croppedImage)
+  const analyzedImageThemePalette = useImageThemePalette(image, croppedImage)
+  const activeImageThemePalette = analyzedImageThemePalette ?? themeImagePalette
   useButtonOnlyTabNavigation(appRef)
   useGlobalPrimaryFocusShortcut({ scopeRef: appRef })
   const openHelp = useCallback(() => {
@@ -1004,6 +1005,7 @@ export default function App() {
           previewImage,
           config,
           progress,
+          imageTheme: activeImageThemePalette,
         }, {
           keepalive: options.keepalive,
         })
@@ -1040,7 +1042,7 @@ export default function App() {
         }
       }
     },
-    [config, croppedImage, image, setSavedGames]
+    [activeImageThemePalette, config, croppedImage, image, setSavedGames]
   )
 
   const persistSaveProgress = useCallback(
@@ -1154,6 +1156,7 @@ export default function App() {
     confirmedCropSnapshotRef.current = null
     setReplayCropTransform(null)
     setConfig(snapshot.config)
+    setImagePalette(null)
     setImage(snapshot.image)
     setIsRandomImage(snapshot.isRandomImage)
     setRandomImageSource(snapshot.randomImageSource)
@@ -1168,6 +1171,7 @@ export default function App() {
     flushPendingSave,
     releaseAppFocus,
     resetRunArtifacts,
+    setImagePalette,
   ])
 
   const scheduleSaveProgress = useCallback(
@@ -1240,6 +1244,7 @@ export default function App() {
     })
     confirmedCropSnapshotRef.current = null
     setReplayCropTransform(null)
+    setImagePalette(null)
     setImage(imgSrc)
     setIsRandomImage(isRandom)
     setRandomImageSource(isRandom ? source : null)
@@ -1247,7 +1252,7 @@ export default function App() {
     setRandomImageError(null)
     setCroppedImage(null)
     setAppState('imageLoaded')
-  }, [beginSession, clearGalleryChallengeState, commitCropDraftSnapshot, config, resetRunArtifacts])
+  }, [beginSession, clearGalleryChallengeState, commitCropDraftSnapshot, config, resetRunArtifacts, setImagePalette])
 
   const handleLoadSavedGame = useCallback(async (saveId: string): Promise<void> => {
     try {
@@ -1265,6 +1270,7 @@ export default function App() {
 
       currentSaveIdRef.current = loaded.id
       setCurrentSaveId(loaded.id)
+      setImagePalette(loaded.imageTheme ?? null)
       setImage(loaded.image)
       setCroppedImage(loaded.croppedImage)
       setConfig(loaded.config)
@@ -1279,7 +1285,7 @@ export default function App() {
     } catch (error) {
       setSavedGamesError(`Spielstand konnte nicht geladen werden: ${getErrorMessage(error)}`)
     }
-  }, [beginSession, clearGalleryChallengeState, clearIgnoredRecoverySave, commitCropDraftSnapshot, resetCompletionFeedback, restartPuzzleRun, setSavedGamesError])
+  }, [beginSession, clearGalleryChallengeState, clearIgnoredRecoverySave, commitCropDraftSnapshot, resetCompletionFeedback, restartPuzzleRun, setImagePalette, setSavedGamesError])
 
   const handleDismissRecoveryResumePrompt = useCallback(() => {
     setDeferredRecoverySaveId(recoveryResumePrompt?.save.id ?? null)
@@ -1681,9 +1687,10 @@ export default function App() {
         cropTransform: completedCropSnapshot?.transform ?? null,
         useFullImage: completedCropSnapshot?.useFullImage ?? false,
         replaySetup: stats.replaySetup,
+        imageTheme: activeImageThemePalette,
       }
     },
-    [croppedImage, image]
+    [activeImageThemePalette, croppedImage, image]
   )
 
   const scheduleGalleryAiAnalysis = useCallback((entryId: string, sessionId: number) => {
@@ -1900,6 +1907,7 @@ export default function App() {
           setActiveGalleryReplaySetup(replaySetup)
           setActiveGalleryChallengeTarget(createGalleryChallengeTarget(entry))
           setConfig(entry.config)
+          setImagePalette(entry.imageTheme ?? null)
           setImage(replayImage)
           setCroppedImage(directCroppedImage)
           setIsRandomImage(false)
@@ -1941,6 +1949,7 @@ export default function App() {
     setActiveGalleryReplaySetup(null)
     setActiveGalleryChallengeTarget(null)
     setConfig(entry.config)
+    setImagePalette(entry.imageTheme ?? null)
     setImage(replayImage)
     setCroppedImage(null)
     setIsRandomImage(false)
@@ -1953,6 +1962,7 @@ export default function App() {
     commitCropDraftSnapshot,
     resetRunArtifacts,
     restartPuzzleRun,
+    setImagePalette,
     setGalleryError,
   ])
 

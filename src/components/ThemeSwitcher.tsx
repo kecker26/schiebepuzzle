@@ -78,7 +78,7 @@ export default function ThemeSwitcher({
   onOpenHelp,
   saveStatus = null,
 }: ThemeSwitcherProps) {
-  const { mode, toggleMode } = useTheme()
+  const { emotionThemeEnabled, imagePalette, mode, toggleEmotionTheme, toggleMode } = useTheme()
   const isMusicMuted = useMusicMuted()
   const selectedMusicStyle = useSelectedMusicStyle()
   const [activePopover, setActivePopover] = useState<ThemeSwitcherPopover>(null)
@@ -91,6 +91,8 @@ export default function ThemeSwitcher({
   const popoverFocusPlacementRef = useRef<PopoverFocusPlacement>('selected')
   const layerIdRef = useRef(Symbol('theme-switcher-popover'))
   const selectedMusicStyleDefinition = getMusicStyleDefinition(selectedMusicStyle)
+  const moodLabel = imagePalette?.moodLabel ?? 'Standard'
+  const moodSourceLabel = imagePalette?.source === 'local-color' ? 'lokale Analyse' : 'Fallback'
   const shouldReduceMotion = useReducedMotionPreference()
   const isMusicPopoverOpen = activePopover === 'music'
   const isStylePickerOpen = activePopover === 'style'
@@ -603,6 +605,22 @@ export default function ThemeSwitcher({
             <span aria-hidden="true">{'\u266B'}</span>
             <span className="theme-toggle-btn-label">{selectedMusicStyleDefinition.shortLabel}</span>
             <span className="theme-toggle-btn-shortcut" aria-hidden="true">{'\u2193'}</span>
+          </button>
+          <span className="theme-switcher-divider" aria-hidden="true" />
+          <button
+            type="button"
+            className={`theme-toggle-btn theme-toggle-btn-style theme-toggle-btn-emotion${emotionThemeEnabled ? ' is-active' : ''}`}
+            onClick={toggleEmotionTheme}
+            title={emotionThemeEnabled
+              ? `Emotion-Theme deaktivieren. Aktuell: ${moodLabel} (${moodSourceLabel}).`
+              : 'Emotion-Theme aktivieren'}
+            aria-label={emotionThemeEnabled
+              ? `Emotion-Theme deaktivieren. Aktuelle Bildstimmung: ${moodLabel}. Quelle: ${moodSourceLabel}.`
+              : 'Emotion-Theme aktivieren. Standard-Farbgebung ist aktiv.'}
+            aria-pressed={emotionThemeEnabled}
+          >
+            <span aria-hidden="true">E</span>
+            <span className="theme-toggle-btn-label">{emotionThemeEnabled ? moodLabel : 'Standard'}</span>
           </button>
           <span className="theme-switcher-divider" aria-hidden="true" />
           <button

@@ -4,17 +4,11 @@ import {
   FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE,
 } from '../../app/focusVisibility.ts'
 import { getDirectionalFocusTarget } from '../../app/directionalFocusNavigation.ts'
-import GlobalUiIcon from '../../components/GlobalUiIcon.tsx'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import { ImageCollection, SolvedGalleryEntry } from '../../types/index'
-import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
+import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
-import { getGalleryCardComparisonHints } from './galleryComparisonHints.ts'
-import {
-  formatAssistanceModeLabel,
-  formatDate,
-  formatTime,
-} from './uploadUtils.ts'
+import { formatDate } from './uploadUtils.ts'
 
 interface UploadGalleryCardProps {
   entry: GalleryDisplayEntry
@@ -35,32 +29,18 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   onOpenDetails,
   onCollectEntry,
   onTagFilter,
-  onRetryTagging,
   onAddSuggestedCollection,
   collections = [],
   suggestedCollectionBusyKey = null,
-  retryingTagEntryId = null,
   onDeleteEntry,
   isDeleting,
 }: UploadGalleryCardProps) {
   const representativeEntry = entry.representativeEntry
-  const assistanceLabel = representativeEntry.hasDetailedProfile
-    ? formatAssistanceModeLabel(representativeEntry.assistanceMode)
-    : 'Legacy'
-  const solveCountLabel = formatGallerySolveCount(entry.totalSolveCount, entry.visibleSolveCount)
   const difficultyLabel = formatDifficultyLabel(representativeEntry.config)
   const completedAtLabel = formatDate(representativeEntry.completedAt)
-  const motifReplaySummary = entry.motifReplaySummary
-  const motifDifficultyCount = motifReplaySummary.difficultyVariants.length
-  const motifReplayableCount = motifReplaySummary.replayableSolveCount
-  const motifBestTimeLabel = motifReplaySummary.bestTimeEntry
-    ? formatTime(motifReplaySummary.bestTimeEntry.time)
-    : null
-  const comparisonHints = getGalleryCardComparisonHints(entry)
+  const totalSolveCountLabel = formatGallerySolveCount(entry.motifReplaySummary.totalSolveCount)
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
-  const canRetryAiTagging = aiTagging?.status === 'failed' || aiTagging?.status === 'unavailable'
-  const isRetryingTagging = retryingTagEntryId === representativeEntry.id
   const collectionSuggestions = (aiTagging?.collectionSuggestions ?? [])
     .map((suggestion) => ({
       suggestion,
@@ -68,10 +48,6 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
     }))
     .filter(({ collection }) => collection && !collection.imageIds.includes(representativeEntry.id))
     .slice(0, 2)
-  const replaySummaryCopy =
-    motifReplayableCount > 0
-      ? `Motivweit ueber ${motifDifficultyCount} ${motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'} ${motifReplayableCount} spielbare ${motifReplayableCount === 1 ? 'Loesung' : 'Loesungen'}${motifBestTimeLabel ? `, Bestzeit gesamt ${motifBestTimeLabel}` : ''}.`
-      : `Dieses Motiv liegt aktuell nur als Archiv-Eintrag vor und ist noch nicht erneut spielbar.`
 
   const focusButton = useCallback((button: HTMLButtonElement | undefined) => {
     if (!button) {
@@ -168,10 +144,6 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
     onCollectEntry?.(entry)
   }, [entry, onCollectEntry])
 
-  const handleRetryTagging = useCallback(() => {
-    void onRetryTagging?.(representativeEntry)
-  }, [onRetryTagging, representativeEntry])
-
   return (
     <article className="gallery-card">
       <button
@@ -199,75 +171,13 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
       </button>
 
       <div className="gallery-card-body">
-        <div className="gallery-card-header">
-          <strong className="gallery-card-title">{difficultyLabel}</strong>
-          <span className="gallery-card-date">{completedAtLabel}</span>
-        </div>
-
-        <div className="gallery-card-tags" aria-label="Puzzle- und Motivdaten">
-          <div className="gallery-card-meta-line">
-            <span className="gallery-card-info-chip">
-              <GlobalUiIcon name="grid" className="gallery-card-info-chip-icon" />
-              <span>{formatPuzzleSize(representativeEntry.config)}</span>
-            </span>
-            <span className="gallery-card-info-chip">
-              <GlobalUiIcon name="refreshCw" className="gallery-card-info-chip-icon" />
-              <span>{solveCountLabel}</span>
-            </span>
-            <span className="gallery-card-info-chip">
-              <GlobalUiIcon
-                name={representativeEntry.assistanceMode === 'auto-assisted' ? 'zap' : 'navigation'}
-                className="gallery-card-info-chip-icon"
-              />
-              <span>{assistanceLabel}</span>
-            </span>
-          </div>
-          <div className="gallery-card-meta-line">
-            <span className="gallery-card-info-chip">
-              <GlobalUiIcon name="move" className="gallery-card-info-chip-icon" />
-              <span>Motivweit {motifDifficultyCount} {motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'}</span>
-            </span>
-            <span className="gallery-card-info-chip">
-              <GlobalUiIcon
-                name={motifReplayableCount > 0 ? 'refreshCw' : 'archive'}
-                className="gallery-card-info-chip-icon"
-              />
-              <span>{motifReplayableCount > 0 ? `${motifReplayableCount} spielbar` : 'Archiv'}</span>
-            </span>
-          </div>
-        </div>
-
-        <div className="gallery-card-stats" aria-label="Zusammenfassung des Laufs">
-          <div className="gallery-card-stat">
-            <span className="gallery-card-stat-label">
-              <UploadScreenIcon name="timer" className="gallery-card-stat-icon" />
-              Zeit
-            </span>
-            <strong className="gallery-card-stat-value">{formatTime(representativeEntry.time)}</strong>
-          </div>
-          <div className="gallery-card-stat">
-            <span className="gallery-card-stat-label">
-              <UploadScreenIcon name="mousePointerClick" className="gallery-card-stat-icon" />
-              Netto
-            </span>
-            <strong className="gallery-card-stat-value">{representativeEntry.moves}</strong>
-          </div>
-        </div>
-
-        <p className="gallery-card-replay-note">{replaySummaryCopy}</p>
-
-        {comparisonHints.length > 0 ? (
-          <div className="gallery-card-comparison-hints" aria-label="Motivvergleich">
-            {comparisonHints.map((hint) => (
-              <span key={hint.label} className={`is-${hint.tone}`}>
-                {hint.label}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        {aiTags.length > 0 || aiTagging ? (
+        {aiTags.length > 0 || collectionSuggestions.length > 0 ? (
           <div className="gallery-card-ai" aria-label="KI-Tags und Sammlungsvorschlaege">
+            <div className="gallery-card-run-count" aria-label={`Gesamtzahl der Laeufe: ${totalSolveCountLabel}`}>
+              <UploadScreenIcon name="refreshCw" className="gallery-card-run-count-icon" />
+              <span>{totalSolveCountLabel}</span>
+            </div>
+
             {aiTags.length > 0 ? (
               <div className="gallery-card-ai-tags">
                 {aiTags.slice(0, 5).map((tag) => (
@@ -284,30 +194,6 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                     #{tag.label}
                   </button>
                 ))}
-              </div>
-            ) : aiTagging?.status === 'failed' || aiTagging?.status === 'unavailable' || aiTagging?.status === 'pending' ? (
-              <div className="gallery-card-ai-status-row">
-                <span className="gallery-card-ai-status" title={aiTagging.error ?? undefined}>
-                  {aiTagging.status === 'unavailable'
-                    ? 'KI-Tags nicht konfiguriert'
-                    : aiTagging.status === 'pending'
-                      ? 'KI-Tagging laeuft ...'
-                      : 'KI-Tagging fehlgeschlagen'}
-                </span>
-                {canRetryAiTagging ? (
-                  <button
-                    type="button"
-                    className="gallery-card-ai-retry"
-                    data-gallery-action="retry-tagging"
-                    data-gallery-entry-id={entry.id}
-                    onClick={handleRetryTagging}
-                    onKeyDown={handleActionKeyDown}
-                    disabled={isDeleting || isRetryingTagging || !onRetryTagging}
-                    title={aiTagging.error ? `Erneut versuchen: ${aiTagging.error}` : 'KI-Tagging erneut versuchen'}
-                  >
-                    {isRetryingTagging ? 'Prueft ...' : 'Erneut'}
-                  </button>
-                ) : null}
               </div>
             ) : null}
 
@@ -336,7 +222,14 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
               </div>
             ) : null}
           </div>
-        ) : null}
+        ) : (
+          <div className="gallery-card-ai">
+            <div className="gallery-card-run-count" aria-label={`Gesamtzahl der Laeufe: ${totalSolveCountLabel}`}>
+              <UploadScreenIcon name="refreshCw" className="gallery-card-run-count-icon" />
+              <span>{totalSolveCountLabel}</span>
+            </div>
+          </div>
+        )}
 
         <div className="gallery-card-actions is-compact">
           <button
@@ -350,7 +243,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             aria-label={`Spielen und Details zu ${difficultyLabel} vom ${completedAtLabel} oeffnen`}
           >
             <UploadScreenIcon name="playCircle" className="gallery-card-action-icon" />
-            <span>Spielen + Details</span>
+            <span>Details</span>
           </button>
           <button
             type="button"

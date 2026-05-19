@@ -150,6 +150,37 @@ interface StoredSaveAiTitle {
   reusedFromSaveId?: string | null
 }
 
+type StoredImageThemeMoodId =
+  | 'joyful'
+  | 'melancholic'
+  | 'dark'
+  | 'energetic'
+  | 'calm'
+  | 'dramatic'
+  | 'nostalgic'
+  | 'dreamy'
+  | 'epic'
+  | 'minimal'
+
+type StoredImageThemePaletteSource = 'local-color' | 'fallback'
+
+interface StoredImageThemePalette {
+  accentSolid: string
+  accentSoft: string
+  accentStrong: string
+  glow: string
+  primaryColor: string
+  primaryHover: string
+  primaryShadow: string
+  primaryShadowHover: string
+  mood: StoredImageThemeMoodId
+  moodLabel: string
+  confidence: number
+  source: StoredImageThemePaletteSource
+  reason: string | null
+  analyzedAt: string
+}
+
 interface StoredSaveProgress {
   moveCount: number
   elapsedTime: number
@@ -170,6 +201,7 @@ interface StoredSaveFile {
   imageFingerprint?: string
   titleSource?: StoredSaveTitleSource
   aiTitle?: StoredSaveAiTitle
+  imageTheme?: StoredImageThemePalette
 }
 
 interface StoredSaveMetaFile {
@@ -182,6 +214,7 @@ interface StoredSaveMetaFile {
   imageFingerprint?: string
   titleSource?: StoredSaveTitleSource
   aiTitle?: StoredSaveAiTitle
+  imageTheme?: StoredImageThemePalette
 }
 
 interface StoredSaveProgressFile {
@@ -200,6 +233,7 @@ interface SaveSummary {
   imageFingerprint?: string
   titleSource?: StoredSaveTitleSource
   aiTitle?: StoredSaveAiTitle
+  imageTheme?: StoredImageThemePalette
 }
 
 interface StoredCompletionRecord {
@@ -266,6 +300,7 @@ interface StoredGalleryEntry {
   cropTransform?: StoredCropTransform | null
   useFullImage?: boolean
   replaySetup?: StoredGalleryReplaySetup
+  imageTheme?: StoredImageThemePalette
 }
 
 type StoredGalleryTagSource = 'gemini' | 'imported'
@@ -1375,6 +1410,7 @@ function toSummary(save: Pick<StoredSaveFile, 'id' | 'name' | 'createdAt' | 'upd
   const titleSource = sanitizeSaveTitleSource((save as Partial<StoredSaveFile>).titleSource)
   const aiTitle = sanitizeSaveAiTitle((save as Partial<StoredSaveFile>).aiTitle)
   const imageFingerprint = sanitizeImageFingerprint((save as Partial<StoredSaveFile>).imageFingerprint)
+  const imageTheme = sanitizeImageThemePalette((save as Partial<StoredSaveFile>).imageTheme)
 
   return {
     id: save.id,
@@ -1388,6 +1424,7 @@ function toSummary(save: Pick<StoredSaveFile, 'id' | 'name' | 'createdAt' | 'upd
     ...(imageFingerprint ? { imageFingerprint } : {}),
     ...(titleSource ? { titleSource } : {}),
     ...(aiTitle ? { aiTitle } : {}),
+    ...(imageTheme ? { imageTheme } : {}),
   }
 }
 
@@ -1400,6 +1437,7 @@ async function readStructuredSaveMeta(saveId: string): Promise<StoredSaveMetaFil
   const imageFingerprint = sanitizeImageFingerprint(meta.imageFingerprint)
   const titleSource = sanitizeSaveTitleSource(meta.titleSource)
   const aiTitle = sanitizeSaveAiTitle(meta.aiTitle)
+  const imageTheme = sanitizeImageThemePalette(meta.imageTheme)
 
   return {
     id: meta.id,
@@ -1411,6 +1449,7 @@ async function readStructuredSaveMeta(saveId: string): Promise<StoredSaveMetaFil
     ...(imageFingerprint ? { imageFingerprint } : {}),
     ...(titleSource ? { titleSource } : {}),
     ...(aiTitle ? { aiTitle } : {}),
+    ...(imageTheme ? { imageTheme } : {}),
   }
 }
 
@@ -1466,6 +1505,7 @@ async function writeStructuredSave(save: StoredSaveFile): Promise<void> {
     ...(save.imageFingerprint ? { imageFingerprint: save.imageFingerprint } : {}),
     ...(save.titleSource ? { titleSource: save.titleSource } : {}),
     ...(save.aiTitle ? { aiTitle: save.aiTitle } : {}),
+    ...(save.imageTheme ? { imageTheme: save.imageTheme } : {}),
   }
   const progressFile: StoredSaveProgressFile = {
     progress: sanitizeProgress(save.progress),
@@ -1711,6 +1751,7 @@ function normalizeImportedSave(
   const imageFingerprint = sanitizeImageFingerprint(input.imageFingerprint) ?? createImageFingerprint(previewImage)
   const titleSource = sanitizeSaveTitleSource(input.titleSource)
   const aiTitle = sanitizeSaveAiTitle(input.aiTitle)
+  const imageTheme = sanitizeImageThemePalette(input.imageTheme)
 
   return {
     id: saveId,
@@ -1725,6 +1766,7 @@ function normalizeImportedSave(
     ...(imageFingerprint ? { imageFingerprint } : {}),
     ...(titleSource ? { titleSource } : {}),
     ...(aiTitle ? { aiTitle } : {}),
+    ...(imageTheme ? { imageTheme } : {}),
   }
 }
 
@@ -2129,6 +2171,79 @@ function sanitizeOptionalPreviewImage(value: unknown): string | null {
 function clampConfidence(value: unknown): number {
   const numericValue = typeof value === 'number' && Number.isFinite(value) ? value : 0
   return Math.max(0, Math.min(1, numericValue))
+}
+
+function isImageThemeMoodId(value: unknown): value is StoredImageThemeMoodId {
+  return (
+    value === 'joyful'
+    || value === 'melancholic'
+    || value === 'dark'
+    || value === 'energetic'
+    || value === 'calm'
+    || value === 'dramatic'
+    || value === 'nostalgic'
+    || value === 'dreamy'
+    || value === 'epic'
+    || value === 'minimal'
+  )
+}
+
+function sanitizeImageThemeSource(value: unknown): StoredImageThemePaletteSource {
+  if (value === 'local-color') return 'local-color'
+  if (value === 'gemini') return 'local-color'
+  return 'fallback'
+}
+
+function sanitizeCssColorValue(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const color = value.trim()
+  if (/^#[a-f0-9]{6}$/i.test(color) || /^#[a-f0-9]{3}$/i.test(color)) return color
+  if (/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i.test(color)) return color
+  return null
+}
+
+function sanitizeImageThemePalette(value: unknown): StoredImageThemePalette | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const input = value as Record<string, unknown>
+  const accentSolid = sanitizeCssColorValue(input.accentSolid)
+  const accentSoft = sanitizeCssColorValue(input.accentSoft)
+  const accentStrong = sanitizeCssColorValue(input.accentStrong)
+  const glow = sanitizeCssColorValue(input.glow)
+  const primaryColor = sanitizeCssColorValue(input.primaryColor)
+  const primaryHover = sanitizeCssColorValue(input.primaryHover)
+  const primaryShadow = sanitizeCssColorValue(input.primaryShadow)
+  const primaryShadowHover = sanitizeCssColorValue(input.primaryShadowHover)
+
+  if (!accentSolid || !accentSoft || !accentStrong || !glow || !primaryColor || !primaryHover || !primaryShadow || !primaryShadowHover) {
+    return undefined
+  }
+
+  const mood = isImageThemeMoodId(input.mood) ? input.mood : 'calm'
+  const moodLabel = typeof input.moodLabel === 'string' && input.moodLabel.trim().length > 0
+    ? input.moodLabel.replace(/\s+/g, ' ').trim().slice(0, 40)
+    : 'Ruhig'
+  const analyzedAt = typeof input.analyzedAt === 'string' && input.analyzedAt.length > 0
+    ? input.analyzedAt
+    : new Date().toISOString()
+
+  return {
+    accentSolid,
+    accentSoft,
+    accentStrong,
+    glow,
+    primaryColor,
+    primaryHover,
+    primaryShadow,
+    primaryShadowHover,
+    mood,
+    moodLabel,
+    confidence: clampConfidence(input.confidence),
+    source: sanitizeImageThemeSource(input.source),
+    reason: typeof input.reason === 'string' && input.reason.trim().length > 0
+      ? input.reason.replace(/\s+/g, ' ').trim().slice(0, 180)
+      : null,
+    analyzedAt,
+  }
 }
 
 function sanitizeGalleryTagLabel(value: unknown): string | null {
@@ -2857,6 +2972,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     cropTransform?: unknown
     useFullImage?: unknown
     replaySetup?: unknown
+    imageTheme?: unknown
   }
 
   if (typeof input.id !== 'string' || typeof input.completedAt !== 'string' || !isValidPuzzleConfig(input.config)) {
@@ -2870,6 +2986,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
   const aiTagging = normalizeGalleryAiTagging(input.aiTagging)
   const cropTransform = sanitizeCropTransform(input.cropTransform)
   const replaySetup = sanitizeGalleryReplaySetup(input.replaySetup, input.config)
+  const imageTheme = sanitizeImageThemePalette(input.imageTheme)
 
   return {
     id: input.id,
@@ -2887,6 +3004,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     ...(cropTransform ? { cropTransform } : {}),
     ...(typeof input.useFullImage === 'boolean' ? { useFullImage: input.useFullImage } : {}),
     ...(replaySetup ? { replaySetup } : {}),
+    ...(imageTheme ? { imageTheme } : {}),
   }
 }
 
@@ -2959,7 +3077,7 @@ function normalizeCollectionImageIds(value: unknown, validImageIds?: Set<string>
 }
 
 function getGalleryMotifKeyForCollection(entry: StoredGalleryEntry): string {
-  return entry.sourceImage ?? entry.previewImage ?? `missing:${entry.id}`
+  return getGalleryMotifKey(entry)
 }
 
 function normalizeCollectionImageIdsByMotif(value: unknown, gallery: StoredGalleryFile): string[] {
@@ -3084,6 +3202,10 @@ async function readGalleryFile(): Promise<StoredGalleryFile> {
 async function writeGalleryFile(gallery: StoredGalleryFile): Promise<void> {
   await ensureSavesDir()
   await writeFile(GALLERY_FILE, JSON.stringify(gallery, null, 2), 'utf-8')
+}
+
+function getGalleryMotifKey(entry: StoredGalleryEntry): string {
+  return entry.sourceImage ?? entry.previewImage ?? `missing:${entry.id}`
 }
 
 function getValidGalleryEntryIds(gallery: StoredGalleryFile): Set<string> {
@@ -3415,6 +3537,7 @@ function validateCreatePayload(payload: unknown): payload is {
   previewImage: string
   config: StoredPuzzleConfig
   progress: StoredSaveProgress
+  imageTheme?: StoredImageThemePalette | null
 } {
   if (!payload || typeof payload !== 'object') return false
 
@@ -3539,6 +3662,7 @@ function validateGalleryPayload(payload: unknown): payload is {
   cropTransform?: StoredCropTransform | null
   useFullImage?: boolean
   replaySetup?: StoredGalleryReplaySetup
+  imageTheme?: StoredImageThemePalette | null
 } {
   if (!payload || typeof payload !== 'object') return false
 
@@ -3927,6 +4051,7 @@ async function handleSaveApi(
 
       const nowIso = new Date().toISOString()
       const imageFingerprint = createImageFingerprint(body.previewImage) ?? createImageFingerprint(body.croppedImage)
+      const imageTheme = sanitizeImageThemePalette(body.imageTheme)
       const reusableTitle = imageFingerprint
         ? await findReusableSaveTitleByFingerprint(imageFingerprint)
         : null
@@ -3941,6 +4066,7 @@ async function handleSaveApi(
         config: body.config,
         progress: sanitizeProgress(body.progress),
         ...(imageFingerprint ? { imageFingerprint } : {}),
+        ...(imageTheme ? { imageTheme } : {}),
         ...(reusableTitle
           ? {
               titleSource: 'reused',
@@ -4252,6 +4378,7 @@ async function handleGalleryApi(
         : nowIso
       const previewImage = sanitizeOptionalPreviewImage(body.previewImage)
       const sourceImage = sanitizeOptionalPreviewImage(body.sourceImage) ?? previewImage
+      const imageTheme = sanitizeImageThemePalette(body.imageTheme)
       const entry: StoredGalleryEntry = {
         id: typeof body.id === 'string' && body.id.length > 0 ? body.id : randomUUID(),
         completedAt,
@@ -4266,6 +4393,7 @@ async function handleGalleryApi(
         cropTransform: sanitizeCropTransform(body.cropTransform),
         useFullImage: typeof body.useFullImage === 'boolean' ? body.useFullImage : undefined,
         replaySetup: sanitizeGalleryReplaySetup(body.replaySetup, body.config),
+        ...(imageTheme ? { imageTheme } : {}),
         aiTagging: {
           status: 'pending',
           provider: 'gemini',
