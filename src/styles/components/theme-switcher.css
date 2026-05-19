@@ -212,6 +212,17 @@
   min-width: 74px;
 }
 
+.theme-toggle-btn-emotion {
+  min-width: 92px;
+}
+
+.theme-toggle-btn-emotion .theme-toggle-btn-label {
+  max-width: 108px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .theme-toggle-btn-label {
   font-size: 0.74rem;
   font-weight: 800;
@@ -648,6 +659,14 @@
 
   .theme-toggle-btn-label {
     font-size: 0.68rem;
+  }
+
+  .theme-toggle-btn-emotion {
+    min-width: 76px;
+  }
+
+  .theme-toggle-btn-emotion .theme-toggle-btn-label {
+    max-width: 72px;
   }
 }
 

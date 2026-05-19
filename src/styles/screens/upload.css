@@ -3552,7 +3552,7 @@
   flex: 1 1 auto;
   flex-direction: column;
   gap: 10px;
-  padding: 14px;
+  padding: 10px;
 }
 
 .gallery-card-header {
@@ -3673,6 +3673,35 @@
   min-width: 0;
 }
 
+.gallery-card-ai.is-empty {
+  min-height: 0;
+}
+
+.gallery-card-run-count {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 30%, var(--chip-border));
+  color: color-mix(in srgb, var(--text-main) 82%, var(--primary-color));
+  background: color-mix(in srgb, var(--image-accent-solid) 12%, transparent);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.gallery-card-run-count-icon {
+  width: 12px;
+  height: 12px;
+  margin-right: 5px;
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--primary-color) 70%, var(--text-secondary));
+}
+
 .gallery-card-ai-tags,
 .gallery-detail-ai-tags,
 .gallery-card-ai-status-row,
@@ -3746,11 +3775,15 @@
 }
 
 .gallery-card-ai-suggestion {
-  min-height: 30px;
-  padding: 7px 10px;
+  min-height: 26px;
+  max-width: 100%;
+  padding: 5px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .gallery-detail-ai-retry {
@@ -4774,12 +4807,12 @@
 .gallery-card-actions {
   margin-top: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 126px), 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .gallery-card-actions.is-compact {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 126px), 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .gallery-card-actions button {
@@ -4788,13 +4821,14 @@
   justify-content: center;
   width: 100%;
   min-width: 0;
-  min-height: 48px;
-  padding: 10px 12px;
-  font-size: 12px;
-  line-height: 1.2;
+  min-height: 38px;
+  padding: 7px 5px;
+  font-size: 10.5px;
+  line-height: 1.1;
   text-align: center;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
   text-wrap: balance;
 }
 
@@ -5343,7 +5377,7 @@
 
   .gallery-card-actions,
   .gallery-card-actions.is-compact {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .data-transfer-controls {
@@ -8226,11 +8260,20 @@
   gap: 8px;
 }
 
+.gallery-card-actions button {
+  gap: 5px;
+}
+
 .saved-game-action-icon,
 .gallery-card-action-icon {
   width: 15px;
   height: 15px;
   flex: 0 0 auto;
+}
+
+.gallery-card-action-icon {
+  width: 13px;
+  height: 13px;
 }
 
 .saved-game-item:hover .saved-game-action-icon,

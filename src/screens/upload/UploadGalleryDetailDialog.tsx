@@ -55,8 +55,8 @@ export default function UploadGalleryDetailDialog({
     ? formatTime(motifReplaySummary.bestCleanTimeEntry.time)
     : null
   const solveCountCopy = entry.visibleSolveCount === entry.totalSolveCount
-    ? `Dieses Motiv wurde auf dieser Schwierigkeit ${entry.totalSolveCount} Mal geloest.`
-    : `Dieses Motiv wurde auf dieser Schwierigkeit insgesamt ${entry.totalSolveCount} Mal geloest; ${entry.visibleSolveCount} Loesungen passen aktuell zu deiner Auswahl.`
+    ? `Dieses Motiv wurde insgesamt ${entry.totalSolveCount} Mal geloest.`
+    : `Dieses Motiv wurde insgesamt ${entry.totalSolveCount} Mal geloest; ${entry.visibleSolveCount} Loesungen passen aktuell zu deiner Auswahl.`
   const motifReplayCopy =
     motifReplayableCount > 0
       ? `Motivweit ueber alle Stufen liegen ${motifSolveCountLabel} auf ${motifDifficultyCount} ${motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'} vor; ${motifReplayableCount} davon haben ein Replay-Bild.`
@@ -210,7 +210,7 @@ export default function UploadGalleryDetailDialog({
 
           <div className="dashboard-inline-chips">
             <span className="saved-game-chip">{formatPuzzleSize(representativeEntry.config)}</span>
-            <span className="saved-game-chip">Stufe {solveCountLabel}</span>
+            <span className="saved-game-chip">Auswahl {solveCountLabel}</span>
             <span className="saved-game-chip">
               Motiv {motifDifficultyCount} {motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'}
             </span>

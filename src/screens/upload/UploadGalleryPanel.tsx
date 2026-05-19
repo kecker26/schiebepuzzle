@@ -77,6 +77,27 @@ export function galleryDisplayEntryMatchesAllTagKeys(
   )
 }
 
+function addMotifTagOption(
+  tagCounts: Map<string, GalleryTagFilterOption>,
+  tagKey: string,
+  label: string,
+  motifEntryId: string
+): void {
+  const current = tagCounts.get(tagKey)
+  if (current) {
+    current.count += 1
+    current.entryIds = [...(current.entryIds ?? []), motifEntryId]
+    return
+  }
+
+  tagCounts.set(tagKey, {
+    id: tagKey,
+    label,
+    count: 1,
+    entryIds: [motifEntryId],
+  })
+}
+
 export default function UploadGalleryPanel({
   gallery,
   collections = [],
@@ -150,24 +171,14 @@ export default function UploadGalleryPanel({
 
     for (const entry of baseFilteredEntries) {
       const seenTagsForCard = new Set<string>()
+      const motifEntryId = entry.representativeEntry.id
       for (const galleryEntry of entry.visibleEntries) {
         for (const tag of galleryEntry.tags ?? []) {
           const key = getGalleryTagKey(tag.label)
           if (!key || seenTagsForCard.has(key)) continue
 
           seenTagsForCard.add(key)
-          const current = tagCounts.get(key)
-          if (current) {
-            current.count += 1
-            current.entryIds = [...(current.entryIds ?? []), entry.id]
-          } else {
-            tagCounts.set(key, {
-              id: key,
-              label: tag.label,
-              count: 1,
-              entryIds: [entry.id],
-            })
-          }
+          addMotifTagOption(tagCounts, key, tag.label, motifEntryId)
         }
       }
     }
@@ -178,31 +189,25 @@ export default function UploadGalleryPanel({
   const allTagOptions = useMemo<GalleryTagFilterOption[]>(() => {
     const tagCounts = new Map<string, GalleryTagFilterOption>()
 
-    for (const entry of entries) {
-      const seenTagsForEntry = new Set<string>()
-      for (const tag of entry.tags ?? []) {
-        const key = getGalleryTagKey(tag.label)
-        if (!key || seenTagsForEntry.has(key)) continue
+    for (const group of galleryGroups) {
+      const seenTagsForMotif = new Set<string>()
+      const motifEntryId = group.allEntries[0]?.id
+      if (!motifEntryId) continue
 
-        seenTagsForEntry.add(key)
-        const current = tagCounts.get(key)
-        if (current) {
-          current.count += 1
-          current.entryIds = [...(current.entryIds ?? []), entry.id]
-        } else {
-          tagCounts.set(key, {
-            id: key,
-            label: tag.label,
-            count: 1,
-            entryIds: [entry.id],
-          })
+      for (const entry of group.allEntries) {
+        for (const tag of entry.tags ?? []) {
+          const key = getGalleryTagKey(tag.label)
+          if (!key || seenTagsForMotif.has(key)) continue
+
+          seenTagsForMotif.add(key)
+          addMotifTagOption(tagCounts, key, tag.label, motifEntryId)
         }
       }
     }
 
     return Array.from(tagCounts.values())
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'de'))
-  }, [entries])
+  }, [galleryGroups])
   const visibleEntries = useMemo(() => {
     const filteredEntries = tagFilters.length === 0
       ? baseFilteredEntries

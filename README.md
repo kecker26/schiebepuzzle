@@ -12,6 +12,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Loesbare Shuffle-Logik, Hinweise und Solver-Unterstuetzung.
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
 - Autosave, kreative Gemini-Titel fuer neue Spielstaende, motivbasierte Titel-Wiederverwendung, maximal 30 aktive Spielstaende mit 5er-Seitennavigation, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
+- Sentiment-basiertes Bild-Theme: hochgeladene, generierte oder wiederverwendete Motive praegen standardmaessig die komplette UI-Farbwelt; Stimmung und Palette werden rein lokal aus Farbe, Helligkeit, Kontrast und Waerme berechnet.
 - Statistik mit vier visuellen Hauptansichten fuer Ueberblick, Analyse, Verlauf und Rohdaten-Explorer; Analyse buendelt Stufen, Rekorde und Sauberkeit, der Rohdaten-Explorer speichert CSV-/JSON-Exporte direkt im Projektordner.
 - Galerie geloester Motive inklusive Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, optionalem Gemini-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und kategorisierter Tag-Verwaltung mit Mehrfachauswahl.
 - Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit KI-Sammlungsvorschlaegen und motivweit deduplizierten Sammlungen aus Tag-Treffern.
@@ -54,7 +55,7 @@ GEMINI_GALLERY_MODEL=gemini-2.5-flash
 
 `POLLINATIONS_API_KEY` ist ein serverseitiger Secret Key und wird nur von der lokalen Vite-Middleware genutzt. Er darf nicht als `VITE_`-Variable ins Frontend gegeben werden. `zimage` ist ein fuer den getesteten Key freigegebenes schnelles Pollinations-Bildmodell.
 `CLOUDFLARE_API_TOKEN` ist der serverseitige Fallback fuer KI-Bilder, wenn Pollinations fehlschlaegt. Der Token braucht Zugriff auf Workers AI fuer die angegebene `CLOUDFLARE_ACCOUNT_ID`; `CLOUDFLARE_IMAGE_MODEL` ist standardmaessig `@cf/black-forest-labs/flux-1-schnell`.
-`GEMINI_API_KEY` ist ein serverseitiger Secret Key fuer automatische Galerie-Tags, Sammlungsvorschlaege und kreative Spielstand-Titel. Ohne Key speichert die App geloeste Bilder und Spielstaende weiterhin normal, markiert KI-Metadaten aber als nicht konfiguriert. `GEMINI_GALLERY_MODEL` ist standardmaessig `gemini-2.5-flash` und wird auch fuer Spielstand-Titel genutzt.
+`GEMINI_API_KEY` ist ein serverseitiger Secret Key fuer automatische Galerie-Tags, Sammlungsvorschlaege und kreative Spielstand-Titel. Ohne Key speichert die App geloeste Bilder und Spielstaende weiterhin normal. Bildstimmungs-Themes laufen bewusst rein lokal im Browser, damit der Theme-Wechsel sofort greift. `GEMINI_GALLERY_MODEL` ist standardmaessig `gemini-2.5-flash` und wird auch fuer Spielstand-Titel genutzt.
 
 ## Start und Befehle
 
@@ -149,8 +150,9 @@ Wichtige Einstiegspunkte:
 4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
 5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
 6. Neue Galerie-Motive optional automatisch mit Gemini taggen, fehlgeschlagene Taggings erneut versuchen, Tags bereinigen, einzelne Tags direkt oder mehrere Tags ueber die Tagverwaltung als Und-Filter anwenden und Tag-Treffer als Sammlung uebernehmen.
-7. Neue Spielstaende erhalten im Hintergrund einen Gemini-Titel; taucht dasselbe Motiv mehrfach auf, wird der vorhandene Motivtitel wiederverwendet.
-8. Spielstaende, Galerie, Sammlungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
+7. Die aktive Bildstimmung faerbt die UI automatisch ein; im Darstellungsbereich kann das Emotion-Theme auf Standard zurueckgeschaltet werden.
+8. Neue Spielstaende erhalten im Hintergrund einen Gemini-Titel; taucht dasselbe Motiv mehrfach auf, wird der vorhandene Motivtitel wiederverwendet.
+9. Spielstaende, Galerie, Sammlungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
 
 ## Entwicklungshinweise
 

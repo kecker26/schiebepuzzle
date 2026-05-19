@@ -1,23 +1,27 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTheme } from '../contexts/ThemeContext.tsx'
-import { extractImageThemePalette } from '../services/ImageThemeService.ts'
+import { extractLocalImageThemePalette } from '../services/ImageThemeService.ts'
+import type { ImageThemePalette } from '../types/index.ts'
 
-export function useImageThemePalette(image: string | null, croppedImage: string | null): void {
-  const { setImagePalette } = useTheme()
+export function useImageThemePalette(image: string | null, croppedImage: string | null): ImageThemePalette | null {
+  const { emotionThemeEnabled, setImagePalette } = useTheme()
+  const [palette, setPalette] = useState<ImageThemePalette | null>(null)
 
   useEffect(() => {
     const activeImage = croppedImage ?? image
     let cancelled = false
 
-    if (!activeImage) {
+    if (!activeImage || !emotionThemeEnabled) {
+      setPalette(null)
       setImagePalette(null)
       return
     }
 
     const applyImageTheme = async () => {
-      const palette = await extractImageThemePalette(activeImage)
+      const localPalette = await extractLocalImageThemePalette(activeImage)
       if (!cancelled) {
-        setImagePalette(palette)
+        setPalette(localPalette)
+        setImagePalette(localPalette)
       }
     }
 
@@ -26,5 +30,7 @@ export function useImageThemePalette(image: string | null, croppedImage: string 
     return () => {
       cancelled = true
     }
-  }, [croppedImage, image, setImagePalette])
+  }, [croppedImage, emotionThemeEnabled, image, setImagePalette])
+
+  return palette
 }

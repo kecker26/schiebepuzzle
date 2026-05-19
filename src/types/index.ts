@@ -132,6 +132,37 @@ export interface PersistedPuzzleMeta {
   config: PuzzleConfig
 }
 
+export type ImageThemeMoodId =
+  | 'joyful'
+  | 'melancholic'
+  | 'dark'
+  | 'energetic'
+  | 'calm'
+  | 'dramatic'
+  | 'nostalgic'
+  | 'dreamy'
+  | 'epic'
+  | 'minimal'
+
+export type ImageThemePaletteSource = 'local-color' | 'fallback'
+
+export interface ImageThemePalette {
+  accentSolid: string
+  accentSoft: string
+  accentStrong: string
+  glow: string
+  primaryColor: string
+  primaryHover: string
+  primaryShadow: string
+  primaryShadowHover: string
+  mood: ImageThemeMoodId
+  moodLabel: string
+  confidence: number
+  source: ImageThemePaletteSource
+  reason: string | null
+  analyzedAt: string
+}
+
 export type SavedGameTitleSource = 'gemini' | 'reused' | 'fallback'
 export type SavedGameAiTitleStatus = 'generated' | 'reused' | 'failed' | 'unavailable' | 'pending'
 
@@ -156,6 +187,7 @@ export interface SavedGameSummary {
   imageFingerprint?: string
   titleSource?: SavedGameTitleSource
   aiTitle?: SavedGameAiTitle
+  imageTheme?: ImageThemePalette
 }
 
 export interface SavedGameData extends SavedGameSummary {
@@ -196,6 +228,7 @@ export interface SolvedGalleryEntry {
   cropTransform?: CropTransform | null
   useFullImage?: boolean
   replaySetup?: GalleryReplaySetup
+  imageTheme?: ImageThemePalette
 }
 
 export interface GalleryReplaySetup {
@@ -439,6 +472,7 @@ export interface RecordSolvedGalleryEntryPayload {
   cropTransform?: CropTransform | null
   useFullImage?: boolean
   replaySetup?: GalleryReplaySetup
+  imageTheme?: ImageThemePalette | null
 }
 
 export interface AnalyzeSolvedGalleryEntryResult {

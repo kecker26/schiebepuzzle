@@ -92,7 +92,7 @@ export function getUniqueGalleryMotifEntryIds(entries: SolvedGalleryEntry[]): st
 }
 
 function getGalleryGroupKey(entry: SolvedGalleryEntry): string {
-  return `${entry.config.rows}x${entry.config.cols}::${getGalleryMotifKey(entry)}`
+  return getGalleryMotifKey(entry)
 }
 
 function getPuzzleConfigKey(config: PuzzleConfig): string {
@@ -218,12 +218,15 @@ export function buildGalleryDisplayEntriesFromGroups(
   options: BuildGalleryDisplayEntriesOptions
 ): GalleryDisplayEntry[] {
   return groups.flatMap((group) => {
-    const representativeEntry = group.allEntries[0]
-    if (!representativeEntry || !matchesGalleryDifficultyFilter(representativeEntry, options.difficultyFilter)) {
+    const difficultyMatchedEntries = group.allEntries.filter((entry) =>
+      matchesGalleryDifficultyFilter(entry, options.difficultyFilter)
+    )
+    const representativeEntry = difficultyMatchedEntries[0]
+    if (!representativeEntry) {
       return []
     }
 
-    const visibleEntries = group.allEntries.filter((entry) =>
+    const visibleEntries = difficultyMatchedEntries.filter((entry) =>
       matchesGalleryAssistanceFilter(entry, options.assistanceFilter)
     )
 

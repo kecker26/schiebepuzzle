@@ -5,7 +5,7 @@
 - Halte Aenderungen klein, nachvollziehbar und kompatibel mit dem bestehenden React-, TypeScript- und Vite-Setup.
 
 ## Projektueberblick
-- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, Gemini-Tagging, Gemini-Spielstandstiteln, Sammlungen, Backup und Musik.
+- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, Gemini-Tagging, Gemini-Spielstandstiteln, sentiment-basiertem Bild-Theme, Sammlungen, Backup und Musik.
 - Frontend: React 18 + TypeScript.
 - Animationen: `motion` / `motion/react`.
 - Icons: `lucide-react` fuer React-SVG-Icons, plus kuratierte lokale SVGs unter `src/assets/system/`.
@@ -22,7 +22,7 @@
 - `src/screens/CropScreen.tsx`: Zuschnitt, Transform und Puzzle-Konfiguration.
 - `src/screens/PuzzleScreen.tsx` und `src/screens/puzzle/`: Spielansicht, Panels, Kontextmenue, Tastaturkuerzel und Solver-Worker-Hooks.
 - `src/components/`: wiederverwendbare UI wie `CommandPalette`, `GlobalHelpOverlay`, `WinDialog`, `ThemeSwitcher`, Toasts, Recovery-Dialog und Icon-Komponenten.
-- `src/contexts/ThemeContext.tsx`: Theme-Zustand.
+- `src/contexts/ThemeContext.tsx`: Theme-Zustand inklusive aktivierbarem Emotion-Theme.
 - `src/motion/`: gemeinsame Motion-Komponenten, Varianten, Tokens und Dialog-A11y-Hooks.
 - `src/services/PuzzleEngine.ts`: Kernlogik fuer Board, Moves, Shuffle, Heuristiken und Hinweise.
 - `src/services/PuzzleStateService.ts`: Persistierbare Puzzle-Fortschritte, Move-/Redo-History und Run-Metriken.
@@ -31,6 +31,7 @@
 - `src/services/ExactPuzzleSolver.ts` und `src/workers/exact-puzzle-solver.worker.ts`: exakte Solver-Variante und Worker.
 - `src/workers/puzzle-solver.worker.ts`: Worker fuer rechenintensive Solver-Aufgaben.
 - `src/services/SaveService.ts`, `StatsService.ts`, `GalleryService.ts`, `CollectionService.ts`, `BackupService.ts`, `MusicService.ts`: Frontend-Zugriff auf lokale `/api/*`-Routen.
+- `src/services/ImageThemeService.ts`: lokale Farbanalyse, lokale Stimmungsklassifikation und intensive semantische Theme-Paletten fuer Bilder.
 - `src/services/RandomImageService.ts`, `PromptImageService.ts` und Provider-Dateien wie `NasaImageProvider.ts`, `MetMuseumImageProvider.ts`, `PicsumImageProvider.ts`, `PixabayImageProvider.ts`, `PexelsImageProvider.ts`, `WikimediaImageProvider.ts`, `SmithsonianImageProvider.ts`, `ArtInstituteImageProvider.ts`, `GeneratedImageProvider.ts`: Zufallsbild- und Prompt-Bild-Quellen.
 - `src/services/AudioService.ts`, `MusicPlaybackController.ts`, `services/music/` und `musicStyles.ts`: lokale und externe Musikauswahl, Fallback-Tracks und Wiedergabezustand.
 - `src/services/api/apiClient.ts`: gemeinsamer Fetch-/Fehler-Wrapper fuer Frontend-API-Calls.
@@ -56,7 +57,7 @@
 - Bei Aenderungen an Tastatur, Fokus, Hilfe oder Command Palette die Hooks in `src/app/` und Barrierefreiheit mitdenken.
 - Bei Audio-/Musik-Aenderungen lokale Fallbacks, Provider-Ausfallpfade und `VITE_JAMENDO_CLIENT_ID` aus `.env.example` beachten.
 - Bei Zufallsbild-Features Provider-Ausfaelle und CORS-/Lizenz-/Attributionsdaten defensiv behandeln.
-- Bei Galerie-KI-Tagging und Spielstand-Titeln `GEMINI_API_KEY` serverseitig halten, grosse Bilder nicht ungeprueft senden und Fehler/fehlende Keys als nicht-blockierende KI-Metadaten speichern.
+- Bei Galerie-KI-Tagging und Spielstand-Titeln `GEMINI_API_KEY` serverseitig halten, grosse Bilder nicht ungeprueft senden und Fehler/fehlende Keys als nicht-blockierende KI-Metadaten behandeln. Bildstimmungs-Themes laufen lokal im Browser und duerfen keine Gemini-Anfrage ausloesen.
 - Nach Projektstruktur-, Workflow-, Befehls-, Persistenz- oder Architektur-Aenderungen diese `AGENTS.md` immer pruefen und bei Bedarf im selben Arbeitsgang aktualisieren.
 - Nach Aenderungen an Funktionsumfang, Setup, Befehlen, Datenhaltung, API, Projektstruktur oder Verifikation auch `README.md` immer pruefen und bei Bedarf im selben Arbeitsgang aktualisieren.
 - Nach jeder Aenderung dem Nutzer kurz erklaeren, wie diese Aenderungen getestet werden koennen.

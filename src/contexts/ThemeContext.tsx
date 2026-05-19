@@ -1,18 +1,24 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import type { ImageThemePalette } from '../services/ImageThemeService.ts'
+import type { ImageThemePalette } from '../types/index.ts'
 
 export type ThemeMode = 'light' | 'dark'
 
 interface ThemeState {
   mode: ThemeMode
+  imagePalette: ImageThemePalette | null
+  activeImagePalette: ImageThemePalette
+  emotionThemeEnabled: boolean
   setMode: (mode: ThemeMode) => void
   setImagePalette: (palette: ImageThemePalette | null) => void
+  setEmotionThemeEnabled: (enabled: boolean) => void
   toggleMode: () => void
+  toggleEmotionTheme: () => void
 }
 
 const ThemeContext = createContext<ThemeState | null>(null)
 
 const STORAGE_KEY_MODE = 'puzzle-theme-mode'
+const STORAGE_KEY_EMOTION_THEME = 'puzzle-emotion-theme-enabled'
 const DEFAULT_IMAGE_THEME: ImageThemePalette = {
   accentSolid: 'rgb(88, 136, 216)',
   accentSoft: 'rgba(88, 136, 216, 0.18)',
@@ -22,6 +28,12 @@ const DEFAULT_IMAGE_THEME: ImageThemePalette = {
   primaryHover: '#1d4ed8',
   primaryShadow: 'rgba(37, 99, 235, 0.28)',
   primaryShadowHover: 'rgba(37, 99, 235, 0.38)',
+  mood: 'calm',
+  moodLabel: 'Ruhig',
+  confidence: 0,
+  source: 'fallback',
+  reason: null,
+  analyzedAt: new Date(0).toISOString(),
 }
 
 interface RgbColor {
@@ -114,9 +126,21 @@ function getStoredMode(): ThemeMode {
   return 'light'
 }
 
+function getStoredEmotionThemeEnabled(): boolean {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_EMOTION_THEME)
+    if (stored === 'false') return false
+    if (stored === 'true') return true
+  } catch {
+    /* ignore */
+  }
+  return true
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(getStoredMode)
   const [imagePalette, setImagePaletteState] = useState<ImageThemePalette | null>(null)
+  const [emotionThemeEnabled, setEmotionThemeEnabledState] = useState<boolean>(getStoredEmotionThemeEnabled)
 
   const setMode = useCallback((next: ThemeMode) => {
     setModeState(next)
@@ -131,6 +155,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setImagePaletteState(next)
   }, [])
 
+  const setEmotionThemeEnabled = useCallback((next: boolean) => {
+    setEmotionThemeEnabledState(next)
+    try {
+      localStorage.setItem(STORAGE_KEY_EMOTION_THEME, String(next))
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
   const toggleMode = useCallback(() => {
     setModeState((current) => {
       const next = current === 'light' ? 'dark' : 'light'
@@ -143,11 +176,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const toggleEmotionTheme = useCallback(() => {
+    setEmotionThemeEnabledState((current) => {
+      const next = !current
+      try {
+        localStorage.setItem(STORAGE_KEY_EMOTION_THEME, String(next))
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
   useEffect(() => {
     const root = document.documentElement
     root.setAttribute('data-theme', mode)
+    root.setAttribute('data-emotion-theme', emotionThemeEnabled ? 'on' : 'off')
 
-    const activeImageTheme = imagePalette ?? DEFAULT_IMAGE_THEME
+    const activeImageTheme = emotionThemeEnabled ? imagePalette ?? DEFAULT_IMAGE_THEME : DEFAULT_IMAGE_THEME
     root.style.setProperty('--image-accent-solid', activeImageTheme.accentSolid)
     root.style.setProperty('--image-accent-soft', activeImageTheme.accentSoft)
     root.style.setProperty('--image-accent-strong', activeImageTheme.accentStrong)
@@ -160,10 +206,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       '--text-on-primary',
       getTextOnPrimaryColor(activeImageTheme.primaryColor, activeImageTheme.primaryHover)
     )
-  }, [mode, imagePalette])
+  }, [emotionThemeEnabled, mode, imagePalette])
 
   return (
-    <ThemeContext.Provider value={{ mode, setMode, setImagePalette, toggleMode }}>
+    <ThemeContext.Provider value={{
+      mode,
+      imagePalette,
+      activeImagePalette: emotionThemeEnabled ? imagePalette ?? DEFAULT_IMAGE_THEME : DEFAULT_IMAGE_THEME,
+      emotionThemeEnabled,
+      setMode,
+      setImagePalette,
+      setEmotionThemeEnabled,
+      toggleMode,
+      toggleEmotionTheme,
+    }}>
       {children}
     </ThemeContext.Provider>
   )
