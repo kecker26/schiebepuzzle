@@ -1,5 +1,10 @@
-import type { AriaRole, RefObject } from 'react'
-import { useMemo, useState } from 'react'
+import type { AriaRole, KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
+import {
+  ensureElementVisible,
+  FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE,
+} from '../../app/focusVisibility.ts'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
 import { ImageCollection, SolvedGallery } from '../../types/index'
@@ -13,6 +18,7 @@ import {
 } from './UploadCollectionDisplayUtils.ts'
 import { formatDate, formatTime } from './uploadUtils.ts'
 import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
+import UploadPageNavigation from './UploadPageNavigation.tsx'
 import UploadStateNotice from './UploadStateNotice.tsx'
 
 interface UploadCollectionsPanelProps {
@@ -37,6 +43,16 @@ interface RenameState {
   description: string
 }
 
+type CollectionImageAction = 'preview' | 'play' | 'remove'
+
+interface PendingCollectionImageRemovalFocus {
+  action: CollectionImageAction
+  imageId: string
+  visibleIndex: number
+}
+
+const COLLECTION_MOTIFS_PER_PAGE = 9
+
 export default function UploadCollectionsPanel({
   collections,
   gallery,
@@ -49,6 +65,8 @@ export default function UploadCollectionsPanel({
   panelRole = 'region',
   primaryActionRef,
 }: UploadCollectionsPanelProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  const pendingImageRemovalFocusRef = useRef<PendingCollectionImageRemovalFocus | null>(null)
   const galleryEntries = useMemo(() => gallery?.entries ?? [], [gallery])
   const displayEntries = useMemo(
     () => buildCollectionDisplayEntries(collections, galleryEntries),
@@ -58,15 +76,140 @@ export default function UploadCollectionsPanel({
   const [renamingCollection, setRenamingCollection] = useState<RenameState | null>(null)
   const [pendingDeleteCollection, setPendingDeleteCollection] = useState<ImageCollection | null>(null)
   const [busyCollectionId, setBusyCollectionId] = useState<string | null>(null)
+  const [currentCollectionPage, setCurrentCollectionPage] = useState(1)
   const selectedDisplayEntry =
     displayEntries.find((entry) => entry.collection.id === selectedCollectionId)
     ?? displayEntries[0]
     ?? null
+  const collectionPageCount = Math.max(
+    1,
+    Math.ceil((selectedDisplayEntry?.entries.length ?? 0) / COLLECTION_MOTIFS_PER_PAGE)
+  )
+  const activeCollectionPage = Math.min(currentCollectionPage, collectionPageCount)
+  const pagedCollectionEntries = useMemo(() => {
+    const entries = selectedDisplayEntry?.entries ?? []
+    const startIndex = (activeCollectionPage - 1) * COLLECTION_MOTIFS_PER_PAGE
+    return entries.slice(startIndex, startIndex + COLLECTION_MOTIFS_PER_PAGE)
+  }, [activeCollectionPage, selectedDisplayEntry])
   const collectionsStateKey = isLoadingCollections
     ? 'loading'
     : displayEntries.length === 0
       ? 'empty'
       : 'content'
+
+  useEffect(() => {
+    setCurrentCollectionPage(1)
+  }, [selectedDisplayEntry?.collection.id])
+
+  useEffect(() => {
+    setCurrentCollectionPage((page) => Math.min(page, collectionPageCount))
+  }, [collectionPageCount])
+
+  const focusPanelElement = useCallback((target: HTMLElement | null) => {
+    if (!target) {
+      return
+    }
+
+    target.focus({ preventScroll: true })
+    ensureElementVisible(target)
+  }, [])
+
+  const findCollectionImageActionButton = useCallback((
+    imageId: string,
+    action: CollectionImageAction
+  ): HTMLButtonElement | null => {
+    const panel = panelRef.current
+    if (!panel) {
+      return null
+    }
+
+    return Array.from(
+      panel.querySelectorAll<HTMLButtonElement>(`button[data-collection-image-action="${action}"]:not([disabled])`)
+    ).find((button) => button.dataset.collectionImageId === imageId) ?? null
+  }, [])
+
+  const findCollectionImageFallbackButton = useCallback((imageId: string): HTMLButtonElement | null => {
+    const panel = panelRef.current
+    if (!panel) {
+      return null
+    }
+
+    return Array.from(
+      panel.querySelectorAll<HTMLButtonElement>('button[data-collection-image-id]:not([disabled])')
+    ).find((button) => button.dataset.collectionImageId === imageId) ?? null
+  }, [])
+
+  const findCollectionsFallbackTarget = useCallback((): HTMLElement | null => {
+    const panel = panelRef.current
+    if (!panel) {
+      return null
+    }
+
+    return (
+      panel.querySelector<HTMLElement>('.collection-list-item.is-selected:not([disabled])')
+      ?? panel
+        .closest<HTMLElement>('.workspace-window-shell')
+        ?.querySelector<HTMLElement>('.workspace-window-nav-button[aria-current="page"]')
+      ?? null
+    )
+  }, [])
+
+  useEffect(() => {
+    const focusRequest = pendingImageRemovalFocusRef.current
+    if (!focusRequest || busyCollectionId !== null) {
+      return
+    }
+
+    const selectedEntries = selectedDisplayEntry?.entries ?? []
+    const isStillInCollection = selectedEntries.some((entry) => entry.id === focusRequest.imageId)
+
+    if (isStillInCollection) {
+      pendingImageRemovalFocusRef.current = null
+      const frameId = window.requestAnimationFrame(() => {
+        focusPanelElement(
+          findCollectionImageActionButton(focusRequest.imageId, focusRequest.action)
+          ?? findCollectionImageFallbackButton(focusRequest.imageId)
+          ?? findCollectionsFallbackTarget()
+        )
+      })
+
+      return () => {
+        window.cancelAnimationFrame(frameId)
+      }
+    }
+
+    const nextEntry =
+      pagedCollectionEntries[focusRequest.visibleIndex]
+      ?? pagedCollectionEntries[focusRequest.visibleIndex - 1]
+      ?? null
+
+    pendingImageRemovalFocusRef.current = null
+
+    const frameId = window.requestAnimationFrame(() => {
+      if (nextEntry) {
+        focusPanelElement(
+          findCollectionImageActionButton(nextEntry.id, focusRequest.action)
+          ?? findCollectionImageActionButton(nextEntry.id, 'preview')
+          ?? findCollectionImageFallbackButton(nextEntry.id)
+        )
+        return
+      }
+
+      focusPanelElement(findCollectionsFallbackTarget())
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+    }
+  }, [
+    busyCollectionId,
+    findCollectionImageActionButton,
+    findCollectionImageFallbackButton,
+    findCollectionsFallbackTarget,
+    focusPanelElement,
+    pagedCollectionEntries,
+    selectedDisplayEntry?.entries,
+  ])
 
   async function handleRenameSubmit() {
     if (!renamingCollection || !renamingCollection.name.trim()) {
@@ -101,6 +244,17 @@ export default function UploadCollectionsPanel({
   }
 
   async function handleRemoveImage(collectionId: string, imageId: string) {
+    const activeElement = document.activeElement
+    pendingImageRemovalFocusRef.current = {
+      imageId,
+      action:
+        activeElement instanceof HTMLButtonElement
+        && activeElement.dataset.collectionImageId === imageId
+        && activeElement.dataset.collectionImageAction
+          ? activeElement.dataset.collectionImageAction as CollectionImageAction
+          : 'remove',
+      visibleIndex: pagedCollectionEntries.findIndex((entry) => entry.id === imageId),
+    }
     setBusyCollectionId(collectionId)
     try {
       await onRemoveCollectionImages(collectionId, [imageId])
@@ -112,6 +266,7 @@ export default function UploadCollectionsPanel({
   return (
     <>
       <div
+        ref={panelRef}
         id="dashboard-panel-collections"
         className="dashboard-panel-scroll"
         role={panelRole}
@@ -150,7 +305,7 @@ export default function UploadCollectionsPanel({
             />
           ) : (
             <div className="collections-workspace-grid">
-              <div className="collections-list" aria-label="Sammlungen">
+              <div className="collections-list" aria-label="Sammlungen" onKeyDown={handleDirectionalFocusNavigation}>
                 {displayEntries.map((entry, index) => (
                   <CollectionListButton
                     key={entry.collection.id}
@@ -165,8 +320,12 @@ export default function UploadCollectionsPanel({
               {selectedDisplayEntry ? (
                 <CollectionDetail
                   entry={selectedDisplayEntry}
+                  activePage={activeCollectionPage}
                   busyCollectionId={busyCollectionId}
+                  pageCount={collectionPageCount}
+                  pagedEntries={pagedCollectionEntries}
                   onReplayEntry={onReplayEntry}
+                  onPageChange={setCurrentCollectionPage}
                   onRename={() => setRenamingCollection({
                     collection: selectedDisplayEntry.collection,
                     name: selectedDisplayEntry.collection.name,
@@ -276,20 +435,101 @@ function CollectionListButton({
 
 function CollectionDetail({
   entry,
+  activePage,
   busyCollectionId,
+  pageCount,
+  pagedEntries,
   onReplayEntry,
+  onPageChange,
   onRename,
   onDelete,
   onRemoveImage,
 }: {
   entry: CollectionDisplayEntry
+  activePage: number
   busyCollectionId: string | null
+  pageCount: number
+  pagedEntries: CollectionDisplayEntry['entries']
   onReplayEntry: GalleryReplayRequestHandler
+  onPageChange: (page: number) => void
   onRename: () => void
   onDelete: () => void
   onRemoveImage: (collectionId: string, imageId: string) => Promise<void>
 }) {
   const isBusy = busyCollectionId === entry.collection.id
+
+  const handleImageActionKeyDown = useCallback((event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
+      return
+    }
+
+    const currentButton = event.currentTarget
+    const action = currentButton.dataset.collectionImageAction
+    const card = currentButton.closest<HTMLElement>('.collection-image-card')
+    const grid = currentButton.closest<HTMLElement>('.collection-image-grid')
+
+    if (!action || !card || !grid) {
+      return
+    }
+
+    const cardButtons = Array.from(
+      card.querySelectorAll<HTMLButtonElement>('button[data-collection-image-action]:not([disabled])')
+    )
+    const sameActionButtons = Array.from(
+      grid.querySelectorAll<HTMLButtonElement>(`button[data-collection-image-action="${action}"]:not([disabled])`)
+    )
+    const cardIndex = cardButtons.indexOf(currentButton)
+    const actionIndex = sameActionButtons.indexOf(currentButton)
+
+    const focusButton = (button: HTMLButtonElement | undefined) => {
+      if (!button) {
+        return
+      }
+
+      button.focus({ preventScroll: true })
+      const visibleTarget = button.closest<HTMLElement>('.collection-image-card') ?? button
+      ensureElementVisible(visibleTarget)
+    }
+
+    switch (event.key) {
+      case 'ArrowLeft':
+        if (cardIndex > 0) {
+          event.preventDefault()
+          focusButton(cardButtons[cardIndex - 1])
+        }
+        return
+      case 'ArrowRight':
+        if (cardIndex >= 0 && cardIndex < cardButtons.length - 1) {
+          event.preventDefault()
+          focusButton(cardButtons[cardIndex + 1])
+        }
+        return
+      case 'ArrowUp':
+        if (actionIndex > 0) {
+          event.preventDefault()
+          focusButton(sameActionButtons[actionIndex - 1])
+        }
+        return
+      case 'ArrowDown':
+        if (actionIndex >= 0 && actionIndex < sameActionButtons.length - 1) {
+          event.preventDefault()
+          focusButton(sameActionButtons[actionIndex + 1])
+        }
+        return
+      case 'Home':
+        if (sameActionButtons.length > 0) {
+          event.preventDefault()
+          focusButton(sameActionButtons[0])
+        }
+        return
+      case 'End':
+        if (sameActionButtons.length > 0) {
+          event.preventDefault()
+          focusButton(sameActionButtons[sameActionButtons.length - 1])
+        }
+        return
+    }
+  }, [])
 
   return (
     <section className="collection-detail" aria-label={`Sammlung ${entry.collection.name}`}>
@@ -326,49 +566,70 @@ function CollectionDetail({
           className="collection-detail-empty"
         />
       ) : (
-        <div className="collection-image-grid" aria-label="Motive in dieser Sammlung">
-          {entry.entries.map((galleryEntry) => (
-            <article key={galleryEntry.id} className="collection-image-card">
-              <button
-                type="button"
-                className="collection-image-preview"
-                onClick={() => onReplayEntry(galleryEntry)}
-                disabled={isBusy || !galleryEntry.sourceImage && !galleryEntry.previewImage}
-                aria-label={`${formatDifficultyLabel(galleryEntry.config)} aus Sammlung spielen`}
-              >
-                {galleryEntry.previewImage ? (
-                  <img
-                    src={galleryEntry.previewImage}
-                    alt={`Geloestes Puzzle ${formatDifficultyLabel(galleryEntry.config)} vom ${formatDate(galleryEntry.completedAt)}`}
-                  />
-                ) : (
-                  <span>Bild</span>
-                )}
-              </button>
-              <div className="collection-image-card-body">
-                <strong>{formatDifficultyLabel(galleryEntry.config)}</strong>
-                <span>{formatPuzzleSize(galleryEntry.config)}</span>
-                <span>{formatTime(galleryEntry.time)} - {galleryEntry.moves} Netto</span>
-              </div>
-              <div className="collection-image-actions">
-                <AnimatedButton
-                  className="secondary"
+        <>
+          <div className="collection-image-grid" aria-label="Motive in dieser Sammlung">
+            {pagedEntries.map((galleryEntry) => (
+              <article key={galleryEntry.id} className="collection-image-card">
+                <button
+                  type="button"
+                  className="collection-image-preview"
+                  data-collection-image-action="preview"
+                  data-collection-image-id={galleryEntry.id}
+                  {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
                   onClick={() => onReplayEntry(galleryEntry)}
+                  onKeyDown={handleImageActionKeyDown}
                   disabled={isBusy || !galleryEntry.sourceImage && !galleryEntry.previewImage}
+                  aria-label={`${formatDifficultyLabel(galleryEntry.config)} aus Sammlung spielen`}
                 >
-                  Spielen
-                </AnimatedButton>
-                <AnimatedButton
-                  className="secondary"
-                  onClick={() => void onRemoveImage(entry.collection.id, galleryEntry.id)}
-                  disabled={isBusy}
-                >
-                  Entfernen
-                </AnimatedButton>
-              </div>
-            </article>
-          ))}
-        </div>
+                  {galleryEntry.previewImage ? (
+                    <img
+                      src={galleryEntry.previewImage}
+                      alt={`Geloestes Puzzle ${formatDifficultyLabel(galleryEntry.config)} vom ${formatDate(galleryEntry.completedAt)}`}
+                    />
+                  ) : (
+                    <span>Bild</span>
+                  )}
+                </button>
+                <div className="collection-image-card-body">
+                  <strong>{formatDifficultyLabel(galleryEntry.config)}</strong>
+                  <span>{formatPuzzleSize(galleryEntry.config)}</span>
+                  <span>{formatTime(galleryEntry.time)} - {galleryEntry.moves} Netto</span>
+                </div>
+                <div className="collection-image-actions">
+                  <AnimatedButton
+                    className="secondary"
+                    data-collection-image-action="play"
+                    data-collection-image-id={galleryEntry.id}
+                    {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
+                    onClick={() => onReplayEntry(galleryEntry)}
+                    onKeyDown={handleImageActionKeyDown}
+                    disabled={isBusy || !galleryEntry.sourceImage && !galleryEntry.previewImage}
+                  >
+                    Spielen
+                  </AnimatedButton>
+                  <AnimatedButton
+                    className="secondary"
+                    data-collection-image-action="remove"
+                    data-collection-image-id={galleryEntry.id}
+                    {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
+                    onClick={() => void onRemoveImage(entry.collection.id, galleryEntry.id)}
+                    onKeyDown={handleImageActionKeyDown}
+                    disabled={isBusy}
+                  >
+                    Entfernen
+                  </AnimatedButton>
+                </div>
+              </article>
+            ))}
+          </div>
+          <UploadPageNavigation
+            activePage={activePage}
+            ariaLabel={`Sammlungsmotivseiten fuer ${entry.collection.name}`}
+            isDisabled={isBusy}
+            onPageChange={onPageChange}
+            pageCount={pageCount}
+          />
+        </>
       )}
     </section>
   )
