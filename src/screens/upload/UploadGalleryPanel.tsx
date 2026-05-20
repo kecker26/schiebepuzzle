@@ -9,6 +9,7 @@ import UploadGalleryCard from './UploadGalleryCard.tsx'
 import UploadGalleryDetailDialog from './UploadGalleryDetailDialog.tsx'
 import UploadGalleryTagManagerDialog from './UploadGalleryTagManagerDialog.tsx'
 import UploadCollectionPickerDialog from './UploadCollectionPickerDialog.tsx'
+import UploadPageNavigation from './UploadPageNavigation.tsx'
 import {
   buildGalleryDisplayEntriesFromGroups,
   buildGalleryDisplayGroups,
@@ -57,6 +58,8 @@ interface PendingGalleryDeletionRequest extends PendingGalleryDeletionFocus {
 }
 
 type GalleryToolbarFocusTarget = 'difficulty' | 'assistance' | 'sort'
+
+const GALLERY_MOTIFS_PER_PAGE = 9
 
 export function getGalleryTagKey(label: string): string {
   return label.trim().toLocaleLowerCase('de-DE')
@@ -135,6 +138,7 @@ export default function UploadGalleryPanel({
   const [isCreatingTagCollection, setIsCreatingTagCollection] = useState(false)
   const [suggestedCollectionBusyKey, setSuggestedCollectionBusyKey] = useState<string | null>(null)
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const [pendingDeleteEntry, setPendingDeleteEntry] = useState<PendingGalleryDeletionRequest | null>(null)
   const deletingEntryIdRef = useRef<string | null>(null)
   const pendingDeletionFocusRef = useRef<PendingGalleryDeletionFocus | null>(null)
@@ -215,6 +219,12 @@ export default function UploadGalleryPanel({
 
     return sortGalleryDisplayEntries(filteredEntries, sortOption)
   }, [baseFilteredEntries, sortOption, tagFilters])
+  const galleryPageCount = Math.max(1, Math.ceil(visibleEntries.length / GALLERY_MOTIFS_PER_PAGE))
+  const activeGalleryPage = Math.min(currentPage, galleryPageCount)
+  const pagedVisibleEntries = useMemo(() => {
+    const startIndex = (activeGalleryPage - 1) * GALLERY_MOTIFS_PER_PAGE
+    return visibleEntries.slice(startIndex, startIndex + GALLERY_MOTIFS_PER_PAGE)
+  }, [activeGalleryPage, visibleEntries])
   const activeTagOption = useMemo(
     () => tagFilters.length === 1 ? tagOptions.find((option) => option.id === tagFilters[0]) ?? null : null,
     [tagFilters, tagOptions]
@@ -257,6 +267,10 @@ export default function UploadGalleryPanel({
     })
   }, [activeTagCollection, matchingTagImageIds, motifIdByEntryId])
   const tagCollectionActionLabel = activeTagCollection ? 'Tag-Motive ergaenzen' : 'Sammlung aus Tag'
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, galleryPageCount))
+  }, [galleryPageCount])
 
   useEffect(() => {
     deletingEntryIdRef.current = deletingEntryId
@@ -371,7 +385,7 @@ export default function UploadGalleryPanel({
       return
     }
 
-    const isStillVisible = visibleEntries.some((entry) => entry.id === focusRequest.entryId)
+    const isStillVisible = pagedVisibleEntries.some((entry) => entry.id === focusRequest.entryId)
 
     pendingDeletionFocusRef.current = null
 
@@ -380,8 +394,8 @@ export default function UploadGalleryPanel({
     }
 
     const nextEntry =
-      visibleEntries[focusRequest.visibleIndex]
-      ?? visibleEntries[focusRequest.visibleIndex - 1]
+      pagedVisibleEntries[focusRequest.visibleIndex]
+      ?? pagedVisibleEntries[focusRequest.visibleIndex - 1]
       ?? null
 
     if (nextEntry) {
@@ -400,7 +414,7 @@ export default function UploadGalleryPanel({
     findGalleryFallbackButton,
     findPanelFallbackTarget,
     focusPanelElement,
-    visibleEntries,
+    pagedVisibleEntries,
   ])
 
   useEffect(() => {
@@ -457,32 +471,38 @@ export default function UploadGalleryPanel({
 
   const handleDifficultyFilterChange = useCallback((value: GalleryDifficultyFilter) => {
     pendingToolbarFocusRef.current = 'difficulty'
+    setCurrentPage(1)
     setDifficultyFilter(value)
   }, [])
 
   const handleAssistanceFilterChange = useCallback((value: GalleryAssistanceFilter) => {
     pendingToolbarFocusRef.current = 'assistance'
+    setCurrentPage(1)
     setAssistanceFilter(value)
   }, [])
 
   const handleTagFilterRequest = useCallback((tagLabel: string) => {
     pendingToolbarFocusRef.current = 'difficulty'
+    setCurrentPage(1)
     setTagFilters([getGalleryTagKey(tagLabel)])
   }, [])
 
   const handleApplyTagFilters = useCallback((tagKeys: string[]) => {
     const normalizedTagKeys = Array.from(new Set(tagKeys.map((tagKey) => getGalleryTagKey(tagKey)).filter(Boolean)))
+    setCurrentPage(1)
     setTagFilters(normalizedTagKeys)
     setIsManagingTags(false)
   }, [])
 
   const handleSortOptionChange = useCallback((value: GallerySortOption) => {
     pendingToolbarFocusRef.current = 'sort'
+    setCurrentPage(1)
     setSortOption(value)
   }, [])
 
   function handleResetFilters() {
     pendingToolbarFocusRef.current = 'difficulty'
+    setCurrentPage(1)
     setDifficultyFilter('all')
     setAssistanceFilter('all')
     setTagFilters([])
@@ -502,9 +522,9 @@ export default function UploadGalleryPanel({
         && activeElement.dataset.galleryAction
           ? activeElement.dataset.galleryAction as GalleryAction
           : 'delete',
-      visibleIndex: visibleEntries.findIndex((visibleEntry) => visibleEntry.id === entry.id),
+      visibleIndex: pagedVisibleEntries.findIndex((visibleEntry) => visibleEntry.id === entry.id),
     })
-  }, [visibleEntries])
+  }, [pagedVisibleEntries])
 
   const handleCollectEntryRequest = useCallback((entry: GalleryDisplayEntry) => {
     if (deletingEntryIdRef.current !== null) return
@@ -566,7 +586,7 @@ export default function UploadGalleryPanel({
   const visibleGalleryStateKey =
     visibleEntries.length === 0
       ? `filtered-empty:${difficultyFilter}:${assistanceFilter}:${tagFilters.join('|')}:${sortOption}`
-      : `grid:${difficultyFilter}:${assistanceFilter}:${tagFilters.join('|')}:${sortOption}`
+      : `grid:${difficultyFilter}:${assistanceFilter}:${tagFilters.join('|')}:${sortOption}:${activeGalleryPage}`
   const collectingImageIds = collectingEntry ? [collectingEntry.representativeEntry.id] : []
   const collectingRepresentativeEntry = collectingEntry?.representativeEntry ?? null
   const collectingImageLabel = collectingRepresentativeEntry
@@ -730,7 +750,7 @@ export default function UploadGalleryPanel({
                   />
                 ) : (
                   <div className="gallery-grid" aria-label="Galerie geloester Spiele">
-                    {visibleEntries.map((entry) => (
+                    {pagedVisibleEntries.map((entry) => (
                       <UploadGalleryCard
                         key={entry.id}
                         entry={entry}
@@ -749,6 +769,13 @@ export default function UploadGalleryPanel({
                   </div>
                 )}
               </AnimatedStateSwap>
+              <UploadPageNavigation
+                activePage={activeGalleryPage}
+                ariaLabel="Galerieseiten"
+                isDisabled={deletingEntryId !== null}
+                onPageChange={setCurrentPage}
+                pageCount={galleryPageCount}
+              />
             </>
           )}
         </AnimatedStateSwap>

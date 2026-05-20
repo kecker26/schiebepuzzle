@@ -11,6 +11,7 @@ import {
 import { ensureElementVisible } from '../../app/focusVisibility.ts'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
 import { SavedGameSummary } from '../../types/index'
+import UploadPageNavigation from './UploadPageNavigation.tsx'
 import UploadSavedGameItem from './UploadSavedGameItem.tsx'
 import UploadStateNotice from './UploadStateNotice.tsx'
 
@@ -335,31 +336,13 @@ export default function UploadSavedGamesPanel({
                 )
               })}
             </ul>
-            {savedGamesPageCount > 1 && (
-              <nav className="saved-games-pagination" aria-label="Spielstandseiten">
-                <span className="saved-games-page-summary">
-                  Seite {activeSavedGamesPage} von {savedGamesPageCount}
-                </span>
-                <div className="saved-games-page-links">
-                  {Array.from({ length: savedGamesPageCount }, (_, index) => {
-                    const page = index + 1
-
-                    return (
-                      <button
-                        key={page}
-                        type="button"
-                        className="saved-games-page-link"
-                        aria-current={page === activeSavedGamesPage ? 'page' : undefined}
-                        onClick={() => handlePageClick(page)}
-                        disabled={isBulkActionDisabled}
-                      >
-                        {page}
-                      </button>
-                    )
-                  })}
-                </div>
-              </nav>
-            )}
+            <UploadPageNavigation
+              activePage={activeSavedGamesPage}
+              ariaLabel="Spielstandseiten"
+              isDisabled={isBulkActionDisabled}
+              onPageChange={handlePageClick}
+              pageCount={savedGamesPageCount}
+            />
           </div>
         )}
       </AnimatedStateSwap>
