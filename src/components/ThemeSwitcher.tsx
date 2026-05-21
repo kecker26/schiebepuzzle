@@ -1,7 +1,17 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { handleDirectionalFocusNavigation } from '../app/directionalFocusNavigation.ts'
+import {
+  CircleHelp,
+  Command,
+  Home,
+  Moon,
+  Music2,
+  Palette,
+  Sun,
+  Volume2,
+  VolumeX,
+} from 'lucide-react'
 import {
   COMMAND_PALETTE_SHORTCUT_ACCESSIBLE_LABEL,
   COMMAND_PALETTE_SHORTCUT_LABEL,
@@ -294,10 +304,12 @@ export default function ThemeSwitcher({
 
     switch (event.key) {
       case 'ArrowLeft':
+      case 'ArrowUp':
         event.preventDefault()
         moveToolbarFocus(-1)
         return
       case 'ArrowRight':
+      case 'ArrowDown':
         event.preventDefault()
         moveToolbarFocus(1)
         return
@@ -321,7 +333,7 @@ export default function ThemeSwitcher({
         focusToolbarButton(toolbarButtons[toolbarButtons.length - 1] ?? null)
         return
       }
-      case 'ArrowDown':
+      case 'PageDown':
         if (target === musicTriggerRef.current) {
           event.preventDefault()
           openPopover('music', 'first')
@@ -333,7 +345,7 @@ export default function ThemeSwitcher({
           openPopover('style', 'selected')
         }
         return
-      case 'ArrowUp':
+      case 'PageUp':
         if (target === musicTriggerRef.current) {
           event.preventDefault()
           openPopover('music', 'last')
@@ -491,17 +503,28 @@ export default function ThemeSwitcher({
 
   const pickerVariant = 'popover'
   const hasPrimaryControls = Boolean(onGoToStartScreen || onOpenCommandPalette || onOpenHelp)
+  const switcherClassName = [
+    'theme-switcher',
+    `theme-switcher--${layout}`,
+    activePopover ? 'has-open-popover' : '',
+  ].filter(Boolean).join(' ')
 
   const switcher = (
-    <>
-      {hasPrimaryControls && (
-        <div className={`theme-switcher-primary theme-switcher-primary--${layout}`}>
-          <div
-            className="theme-switcher-primary-controls"
-            role="toolbar"
-            aria-label="Navigation und Hilfe"
-            onKeyDown={handleDirectionalFocusNavigation}
-          >
+    <div className={switcherClassName} ref={switcherRef}>
+      <div className="theme-switcher-shell">
+        <div className="theme-switcher-rail-head">
+          <span className="theme-switcher-rail-mark" aria-hidden="true">SP</span>
+          <span className="theme-switcher-rail-title">Menue</span>
+        </div>
+
+        <div
+          className="theme-switcher-controls"
+          role="toolbar"
+          aria-label="App-Navigation, Hilfe, Musik und Darstellung"
+          onKeyDown={handleToolbarKeyDown}
+        >
+          {hasPrimaryControls && (
+            <div className="theme-switcher-control-group" aria-label="Navigation und Hilfe">
             {onGoToStartScreen && (
               <button
                 type="button"
@@ -513,13 +536,10 @@ export default function ThemeSwitcher({
                 title="Zur Startseite wechseln"
                 aria-label="Zur Startseite wechseln"
               >
-                <span aria-hidden="true">{'\u2302'}</span>
+                <Home className="theme-toggle-icon" />
                 <span className="theme-toggle-btn-label">Start</span>
               </button>
             )}
-            {onGoToStartScreen && (onOpenCommandPalette || onOpenHelp) ? (
-              <span className="theme-switcher-divider" aria-hidden="true" />
-            ) : null}
             {onOpenCommandPalette && (
               <button
                 type="button"
@@ -529,14 +549,11 @@ export default function ThemeSwitcher({
                 aria-label="Command Palette oeffnen"
                 aria-keyshortcuts={COMMAND_PALETTE_SHORTCUT_ACCESSIBLE_LABEL}
               >
-                <span aria-hidden="true">{'\u2318'}</span>
+                <Command className="theme-toggle-icon" />
                 <span className="theme-toggle-btn-label">Palette</span>
-                <span className="theme-toggle-btn-shortcut" aria-hidden="true">{COMMAND_PALETTE_SHORTCUT_LABEL}</span>
+                <span className="theme-toggle-btn-shortcut theme-toggle-btn-shortcut--inline" aria-hidden="true">{COMMAND_PALETTE_SHORTCUT_LABEL}</span>
               </button>
             )}
-            {onOpenCommandPalette && onOpenHelp ? (
-              <span className="theme-switcher-divider" aria-hidden="true" />
-            ) : null}
             {onOpenHelp && (
               <button
                 type="button"
@@ -546,19 +563,17 @@ export default function ThemeSwitcher({
                 aria-label="Hilfe und Tastaturbefehle anzeigen"
                 aria-keyshortcuts="F1"
               >
-                <span aria-hidden="true">?</span>
+                <CircleHelp className="theme-toggle-icon" />
                 <span className="theme-toggle-btn-label">Hilfe</span>
-                <span className="theme-toggle-btn-shortcut" aria-hidden="true">F1</span>
+                <span className="theme-toggle-btn-shortcut theme-toggle-btn-shortcut--inline" aria-hidden="true">F1</span>
               </button>
             )}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      <div className={`theme-switcher theme-switcher--${layout}`} ref={switcherRef}>
-        <div className="theme-switcher-controls" role="toolbar" aria-label="Musik und Darstellung" onKeyDown={handleToolbarKeyDown}>
+          <div className="theme-switcher-control-group" aria-label="Musik und Darstellung">
           {saveStatus && (
-            <>
+            <div className="theme-switcher-save-status-wrap">
               <div
                 className={`theme-switcher-save-status theme-switcher-save-status--${saveStatus.kind}`}
                 role={saveStatus.kind === 'error' ? 'alert' : 'status'}
@@ -572,8 +587,7 @@ export default function ThemeSwitcher({
                   <span className="theme-switcher-save-status-detail">{saveStatus.detail}</span>
                 </span>
               </div>
-              <span className="theme-switcher-divider" aria-hidden="true" />
-            </>
+            </div>
           )}
 
           <button
@@ -587,10 +601,10 @@ export default function ThemeSwitcher({
             aria-haspopup="dialog"
             aria-controls={musicPopoverId}
           >
-            <span aria-hidden="true">{isMusicMuted ? '\u{1F507}' : '\u{1F50A}'}</span>
-            <span className="theme-toggle-btn-shortcut" aria-hidden="true">{'\u2193'}</span>
+            {isMusicMuted ? <VolumeX className="theme-toggle-icon" /> : <Volume2 className="theme-toggle-icon" />}
+            <span className="theme-toggle-btn-label">Musik</span>
+            <span className="theme-toggle-btn-shortcut" aria-hidden="true">PgDn</span>
           </button>
-          <span className="theme-switcher-divider" aria-hidden="true" />
           <button
             type="button"
             className={`theme-toggle-btn theme-toggle-btn-style${isStylePickerOpen ? ' is-active' : ''}`}
@@ -602,11 +616,10 @@ export default function ThemeSwitcher({
             aria-haspopup="dialog"
             aria-controls={stylePopoverId}
           >
-            <span aria-hidden="true">{'\u266B'}</span>
+            <Music2 className="theme-toggle-icon" />
             <span className="theme-toggle-btn-label">{selectedMusicStyleDefinition.shortLabel}</span>
-            <span className="theme-toggle-btn-shortcut" aria-hidden="true">{'\u2193'}</span>
+            <span className="theme-toggle-btn-shortcut" aria-hidden="true">PgDn</span>
           </button>
-          <span className="theme-switcher-divider" aria-hidden="true" />
           <button
             type="button"
             className={`theme-toggle-btn theme-toggle-btn-style theme-toggle-btn-emotion${emotionThemeEnabled ? ' is-active' : ''}`}
@@ -619,19 +632,22 @@ export default function ThemeSwitcher({
               : 'Emotion-Theme aktivieren. Standard-Farbgebung ist aktiv.'}
             aria-pressed={emotionThemeEnabled}
           >
-            <span aria-hidden="true">E</span>
+            <Palette className="theme-toggle-icon" />
             <span className="theme-toggle-btn-label">{emotionThemeEnabled ? moodLabel : 'Standard'}</span>
           </button>
-          <span className="theme-switcher-divider" aria-hidden="true" />
           <button
             type="button"
             className="theme-toggle-btn"
             onClick={toggleMode}
             title={mode === 'light' ? 'Dunkelmodus aktivieren' : 'Hellmodus aktivieren'}
+            aria-label={mode === 'light' ? 'Dunkelmodus aktivieren' : 'Hellmodus aktivieren'}
           >
-            <span aria-hidden="true">{mode === 'light' ? '\u263e' : '\u2600'}</span>
+            {mode === 'light' ? <Moon className="theme-toggle-icon" /> : <Sun className="theme-toggle-icon" />}
+            <span className="theme-toggle-btn-label">{mode === 'light' ? 'Dunkel' : 'Hell'}</span>
           </button>
+          </div>
         </div>
+      </div>
 
         <AnimatePresence initial={false}>
           {activePopover && (
@@ -703,8 +719,7 @@ export default function ThemeSwitcher({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </>
+    </div>
   )
 
   if (typeof document === 'undefined') {
