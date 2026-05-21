@@ -3539,7 +3539,7 @@
   padding: 14px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--image-accent-solid) 26%, transparent);
-  background: color-mix(in srgb, var(--card-bg) 68%, transparent);
+  background: var(--secondary-bg);
   color: var(--text-secondary);
   font-size: 14px;
   font-weight: 800;
@@ -3635,9 +3635,9 @@
   min-height: 24px;
   padding: 5px 9px;
   border-radius: 999px;
-  border: 1px solid var(--chip-border);
+  border: 1px solid var(--secondary-border);
   color: var(--text-secondary);
-  background: color-mix(in srgb, var(--panel-bg) 70%, transparent);
+  background: var(--secondary-bg);
   font-size: 10px;
   font-weight: 900;
   line-height: 1.15;
@@ -3647,21 +3647,21 @@
 
 .gallery-card-comparison-hints span.is-positive,
 .gallery-detail-timeline-insights span.is-positive {
-  border-color: color-mix(in srgb, var(--success-color) 34%, var(--chip-border));
+  border-color: color-mix(in srgb, var(--success-color) 34%, var(--secondary-border));
   color: color-mix(in srgb, var(--success-color) 76%, var(--text-main));
   background: color-mix(in srgb, var(--success-color) 12%, transparent);
 }
 
 .gallery-card-comparison-hints span.is-negative,
 .gallery-detail-timeline-insights span.is-negative {
-  border-color: color-mix(in srgb, var(--danger-color) 34%, var(--chip-border));
+  border-color: color-mix(in srgb, var(--danger-color) 34%, var(--secondary-border));
   color: color-mix(in srgb, var(--danger-color) 72%, var(--text-main));
   background: color-mix(in srgb, var(--danger-color) 10%, transparent);
 }
 
 .gallery-card-comparison-hints span.is-info,
 .gallery-detail-timeline-insights span.is-info {
-  border-color: color-mix(in srgb, var(--primary-color) 32%, var(--chip-border));
+  border-color: color-mix(in srgb, var(--primary-color) 32%, var(--secondary-border));
   color: color-mix(in srgb, var(--primary-color) 74%, var(--text-main));
   background: color-mix(in srgb, var(--primary-color) 10%, transparent);
 }
@@ -3685,7 +3685,7 @@
   min-height: 24px;
   padding: 5px 9px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 30%, var(--chip-border));
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 30%, var(--secondary-border));
   color: color-mix(in srgb, var(--text-main) 82%, var(--primary-color));
   background: color-mix(in srgb, var(--image-accent-solid) 12%, transparent);
   font-size: 10px;
@@ -3722,7 +3722,7 @@
   min-height: 24px;
   padding: 5px 9px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--primary-color) 28%, var(--chip-border));
+  border: 1px solid color-mix(in srgb, var(--primary-color) 28%, var(--secondary-border));
   color: color-mix(in srgb, var(--primary-color) 72%, var(--text-main));
   background: color-mix(in srgb, var(--primary-color) 9%, transparent);
   font-size: 10px;
@@ -3746,7 +3746,7 @@
 .gallery-card-ai-tags button:focus-visible,
 .gallery-card-ai-retry:hover:not(:disabled),
 .gallery-card-ai-retry:focus-visible {
-  border-color: color-mix(in srgb, var(--primary-color) 54%, var(--chip-border));
+  border-color: color-mix(in srgb, var(--primary-color) 54%, var(--secondary-border));
   color: color-mix(in srgb, var(--primary-color) 86%, var(--text-main));
   background: color-mix(in srgb, var(--primary-color) 15%, transparent);
   transform: translateY(-1px);
@@ -3770,7 +3770,7 @@
 
 .gallery-card-ai-retry {
   color: var(--text-main);
-  border-color: color-mix(in srgb, var(--primary-color) 46%, var(--chip-border));
+  border-color: color-mix(in srgb, var(--primary-color) 46%, var(--secondary-border));
   background: color-mix(in srgb, var(--primary-color) 15%, transparent);
 }
 
@@ -3812,7 +3812,7 @@
   padding: 22px;
   border-radius: 24px;
   border: 1px solid var(--card-border);
-  background: var(--panel-bg);
+  background: var(--glass-dialog-bg);
   box-shadow: var(--panel-shadow-hover);
 }
 
@@ -3949,7 +3949,7 @@
   border: 1px solid color-mix(in srgb, var(--primary-color) 18%, var(--card-border));
   color: var(--text-main);
   text-align: left;
-  background: color-mix(in srgb, var(--panel-bg) 78%, transparent);
+  background: var(--card-bg);
   transition:
     border-color 0.2s ease,
     background 0.2s ease,
@@ -3960,7 +3960,9 @@
 .gallery-tag-manager-list-item:has(:focus-visible),
 .gallery-tag-manager-list-item.is-active {
   border-color: color-mix(in srgb, var(--primary-color) 58%, var(--card-border));
-  background: color-mix(in srgb, var(--primary-color) 14%, var(--panel-bg));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--primary-color) 14%, transparent) 0%, transparent 56%),
+    var(--card-bg-hover);
 }
 
 .gallery-tag-manager-list-item:hover:not(.is-disabled) {
@@ -4029,7 +4031,9 @@
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--primary-color) 20%, var(--card-border));
   color: var(--text-main);
-  background: color-mix(in srgb, var(--primary-color) 10%, var(--panel-bg));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 58%),
+    var(--secondary-bg);
   font: inherit;
   cursor: pointer;
 }
@@ -4041,7 +4045,9 @@
 .gallery-tag-manager-category-toggle:hover:not(:disabled),
 .gallery-tag-manager-category-toggle:focus-visible {
   border-color: color-mix(in srgb, var(--primary-color) 54%, var(--card-border));
-  background: color-mix(in srgb, var(--primary-color) 16%, var(--panel-bg));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--primary-color) 16%, transparent) 0%, transparent 58%),
+    var(--secondary-bg-hover);
 }
 
 .gallery-tag-manager-category-toggle:focus-visible {
@@ -4157,7 +4163,7 @@
   height: 6px;
   overflow: hidden;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--border-color) 42%, transparent);
+  background: color-mix(in srgb, var(--secondary-border) 42%, transparent);
 }
 
 .gallery-tag-manager-list-item-meter span,
@@ -4240,7 +4246,7 @@
   padding: 12px;
   border-radius: 16px;
   border: 1px solid var(--card-border);
-  background: color-mix(in srgb, var(--panel-bg) 70%, transparent);
+  background: var(--secondary-bg);
 }
 
 .gallery-tag-manager-detail-similar div {
@@ -4301,17 +4307,19 @@
   min-height: 38px;
   padding: 8px 12px;
   border-radius: 12px;
-  border: 1px solid var(--button-border);
+  border: 1px solid var(--secondary-border);
   color: var(--text-main);
-  background: var(--button-bg);
+  background: var(--secondary-bg);
   font: inherit;
   font-weight: 900;
   cursor: pointer;
 }
 
 .gallery-tag-manager-confirm-remove button.danger {
-  border-color: color-mix(in srgb, var(--danger-color) 60%, var(--button-border));
-  background: color-mix(in srgb, var(--danger-color) 18%, var(--button-bg));
+  border-color: color-mix(in srgb, var(--danger-color) 60%, var(--secondary-border));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--danger-color) 18%, transparent), transparent),
+    var(--secondary-bg);
 }
 
 .gallery-tag-manager-confirm-remove button:focus-visible {
@@ -4877,9 +4885,11 @@
   align-items: start;
   min-height: 0;
   border-radius: 32px;
-  border: 1px solid var(--dialog-border);
-  background: linear-gradient(180deg, rgba(14, 21, 38, 0.96), rgba(18, 27, 46, 0.88));
-  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--glass-dialog-border);
+  background: var(--glass-dialog-bg);
+  box-shadow: var(--glass-dialog-shadow);
+  backdrop-filter: blur(var(--glass-dialog-blur)) saturate(145%);
+  -webkit-backdrop-filter: blur(var(--glass-dialog-blur)) saturate(145%);
   overflow: hidden;
 }
 
@@ -4896,7 +4906,7 @@
   overflow: hidden;
   background:
     radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 55%),
-    linear-gradient(180deg, rgba(2, 6, 23, 0.32), rgba(2, 6, 23, 0.16));
+    var(--surface-soft);
 }
 
 .gallery-detail-image,
@@ -4913,7 +4923,7 @@
   margin: 0 auto;
   object-fit: contain;
   border-radius: 24px;
-  background: rgba(2, 6, 23, 0.2);
+  background: var(--preview-bg);
 }
 
 .gallery-detail-image-placeholder {
@@ -4933,8 +4943,8 @@
   min-height: 96px;
   padding: 16px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--secondary-bg);
+  border: 1px solid var(--secondary-border);
   color: var(--text-secondary);
   font-size: 15px;
   font-weight: 800;
@@ -4955,7 +4965,7 @@
   color: var(--text-main);
   background:
     radial-gradient(circle at 18% 16%, color-mix(in srgb, var(--primary-color) 24%, transparent) 0%, transparent 48%),
-    linear-gradient(135deg, color-mix(in srgb, var(--card-bg) 94%, transparent), color-mix(in srgb, var(--panel-bg) 82%, transparent));
+    var(--card-bg);
   box-shadow: var(--panel-shadow);
   text-align: center;
   transition:
@@ -5019,7 +5029,7 @@
   scrollbar-gutter: stable;
   background:
     radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 34%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0));
+    color-mix(in srgb, var(--surface-soft) 78%, transparent);
 }
 
 .gallery-detail-header {
@@ -5184,8 +5194,9 @@
   border-radius: 22px;
   border: 1px solid var(--card-border);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--card-bg) 92%, transparent), color-mix(in srgb, var(--panel-bg) 72%, transparent));
-  box-shadow: 0 16px 32px rgba(2, 6, 23, 0.16);
+    radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 56%),
+    var(--card-bg);
+  box-shadow: var(--panel-shadow);
 }
 
 .gallery-detail-timeline-action-stack {
@@ -5213,8 +5224,7 @@
   overflow: hidden;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--card-border) 82%, transparent);
-  background:
-    linear-gradient(135deg, rgba(15, 23, 42, 0.52), rgba(30, 41, 59, 0.3));
+  background: var(--preview-bg);
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 800;
@@ -5233,7 +5243,7 @@
   border-color: color-mix(in srgb, var(--primary-color) 40%, var(--card-border));
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--primary-color) 18%, transparent) 0%, transparent 52%),
-    color-mix(in srgb, var(--card-bg) 88%, transparent);
+    var(--card-bg);
 }
 
 .gallery-detail-timeline-content {
@@ -5285,7 +5295,7 @@
   min-height: 24px;
   padding: 5px 9px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--primary-color) 24%, var(--chip-border));
+  border: 1px solid color-mix(in srgb, var(--primary-color) 24%, var(--secondary-border));
   color: color-mix(in srgb, var(--primary-color) 74%, var(--text-main));
   background: color-mix(in srgb, var(--primary-color) 10%, transparent);
   font-size: 9px;
@@ -5308,9 +5318,9 @@
   min-height: 26px;
   padding: 5px 9px;
   border-radius: 999px;
-  border: 1px solid var(--chip-border);
+  border: 1px solid var(--secondary-border);
   color: var(--text-secondary);
-  background: color-mix(in srgb, var(--panel-bg) 70%, transparent);
+  background: var(--secondary-bg);
   font-size: 11px;
   font-weight: 800;
   line-height: 1.2;

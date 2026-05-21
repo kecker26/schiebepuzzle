@@ -131,6 +131,7 @@
   --danger-color: #ef4444;
   --danger-hover: #dc2626;
   --danger-shadow: rgba(239, 68, 68, 0.3);
+  --success-color: #16a34a;
 
   --secondary-bg:
     radial-gradient(circle at top right, var(--image-accent-soft) 0%, transparent 64%),
@@ -273,6 +274,7 @@
   --text-secondary: #d0dbef;
   --text-muted: #94a7c7;
   --text-on-primary: #ffffff;
+  --success-color: #4ade80;
 
   --surface-strong: rgba(11, 18, 33, 0.86);
   --surface-soft: rgba(14, 22, 38, 0.6);
