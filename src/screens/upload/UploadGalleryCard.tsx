@@ -1,13 +1,19 @@
-import { memo, type KeyboardEvent as ReactKeyboardEvent, useCallback } from 'react'
+import {
+  memo,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useMemo,
+} from 'react'
 import {
   ensureElementVisible,
   FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE,
 } from '../../app/focusVisibility.ts'
 import { getDirectionalFocusTarget } from '../../app/directionalFocusNavigation.ts'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
-import { ImageCollection, SolvedGalleryEntry } from '../../types/index'
+import { ImageCollection, ImageThemePalette, SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
+import { useUploadImagePalette } from './uploadImagePalette.ts'
 import { formatDate } from './uploadUtils.ts'
 
 interface UploadGalleryCardProps {
@@ -24,6 +30,15 @@ interface UploadGalleryCardProps {
   isDeleting: boolean
 }
 
+function findStoredCardPalette(entry: GalleryDisplayEntry): ImageThemePalette | null {
+  return (
+    entry.representativeEntry.imageTheme
+    ?? entry.visibleEntries.find((galleryEntry) => galleryEntry.imageTheme)?.imageTheme
+    ?? entry.allEntries.find((galleryEntry) => galleryEntry.imageTheme)?.imageTheme
+    ?? null
+  )
+}
+
 const UploadGalleryCard = memo(function UploadGalleryCard({
   entry,
   onOpenDetails,
@@ -36,6 +51,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   isDeleting,
 }: UploadGalleryCardProps) {
   const representativeEntry = entry.representativeEntry
+  const storedPalette = useMemo(() => findStoredCardPalette(entry), [entry])
   const difficultyLabel = formatDifficultyLabel(representativeEntry.config)
   const completedAtLabel = formatDate(representativeEntry.completedAt)
   const totalSolveCountLabel = formatGallerySolveCount(entry.motifReplaySummary.totalSolveCount)
@@ -48,6 +64,10 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
     }))
     .filter(({ collection }) => collection && !collection.imageIds.includes(representativeEntry.id))
     .slice(0, 2)
+  const { activePalette, paletteStyle: cardPaletteStyle } = useUploadImagePalette({
+    paletteSource: representativeEntry.previewImage ?? representativeEntry.sourceImage,
+    storedPalette,
+  })
 
   const focusButton = useCallback((button: HTMLButtonElement | undefined) => {
     if (!button) {
@@ -145,7 +165,12 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   }, [entry, onCollectEntry])
 
   return (
-    <article className="gallery-card">
+    <article
+      className="gallery-card"
+      style={cardPaletteStyle}
+      data-image-mood={activePalette?.mood}
+      data-image-palette-source={activePalette?.source}
+    >
       <button
         type="button"
         className="gallery-card-preview-shell"
@@ -168,6 +193,13 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             <span className="gallery-card-preview-mark">Bild</span>
           </div>
         )}
+        {activePalette ? (
+          <span className="gallery-card-palette" aria-hidden="true">
+            <span className="gallery-card-palette-swatch gallery-card-palette-swatch-primary" />
+            <span className="gallery-card-palette-swatch gallery-card-palette-swatch-accent" />
+            <span className="gallery-card-palette-swatch gallery-card-palette-swatch-glow" />
+          </span>
+        ) : null}
       </button>
 
       <div className="gallery-card-body">

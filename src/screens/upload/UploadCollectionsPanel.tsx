@@ -7,7 +7,7 @@ import {
 } from '../../app/focusVisibility.ts'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
-import { ImageCollection, SolvedGallery } from '../../types/index'
+import { ImageCollection, SolvedGallery, SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import UploadConfirmDialog from './UploadConfirmDialog.tsx'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
@@ -20,6 +20,7 @@ import { formatDate, formatTime } from './uploadUtils.ts'
 import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 import UploadPageNavigation from './UploadPageNavigation.tsx'
 import UploadStateNotice from './UploadStateNotice.tsx'
+import { useUploadImagePalette } from './uploadImagePalette.ts'
 
 interface UploadCollectionsPanelProps {
   collections: ImageCollection[]
@@ -410,11 +411,19 @@ function CollectionListButton({
   buttonRef?: RefObject<HTMLButtonElement>
   onSelect: () => void
 }) {
+  const { activePalette, paletteStyle } = useUploadImagePalette({
+    paletteSource: entry.previewEntry?.previewImage ?? entry.previewEntry?.sourceImage,
+    storedPalette: entry.previewEntry?.imageTheme ?? null,
+  })
+
   return (
     <button
       ref={buttonRef}
       type="button"
       className={`collection-list-item${isSelected ? ' is-selected' : ''}`}
+      style={paletteStyle}
+      data-image-mood={activePalette?.mood}
+      data-image-palette-source={activePalette?.source}
       onClick={onSelect}
       aria-current={isSelected ? 'true' : undefined}
     >
@@ -424,6 +433,13 @@ function CollectionListButton({
         ) : (
           <UploadScreenIcon name="folderHeart" className="collection-list-preview-icon" />
         )}
+        {activePalette ? (
+          <span className="image-card-palette collection-list-palette">
+            <span className="image-card-palette-swatch image-card-palette-swatch-primary" />
+            <span className="image-card-palette-swatch image-card-palette-swatch-accent" />
+            <span className="image-card-palette-swatch image-card-palette-swatch-glow" />
+          </span>
+        ) : null}
       </span>
       <span className="collection-list-copy">
         <strong>{entry.collection.name}</strong>
@@ -569,57 +585,15 @@ function CollectionDetail({
         <>
           <div className="collection-image-grid" aria-label="Motive in dieser Sammlung">
             {pagedEntries.map((galleryEntry) => (
-              <article key={galleryEntry.id} className="collection-image-card">
-                <button
-                  type="button"
-                  className="collection-image-preview"
-                  data-collection-image-action="preview"
-                  data-collection-image-id={galleryEntry.id}
-                  {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
-                  onClick={() => onReplayEntry(galleryEntry)}
-                  onKeyDown={handleImageActionKeyDown}
-                  disabled={isBusy || !galleryEntry.sourceImage && !galleryEntry.previewImage}
-                  aria-label={`${formatDifficultyLabel(galleryEntry.config)} aus Sammlung spielen`}
-                >
-                  {galleryEntry.previewImage ? (
-                    <img
-                      src={galleryEntry.previewImage}
-                      alt={`Geloestes Puzzle ${formatDifficultyLabel(galleryEntry.config)} vom ${formatDate(galleryEntry.completedAt)}`}
-                    />
-                  ) : (
-                    <span>Bild</span>
-                  )}
-                </button>
-                <div className="collection-image-card-body">
-                  <strong>{formatDifficultyLabel(galleryEntry.config)}</strong>
-                  <span>{formatPuzzleSize(galleryEntry.config)}</span>
-                  <span>{formatTime(galleryEntry.time)} - {galleryEntry.moves} Netto</span>
-                </div>
-                <div className="collection-image-actions">
-                  <AnimatedButton
-                    className="secondary"
-                    data-collection-image-action="play"
-                    data-collection-image-id={galleryEntry.id}
-                    {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
-                    onClick={() => onReplayEntry(galleryEntry)}
-                    onKeyDown={handleImageActionKeyDown}
-                    disabled={isBusy || !galleryEntry.sourceImage && !galleryEntry.previewImage}
-                  >
-                    Spielen
-                  </AnimatedButton>
-                  <AnimatedButton
-                    className="secondary"
-                    data-collection-image-action="remove"
-                    data-collection-image-id={galleryEntry.id}
-                    {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
-                    onClick={() => void onRemoveImage(entry.collection.id, galleryEntry.id)}
-                    onKeyDown={handleImageActionKeyDown}
-                    disabled={isBusy}
-                  >
-                    Entfernen
-                  </AnimatedButton>
-                </div>
-              </article>
+              <CollectionImageCard
+                key={galleryEntry.id}
+                collectionId={entry.collection.id}
+                galleryEntry={galleryEntry}
+                isBusy={isBusy}
+                onActionKeyDown={handleImageActionKeyDown}
+                onRemoveImage={onRemoveImage}
+                onReplayEntry={onReplayEntry}
+              />
             ))}
           </div>
           <UploadPageNavigation
@@ -632,5 +606,94 @@ function CollectionDetail({
         </>
       )}
     </section>
+  )
+}
+
+function CollectionImageCard({
+  collectionId,
+  galleryEntry,
+  isBusy,
+  onActionKeyDown,
+  onRemoveImage,
+  onReplayEntry,
+}: {
+  collectionId: string
+  galleryEntry: SolvedGalleryEntry
+  isBusy: boolean
+  onActionKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => void
+  onRemoveImage: (collectionId: string, imageId: string) => Promise<void>
+  onReplayEntry: GalleryReplayRequestHandler
+}) {
+  const { activePalette, paletteStyle } = useUploadImagePalette({
+    paletteSource: galleryEntry.previewImage ?? galleryEntry.sourceImage,
+    storedPalette: galleryEntry.imageTheme ?? null,
+  })
+  const canReplayEntry = Boolean(galleryEntry.sourceImage ?? galleryEntry.previewImage)
+  const difficultyLabel = formatDifficultyLabel(galleryEntry.config)
+
+  return (
+    <article
+      className="collection-image-card"
+      style={paletteStyle}
+      data-image-mood={activePalette?.mood}
+      data-image-palette-source={activePalette?.source}
+    >
+      <button
+        type="button"
+        className="collection-image-preview"
+        data-collection-image-action="preview"
+        data-collection-image-id={galleryEntry.id}
+        {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
+        onClick={() => onReplayEntry(galleryEntry)}
+        onKeyDown={onActionKeyDown}
+        disabled={isBusy || !canReplayEntry}
+        aria-label={`${difficultyLabel} aus Sammlung spielen`}
+      >
+        {galleryEntry.previewImage ? (
+          <img
+            src={galleryEntry.previewImage}
+            alt={`Geloestes Puzzle ${difficultyLabel} vom ${formatDate(galleryEntry.completedAt)}`}
+          />
+        ) : (
+          <span>Bild</span>
+        )}
+        {activePalette ? (
+          <span className="image-card-palette collection-image-palette" aria-hidden="true">
+            <span className="image-card-palette-swatch image-card-palette-swatch-primary" />
+            <span className="image-card-palette-swatch image-card-palette-swatch-accent" />
+            <span className="image-card-palette-swatch image-card-palette-swatch-glow" />
+          </span>
+        ) : null}
+      </button>
+      <div className="collection-image-card-body">
+        <strong>{difficultyLabel}</strong>
+        <span>{formatPuzzleSize(galleryEntry.config)}</span>
+        <span>{formatTime(galleryEntry.time)} - {galleryEntry.moves} Netto</span>
+      </div>
+      <div className="collection-image-actions">
+        <AnimatedButton
+          className="secondary"
+          data-collection-image-action="play"
+          data-collection-image-id={galleryEntry.id}
+          {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
+          onClick={() => onReplayEntry(galleryEntry)}
+          onKeyDown={onActionKeyDown}
+          disabled={isBusy || !canReplayEntry}
+        >
+          Spielen
+        </AnimatedButton>
+        <AnimatedButton
+          className="secondary"
+          data-collection-image-action="remove"
+          data-collection-image-id={galleryEntry.id}
+          {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
+          onClick={() => void onRemoveImage(collectionId, galleryEntry.id)}
+          onKeyDown={onActionKeyDown}
+          disabled={isBusy}
+        >
+          Entfernen
+        </AnimatedButton>
+      </div>
+    </article>
   )
 }

@@ -11,6 +11,8 @@ import AnimatedStaggerGroup from '../motion/AnimatedStaggerGroup.tsx'
 import StartScreenIcon from '../components/StartScreenIcon.tsx'
 import StartScreenAnimatedBoard from '../components/StartScreenAnimatedBoard.tsx'
 import { shouldPreserveNativeContextMenu } from '../utils/contextWindow.ts'
+import type { ImageThemePalette } from '../types/index.ts'
+import { useUploadImagePalette } from './upload/uploadImagePalette.ts'
 
 interface StartScreenProps {
   onStart: () => void
@@ -19,6 +21,8 @@ interface StartScreenProps {
   onOpenHelp: () => void
   quitHint: string | null
   heroImage: string | null
+  startPalette?: ImageThemePalette | null
+  startPaletteSource?: string | null
   registerAppContextMenuHandler: (handler: AppContextMenuHandler | null) => void
   resumeActionLabel?: string | null
   resumeActionDetail?: string | null
@@ -159,6 +163,8 @@ export default function StartScreen({
   onOpenHelp,
   quitHint,
   heroImage,
+  startPalette = null,
+  startPaletteSource = null,
   registerAppContextMenuHandler,
   resumeActionLabel = null,
   resumeActionDetail = null,
@@ -170,6 +176,10 @@ export default function StartScreen({
   const resumeDetailId = useId()
   const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null)
   const hasResumeAction = Boolean(onResumeSession && resumeActionLabel)
+  const { activePalette, paletteStyle } = useUploadImagePalette({
+    paletteSource: startPaletteSource ?? heroImage,
+    storedPalette: startPalette,
+  })
   const startStats = useMemo(() => [
     {
       key: 'saved-games',
@@ -259,7 +269,14 @@ export default function StartScreen({
   ], [hasResumeAction, onOpenHelp, onQuit, onResumeSession, onStart, resumeActionLabel])
 
   return (
-    <section className="start-screen" data-page-focus-root="true" onContextMenu={handleOpenContextWindow}>
+    <section
+      className="start-screen"
+      data-page-focus-root="true"
+      data-image-mood={activePalette?.mood}
+      data-image-palette-source={activePalette?.source}
+      style={paletteStyle}
+      onContextMenu={handleOpenContextWindow}
+    >
       <div className="start-screen-shell">
         <AnimatedStaggerGroup className="start-screen-copy" level="strong">
           <AnimatedReveal as="article" className="start-screen-hero-panel" level="strong">
@@ -296,6 +313,13 @@ export default function StartScreen({
                     <span id={resumeDetailId} className="start-screen-resume-detail">{resumeActionDetail}</span>
                   )}
                 </span>
+                {activePalette && (
+                  <span className="start-screen-resume-palette" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                )}
               </AnimatedButton>
             )}
 

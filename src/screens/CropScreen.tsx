@@ -177,7 +177,6 @@ export default function CropScreen({
     const handleWindowKeyDown = (event: KeyboardEvent) => {
       if (
         event.defaultPrevented
-        || event.key !== 'Escape'
         || event.altKey
         || event.ctrlKey
         || event.metaKey
@@ -193,8 +192,18 @@ export default function CropScreen({
         return
       }
 
-      event.preventDefault()
-      onBack()
+      if (event.key.toLowerCase() === 'b') {
+        event.preventDefault()
+        if (event.repeat) return
+
+        previewStageRef.current?.focus({ preventScroll: true })
+        return
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onBack()
+      }
     }
 
     window.addEventListener('keydown', handleWindowKeyDown)
@@ -785,8 +794,8 @@ export default function CropScreen({
               </span>
               <span className="crop-hint-copy">
               {useFullImage
-                ? 'Komplettes Bild aktiv: Q/E oder die Rotationstasten drehen das Bild, R setzt zurueck, Enter startet direkt.'
-                : 'Ausschnitt aktiv: Ziehen zum Verschieben oder den Vorschaubereich fokussieren und mit Pfeiltasten, Shift plus Pfeiltasten, Plus/Minus, Q/E und R arbeiten.'}
+                ? 'Komplettes Bild aktiv: B fokussiert die Vorschau, Q/E oder die Rotationstasten drehen das Bild, R setzt zurueck, Enter startet direkt.'
+                : 'Ausschnitt aktiv: B fokussiert die Vorschau, danach mit Pfeiltasten, Shift plus Pfeiltasten, Plus/Minus, Q/E und R arbeiten oder per Ziehen verschieben.'}
               </span>
             </p>
           </AnimatedReveal>
@@ -806,8 +815,8 @@ export default function CropScreen({
               aria-describedby="crop-hint"
               aria-label={
                 useFullImage
-                  ? 'Bildvorschau. Enter startet das Spiel, Escape geht zurueck.'
-                  : 'Bildzuschnitt. Pfeiltasten verschieben den Ausschnitt, Plus und Minus zoomen, Q und E drehen, R setzt zurueck, Enter startet das Spiel.'
+                  ? 'Bildvorschau. B fokussiert diese Vorschau, Enter startet das Spiel, Escape geht zurueck.'
+                  : 'Bildzuschnitt. B fokussiert diese Vorschau, Pfeiltasten verschieben den Ausschnitt, Plus und Minus zoomen, Q und E drehen, R setzt zurueck, Enter startet das Spiel.'
               }
               onKeyDown={handlePreviewKeyDown}
             >

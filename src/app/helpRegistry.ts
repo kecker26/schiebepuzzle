@@ -118,7 +118,7 @@ const COMMON_SECTIONS: HelpSection[] = [
     isGlobal: true,
     items: [
       {
-        label: 'Links oben liegen Start, Palette und Hilfe; rechts oben bleiben Musik, Musikstil und Hell-/Dunkel-Modus.',
+        label: 'Links oben liegen Start, Command Palette und Hilfe; rechts oben bleiben Musik, Musikstil, Bildpalette und Hell-/Dunkel-Modus.',
       },
       {
         keys: ['Pfeile', 'Pos1', 'Ende'],
@@ -128,7 +128,7 @@ const COMMON_SECTIONS: HelpSection[] = [
         label: 'Per Pfeil nach unten oeffnest du Lautstaerke oder Stilauswahl direkt im Dropdown.',
       },
       {
-        label: 'Das Theme wechselt sofort zwischen hell und dunkel.',
+        label: 'Die Bildpalette laesst sich zentral fuer UI, Galerie-, Spielstand- und Sammlungskarten ein- oder ausschalten; das Theme wechselt sofort zwischen hell und dunkel.',
       },
     ],
   },
@@ -465,6 +465,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           {
             keys: ['Tab'],
             label: 'Zwischen Schwierigkeit, Bildmodus, Vorschau, Zoom, Rotation und den Aktionen wechseln',
+          },
+          {
+            keys: ['B'],
+            label: 'Den Fokus jederzeit direkt auf die Vorschau setzen',
           },
           {
             keys: ['Pfeile'],
