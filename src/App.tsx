@@ -104,6 +104,7 @@ import {
   RecordSolvedGalleryEntryPayload,
   SavedGameSummary,
   SolvedGalleryEntry,
+  ImageThemePalette,
   ImageCollection,
   ImageCollections,
   WinStats,
@@ -2230,6 +2231,37 @@ export default function App() {
     handleReplayGalleryEntry(latestGalleryEntry)
   }, [appState, flushPendingSave, handleReplayGalleryEntry, latestGalleryEntry])
 
+  const startScreenPaletteCandidate = useMemo<{
+    palette: ImageThemePalette | null
+    source: string | null
+  }>(() => {
+    if (startResumeCandidate?.kind === 'save') {
+      return {
+        palette: startResumeCandidate.save.imageTheme ?? null,
+        source: startResumeCandidate.save.previewImage,
+      }
+    }
+
+    if (latestSavedGame) {
+      return {
+        palette: latestSavedGame.imageTheme ?? null,
+        source: latestSavedGame.previewImage,
+      }
+    }
+
+    if (latestGalleryEntry) {
+      return {
+        palette: latestGalleryEntry.imageTheme ?? null,
+        source: latestGalleryEntry.previewImage ?? latestGalleryEntry.sourceImage,
+      }
+    }
+
+    return {
+      palette: activeImageThemePalette,
+      source: startScreenHeroImage,
+    }
+  }, [activeImageThemePalette, latestGalleryEntry, latestSavedGame, startResumeCandidate, startScreenHeroImage])
+
   const handleStartRandomImageFromPalette = useCallback(async () => {
     if (appState === 'playing') {
       await flushPendingSave(activeSessionRef.current, {})
@@ -2546,6 +2578,8 @@ export default function App() {
               onOpenHelp={openHelp}
               quitHint={quitHint}
               heroImage={startScreenHeroImage}
+              startPalette={startScreenPaletteCandidate.palette}
+              startPaletteSource={startScreenPaletteCandidate.source}
               registerAppContextMenuHandler={registerAppContextMenuHandler}
               resumeActionLabel={startResumeCandidate?.label ?? null}
               resumeActionDetail={startResumeCandidate?.detail ?? null}

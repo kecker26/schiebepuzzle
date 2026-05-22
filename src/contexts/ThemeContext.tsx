@@ -11,6 +11,7 @@ interface ThemeState {
   setMode: (mode: ThemeMode) => void
   setImagePalette: (palette: ImageThemePalette | null) => void
   setEmotionThemeEnabled: (enabled: boolean) => void
+  resolveImagePalette: (palette: ImageThemePalette | null | undefined) => ImageThemePalette | null
   toggleMode: () => void
   toggleEmotionTheme: () => void
 }
@@ -34,6 +35,19 @@ const DEFAULT_IMAGE_THEME: ImageThemePalette = {
   source: 'fallback',
   reason: null,
   analyzedAt: new Date(0).toISOString(),
+}
+
+const RADIANCE_STRENGTH_BY_MOOD: Record<ImageThemePalette['mood'], number> = {
+  joyful: 0.68,
+  melancholic: 0.34,
+  dark: 0.38,
+  energetic: 0.74,
+  calm: 0.42,
+  dramatic: 0.58,
+  nostalgic: 0.5,
+  dreamy: 0.64,
+  epic: 0.66,
+  minimal: 0.28,
 }
 
 interface RgbColor {
@@ -116,6 +130,15 @@ function getTextOnPrimaryColor(primaryColor: string, primaryHover: string): stri
   return darkContrast > lightContrast ? '#0f172a' : '#ffffff'
 }
 
+function getRadianceStrength(imageTheme: ImageThemePalette): string {
+  const baseStrength = RADIANCE_STRENGTH_BY_MOOD[imageTheme.mood] ?? RADIANCE_STRENGTH_BY_MOOD.calm
+  const confidenceMultiplier = 0.82 + Math.min(1, Math.max(0, imageTheme.confidence)) * 0.28
+  const sourceMultiplier = imageTheme.source === 'fallback' ? 0.78 : 1
+  const strength = Math.min(0.78, Math.max(0.22, baseStrength * confidenceMultiplier * sourceMultiplier))
+
+  return strength.toFixed(2)
+}
+
 function getStoredMode(): ThemeMode {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_MODE)
@@ -188,35 +211,44 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const resolveImagePalette = useCallback((palette: ImageThemePalette | null | undefined) => {
+    return emotionThemeEnabled ? palette ?? null : null
+  }, [emotionThemeEnabled])
+
+  const activeImagePalette = resolveImagePalette(imagePalette) ?? DEFAULT_IMAGE_THEME
+
   useEffect(() => {
     const root = document.documentElement
     root.setAttribute('data-theme', mode)
     root.setAttribute('data-emotion-theme', emotionThemeEnabled ? 'on' : 'off')
 
-    const activeImageTheme = emotionThemeEnabled ? imagePalette ?? DEFAULT_IMAGE_THEME : DEFAULT_IMAGE_THEME
-    root.style.setProperty('--image-accent-solid', activeImageTheme.accentSolid)
-    root.style.setProperty('--image-accent-soft', activeImageTheme.accentSoft)
-    root.style.setProperty('--image-accent-strong', activeImageTheme.accentStrong)
-    root.style.setProperty('--image-glow', activeImageTheme.glow)
-    root.style.setProperty('--primary-color', activeImageTheme.primaryColor)
-    root.style.setProperty('--primary-hover', activeImageTheme.primaryHover)
-    root.style.setProperty('--primary-shadow', activeImageTheme.primaryShadow)
-    root.style.setProperty('--primary-shadow-hover', activeImageTheme.primaryShadowHover)
+    root.setAttribute('data-image-mood', activeImagePalette.mood)
+    root.setAttribute('data-image-palette-source', activeImagePalette.source)
+    root.style.setProperty('--image-accent-solid', activeImagePalette.accentSolid)
+    root.style.setProperty('--image-accent-soft', activeImagePalette.accentSoft)
+    root.style.setProperty('--image-accent-strong', activeImagePalette.accentStrong)
+    root.style.setProperty('--image-glow', activeImagePalette.glow)
+    root.style.setProperty('--theme-radiance-strength', getRadianceStrength(activeImagePalette))
+    root.style.setProperty('--primary-color', activeImagePalette.primaryColor)
+    root.style.setProperty('--primary-hover', activeImagePalette.primaryHover)
+    root.style.setProperty('--primary-shadow', activeImagePalette.primaryShadow)
+    root.style.setProperty('--primary-shadow-hover', activeImagePalette.primaryShadowHover)
     root.style.setProperty(
       '--text-on-primary',
-      getTextOnPrimaryColor(activeImageTheme.primaryColor, activeImageTheme.primaryHover)
+      getTextOnPrimaryColor(activeImagePalette.primaryColor, activeImagePalette.primaryHover)
     )
-  }, [emotionThemeEnabled, mode, imagePalette])
+  }, [activeImagePalette, emotionThemeEnabled, mode])
 
   return (
     <ThemeContext.Provider value={{
       mode,
       imagePalette,
-      activeImagePalette: emotionThemeEnabled ? imagePalette ?? DEFAULT_IMAGE_THEME : DEFAULT_IMAGE_THEME,
+      activeImagePalette,
       emotionThemeEnabled,
       setMode,
       setImagePalette,
       setEmotionThemeEnabled,
+      resolveImagePalette,
       toggleMode,
       toggleEmotionTheme,
     }}>
@@ -225,8 +257,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   )
 }
 
+export function useOptionalTheme(): ThemeState | null {
+  return useContext(ThemeContext)
+}
+
 export function useTheme(): ThemeState {
-  const ctx = useContext(ThemeContext)
+  const ctx = useOptionalTheme()
   if (!ctx) throw new Error('useTheme must be used within ThemeProvider')
   return ctx
 }

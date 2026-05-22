@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { useRef, type AriaRole, type ReactNode, type RefObject } from 'react'
+import { useRef, type AriaRole, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { getDialogOverlayVariants, getDialogVariants } from './variants.ts'
 import { useReducedMotionPreference } from './useReducedMotionPreference.ts'
@@ -21,6 +21,8 @@ interface AnimatedDialogProps {
   restoreFocusFallbackRef?: RefObject<HTMLElement | null>
   lockScroll?: boolean
   initialFocusRef?: RefObject<HTMLElement | null>
+  dialogStyle?: CSSProperties
+  overlayStyle?: CSSProperties
 }
 
 export default function AnimatedDialog({
@@ -39,6 +41,8 @@ export default function AnimatedDialog({
   restoreFocusFallbackRef,
   lockScroll = false,
   initialFocusRef,
+  dialogStyle,
+  overlayStyle,
 }: AnimatedDialogProps) {
   const shouldReduceMotion = useReducedMotionPreference()
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -59,6 +63,7 @@ export default function AnimatedDialog({
   const overlay = (
     <motion.div
       className={overlayClassName}
+      style={overlayStyle}
       data-page-focus-root="true"
       variants={getDialogOverlayVariants(shouldReduceMotion)}
       initial="initial"
@@ -73,6 +78,7 @@ export default function AnimatedDialog({
       <motion.div
         ref={dialogRef}
         className={dialogClassName}
+        style={dialogStyle}
         role={role}
         aria-modal="true"
         aria-labelledby={titleId}

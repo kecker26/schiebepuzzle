@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
-import { SolvedGalleryEntry } from '../../types/index'
+import { type ImageThemePalette, type SolvedGalleryEntry } from '../../types/index'
 import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
@@ -13,6 +13,7 @@ import {
   formatTime,
 } from './uploadUtils.ts'
 import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
+import { useUploadImagePalette } from './uploadImagePalette.ts'
 
 interface UploadGalleryDetailDialogProps {
   entry: GalleryDisplayEntry
@@ -25,6 +26,15 @@ interface UploadGalleryDetailDialogProps {
 
 function getConfigKey(entry: SolvedGalleryEntry): string {
   return `${entry.config.rows}x${entry.config.cols}`
+}
+
+function findStoredDetailPalette(entry: GalleryDisplayEntry): ImageThemePalette | null {
+  return (
+    entry.representativeEntry.imageTheme
+    ?? entry.visibleEntries.find((galleryEntry) => galleryEntry.imageTheme)?.imageTheme
+    ?? entry.allEntries.find((galleryEntry) => galleryEntry.imageTheme)?.imageTheme
+    ?? null
+  )
 }
 
 export default function UploadGalleryDetailDialog({
@@ -40,6 +50,11 @@ export default function UploadGalleryDetailDialog({
   const collectButtonRef = useRef<HTMLButtonElement>(null)
   const representativeEntry = entry.representativeEntry
   const detailImage = representativeEntry.sourceImage ?? representativeEntry.previewImage
+  const storedPalette = useMemo(() => findStoredDetailPalette(entry), [entry])
+  const { activePalette, paletteStyle: detailPaletteStyle } = useUploadImagePalette({
+    paletteSource: representativeEntry.previewImage ?? representativeEntry.sourceImage,
+    storedPalette,
+  })
   const assistanceLabel = representativeEntry.hasDetailedProfile
     ? formatAssistanceModeLabel(representativeEntry.assistanceMode)
     : formatProfileSourceLabel(false)
@@ -149,6 +164,7 @@ export default function UploadGalleryDetailDialog({
     <AnimatedDialog
       overlayClassName="gallery-detail-overlay"
       dialogClassName="gallery-detail-dialog"
+      dialogStyle={detailPaletteStyle}
       titleId="gallery-detail-title"
       descriptionId={descriptionId}
       onClose={onClose}
@@ -159,6 +175,13 @@ export default function UploadGalleryDetailDialog({
       lockScroll
       initialFocusRef={initialFocusRef}
     >
+        {activePalette ? (
+          <span className="image-card-palette gallery-detail-palette" aria-hidden="true">
+            <span className="image-card-palette-swatch image-card-palette-swatch-primary" />
+            <span className="image-card-palette-swatch image-card-palette-swatch-accent" />
+            <span className="image-card-palette-swatch image-card-palette-swatch-glow" />
+          </span>
+        ) : null}
         <div className="gallery-detail-media-shell">
           {detailImage ? (
             <img

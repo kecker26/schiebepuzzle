@@ -154,10 +154,18 @@
   scrollbar-gutter: stable both-edges;
   scrollbar-width: thin;
   border-radius: 26px;
-  border: 1px solid var(--puzzle-rail-border);
-  background: var(--puzzle-rail-bg);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-ring) 28%, var(--puzzle-rail-border));
+  background:
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--image-radiance) 32%, transparent) 0%, transparent 36%),
+    radial-gradient(circle at 92% 18%, color-mix(in srgb, var(--image-accent-solid) 22%, transparent) 0%, transparent 42%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 16%, var(--puzzle-rail-bg)),
+      color-mix(in srgb, var(--primary-color) 12%, var(--puzzle-rail-bg))
+    );
   box-shadow:
     var(--puzzle-rail-shadow),
+    0 0 44px color-mix(in srgb, var(--image-radiance) 12%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(14px) saturate(132%);
   -webkit-backdrop-filter: blur(14px) saturate(132%);
@@ -422,9 +430,17 @@
   min-height: 92px;
   padding: 15px 15px 14px;
   border-radius: 20px;
-  border: 1px solid var(--stat-border);
-  background: var(--puzzle-card-secondary-bg);
-  box-shadow: 0 12px 26px color-mix(in srgb, var(--image-accent-solid) 6%, rgba(15, 23, 42, 0.1));
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 26%, var(--stat-border));
+  background:
+    radial-gradient(circle at 20% 12%, color-mix(in srgb, var(--image-radiance) 24%, transparent) 0%, transparent 54%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, var(--puzzle-card-secondary-bg)),
+      color-mix(in srgb, var(--primary-color) 8%, var(--puzzle-card-secondary-bg))
+    );
+  box-shadow:
+    0 12px 26px color-mix(in srgb, var(--image-radiance) 10%, rgba(15, 23, 42, 0.1)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: grid;
   grid-template-rows: auto 1fr auto;
   align-items: center;
@@ -502,9 +518,18 @@
   gap: 16px;
   padding: 16px 17px;
   border-radius: 24px;
-  border: 1px solid var(--puzzle-card-border);
-  background: var(--puzzle-card-primary-bg);
-  box-shadow: var(--puzzle-card-shadow);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-ring) 32%, var(--puzzle-card-border));
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--image-radiance) 30%, transparent) 0%, transparent 42%),
+    radial-gradient(circle at 86% 16%, color-mix(in srgb, var(--image-accent-solid) 18%, transparent) 0%, transparent 46%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--image-accent-solid) 14%, var(--puzzle-card-primary-bg)),
+      color-mix(in srgb, var(--primary-color) 10%, var(--puzzle-card-primary-bg))
+    );
+  box-shadow:
+    var(--puzzle-card-shadow),
+    0 0 32px color-mix(in srgb, var(--image-radiance) 14%, transparent);
   transition:
     border-color 0.28s ease,
     box-shadow 0.28s ease,
@@ -620,9 +645,17 @@
   gap: 14px;
   padding: 17px 18px;
   border-radius: 24px;
-  border: 1px solid var(--puzzle-card-border);
-  background: var(--puzzle-card-primary-bg);
-  box-shadow: var(--puzzle-card-shadow);
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 24%, var(--puzzle-card-border));
+  background:
+    radial-gradient(circle at 14% 12%, color-mix(in srgb, var(--image-radiance) 22%, transparent) 0%, transparent 44%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, var(--puzzle-card-primary-bg)),
+      color-mix(in srgb, var(--primary-color) 8%, var(--puzzle-card-primary-bg))
+    );
+  box-shadow:
+    var(--puzzle-card-shadow),
+    0 0 28px color-mix(in srgb, var(--image-radiance) 12%, transparent);
   transition:
     border-color 0.28s ease,
     box-shadow 0.28s ease,
@@ -940,9 +973,15 @@
   gap: 12px;
   padding: 14px;
   border-radius: 22px;
-  border: 1px solid var(--puzzle-card-secondary-border);
-  background: var(--puzzle-card-secondary-bg);
-  box-shadow: 0 12px 26px color-mix(in srgb, var(--image-accent-solid) 6%, rgba(15, 23, 42, 0.1));
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 24%, var(--puzzle-card-secondary-border));
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--image-radiance) 20%, transparent) 0%, transparent 54%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 9%, var(--puzzle-card-secondary-bg)),
+      color-mix(in srgb, var(--primary-color) 7%, var(--puzzle-card-secondary-bg))
+    );
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--image-radiance) 10%, rgba(15, 23, 42, 0.1));
 }
 
 .puzzle-tools-shell-header {
@@ -989,9 +1028,15 @@
   gap: 10px;
   padding: 14px;
   border-radius: 22px;
-  border: 1px solid var(--puzzle-card-secondary-border);
-  background: var(--puzzle-card-secondary-bg);
-  box-shadow: 0 12px 26px color-mix(in srgb, var(--image-accent-solid) 6%, rgba(15, 23, 42, 0.1));
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 24%, var(--puzzle-card-secondary-border));
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--image-radiance) 20%, transparent) 0%, transparent 54%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 9%, var(--puzzle-card-secondary-bg)),
+      color-mix(in srgb, var(--primary-color) 7%, var(--puzzle-card-secondary-bg))
+    );
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--image-radiance) 10%, rgba(15, 23, 42, 0.1));
   transition:
     border-color 0.28s ease,
     box-shadow 0.28s ease,
@@ -1122,9 +1167,17 @@
   gap: 12px;
   padding: 12px 13px 13px;
   border-radius: 20px;
-  border: 1px solid var(--puzzle-card-border);
-  background: var(--puzzle-card-primary-bg);
-  box-shadow: var(--puzzle-card-shadow);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-ring) 30%, var(--puzzle-card-border));
+  background:
+    radial-gradient(circle at 16% 10%, color-mix(in srgb, var(--image-radiance) 26%, transparent) 0%, transparent 44%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 12%, var(--puzzle-card-primary-bg)),
+      color-mix(in srgb, var(--primary-color) 9%, var(--puzzle-card-primary-bg))
+    );
+  box-shadow:
+    var(--puzzle-card-shadow),
+    0 0 30px color-mix(in srgb, var(--image-radiance) 12%, transparent);
   max-height: 680px;
   opacity: 1;
   overflow: hidden;
@@ -1188,7 +1241,8 @@
   border: 1px solid var(--preview-border);
   background: var(--preview-bg);
   box-shadow:
-    0 16px 32px color-mix(in srgb, var(--image-accent-solid) 10%, rgba(2, 6, 23, 0.16)),
+    0 16px 32px color-mix(in srgb, var(--image-radiance-shadow) 16%, rgba(2, 6, 23, 0.16)),
+    0 0 32px color-mix(in srgb, var(--image-radiance) 18%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease, box-shadow 0.38s ease;
 }
@@ -1236,17 +1290,20 @@
 }
 
 .puzzle-preview-grid-tile:hover {
-  background: rgba(56, 189, 248, 0.14);
-  border-color: rgba(125, 211, 252, 0.6);
-  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.48);
+  background: color-mix(in srgb, var(--image-radiance) 18%, transparent);
+  border-color: color-mix(in srgb, var(--image-radiance-ring) 64%, transparent);
+  box-shadow:
+    inset 0 0 0 1px rgba(248, 250, 252, 0.48),
+    0 0 18px color-mix(in srgb, var(--image-radiance) 24%, transparent);
 }
 
 .puzzle-preview-grid-tile.is-active {
-  background: rgba(56, 189, 248, 0.18);
+  background: color-mix(in srgb, var(--image-radiance) 24%, transparent);
   border-color: rgba(248, 250, 252, 0.88);
   box-shadow:
-    inset 0 0 0 2px rgba(8, 145, 178, 0.92),
-    0 0 0 2px rgba(56, 189, 248, 0.18);
+    inset 0 0 0 2px color-mix(in srgb, var(--primary-color) 88%, rgba(8, 145, 178, 0.92)),
+    0 0 0 2px color-mix(in srgb, var(--image-radiance) 22%, transparent),
+    0 0 24px color-mix(in srgb, var(--image-radiance) 32%, transparent);
 }
 
 .puzzle-preview-grid-tile.is-empty {
@@ -1370,9 +1427,15 @@
   gap: 7px;
   padding: 11px 12px;
   border-radius: 18px;
-  border: 1px solid var(--puzzle-card-secondary-border);
-  background: var(--puzzle-card-secondary-bg);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--image-accent-solid) 6%, rgba(2, 6, 23, 0.14));
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 24%, var(--puzzle-card-secondary-border));
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--image-radiance) 20%, transparent) 0%, transparent 54%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 9%, var(--puzzle-card-secondary-bg)),
+      color-mix(in srgb, var(--primary-color) 7%, var(--puzzle-card-secondary-bg))
+    );
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--image-radiance) 10%, rgba(2, 6, 23, 0.14));
   transition:
     transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.38s ease,
@@ -1450,9 +1513,15 @@
   gap: 10px;
   padding: 11px 12px 12px;
   border-radius: 18px;
-  border: 1px solid var(--puzzle-card-secondary-border);
-  background: var(--puzzle-card-secondary-bg);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--image-accent-solid) 6%, rgba(2, 6, 23, 0.14));
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 24%, var(--puzzle-card-secondary-border));
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--image-radiance) 20%, transparent) 0%, transparent 54%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 9%, var(--puzzle-card-secondary-bg)),
+      color-mix(in srgb, var(--primary-color) 7%, var(--puzzle-card-secondary-bg))
+    );
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--image-radiance) 10%, rgba(2, 6, 23, 0.14));
   transition:
     border-color 0.3s ease,
     box-shadow 0.3s ease,
@@ -1655,28 +1724,51 @@
 }
 
 .puzzle-board-frame.is-focused {
-  border-color: color-mix(in srgb, var(--image-accent-solid) 44%, rgba(255, 255, 255, 0.18));
+  border-color: color-mix(in srgb, var(--image-radiance-ring) 52%, rgba(255, 255, 255, 0.18));
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--image-accent-solid) 24%, rgba(255, 255, 255, 0.12)),
+    0 0 0 1px color-mix(in srgb, var(--image-radiance-ring) 28%, rgba(255, 255, 255, 0.12)),
+    0 0 58px color-mix(in srgb, var(--image-radiance) 28%, transparent),
     var(--puzzle-board-shell-shadow),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.puzzle-board-frame::before {
+.puzzle-board-frame::before,
+.puzzle-board-frame::after {
   content: '';
   position: absolute;
+  pointer-events: none;
+}
+
+.puzzle-board-frame::before {
   inset: 14px;
   border-radius: 24px;
-  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 14%, rgba(255, 255, 255, 0.08));
+  z-index: 0;
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 40%, rgba(255, 255, 255, 0.08));
   background:
-    radial-gradient(circle at top center, color-mix(in srgb, var(--image-accent-strong) 42%, transparent) 0%, transparent 58%);
+    radial-gradient(circle at top center, color-mix(in srgb, var(--image-radiance) 44%, transparent) 0%, transparent 58%);
   opacity: 0.8;
-  pointer-events: none;
+}
+
+.puzzle-board-frame::after {
+  inset: -20%;
+  z-index: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--image-radiance) 44%, transparent) 0%, transparent 32%),
+    radial-gradient(circle at 78% 22%, color-mix(in srgb, var(--image-glow) 42%, transparent) 0%, transparent 28%);
+  opacity: calc(var(--theme-radiance-strength) * 0.44);
+  filter: blur(18px) saturate(1.18);
+  transition: opacity 0.28s ease, transform 0.28s ease;
 }
 
 .puzzle-board-frame.is-focused::before {
   opacity: 1;
-  border-color: color-mix(in srgb, var(--image-accent-solid) 28%, rgba(255, 255, 255, 0.12));
+  border-color: color-mix(in srgb, var(--image-radiance-ring) 32%, rgba(255, 255, 255, 0.12));
+}
+
+.puzzle-board-frame.is-focused::after {
+  opacity: calc(var(--theme-radiance-strength) * 0.74);
+  transform: scale(1.04);
 }
 
 .puzzle-board-viewport {
@@ -1716,7 +1808,7 @@
   z-index: 2;
   border-radius: 30px;
   background:
-    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--image-accent-solid) 34%, rgba(34, 197, 94, 0.28)), transparent 58%);
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--image-radiance) 46%, rgba(34, 197, 94, 0.28)), transparent 58%);
   opacity: 0;
   pointer-events: none;
 }
@@ -1762,9 +1854,10 @@
 
 .puzzle-board-stage.is-board-focused .puzzle-board-caption {
   color: var(--text-primary);
-  border-color: color-mix(in srgb, var(--image-accent-solid) 24%, rgba(255, 255, 255, 0.14));
+  border-color: color-mix(in srgb, var(--image-radiance-ring) 32%, rgba(255, 255, 255, 0.14));
   box-shadow:
-    0 14px 28px color-mix(in srgb, var(--image-accent-solid) 14%, rgba(15, 23, 42, 0.16)),
+    0 14px 28px color-mix(in srgb, var(--image-radiance-shadow) 20%, rgba(15, 23, 42, 0.16)),
+    0 0 28px color-mix(in srgb, var(--image-radiance) 18%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
@@ -1792,7 +1885,8 @@
 .puzzle-canvas:focus-visible {
   box-shadow:
     var(--focus-ring),
-    var(--puzzle-canvas-shadow);
+    var(--puzzle-canvas-shadow),
+    0 0 58px color-mix(in srgb, var(--image-radiance) 36%, transparent);
 }
 
 .puzzle-canvas.is-locked {
@@ -2054,37 +2148,77 @@
 [data-theme="light"] .puzzle-stat-card,
 [data-theme="light"] .puzzle-shortcut-panel,
 [data-theme="light"] .puzzle-hint-context {
-  border-color: var(--puzzle-card-secondary-border);
-  background: var(--puzzle-card-secondary-bg);
-  box-shadow: var(--puzzle-card-shadow);
+  border-color: color-mix(in srgb, var(--image-accent-solid) 22%, var(--puzzle-card-secondary-border));
+  background:
+    radial-gradient(circle at 20% 12%, color-mix(in srgb, var(--image-radiance) 18%, transparent) 0%, transparent 54%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 8%, var(--puzzle-card-secondary-bg)),
+      color-mix(in srgb, var(--primary-color) 6%, var(--puzzle-card-secondary-bg))
+    );
+  box-shadow:
+    var(--puzzle-card-shadow),
+    0 0 20px color-mix(in srgb, var(--image-radiance) 8%, transparent);
 }
 
 [data-theme="light"] .puzzle-progress-panel,
 [data-theme="light"] .puzzle-hint-panel {
-  border-color: var(--puzzle-card-border);
-  background: var(--puzzle-card-primary-bg);
-  box-shadow: var(--puzzle-card-shadow);
+  border-color: color-mix(in srgb, var(--image-radiance-ring) 24%, var(--puzzle-card-border));
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--image-radiance) 20%, transparent) 0%, transparent 42%),
+    radial-gradient(circle at 86% 16%, color-mix(in srgb, var(--image-accent-solid) 12%, transparent) 0%, transparent 46%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, var(--puzzle-card-primary-bg)),
+      color-mix(in srgb, var(--primary-color) 7%, var(--puzzle-card-primary-bg))
+    );
+  box-shadow:
+    var(--puzzle-card-shadow),
+    0 0 24px color-mix(in srgb, var(--image-radiance) 10%, transparent);
 }
 
 [data-theme="light"] .puzzle-side-panel {
-  border-color: var(--puzzle-rail-border);
-  background: var(--puzzle-rail-bg);
-  box-shadow: var(--puzzle-rail-shadow);
+  border-color: color-mix(in srgb, var(--image-radiance-ring) 24%, var(--puzzle-rail-border));
+  background:
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--image-radiance) 22%, transparent) 0%, transparent 36%),
+    radial-gradient(circle at 92% 18%, color-mix(in srgb, var(--image-accent-solid) 16%, transparent) 0%, transparent 42%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 12%, var(--puzzle-rail-bg)),
+      color-mix(in srgb, var(--primary-color) 8%, var(--puzzle-rail-bg))
+    );
+  box-shadow:
+    var(--puzzle-rail-shadow),
+    0 0 34px color-mix(in srgb, var(--image-radiance) 10%, transparent);
 }
 
 [data-theme="light"] .puzzle-preview-reference {
-  border-color: var(--puzzle-card-border);
-  background: var(--puzzle-card-primary-bg);
-  box-shadow: var(--puzzle-card-shadow);
+  border-color: color-mix(in srgb, var(--image-radiance-ring) 24%, var(--puzzle-card-border));
+  background:
+    radial-gradient(circle at 16% 10%, color-mix(in srgb, var(--image-radiance) 20%, transparent) 0%, transparent 44%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, var(--puzzle-card-primary-bg)),
+      color-mix(in srgb, var(--primary-color) 7%, var(--puzzle-card-primary-bg))
+    );
+  box-shadow:
+    var(--puzzle-card-shadow),
+    0 0 24px color-mix(in srgb, var(--image-radiance) 10%, transparent);
 }
 
 [data-theme="light"] .puzzle-preview-insight,
 [data-theme="light"] .puzzle-music-card,
 [data-theme="light"] .puzzle-tools-shell,
 [data-theme="light"] .puzzle-ghost-slider {
-  border-color: var(--puzzle-card-secondary-border);
-  background: var(--puzzle-card-secondary-bg);
-  box-shadow: 0 12px 24px color-mix(in srgb, var(--image-accent-solid) 6%, rgba(15, 23, 42, 0.08));
+  border-color: color-mix(in srgb, var(--image-accent-solid) 22%, var(--puzzle-card-secondary-border));
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--image-radiance) 16%, transparent) 0%, transparent 54%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 8%, var(--puzzle-card-secondary-bg)),
+      color-mix(in srgb, var(--primary-color) 6%, var(--puzzle-card-secondary-bg))
+    );
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--image-radiance) 8%, rgba(15, 23, 42, 0.08));
 }
 
 [data-theme="light"] .puzzle-preview-supporting {
@@ -2456,18 +2590,24 @@
 }
 
 .puzzle-stat-card:hover {
-  border-color: var(--stat-border);
-  background: var(--puzzle-card-secondary-bg);
+  border-color: color-mix(in srgb, var(--image-accent-solid) 26%, var(--stat-border));
+  background:
+    radial-gradient(circle at 20% 12%, color-mix(in srgb, var(--image-radiance) 24%, transparent) 0%, transparent 54%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 10%, var(--puzzle-card-secondary-bg)),
+      color-mix(in srgb, var(--primary-color) 8%, var(--puzzle-card-secondary-bg))
+    );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 8px 18px color-mix(in srgb, var(--image-accent-solid) 4%, rgba(15, 23, 42, 0.08));
+    0 8px 18px color-mix(in srgb, var(--image-radiance) 10%, rgba(15, 23, 42, 0.08));
 }
 
 .puzzle-preview-insight:hover {
-  border-color: var(--puzzle-card-border);
+  border-color: color-mix(in srgb, var(--image-accent-solid) 24%, var(--puzzle-card-secondary-border));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 8px 18px color-mix(in srgb, var(--image-accent-solid) 5%, rgba(2, 6, 23, 0.1));
+    0 8px 18px color-mix(in srgb, var(--image-radiance) 10%, rgba(2, 6, 23, 0.1));
 }
 
 .puzzle-header-shortcut,
@@ -2491,9 +2631,17 @@
 }
 
 .puzzle-preview-reference:hover {
-  border-color: var(--puzzle-card-border);
-  background: var(--puzzle-card-primary-bg);
-  box-shadow: var(--puzzle-card-shadow);
+  border-color: color-mix(in srgb, var(--image-radiance-ring) 30%, var(--puzzle-card-border));
+  background:
+    radial-gradient(circle at 16% 10%, color-mix(in srgb, var(--image-radiance) 26%, transparent) 0%, transparent 44%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image-accent-solid) 12%, var(--puzzle-card-primary-bg)),
+      color-mix(in srgb, var(--primary-color) 9%, var(--puzzle-card-primary-bg))
+    );
+  box-shadow:
+    var(--puzzle-card-shadow),
+    0 0 30px color-mix(in srgb, var(--image-radiance) 12%, transparent);
 }
 
 .puzzle-preview-reference:hover .puzzle-preview-frame {

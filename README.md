@@ -12,9 +12,9 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Loesbare Shuffle-Logik, Hinweise und Solver-Unterstuetzung.
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
 - Autosave, kreative Gemini-Titel fuer neue Spielstaende, motivbasierte Titel-Wiederverwendung, maximal 30 aktive Spielstaende mit 5er-Seitennavigation, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
-- Sentiment-basiertes Bild-Theme: hochgeladene, generierte oder wiederverwendete Motive praegen standardmaessig die komplette UI-Farbwelt; Stimmung und Palette werden rein lokal aus Farbe, Helligkeit, Kontrast und Waerme berechnet.
+- Sentiment-basiertes Bild-Theme: hochgeladene, generierte oder wiederverwendete Motive praegen standardmaessig die komplette UI-Farbwelt; Stimmung und Palette werden rein lokal aus Farbe, Helligkeit, Kontrast und Waerme berechnet und zentral im Menue ein- oder ausgeschaltet.
 - Statistik mit vier visuellen Hauptansichten fuer Ueberblick, Analyse, Verlauf und Rohdaten-Explorer; Analyse buendelt Stufen, Rekorde und Sauberkeit, der Rohdaten-Explorer speichert CSV-/JSON-Exporte direkt im Projektordner.
-- Galerie geloester Motive inklusive Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, 9er-Seitennavigation, optionalem Gemini-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und kategorisierter Tag-Verwaltung mit Mehrfachauswahl.
+- Galerie geloester Motive inklusive bildspezifischer Paletten fuer Galerie-, Spielstand-, Sammlungs- und Detailkarten, die dem zentralen Palette-Schalter folgen, Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, 9er-Seitennavigation, optionalem Gemini-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und kategorisierter Tag-Verwaltung mit Mehrfachauswahl.
 - Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit 9er-Seitennavigation, KI-Sammlungsvorschlaegen und motivweit deduplizierten Sammlungen aus Tag-Treffern.
 - Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
 - Musik- und Sound-Unterstuetzung mit lokalen Fallback-Tracks.
@@ -150,7 +150,7 @@ Wichtige Einstiegspunkte:
 4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
 5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
 6. Neue Galerie-Motive optional automatisch mit Gemini taggen, fehlgeschlagene Taggings erneut versuchen, Tags bereinigen, einzelne Tags direkt oder mehrere Tags ueber die Tagverwaltung als Und-Filter anwenden und Tag-Treffer als Sammlung uebernehmen.
-7. Die aktive Bildstimmung faerbt die UI automatisch ein; im Darstellungsbereich kann das Emotion-Theme auf Standard zurueckgeschaltet werden.
+7. Die aktive Bildstimmung faerbt die UI automatisch ein; im Darstellungsbereich kann die Bildpalette zentral fuer UI und bildspezifische Karten auf Standard zurueckgeschaltet werden.
 8. Neue Spielstaende erhalten im Hintergrund einen Gemini-Titel; taucht dasselbe Motiv mehrfach auf, wird der vorhandene Motivtitel wiederverwendet.
 9. Spielstaende, Galerie, Sammlungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
 

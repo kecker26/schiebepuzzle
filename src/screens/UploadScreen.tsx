@@ -16,6 +16,7 @@ import {
   SolvedGalleryEntry,
   ImageCollection,
   ImageCollections,
+  ImageThemePalette,
 } from '../types/index'
 import { getErrorMessage, scrollViewportToTop } from '../app/appUtils.ts'
 import { listPuzzleDataBackupFiles } from '../services/BackupService.ts'
@@ -45,6 +46,7 @@ import {
 } from './upload/uploadUtils.ts'
 import { shouldPreserveNativeContextMenu } from '../utils/contextWindow.ts'
 import ErrorToast from '../components/ErrorToast.tsx'
+import { useUploadImagePalette } from './upload/uploadImagePalette.ts'
 import '../styles/screens/upload.css'
 
 interface UploadScreenProps {
@@ -1009,6 +1011,68 @@ export default function UploadScreen({
   const favoriteDifficulty = findFavoriteDifficulty(stats)
   const fastestDifficulty = findFastestDifficulty(stats)
   const latestActivityAt = getLatestActivityTimestamp(stats, savedGames, gallery)
+  const latestSavedGame = useMemo(() => (
+    savedGames.reduce<SavedGameSummary | null>((latest, entry) => {
+      if (!latest) {
+        return entry
+      }
+
+      return Date.parse(entry.updatedAt) > Date.parse(latest.updatedAt) ? entry : latest
+    }, null)
+  ), [savedGames])
+  const latestGalleryEntry = useMemo(() => (
+    gallery?.entries.reduce<SolvedGalleryEntry | null>((latest, entry) => {
+      if (!latest) {
+        return entry
+      }
+
+      return Date.parse(entry.completedAt) > Date.parse(latest.completedAt) ? entry : latest
+    }, null) ?? null
+  ), [gallery])
+  const uploadPaletteCandidate = useMemo<{
+    palette: ImageThemePalette | null
+    source: string | null
+  }>(() => {
+    if (activeWindow === 'savedGames' && latestSavedGame) {
+      return {
+        palette: latestSavedGame.imageTheme ?? null,
+        source: latestSavedGame.previewImage,
+      }
+    }
+
+    if ((activeWindow === 'gallery' || activeWindow === 'collections') && latestGalleryEntry) {
+      return {
+        palette: latestGalleryEntry.imageTheme ?? null,
+        source: latestGalleryEntry.previewImage ?? latestGalleryEntry.sourceImage,
+      }
+    }
+
+    const latestSaveTime = latestSavedGame ? Date.parse(latestSavedGame.updatedAt) : Number.NEGATIVE_INFINITY
+    const latestGalleryTime = latestGalleryEntry ? Date.parse(latestGalleryEntry.completedAt) : Number.NEGATIVE_INFINITY
+
+    if (latestGalleryEntry && latestGalleryTime > latestSaveTime) {
+      return {
+        palette: latestGalleryEntry.imageTheme ?? null,
+        source: latestGalleryEntry.previewImage ?? latestGalleryEntry.sourceImage,
+      }
+    }
+
+    if (latestSavedGame) {
+      return {
+        palette: latestSavedGame.imageTheme ?? null,
+        source: latestSavedGame.previewImage,
+      }
+    }
+
+    return {
+      palette: null,
+      source: null,
+    }
+  }, [activeWindow, latestGalleryEntry, latestSavedGame])
+  const { activePalette, paletteStyle } = useUploadImagePalette({
+    paletteSource: uploadPaletteCandidate.source,
+    storedPalette: uploadPaletteCandidate.palette,
+  })
 
   const filteredHistory = useMemo(() => {
     if (historyFilter === 'all') return completionHistory
@@ -1262,6 +1326,9 @@ export default function UploadScreen({
       ref={screenRef}
       className={`upload-screen${isDragActive ? ' is-drag-active' : ''}`}
       data-page-focus-root="true"
+      data-image-mood={activePalette?.mood}
+      data-image-palette-source={activePalette?.source}
+      style={paletteStyle}
       onContextMenu={handleOpenContextWindow}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}

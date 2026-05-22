@@ -2,6 +2,7 @@ import { memo, type KeyboardEvent as ReactKeyboardEvent, type RefObject, useCall
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import { SavedGameSummary } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
+import { useUploadImagePalette } from './uploadImagePalette.ts'
 import { formatDate, formatTime } from './uploadUtils.ts'
 
 interface UploadSavedGameItemProps {
@@ -26,6 +27,10 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
   onActionKeyDown,
 }: UploadSavedGameItemProps) {
   const isBusy = isLoading || isDeleting || isDeletingAllSavedGames
+  const { activePalette, paletteStyle } = useUploadImagePalette({
+    paletteSource: save.previewImage,
+    storedPalette: save.imageTheme ?? null,
+  })
 
   const handleLoadClick = useCallback(() => {
     onLoadSave(save.id)
@@ -36,13 +41,25 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
   }, [onDeleteRequest, save])
 
   return (
-    <li className="saved-game-item">
+    <li
+      className="saved-game-item"
+      style={paletteStyle}
+      data-image-mood={activePalette?.mood}
+      data-image-palette-source={activePalette?.source}
+    >
       <div className="saved-game-preview-shell">
         <img
           src={save.previewImage}
           alt={`Vorschau ${save.name}`}
           className="saved-game-preview"
         />
+        {activePalette ? (
+          <span className="image-card-palette saved-game-palette" aria-hidden="true">
+            <span className="image-card-palette-swatch image-card-palette-swatch-primary" />
+            <span className="image-card-palette-swatch image-card-palette-swatch-accent" />
+            <span className="image-card-palette-swatch image-card-palette-swatch-glow" />
+          </span>
+        ) : null}
       </div>
       <div className="saved-game-meta">
         <span className="saved-game-kicker">Zuletzt gespielt</span>

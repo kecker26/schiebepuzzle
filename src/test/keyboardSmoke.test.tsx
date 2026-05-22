@@ -63,6 +63,7 @@ import type {
   SavedGameSummary,
   SolvedGallery,
   SolvedGalleryEntry,
+  ImageThemePalette,
   PuzzleState,
 } from '../types/index'
 
@@ -132,6 +133,25 @@ function createGalleryDisplayEntry(id: string, completedAt: string): GalleryDisp
       bestMovesEntry: representativeEntry,
       bestCleanTimeEntry: null,
     },
+  }
+}
+
+function createImageThemePalette(): ImageThemePalette {
+  return {
+    accentSolid: 'rgb(220, 38, 38)',
+    accentSoft: 'rgba(220, 38, 38, 0.18)',
+    accentStrong: 'rgba(220, 38, 38, 0.34)',
+    glow: 'rgba(248, 113, 113, 0.48)',
+    primaryColor: '#dc2626',
+    primaryHover: '#b91c1c',
+    primaryShadow: 'rgba(220, 38, 38, 0.28)',
+    primaryShadowHover: 'rgba(220, 38, 38, 0.38)',
+    mood: 'energetic',
+    moodLabel: 'Energie',
+    confidence: 0.84,
+    source: 'local-color',
+    reason: null,
+    analyzedAt: '2026-04-11T10:00:00.000Z',
   }
 }
 
@@ -3002,10 +3022,51 @@ describe('keyboard smoke tests', () => {
       </ThemeProvider>
     )
 
-    expect(screen.getByRole('toolbar', { name: 'Musik und Darstellung' })).toBeTruthy()
+    expect(screen.getByRole('toolbar', { name: 'App-Navigation, Hilfe, Musik und Darstellung' })).toBeTruthy()
     const saveStatus = screen.getByRole('status')
     expect(within(saveStatus).getByText('Speichert...')).toBeTruthy()
     expect(within(saveStatus).getByText('Spielstand wird automatisch gesichert.')).toBeTruthy()
+  })
+
+  it('uses the emotion theme toggle for scoped image palettes too', async () => {
+    window.localStorage.setItem('puzzle-emotion-theme-enabled', 'true')
+    const entry = createGalleryDisplayEntry('1', '2026-04-11T10:00:00.000Z')
+    entry.representativeEntry.imageTheme = createImageThemePalette()
+
+    const { container } = render(
+      <ThemeProvider>
+        <ThemeSwitcher
+          layout="floating"
+          onGoToStartScreen={vi.fn()}
+          onOpenCommandPalette={vi.fn()}
+          onOpenHelp={vi.fn()}
+        />
+        <div className="gallery-grid">
+          <UploadGalleryCard
+            entry={entry}
+            onOpenDetails={vi.fn()}
+            onDeleteEntry={vi.fn()}
+            isDeleting={false}
+          />
+        </div>
+      </ThemeProvider>
+    )
+
+    const card = container.querySelector<HTMLElement>('.gallery-card')!
+
+    await waitFor(() => {
+      expect(card.querySelector('.gallery-card-palette')).toBeTruthy()
+      expect(card.style.getPropertyValue('--primary-color')).toBe('#dc2626')
+      expect(document.documentElement.getAttribute('data-emotion-theme')).toBe('on')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /Emotion-Theme deaktivieren/i }))
+
+    await waitFor(() => {
+      expect(card.querySelector('.gallery-card-palette')).toBeNull()
+      expect(card.style.getPropertyValue('--primary-color')).toBe('')
+      expect(document.documentElement.getAttribute('data-emotion-theme')).toBe('off')
+    })
   })
 
   it('moves through the top primary toolbar with arrows, Pos1 and Ende', () => {
@@ -3023,19 +3084,21 @@ describe('keyboard smoke tests', () => {
     const startButton = screen.getByRole('button', { name: 'Zur Startseite wechseln' })
     const paletteButton = screen.getByRole('button', { name: 'Command Palette oeffnen' })
     const helpButton = screen.getByRole('button', { name: 'Hilfe und Tastaturbefehle anzeigen' })
+    const themeButton = screen.getByRole('button', { name: /Dunkelmodus aktivieren|Hellmodus aktivieren/i })
 
     mockElementRect(startButton, { left: 0, top: 0, width: 120, height: 44 })
     mockElementRect(paletteButton, { left: 150, top: 0, width: 120, height: 44 })
     mockElementRect(helpButton, { left: 300, top: 0, width: 120, height: 44 })
+    mockElementRect(themeButton, { left: 900, top: 0, width: 120, height: 44 })
 
     startButton.focus()
     fireEvent.keyDown(startButton, { key: 'ArrowRight' })
     expect(document.activeElement).toBe(paletteButton)
 
     fireEvent.keyDown(paletteButton, { key: 'End' })
-    expect(document.activeElement).toBe(helpButton)
+    expect(document.activeElement).toBe(themeButton)
 
-    fireEvent.keyDown(helpButton, { key: 'Home' })
+    fireEvent.keyDown(themeButton, { key: 'Home' })
     expect(document.activeElement).toBe(startButton)
   })
 
@@ -3858,6 +3921,69 @@ describe('keyboard smoke tests', () => {
     fireEvent.keyDown(window, { key: 'Escape' })
 
     expect(onBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('focuses the crop preview with B from the active crop controls', async () => {
+    const OriginalImage = window.Image
+
+    class LoadingImage {
+      onload: ((event: Event) => void) | null = null
+      onerror: ((event: Event) => void) | null = null
+      naturalWidth = 640
+      naturalHeight = 480
+      width = 640
+      height = 480
+      private currentSrc = ''
+
+      get src() {
+        return this.currentSrc
+      }
+
+      set src(value: string) {
+        this.currentSrc = value
+        window.setTimeout(() => this.onload?.(new Event('load')), 0)
+      }
+    }
+
+    Object.defineProperty(window, 'Image', {
+      configurable: true,
+      writable: true,
+      value: LoadingImage,
+    })
+
+    try {
+      render(
+        <CropScreen
+          image="data:image/png;base64,test"
+          config={{ rows: 4, cols: 4 }}
+          onOpenHelp={vi.fn()}
+          registerAppContextMenuHandler={vi.fn()}
+          initialUseFullImage
+          onConfigChange={vi.fn()}
+          onCropConfirmed={vi.fn()}
+          onBack={vi.fn()}
+          onGoToStartScreen={vi.fn()}
+        />
+      )
+
+      const preview = await screen.findByRole('group', { name: /Bildvorschau/i })
+      const activeDifficulty = screen.getByRole('radio', { checked: true })
+
+      await waitFor(() => {
+        expect(document.activeElement).toBe(activeDifficulty)
+      })
+
+      fireEvent.keyDown(window, { key: 'B' })
+
+      expect(document.activeElement).toBe(preview)
+      expect(screen.getByText(/B fokussiert die Vorschau/i)).toBeTruthy()
+    } finally {
+      Object.defineProperty(window, 'Image', {
+        configurable: true,
+        writable: true,
+        value: OriginalImage,
+      })
+    }
   })
 
   it('switches between help and command palette without leaving both overlays open', () => {
