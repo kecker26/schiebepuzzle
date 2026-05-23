@@ -45,10 +45,22 @@ const CLOUDFLARE_GENERATED_IMAGE_STEPS = 4
 const CLOUDFLARE_GENERATED_IMAGE_TIMEOUT_MS = 120000
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com'
 const GEMINI_GALLERY_MODEL = 'gemini-2.5-flash'
-const GEMINI_GALLERY_TIMEOUT_MS = 45000
+const OPENROUTER_DEFAULT_MODEL = 'openrouter/free'
+const OPENROUTER_FREE_MODEL_FALLBACKS = [
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'nvidia/nemotron-nano-12b-v2-vl:free',
+  'google/gemma-4-31b-it:free',
+  'google/gemma-4-26b-a4b-it:free',
+]
+const GROQ_BASE_URL = 'https://api.groq.com/openai/v1'
+const GROQ_DEFAULT_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
+const GROQ_MAX_BASE64_IMAGE_BYTES = 4 * 1024 * 1024
+const GEMINI_GALLERY_TIMEOUT_MS = 75000
 const GEMINI_GALLERY_MAX_INLINE_IMAGE_BYTES = 18 * 1024 * 1024
 const GEMINI_SAVE_TITLE_TIMEOUT_MS = 30000
 const GEMINI_SAVE_TITLE_MAX_INLINE_IMAGE_BYTES = 18 * 1024 * 1024
+const LLM_CONTENT_RETRY_ATTEMPTS = 1
+const GALLERY_AI_MIN_TAG_LIMIT = 4
 const GALLERY_AI_TAG_LIMIT = 8
 const GALLERY_AI_COLLECTION_SUGGESTION_LIMIT = 4
 const SAVE_AI_TITLE_MAX_LENGTH = 64
@@ -67,6 +79,12 @@ interface LocalApiPluginOptions {
   cloudflareImageModel?: string
   geminiApiKey?: string
   geminiGalleryModel?: string
+  llmProvider?: string
+  llmApiKey?: string
+  llmBaseUrl?: string
+  llmModel?: string
+  groqApiKey?: string
+  groqModel?: string
 }
 
 interface PollinationsGeneratedImageConfig {
@@ -85,9 +103,20 @@ interface GeneratedImageConfig {
   cloudflare: CloudflareGeneratedImageConfig
 }
 
+type StoredAiProvider = 'gemini' | 'openrouter' | 'openai-compatible' | 'groq'
+type ParsedDataUrlImage = { mimeType: string; base64Data: string; byteLength: number }
+
+interface GroqFallbackConfig {
+  apiKey: string
+  model: string
+}
+
 interface GeminiGalleryConfig {
   apiKey: string
   model: string
+  provider: StoredAiProvider
+  baseUrl?: string
+  groqFallback?: GroqFallbackConfig | null
 }
 
 const POWERSHELL_CLIPBOARD_IMAGE_STATUS_SCRIPT = [
@@ -143,7 +172,7 @@ type StoredSaveAiTitleStatus = 'generated' | 'reused' | 'failed' | 'unavailable'
 
 interface StoredSaveAiTitle {
   status: StoredSaveAiTitleStatus
-  provider: 'gemini'
+  provider: StoredAiProvider
   model: string | null
   generatedAt: string | null
   error: string | null
@@ -340,7 +369,7 @@ interface StoredGalleryCollectionSuggestion {
 
 interface StoredGalleryAiTagging {
   status: StoredGalleryAiTaggingStatus
-  provider: 'gemini'
+  provider: StoredAiProvider
   model: string | null
   generatedAt: string | null
   error: string | null
@@ -797,7 +826,38 @@ function createGeneratedImageSeed(): number {
 }
 
 function getErrorDetail(error: unknown): string {
-  return error instanceof Error ? error.message : 'Unbekannter Fehler'
+  if (!(error instanceof Error)) return 'Unbekannter Fehler'
+
+  const cause = (error as Error & { cause?: unknown }).cause
+  if (cause && typeof cause === 'object') {
+    const causeInput = cause as {
+      code?: unknown
+      hostname?: unknown
+      host?: unknown
+      port?: unknown
+      message?: unknown
+    }
+    const causeCode = typeof causeInput.code === 'string' ? causeInput.code : null
+    const causeHost = typeof causeInput.hostname === 'string'
+      ? causeInput.hostname
+      : typeof causeInput.host === 'string'
+        ? causeInput.host
+        : null
+    const causePort = typeof causeInput.port === 'number' || typeof causeInput.port === 'string'
+      ? String(causeInput.port)
+      : null
+    const causeMessage = typeof causeInput.message === 'string' && causeInput.message.length > 0
+      ? causeInput.message
+      : null
+    const causeDetails = [causeCode, causeHost, causePort ? `Port ${causePort}` : null]
+      .filter((detail): detail is string => Boolean(detail))
+      .join(' ')
+
+    if (causeDetails) return `${error.message} (${causeDetails})`
+    if (causeMessage) return `${error.message} (${causeMessage})`
+  }
+
+  return error.message
 }
 
 async function parsePollinationsError(response: Response): Promise<string> {
@@ -989,7 +1049,16 @@ function parseGeminiJson<T>(text: string): T {
     .replace(/\s*```$/i, '')
     .trim()
 
-  return JSON.parse(unfencedText) as T
+  try {
+    return JSON.parse(unfencedText) as T
+  } catch (error) {
+    const objectStart = unfencedText.indexOf('{')
+    const objectEnd = unfencedText.lastIndexOf('}')
+    if (objectStart >= 0 && objectEnd > objectStart) {
+      return JSON.parse(unfencedText.slice(objectStart, objectEnd + 1)) as T
+    }
+    throw error
+  }
 }
 
 function createGalleryAnalysisPrompt(
@@ -1009,13 +1078,14 @@ function createGalleryAnalysisPrompt(
     'Analysiere dieses geloeste Schiebepuzzle-Motiv fuer eine lokale deutsche Galerie.',
     'Erzeuge kurze deutsche Motiv-Tags ohne fuehrendes #, zum Beispiel Landschaft, Architektur, Dunkel, Portrait, Natur, Stadt, Kunst, Tiere, Wasser oder Nacht.',
     'Nutze nur sichtbare Bildinhalte und offensichtliche Stimmung/Farbwirkung. Keine personenbezogenen sensiblen Vermutungen.',
+    `Erzeuge mindestens ${GALLERY_AI_MIN_TAG_LIMIT} und maximal ${GALLERY_AI_TAG_LIMIT} unterschiedliche Tags.`,
     'Schlage nur bestehende Sammlungen vor, wenn das Bild gut dazu passt. Nutze dabei exakt die vorhandenen collectionId-Werte.',
     '',
     `Puzzle-Groesse: ${entry.config.rows}x${entry.config.cols}`,
     'Bestehende Sammlungen:',
     collectionContext,
     '',
-    `Antwortformat: JSON mit maximal ${GALLERY_AI_TAG_LIMIT} tags und maximal ${GALLERY_AI_COLLECTION_SUGGESTION_LIMIT} collectionSuggestions.`,
+    `Antwortformat: Nur JSON, keine Markdown-Fences. Schema: {"tags":[{"label":"kurzer deutscher Tag","confidence":0.0}],"collectionSuggestions":[{"collectionId":"bestehende-id","collectionName":"Name","reason":"kurzer Grund","confidence":0.0}]}. Mindestens ${GALLERY_AI_MIN_TAG_LIMIT} und maximal ${GALLERY_AI_TAG_LIMIT} tags, maximal ${GALLERY_AI_COLLECTION_SUGGESTION_LIMIT} collectionSuggestions.`,
   ].join('\n')
 }
 
@@ -1052,59 +1122,276 @@ function createGeminiGallerySchema(): object {
   }
 }
 
-async function analyzeGalleryImageWithGemini(
-  entry: StoredGalleryEntry,
-  collections: StoredImageCollection[],
-  config: GeminiGalleryConfig
-): Promise<Pick<StoredGalleryEntry, 'tags' | 'aiTagging'>> {
-  if (!config.apiKey) {
-    return {
-      tags: entry.tags,
-      aiTagging: {
-        status: 'unavailable',
-        provider: 'gemini',
-        model: config.model,
-        generatedAt: new Date().toISOString(),
-        error: 'GEMINI_API_KEY ist nicht konfiguriert',
-        collectionSuggestions: [],
-      },
+interface LlmResponse {
+  text: string
+  model: string | null
+}
+
+interface CustomLlmErrorPayload {
+  error?: {
+    message?: string
+    code?: string | number
+    metadata?: {
+      raw?: unknown
+      provider_name?: unknown
     }
   }
+}
 
-  const image = parseDataUrlImage(entry.previewImage ?? entry.sourceImage ?? '')
-  if (!image) {
-    return {
-      tags: entry.tags,
-      aiTagging: {
-        status: 'failed',
-        provider: 'gemini',
-        model: config.model,
-        generatedAt: new Date().toISOString(),
-        error: 'Kein unterstuetztes Galerie-Bild fuer KI-Tagging gefunden',
-        collectionSuggestions: [],
-      },
+interface CustomLlmResponsePayload {
+  error?: CustomLlmErrorPayload['error']
+  model?: string
+  choices?: Array<{
+    message?: {
+      content?: CustomLlmMessageContent
     }
-  }
+  }>
+}
 
-  if (image.byteLength > GEMINI_GALLERY_MAX_INLINE_IMAGE_BYTES) {
-    return {
-      tags: entry.tags,
-      aiTagging: {
-        status: 'failed',
-        provider: 'gemini',
-        model: config.model,
-        generatedAt: new Date().toISOString(),
-        error: 'Galerie-Bild ist zu gross fuer Gemini Inline-Analyse',
-        collectionSuggestions: [],
-      },
+type CustomLlmMessageContent = string | Array<{
+  text?: unknown
+  type?: unknown
+}> | undefined
+
+function normalizeAiProvider(value: unknown, baseUrl?: unknown): StoredAiProvider {
+  if (value === 'openrouter' || (typeof baseUrl === 'string' && /(^|\.)openrouter\.ai\b/i.test(baseUrl))) {
+    return 'openrouter'
+  }
+  return value === 'openai-compatible' ? value : 'gemini'
+}
+
+function getAiProviderLabel(provider: StoredAiProvider): string {
+  if (provider === 'openrouter') return 'OpenRouter'
+  if (provider === 'openai-compatible') return 'OpenAI-kompatibler LLM'
+  if (provider === 'groq') return 'Groq'
+  return 'Gemini'
+}
+
+function shouldTryNextOpenRouterModel(message: string): boolean {
+  return /\bno endpoints found\b|support image input/i.test(message)
+}
+
+function isOpenRouterAccountRateLimit(message: string): boolean {
+  return /free-models-per-min|free-models-per-day|rate limit exceeded/i.test(message)
+}
+
+function getOpenRouterModelCandidates(primaryModel: string): string[] {
+  const models = primaryModel === OPENROUTER_DEFAULT_MODEL
+    ? [...OPENROUTER_FREE_MODEL_FALLBACKS, primaryModel]
+    : [primaryModel, OPENROUTER_DEFAULT_MODEL, ...OPENROUTER_FREE_MODEL_FALLBACKS]
+
+  return Array.from(new Set(models))
+}
+
+function isTransientOpenRouterProviderError(message: string): boolean {
+  return !isOpenRouterAccountRateLimit(message)
+    && /temporarily rate-limited upstream|provider returned error|no instances available|upstream error|enginecore|502|503/i.test(message)
+}
+
+function extractRawLlmErrorMessage(value: unknown): string | null {
+  if (!value) return null
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        return extractRawLlmErrorMessage(JSON.parse(trimmed)) ?? trimmed
+      } catch {
+        return trimmed
+      }
     }
+    return trimmed
   }
+  if (typeof value !== 'object') return null
 
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), GEMINI_GALLERY_TIMEOUT_MS)
-  const url = `${GEMINI_BASE_URL}/v1beta/models/${encodeURIComponent(config.model)}:generateContent`
+  const input = value as {
+    error?: unknown
+    detail?: unknown
+    message?: unknown
+  }
+  return extractRawLlmErrorMessage(input.error)
+    ?? extractRawLlmErrorMessage(input.detail)
+    ?? extractRawLlmErrorMessage(input.message)
+}
 
+async function parseCustomLlmError(response: Response): Promise<string> {
   try {
+    const payload = await response.json() as CustomLlmErrorPayload
+    return getCustomLlmErrorMessage(payload, `LLM API antwortete mit Fehler ${response.status}`)
+  } catch {
+    // Fall through to the generic status message.
+  }
+  return `LLM API antwortete mit Fehler ${response.status}`
+}
+
+function getCustomLlmErrorMessage(payload: CustomLlmErrorPayload, fallback: string): string {
+  const providerName = typeof payload?.error?.metadata?.provider_name === 'string'
+    ? payload.error.metadata.provider_name
+    : null
+  const rawDetail = extractRawLlmErrorMessage(payload?.error?.metadata?.raw)
+  if (rawDetail) {
+    if (isOpenRouterAccountRateLimit(rawDetail)) {
+      return 'OpenRouter-Free-Limit erreicht. Bitte warte kurz und versuche es erneut.'
+    }
+    return providerName ? `${providerName}: ${rawDetail}` : rawDetail
+  }
+  if (payload?.error?.message) {
+    if (isOpenRouterAccountRateLimit(payload.error.message)) {
+      return 'OpenRouter-Free-Limit erreicht. Bitte warte kurz und versuche es erneut.'
+    }
+    return providerName ? `${providerName}: ${payload.error.message}` : payload.error.message
+  }
+  return fallback
+}
+
+async function callOpenAiCompatibleLlm(
+  image: ParsedDataUrlImage,
+  promptText: string,
+  config: GeminiGalleryConfig,
+  signal: AbortSignal,
+  model: string
+): Promise<LlmResponse> {
+  const baseUrl = (config.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/+$/, '')
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.apiKey}`,
+      ...(config.provider === 'openrouter'
+        ? {
+            'HTTP-Referer': 'https://github.com/kecker26/schiebepuzzle',
+            'X-Title': 'Schiebepuzzle Web-App',
+          }
+        : {}),
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: promptText,
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${image.mimeType};base64,${image.base64Data}`,
+              },
+            },
+          ],
+        },
+      ],
+      ...(config.provider === 'openrouter' && model === OPENROUTER_DEFAULT_MODEL
+        ? {}
+        : { response_format: { type: 'json_object' } }),
+    }),
+    signal,
+  })
+
+  if (!response.ok) {
+    throw new Error(await parseCustomLlmError(response))
+  }
+
+  const payload = await response.json() as CustomLlmResponsePayload
+  if (payload.error) {
+    throw new Error(getCustomLlmErrorMessage(payload, 'LLM API hat einen Fehler ohne Detail zurueckgegeben'))
+  }
+
+  return {
+    text: extractCustomLlmMessageText(payload.choices?.[0]?.message?.content),
+    model: typeof payload.model === 'string' && payload.model.length > 0 ? payload.model : model,
+  }
+}
+
+function extractCustomLlmMessageText(content: CustomLlmMessageContent): string {
+  if (typeof content === 'string') return content.trim()
+  if (!Array.isArray(content)) return ''
+
+  return content
+    .map((part) => typeof part?.text === 'string' ? part.text : '')
+    .filter((text) => text.length > 0)
+    .join('\n')
+    .trim()
+}
+
+async function callGroqFallback(
+  image: ParsedDataUrlImage,
+  promptText: string,
+  fallback: GroqFallbackConfig,
+  signal: AbortSignal
+): Promise<LlmResponse> {
+  if (image.byteLength > GROQ_MAX_BASE64_IMAGE_BYTES) {
+    throw new Error(`Bild ist zu gross fuer Groq-Fallback (max ${Math.round(GROQ_MAX_BASE64_IMAGE_BYTES / 1024 / 1024)} MB base64)`)
+  }
+  const groqConfig: GeminiGalleryConfig = {
+    apiKey: fallback.apiKey,
+    model: fallback.model,
+    provider: 'groq',
+    baseUrl: GROQ_BASE_URL,
+  }
+  return callOpenAiCompatibleLlm(image, promptText, groqConfig, signal, fallback.model)
+}
+
+async function callLlmService(
+  image: ParsedDataUrlImage,
+  promptText: string,
+  schema: object,
+  config: GeminiGalleryConfig,
+  signal: AbortSignal
+): Promise<LlmResponse> {
+  const isCustomLlm = config.provider === 'openrouter' || config.provider === 'openai-compatible'
+
+  if (isCustomLlm) {
+    const primaryModel = config.model || (config.provider === 'openrouter' ? OPENROUTER_DEFAULT_MODEL : '')
+    if (!primaryModel) {
+      throw new Error('LLM_MODEL ist nicht konfiguriert')
+    }
+    let lastError: unknown = null
+    const modelCandidates = config.provider === 'openrouter'
+      ? getOpenRouterModelCandidates(primaryModel)
+      : [primaryModel]
+
+    for (const model of modelCandidates) {
+      try {
+        return await callOpenAiCompatibleLlm(image, promptText, config, signal, model)
+      } catch (error) {
+        lastError = error
+        const message = getErrorDetail(error)
+        if (
+          config.provider !== 'openrouter'
+          || isOpenRouterAccountRateLimit(message)
+          || (!shouldTryNextOpenRouterModel(message) && !isTransientOpenRouterProviderError(message))
+        ) {
+          // Before giving up, try Groq fallback if configured and not a rate-limit
+          if (
+            config.groqFallback?.apiKey
+            && !isOpenRouterAccountRateLimit(message)
+          ) {
+            try {
+              return await callGroqFallback(image, promptText, config.groqFallback, signal)
+            } catch {
+              // Groq fallback also failed, throw the original error
+            }
+          }
+          throw error
+        }
+      }
+    }
+
+    // All model candidates exhausted – try Groq fallback before giving up
+    if (config.groqFallback?.apiKey) {
+      try {
+        return await callGroqFallback(image, promptText, config.groqFallback, signal)
+      } catch {
+        // Groq fallback also failed, throw the original OpenRouter error
+      }
+    }
+    throw lastError
+  } else {
+    // Default Gemini path
+    const url = `${GEMINI_BASE_URL}/v1beta/models/${encodeURIComponent(config.model)}:generateContent`
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -1120,15 +1407,15 @@ async function analyzeGalleryImageWithGemini(
                 data: image.base64Data,
               },
             },
-            { text: createGalleryAnalysisPrompt(entry, collections) },
+            { text: promptText },
           ],
         }],
         generationConfig: {
           responseMimeType: 'application/json',
-          responseSchema: createGeminiGallerySchema(),
+          responseSchema: schema,
         },
       }),
-      signal: controller.signal,
+      signal,
     })
 
     if (!response.ok) {
@@ -1137,37 +1424,116 @@ async function analyzeGalleryImageWithGemini(
 
     const payload = await response.json() as GeminiGenerateContentResponse
     const text = extractGeminiText(payload)
-    if (!text) {
-      throw new Error('Gemini hat keine Analyse zurueckgegeben')
-    }
+    return { text, model: config.model }
+  }
+}
 
-    const analysis = parseGeminiJson<GeminiGalleryAnalysisPayload>(text)
-    const tags = normalizeGalleryTags(analysis.tags)
-    const collectionSuggestions = normalizeGalleryCollectionSuggestions(analysis.collectionSuggestions, collections)
+async function analyzeGalleryImageWithGemini(
+  entry: StoredGalleryEntry,
+  collections: StoredImageCollection[],
+  config: GeminiGalleryConfig
+): Promise<Pick<StoredGalleryEntry, 'tags' | 'aiTagging'>> {
+  const isCustomLlm = config.provider === 'openrouter' || config.provider === 'openai-compatible'
+  const providerLabel = getAiProviderLabel(config.provider)
+  const generatedAt = new Date().toISOString()
 
+  if (!config.apiKey) {
     return {
-      tags,
+      tags: entry.tags,
       aiTagging: {
-        status: 'tagged',
-        provider: 'gemini',
+        status: 'unavailable',
+        provider: config.provider,
         model: config.model,
-        generatedAt: new Date().toISOString(),
-        error: null,
-        collectionSuggestions,
+        generatedAt,
+        error: isCustomLlm ? `API-Key fuer ${providerLabel} ist nicht konfiguriert` : 'GEMINI_API_KEY ist nicht konfiguriert',
+        collectionSuggestions: [],
       },
     }
+  }
+
+  const image = parseDataUrlImage(entry.previewImage ?? entry.sourceImage ?? '')
+  if (!image) {
+    return {
+      tags: entry.tags,
+      aiTagging: {
+        status: 'failed',
+        provider: config.provider,
+        model: config.model,
+        generatedAt,
+        error: 'Kein unterstuetztes Galerie-Bild fuer KI-Tagging gefunden',
+        collectionSuggestions: [],
+      },
+    }
+  }
+
+  if (image.byteLength > GEMINI_GALLERY_MAX_INLINE_IMAGE_BYTES) {
+    return {
+      tags: entry.tags,
+      aiTagging: {
+        status: 'failed',
+        provider: config.provider,
+        model: config.model,
+        generatedAt,
+        error: `Galerie-Bild ist zu gross fuer ${providerLabel} Inline-Analyse`,
+        collectionSuggestions: [],
+      },
+    }
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), GEMINI_GALLERY_TIMEOUT_MS)
+
+  try {
+    const prompt = createGalleryAnalysisPrompt(entry, collections)
+    const schema = createGeminiGallerySchema()
+    const maxAttempts = config.provider === 'openrouter' ? LLM_CONTENT_RETRY_ATTEMPTS : 1
+    let lastContentError: unknown = null
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const response = await callLlmService(image, prompt, schema, config, controller.signal)
+
+        if (!response.text) {
+          throw new Error('LLM hat keine Analyse zurueckgegeben')
+        }
+
+        const analysis = parseGeminiJson<GeminiGalleryAnalysisPayload>(response.text)
+        const tags = normalizeGalleryTags(analysis.tags)
+        if (tags.length < GALLERY_AI_MIN_TAG_LIMIT) {
+          throw new Error(`LLM hat nur ${tags.length} nutzbare Tags erzeugt`)
+        }
+        const collectionSuggestions = normalizeGalleryCollectionSuggestions(analysis.collectionSuggestions, collections)
+
+        return {
+          tags,
+          aiTagging: {
+            status: 'tagged',
+            provider: config.provider,
+            model: response.model ?? config.model,
+            generatedAt,
+            error: null,
+            collectionSuggestions,
+          },
+        }
+      } catch (error) {
+        lastContentError = error
+        if (attempt >= maxAttempts - 1 || error instanceof DOMException && error.name === 'AbortError') {
+          throw error
+        }
+      }
+    }
+    throw lastContentError
   } catch (error) {
     const message = error instanceof DOMException && error.name === 'AbortError'
-      ? 'Gemini hat zu lange fuer das Galerie-Tagging gebraucht'
+      ? 'LLM hat zu lange fuer das Galerie-Tagging gebraucht'
       : getErrorDetail(error)
 
     return {
       tags: entry.tags,
       aiTagging: {
         status: 'failed',
-        provider: 'gemini',
+        provider: config.provider,
         model: config.model,
-        generatedAt: new Date().toISOString(),
+        generatedAt,
         error: message,
         collectionSuggestions: [],
       },
@@ -1184,7 +1550,7 @@ function createSaveTitlePrompt(config: StoredPuzzleConfig): string {
     'Keine Dateinamen, keine technischen Begriffe, keine Anfuehrungszeichen, keine sensiblen personenbezogenen Vermutungen.',
     '',
     `Puzzle-Groesse: ${config.rows}x${config.cols}`,
-    'Antwortformat: JSON mit dem Feld title.',
+    'Antwortformat: Nur JSON, keine Markdown-Fences. Schema: {"title":"Kurzer deutscher Titel"}.',
   ].join('\n')
 }
 
@@ -1198,6 +1564,14 @@ function createGeminiSaveTitleSchema(): object {
   }
 }
 
+function parseSaveTitlePayload(text: string): GeminiSaveTitlePayload {
+  try {
+    return parseGeminiJson<GeminiSaveTitlePayload>(text)
+  } catch {
+    return { title: sanitizeGeneratedSaveTitle(text) }
+  }
+}
+
 async function generateSaveTitleWithGemini(
   save: StoredSaveFile,
   config: GeminiGalleryConfig
@@ -1206,16 +1580,18 @@ async function generateSaveTitleWithGemini(
   aiTitle: StoredSaveAiTitle
 }> {
   const generatedAt = new Date().toISOString()
+  const isCustomLlm = config.provider === 'openrouter' || config.provider === 'openai-compatible'
+  const providerLabel = getAiProviderLabel(config.provider)
 
   if (!config.apiKey) {
     return {
       title: null,
       aiTitle: {
         status: 'unavailable',
-        provider: 'gemini',
+        provider: config.provider,
         model: config.model,
         generatedAt,
-        error: 'GEMINI_API_KEY ist nicht konfiguriert',
+        error: isCustomLlm ? `API-Key fuer ${providerLabel} ist nicht konfiguriert` : 'GEMINI_API_KEY ist nicht konfiguriert',
       },
     }
   }
@@ -1226,7 +1602,7 @@ async function generateSaveTitleWithGemini(
       title: null,
       aiTitle: {
         status: 'failed',
-        provider: 'gemini',
+        provider: config.provider,
         model: config.model,
         generatedAt,
         error: 'Kein unterstuetztes Spielstand-Bild fuer KI-Titel gefunden',
@@ -1239,81 +1615,64 @@ async function generateSaveTitleWithGemini(
       title: null,
       aiTitle: {
         status: 'failed',
-        provider: 'gemini',
+        provider: config.provider,
         model: config.model,
         generatedAt,
-        error: 'Spielstand-Bild ist zu gross fuer Gemini Inline-Analyse',
+        error: `Spielstand-Bild ist zu gross fuer ${providerLabel} Inline-Analyse`,
       },
     }
   }
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), GEMINI_SAVE_TITLE_TIMEOUT_MS)
-  const url = `${GEMINI_BASE_URL}/v1beta/models/${encodeURIComponent(config.model)}:generateContent`
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': config.apiKey,
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            {
-              inline_data: {
-                mime_type: image.mimeType,
-                data: image.base64Data,
-              },
-            },
-            { text: createSaveTitlePrompt(save.config) },
-          ],
-        }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: createGeminiSaveTitleSchema(),
-        },
-      }),
-      signal: controller.signal,
-    })
+    const prompt = createSaveTitlePrompt(save.config)
+    const schema = createGeminiSaveTitleSchema()
+    const maxAttempts = config.provider === 'openrouter' ? LLM_CONTENT_RETRY_ATTEMPTS : 1
+    let lastContentError: unknown = null
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const response = await callLlmService(image, prompt, schema, config, controller.signal)
 
-    if (!response.ok) {
-      throw new Error(await parseGeminiError(response))
-    }
+        if (!response.text) {
+          throw new Error('LLM hat keinen Spielstand-Titel zurueckgegeben')
+        }
 
-    const payload = await response.json() as GeminiGenerateContentResponse
-    const text = extractGeminiText(payload)
-    if (!text) {
-      throw new Error('Gemini hat keinen Spielstand-Titel zurueckgegeben')
-    }
+        const analysis = parseSaveTitlePayload(response.text)
+        const title = sanitizeGeneratedSaveTitle(analysis.title)
+        if (!title) {
+          throw new Error('LLM hat keinen nutzbaren Spielstand-Titel erzeugt')
+        }
 
-    const analysis = parseGeminiJson<GeminiSaveTitlePayload>(text)
-    const title = sanitizeGeneratedSaveTitle(analysis.title)
-    if (!title) {
-      throw new Error('Gemini hat keinen nutzbaren Spielstand-Titel erzeugt')
+        return {
+          title,
+          aiTitle: {
+            status: 'generated',
+            provider: config.provider,
+            model: response.model ?? config.model,
+            generatedAt,
+            error: null,
+          },
+        }
+      } catch (error) {
+        lastContentError = error
+        if (attempt >= maxAttempts - 1 || error instanceof DOMException && error.name === 'AbortError') {
+          throw error
+        }
+      }
     }
-
-    return {
-      title,
-      aiTitle: {
-        status: 'generated',
-        provider: 'gemini',
-        model: config.model,
-        generatedAt,
-        error: null,
-      },
-    }
+    throw lastContentError
   } catch (error) {
     const message = error instanceof DOMException && error.name === 'AbortError'
-      ? 'Gemini hat zu lange fuer den Spielstand-Titel gebraucht'
+      ? 'LLM hat zu lange fuer den Spielstand-Titel gebraucht'
       : getErrorDetail(error)
 
     return {
       title: null,
       aiTitle: {
         status: 'failed',
-        provider: 'gemini',
+        provider: config.provider,
         model: config.model,
         generatedAt,
         error: message,
@@ -1374,6 +1733,7 @@ function sanitizeSaveAiTitle(value: unknown): StoredSaveAiTitle | undefined {
 
   const input = value as {
     status?: unknown
+    provider?: unknown
     model?: unknown
     generatedAt?: unknown
     error?: unknown
@@ -1390,7 +1750,7 @@ function sanitizeSaveAiTitle(value: unknown): StoredSaveAiTitle | undefined {
 
   return {
     status,
-    provider: 'gemini',
+    provider: normalizeAiProvider(input.provider),
     model: typeof input.model === 'string' && input.model.length > 0 ? input.model : null,
     generatedAt: typeof input.generatedAt === 'string' && input.generatedAt.length > 0 ? input.generatedAt : null,
     error: typeof input.error === 'string' && input.error.length > 0 ? input.error.slice(0, 240) : null,
@@ -2265,13 +2625,17 @@ function normalizeGalleryTags(value: unknown): StoredGalleryImageTag[] {
 
   const tags = new Map<string, StoredGalleryImageTag>()
   for (const item of value) {
-    if (!item || typeof item !== 'object') continue
+    const input = typeof item === 'string'
+      ? { label: item, confidence: 0.72, source: 'gemini' }
+      : item && typeof item === 'object'
+        ? item as {
+            label?: unknown
+            confidence?: unknown
+            source?: unknown
+          }
+        : null
+    if (!input) continue
 
-    const input = item as {
-      label?: unknown
-      confidence?: unknown
-      source?: unknown
-    }
     const label = sanitizeGalleryTagLabel(input.label)
     if (!label) continue
 
@@ -2365,7 +2729,7 @@ function normalizeGalleryAiTagging(value: unknown): StoredGalleryAiTagging | und
 
   return {
     status,
-    provider: 'gemini',
+    provider: normalizeAiProvider(input.provider),
     model: typeof input.model === 'string' && input.model.length > 0 ? input.model : null,
     generatedAt: typeof input.generatedAt === 'string' && input.generatedAt.length > 0 ? input.generatedAt : null,
     error: typeof input.error === 'string' && input.error.length > 0 ? input.error.slice(0, 240) : null,
@@ -2377,7 +2741,7 @@ function getGalleryTagMatchKey(label: string): string {
   return label.trim().toLocaleLowerCase('de-DE')
 }
 
-function parseDataUrlImage(value: string): { mimeType: string; base64Data: string; byteLength: number } | null {
+function parseDataUrlImage(value: string): ParsedDataUrlImage | null {
   const match = /^data:(image\/(?:png|jpeg|jpg|webp));base64,([a-zA-Z0-9+/=]+)$/i.exec(value)
   if (!match) return null
 
@@ -4072,7 +4436,7 @@ async function handleSaveApi(
               titleSource: 'reused',
               aiTitle: {
                 status: 'reused',
-                provider: 'gemini',
+                provider: reusableTitle.aiTitle?.provider ?? geminiGalleryConfig.provider,
                 model: reusableTitle.aiTitle?.model ?? geminiGalleryConfig.model,
                 generatedAt: nowIso,
                 error: null,
@@ -4148,7 +4512,7 @@ async function handleSaveApi(
           titleSource: 'reused',
           aiTitle: {
             status: 'reused',
-            provider: 'gemini',
+            provider: reusableTitle.aiTitle?.provider ?? geminiGalleryConfig.provider,
             model: reusableTitle.aiTitle?.model ?? geminiGalleryConfig.model,
             generatedAt: new Date().toISOString(),
             error: null,
@@ -4396,7 +4760,7 @@ async function handleGalleryApi(
         ...(imageTheme ? { imageTheme } : {}),
         aiTagging: {
           status: 'pending',
-          provider: 'gemini',
+          provider: geminiGalleryConfig.provider,
           model: geminiGalleryConfig.model,
           generatedAt: null,
           error: null,
@@ -4904,9 +5268,19 @@ export function apiPlugin(options: LocalApiPluginOptions = {}): Plugin {
       model: options.cloudflareImageModel || CLOUDFLARE_GENERATED_IMAGE_MODEL,
     },
   }
+  const provider = normalizeAiProvider(options.llmProvider, options.llmBaseUrl)
+  const isCustomLlm = provider === 'openrouter' || provider === 'openai-compatible'
+  const groqFallback: GroqFallbackConfig | null = options.groqApiKey
+    ? { apiKey: options.groqApiKey, model: options.groqModel || GROQ_DEFAULT_MODEL }
+    : null
   const geminiGalleryConfig: GeminiGalleryConfig = {
-    apiKey: options.geminiApiKey ?? '',
-    model: options.geminiGalleryModel || GEMINI_GALLERY_MODEL,
+    apiKey: isCustomLlm ? (options.llmApiKey ?? '') : (options.geminiApiKey ?? ''),
+    model: isCustomLlm
+      ? (options.llmModel || (provider === 'openrouter' ? OPENROUTER_DEFAULT_MODEL : ''))
+      : (options.geminiGalleryModel || GEMINI_GALLERY_MODEL),
+    provider,
+    baseUrl: options.llmBaseUrl ?? '',
+    groqFallback,
   }
 
   return {

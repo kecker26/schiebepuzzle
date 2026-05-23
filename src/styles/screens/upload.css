@@ -4038,6 +4038,12 @@
   justify-self: start;
 }
 
+.gallery-detail-ai-error {
+  color: var(--danger-color);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
 .gallery-tag-manager-overlay {
   position: fixed;
   inset: 0;

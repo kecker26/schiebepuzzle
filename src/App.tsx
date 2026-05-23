@@ -118,6 +118,40 @@ import {
 const DEFAULT_CONFIG: PuzzleConfig = DEFAULT_PUZZLE_CONFIG
 const MAX_DISPLAYED_SAVED_GAMES = 30
 const SAVE_DEBOUNCE_MS = 3000
+const SAVE_TITLE_RETRY_DELAYS_MS = [0, 30000, 120000]
+
+function waitFor(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
+}
+
+async function generateSavedGameTitleWithRetry(saveId: string): Promise<SavedGameSummary> {
+  let latestSave: SavedGameSummary | null = null
+  let lastError: unknown = null
+
+  for (const delayMs of SAVE_TITLE_RETRY_DELAYS_MS) {
+    if (delayMs > 0) {
+      await waitFor(delayMs)
+    }
+
+    try {
+      latestSave = await generateSavedGameTitle(saveId)
+      if (
+        latestSave.titleSource !== 'fallback'
+        || latestSave.aiTitle?.status === 'generated'
+        || latestSave.aiTitle?.status === 'reused'
+      ) {
+        return latestSave
+      }
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  if (latestSave) return latestSave
+  throw lastError instanceof Error ? lastError : new Error('KI-Titel konnte nicht erzeugt werden.')
+}
 const SAVE_MAX_INTERVAL_MS = 10000
 const CROP_TRANSFORM_MATCH_EPSILON = 0.0001
 type GlobalOverlayKind = 'help' | 'commandPalette'
@@ -1013,7 +1047,7 @@ export default function App() {
 
         setSavedGames((prev) => upsertSummary(prev, created).slice(0, MAX_DISPLAYED_SAVED_GAMES))
         if (created.titleSource !== 'reused') {
-          void generateSavedGameTitle(created.id)
+          void generateSavedGameTitleWithRetry(created.id)
             .then((titledSave) => {
               setSavedGames((prev) => (
                 prev.some((entry) => entry.id === titledSave.id)

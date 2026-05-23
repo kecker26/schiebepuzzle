@@ -165,10 +165,11 @@ export interface ImageThemePalette {
 
 export type SavedGameTitleSource = 'gemini' | 'reused' | 'fallback'
 export type SavedGameAiTitleStatus = 'generated' | 'reused' | 'failed' | 'unavailable' | 'pending'
+export type AiMetadataProvider = 'gemini' | 'openrouter' | 'openai-compatible' | 'groq'
 
 export interface SavedGameAiTitle {
   status: SavedGameAiTitleStatus
-  provider: 'gemini'
+  provider: AiMetadataProvider
   model: string | null
   generatedAt: string | null
   error: string | null
@@ -272,7 +273,7 @@ export interface GalleryCollectionSuggestion {
 
 export interface GalleryAiTagging {
   status: GalleryAiTaggingStatus
-  provider: 'gemini'
+  provider: AiMetadataProvider
   model: string | null
   generatedAt: string | null
   error: string | null
