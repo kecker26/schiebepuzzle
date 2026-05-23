@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { SolvedGalleryEntry } from '../types/index.ts'
 import {
   buildGalleryDisplayEntries,
+  getSimilarGalleryEntries,
   getUniqueGalleryMotifEntryIds,
 } from '../screens/upload/UploadGalleryDisplayUtils.ts'
 import { galleryDisplayEntryMatchesAllTagKeys, getGalleryTagKey } from '../screens/upload/UploadGalleryPanel.tsx'
@@ -197,5 +198,63 @@ describe('UploadGalleryDisplayUtils', () => {
 
     expect(galleryDisplayEntryMatchesAllTagKeys(entry, [getGalleryTagKey('wald'), getGalleryTagKey('see')])).toBe(true)
     expect(galleryDisplayEntryMatchesAllTagKeys(entry, [getGalleryTagKey('wald'), getGalleryTagKey('stadt')])).toBe(false)
+  })
+
+  it('sortiert aehnliche Galerie-Motive nach Tag-Ueberschneidung und Loesungshaeufigkeit', () => {
+    const entries = buildGalleryDisplayEntries(
+      [
+        createGalleryEntry('motif-a', {
+          previewImage: 'preview-a',
+          sourceImage: 'source-a',
+          tags: [
+            { label: 'Wald', confidence: 0.9, source: 'gemini' },
+            { label: 'See', confidence: 0.8, source: 'gemini' },
+            { label: 'Berge', confidence: 0.7, source: 'gemini' },
+          ],
+        }),
+        createGalleryEntry('motif-b-run-1', {
+          previewImage: 'preview-b',
+          sourceImage: 'source-b',
+          tags: [
+            { label: 'Wald', confidence: 0.9, source: 'gemini' },
+            { label: 'See', confidence: 0.8, source: 'gemini' },
+          ],
+        }),
+        createGalleryEntry('motif-b-run-2', {
+          previewImage: 'preview-b',
+          sourceImage: 'source-b',
+          completedAt: '2026-04-23T12:00:00.000Z',
+          tags: [
+            { label: 'Wald', confidence: 0.9, source: 'gemini' },
+          ],
+        }),
+        createGalleryEntry('motif-c', {
+          previewImage: 'preview-c',
+          sourceImage: 'source-c',
+          tags: [
+            { label: 'Berge', confidence: 0.7, source: 'gemini' },
+            { label: 'Stadt', confidence: 0.6, source: 'gemini' },
+          ],
+        }),
+        createGalleryEntry('motif-d', {
+          previewImage: 'preview-d',
+          sourceImage: 'source-d',
+          tags: [
+            { label: 'Architektur', confidence: 0.8, source: 'gemini' },
+          ],
+        }),
+      ],
+      {
+        difficultyFilter: 'all',
+        assistanceFilter: 'all',
+      }
+    )
+    const current = entries.find((entry) => entry.representativeEntry.id === 'motif-a')
+
+    expect(current).toBeDefined()
+    expect(getSimilarGalleryEntries(current as NonNullable<typeof current>, entries).map((entry) => entry.representativeEntry.id)).toEqual([
+      'motif-b-run-1',
+      'motif-c',
+    ])
   })
 })

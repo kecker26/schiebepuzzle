@@ -20,6 +20,7 @@ export function createUploadImagePaletteStyle(
     '--image-radiance-ring': `color-mix(in srgb, ${palette.primaryColor} 72%, #ffffff)`,
     '--image-radiance-border': `color-mix(in srgb, ${palette.glow} 48%, var(--card-border))`,
     '--image-radiance-shadow': `color-mix(in srgb, ${palette.primaryShadowHover} 78%, ${palette.glow})`,
+    '--focus-ring': `0 0 0 4px color-mix(in srgb, ${palette.primaryColor} 32%, transparent), 0 0 0 1px color-mix(in srgb, ${palette.primaryColor} 72%, #ffffff)`,
     '--primary-color': palette.primaryColor,
     '--primary-hover': palette.primaryHover,
     '--primary-shadow': palette.primaryShadow,

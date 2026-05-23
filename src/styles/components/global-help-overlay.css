@@ -7,7 +7,8 @@
   justify-content: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-glow) 28%, transparent), transparent 42%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-radiance) 36%, transparent), transparent 42%),
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--image-accent-strong) 24%, transparent), transparent 34%),
     rgba(2, 6, 23, 0.44);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -20,9 +21,14 @@
   max-height: min(94vh, calc(100vh - 32px));
   overflow: hidden;
   border-radius: 30px;
-  border: 1px solid color-mix(in srgb, var(--glass-dialog-border) 96%, transparent);
-  background: var(--glass-dialog-bg);
-  box-shadow: var(--glass-dialog-shadow);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 72%, var(--glass-dialog-border));
+  background:
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--image-accent-strong) 92%, transparent) 0%, transparent 30%),
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--image-radiance) 46%, transparent) 0%, transparent 32%),
+    color-mix(in srgb, var(--glass-dialog-bg) 82%, var(--image-accent-soft));
+  box-shadow:
+    var(--glass-dialog-shadow),
+    0 0 64px color-mix(in srgb, var(--image-radiance) 18%, transparent);
   backdrop-filter: blur(var(--glass-dialog-blur)) saturate(155%);
   -webkit-backdrop-filter: blur(var(--glass-dialog-blur)) saturate(155%);
 }
@@ -56,10 +62,10 @@
   min-height: 40px;
   padding: 0 14px;
   border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--glass-border) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 58%, var(--glass-border));
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 18%, transparent), transparent 60%),
-    rgba(255, 255, 255, 0.04);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 82%, transparent), transparent 60%),
+    color-mix(in srgb, rgba(255, 255, 255, 0.04) 74%, var(--image-accent-soft));
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -112,11 +118,11 @@
   min-height: 40px;
   padding: 0 32px 0 14px;
   border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--glass-border) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 58%, var(--glass-border));
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")
       no-repeat right 10px center / 14px,
-    rgba(255, 255, 255, 0.04);
+    color-mix(in srgb, rgba(255, 255, 255, 0.04) 74%, var(--image-accent-soft));
   color: var(--text-main);
   font-family: inherit;
   font-size: 0.82rem;
@@ -219,10 +225,10 @@
   min-height: 34px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 22%, var(--glass-border));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 68%, var(--glass-border));
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 36%, transparent), transparent 56%),
-    rgba(255, 255, 255, 0.05);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-radiance) 30%, transparent), transparent 56%),
+    color-mix(in srgb, rgba(255, 255, 255, 0.05) 74%, var(--image-accent-soft));
   color: var(--text-main);
   font-size: 0.8rem;
   font-weight: 700;
@@ -242,10 +248,10 @@
   flex-wrap: wrap;
   padding: 12px 16px;
   border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 14%, var(--glass-border));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 56%, var(--glass-border));
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 14%, transparent), transparent 50%),
-    rgba(255, 255, 255, 0.025);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 72%, transparent), transparent 50%),
+    color-mix(in srgb, rgba(255, 255, 255, 0.025) 78%, var(--image-accent-soft));
 }
 
 .global-help-toc-label {
@@ -268,9 +274,9 @@
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  border: 1px solid color-mix(in srgb, var(--glass-border) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 46%, var(--glass-border));
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, rgba(255, 255, 255, 0.04) 78%, var(--image-accent-soft));
   color: var(--text-main);
   font-family: inherit;
   font-size: 0.78rem;
@@ -359,26 +365,29 @@
   gap: 14px;
   padding: 18px 18px 20px;
   border-radius: 24px;
-  border: 1px solid color-mix(in srgb, var(--glass-border) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 54%, var(--glass-border));
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 24%, transparent), transparent 54%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 92%, transparent), transparent 54%),
+    radial-gradient(circle at 96% 12%, color-mix(in srgb, var(--image-glow) 20%, transparent), transparent 42%),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--surface-strong) 92%, transparent),
-      color-mix(in srgb, var(--surface-soft) 84%, transparent)
+      color-mix(in srgb, var(--surface-strong) 82%, var(--image-accent-soft)),
+      color-mix(in srgb, var(--surface-soft) 78%, var(--image-accent-strong))
     );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 28px color-mix(in srgb, var(--primary-color) 8%, transparent);
 }
 
 .global-help-section--global {
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 12%, transparent), transparent 50%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 54%, transparent), transparent 50%),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--surface-strong) 72%, transparent),
-      color-mix(in srgb, var(--surface-soft) 60%, transparent)
+      color-mix(in srgb, var(--surface-strong) 72%, var(--image-accent-soft)),
+      color-mix(in srgb, var(--surface-soft) 64%, var(--image-accent-strong))
     );
-  border-color: color-mix(in srgb, var(--glass-border) 60%, transparent);
+  border-color: color-mix(in srgb, var(--image-radiance-border) 38%, var(--glass-border));
   opacity: 0.88;
 }
 
@@ -399,11 +408,13 @@
   width: 38px;
   height: 38px;
   border-radius: 13px;
-  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 28%, rgba(255, 255, 255, 0.08));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 58%, rgba(255, 255, 255, 0.08));
   background:
-    radial-gradient(circle, color-mix(in srgb, var(--image-accent-solid) 18%, rgba(255, 255, 255, 0.08)), transparent 72%),
-    rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    radial-gradient(circle, color-mix(in srgb, var(--image-radiance) 24%, rgba(255, 255, 255, 0.08)), transparent 72%),
+    color-mix(in srgb, rgba(255, 255, 255, 0.04) 78%, var(--image-accent-soft));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 18px color-mix(in srgb, var(--primary-color) 10%, transparent);
   animation: helpIconPulse 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

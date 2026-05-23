@@ -12,7 +12,7 @@ interface UploadMenuCardsProps {
   isFetchingRandom: boolean
   isGeneratingPromptImage: boolean
   promptValue: string
-  onFetchRandomImage: () => Promise<void> | void
+  onFetchRandomImage: (query?: string) => Promise<void> | void
   onPromptValueChange: (value: string) => void
   onGeneratePromptImage: () => Promise<void> | void
 }
@@ -78,7 +78,9 @@ export default function UploadMenuCards({
 
       <AnimatedCardButton
         className="menu-card menu-card-random"
-        onClick={onFetchRandomImage}
+        onClick={() => {
+          void onFetchRandomImage()
+        }}
         disabled={isFetchingRandom}
         reveal
         revealLevel="medium"

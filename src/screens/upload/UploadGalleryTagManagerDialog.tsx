@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import {
   Activity,
   Brush,
@@ -33,6 +33,7 @@ interface UploadGalleryTagManagerDialogProps {
   onRemoveTag: (sourceLabel: string) => Promise<void>
   onApplyTagFilters: (tagKeys: string[]) => void
   onClose: () => void
+  paletteStyle?: CSSProperties
 }
 
 interface GalleryTagDuplicateGroup {
@@ -828,6 +829,7 @@ export default function UploadGalleryTagManagerDialog({
   onRemoveTag,
   onApplyTagFilters,
   onClose,
+  paletteStyle,
 }: UploadGalleryTagManagerDialogProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortMode, setSortMode] = useState<TagManagerSortMode>('alpha-asc')
@@ -1010,6 +1012,7 @@ export default function UploadGalleryTagManagerDialog({
       trapFocus
       restoreFocus
       lockScroll
+      overlayStyle={paletteStyle}
     >
       <div className="gallery-tag-manager-header">
         <div>

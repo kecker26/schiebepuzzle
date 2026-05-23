@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { ALL_HELP_CONTEXTS, getHelpView, type HelpContext, type HelpSection } from '../app/helpRegistry.ts'
 import { useAccessibilityAnnouncer } from '../app/accessibilityAnnouncer.tsx'
 import GlobalUiIcon from './GlobalUiIcon.tsx'
@@ -11,6 +11,7 @@ import '../styles/components/global-help-overlay.css'
 interface GlobalHelpOverlayProps {
   helpContext: HelpContext
   onClose: () => void
+  paletteStyle?: CSSProperties
 }
 
 function toHelpSectionId(title: string): string {
@@ -41,7 +42,7 @@ function matchesSearch(section: HelpSection, query: string): HelpSection | null 
   return { ...section, items: matchingItems }
 }
 
-export default function GlobalHelpOverlay({ helpContext, onClose }: GlobalHelpOverlayProps) {
+export default function GlobalHelpOverlay({ helpContext, onClose, paletteStyle }: GlobalHelpOverlayProps) {
   const announceAccessibility = useAccessibilityAnnouncer()
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const scrollRegionRef = useRef<HTMLDivElement>(null)
@@ -177,6 +178,7 @@ export default function GlobalHelpOverlay({ helpContext, onClose }: GlobalHelpOv
       restoreFocus
       lockScroll
       initialFocusRef={closeButtonRef}
+      overlayStyle={paletteStyle}
     >
       <div className="global-help-view">
         <p id="global-help-search-hint" className="visually-hidden">

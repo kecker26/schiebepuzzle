@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import ContextMenuIcon, { type ContextMenuIconName } from './ContextMenuIcon.tsx'
 import GlobalUiIcon, { type GlobalUiIconName } from './GlobalUiIcon.tsx'
@@ -37,6 +37,7 @@ interface CompactContextMenuProps {
   position: ContextMenuPosition
   items: ContextMenuItem[]
   onClose: () => void
+  paletteStyle?: CSSProperties
 }
 
 export type { ContextMenuItem, ContextMenuPosition }
@@ -82,7 +83,7 @@ function getContextMenuGroupIcon(title: string, explicitIcon?: GlobalUiIconName)
   }
 }
 
-export default function CompactContextMenu({ position, items, onClose }: CompactContextMenuProps) {
+export default function CompactContextMenu({ position, items, onClose, paletteStyle }: CompactContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([])
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null)
@@ -291,7 +292,7 @@ export default function CompactContextMenu({ position, items, onClose }: Compact
       role="menu"
       aria-orientation="vertical"
       tabIndex={-1}
-      style={{ left: position.x, top: position.y }}
+      style={{ ...paletteStyle, left: position.x, top: position.y }}
     >
       {items.map((item, index) => {
         if (item.separator) {

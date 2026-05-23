@@ -20,7 +20,8 @@ export interface RandomPuzzleImageResult {
 
 interface RandomImageProvider {
   source: RandomImageSourceInfo
-  fetch: () => Promise<string>
+  supportsSearch?: boolean
+  fetch: (query?: string) => Promise<string>
 }
 
 function shuffleProviders<T>(providers: T[]): T[] {
@@ -32,7 +33,8 @@ function shuffleProviders<T>(providers: T[]): T[] {
   return result
 }
 
-export async function fetchRandomPuzzleImageResult(): Promise<RandomPuzzleImageResult> {
+export async function fetchRandomPuzzleImageResult(query?: string): Promise<RandomPuzzleImageResult> {
+  const searchQuery = query?.trim()
   const providers: RandomImageProvider[] = [
     {
       source: {
@@ -53,21 +55,24 @@ export async function fetchRandomPuzzleImageResult(): Promise<RandomPuzzleImageR
         label: 'Pexels',
         url: 'https://www.pexels.com/api/',
       },
-      fetch: () => fetchRandomPexelsImage(),
+      supportsSearch: true,
+      fetch: (providerQuery) => fetchRandomPexelsImage(providerQuery),
     },
     {
       source: {
         label: 'Pixabay',
         url: 'https://pixabay.com/',
       },
-      fetch: () => fetchRandomPixabayImage(),
+      supportsSearch: true,
+      fetch: (providerQuery) => fetchRandomPixabayImage(providerQuery),
     },
     {
       source: {
         label: 'NASA Image Library',
         url: 'https://images.nasa.gov/',
       },
-      fetch: () => fetchRandomNasaImage(),
+      supportsSearch: true,
+      fetch: (providerQuery) => fetchRandomNasaImage(providerQuery),
     },
     {
       source: {
@@ -105,16 +110,20 @@ export async function fetchRandomPuzzleImageResult(): Promise<RandomPuzzleImageR
         label: 'Smithsonian Open Access',
         url: 'https://www.si.edu/openaccess',
       },
-      fetch: () => fetchRandomSmithsonianImage(),
+      supportsSearch: true,
+      fetch: (providerQuery) => fetchRandomSmithsonianImage(providerQuery),
     })
   }
 
-  const shuffledProviders = shuffleProviders(providers)
+  const providerPool = searchQuery
+    ? providers.filter((provider) => provider.supportsSearch)
+    : providers
+  const shuffledProviders = shuffleProviders(providerPool)
 
   for (const provider of shuffledProviders) {
     try {
       return {
-        imageSrc: await provider.fetch(),
+        imageSrc: await provider.fetch(searchQuery),
         source: provider.source,
       }
     } catch {
@@ -131,7 +140,7 @@ export async function fetchRandomPuzzleImageResult(): Promise<RandomPuzzleImageR
   }
 }
 
-export async function fetchRandomPuzzleImage(): Promise<string> {
-  const result = await fetchRandomPuzzleImageResult()
+export async function fetchRandomPuzzleImage(query?: string): Promise<string> {
+  const result = await fetchRandomPuzzleImageResult(query)
   return result.imageSrc
 }

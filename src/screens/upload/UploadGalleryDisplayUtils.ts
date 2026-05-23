@@ -304,6 +304,56 @@ export function countUniqueGalleryEntries(entries: SolvedGalleryEntry[]): number
   return buildGalleryDisplayGroups(entries).length
 }
 
+function getGalleryDisplayTagKeys(entry: GalleryDisplayEntry): Set<string> {
+  const tagKeys = new Set<string>()
+
+  for (const galleryEntry of entry.allEntries) {
+    for (const tag of galleryEntry.tags ?? []) {
+      const tagKey = tag.label.trim().toLocaleLowerCase('de-DE')
+      if (tagKey) {
+        tagKeys.add(tagKey)
+      }
+    }
+  }
+
+  return tagKeys
+}
+
+export function getSimilarGalleryEntries(
+  current: GalleryDisplayEntry,
+  all: GalleryDisplayEntry[],
+  limit: number = 4
+): GalleryDisplayEntry[] {
+  const currentTagKeys = getGalleryDisplayTagKeys(current)
+  if (currentTagKeys.size === 0 || limit <= 0) {
+    return []
+  }
+
+  return all
+    .filter((entry) => entry.id !== current.id)
+    .map((entry) => {
+      const tagKeys = getGalleryDisplayTagKeys(entry)
+      const overlapCount = Array.from(tagKeys).filter((tagKey) => currentTagKeys.has(tagKey)).length
+      const unionCount = new Set([...Array.from(currentTagKeys), ...Array.from(tagKeys)]).size
+      const overlapScore = unionCount > 0 ? overlapCount / unionCount : 0
+
+      return {
+        entry,
+        overlapCount,
+        overlapScore,
+      }
+    })
+    .filter((candidate) => candidate.overlapCount > 0)
+    .sort((a, b) =>
+      b.overlapCount - a.overlapCount
+      || b.overlapScore - a.overlapScore
+      || b.entry.totalSolveCount - a.entry.totalSolveCount
+      || parseTimestamp(b.entry.latestCompletedAt) - parseTimestamp(a.entry.latestCompletedAt)
+    )
+    .slice(0, limit)
+    .map((candidate) => candidate.entry)
+}
+
 export function formatGallerySolveCount(totalSolveCount: number, visibleSolveCount: number = totalSolveCount): string {
   if (visibleSolveCount === totalSolveCount) {
     return `${totalSolveCount} ${totalSolveCount === 1 ? 'Loesung' : 'Loesungen'}`

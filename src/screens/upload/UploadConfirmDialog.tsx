@@ -1,4 +1,11 @@
-import { useCallback, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react'
+import {
+  useCallback,
+  useRef,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
 
@@ -13,6 +20,7 @@ interface UploadConfirmDialogProps {
   onConfirm: () => void
   confirmButtonRef?: RefObject<HTMLButtonElement>
   restoreFocusFallbackRef?: RefObject<HTMLElement | null>
+  paletteStyle?: CSSProperties
 }
 
 export default function UploadConfirmDialog({
@@ -26,6 +34,7 @@ export default function UploadConfirmDialog({
   onConfirm,
   confirmButtonRef,
   restoreFocusFallbackRef,
+  paletteStyle,
 }: UploadConfirmDialogProps) {
   const descriptionId = `${titleId}-description`
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
@@ -92,6 +101,7 @@ export default function UploadConfirmDialog({
       restoreFocus
       restoreFocusFallbackRef={restoreFocusFallbackRef}
       lockScroll
+      overlayStyle={paletteStyle}
       initialFocusRef={cancelButtonRef}
     >
       <h3 id={titleId}>{title}</h3>

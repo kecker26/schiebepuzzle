@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { useRef, type ReactNode, type RefObject } from 'react'
+import { useRef, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { getWorkspaceOverlayVariants, getWorkspaceShellVariants } from './variants.ts'
 import { useReducedMotionPreference } from './useReducedMotionPreference.ts'
@@ -19,6 +19,7 @@ interface AnimatedWorkspaceWindowProps {
   restoreFocus?: boolean
   lockScroll?: boolean
   initialFocusRef?: RefObject<HTMLElement | null>
+  overlayStyle?: CSSProperties
 }
 
 export default function AnimatedWorkspaceWindow({
@@ -35,6 +36,7 @@ export default function AnimatedWorkspaceWindow({
   restoreFocus = false,
   lockScroll = false,
   initialFocusRef,
+  overlayStyle,
 }: AnimatedWorkspaceWindowProps) {
   const shouldReduceMotion = useReducedMotionPreference()
   const shellRef = useRef<HTMLElement>(null)
@@ -53,6 +55,7 @@ export default function AnimatedWorkspaceWindow({
   const overlay = (
     <motion.div
       className={overlayClassName}
+      style={overlayStyle}
       data-page-focus-root="true"
       variants={getWorkspaceOverlayVariants(shouldReduceMotion)}
       initial="initial"
