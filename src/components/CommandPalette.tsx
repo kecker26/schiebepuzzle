@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { COMMAND_PALETTE_SHORTCUT_LABEL } from '../app/commandPaletteShortcut.ts'
 import type { GlobalUiIconName } from './GlobalUiIcon.tsx'
 import GlobalUiIcon from './GlobalUiIcon.tsx'
@@ -21,6 +21,7 @@ interface CommandPaletteProps {
   commands: CommandPaletteCommand[]
   contextLabel: string
   onClose: () => void
+  paletteStyle?: CSSProperties
 }
 
 function normalizeSearchValue(value: string): string {
@@ -31,7 +32,7 @@ function normalizeSearchValue(value: string): string {
     .trim()
 }
 
-export default function CommandPalette({ commands, contextLabel, onClose }: CommandPaletteProps) {
+export default function CommandPalette({ commands, contextLabel, onClose, paletteStyle }: CommandPaletteProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const resultRefs = useRef(new Map<string, HTMLButtonElement>())
@@ -236,6 +237,7 @@ export default function CommandPalette({ commands, contextLabel, onClose }: Comm
       restoreFocus
       lockScroll
       initialFocusRef={inputRef}
+      overlayStyle={paletteStyle}
     >
       <div className="command-palette-view">
         <div className="command-palette-header">

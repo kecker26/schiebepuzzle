@@ -7,7 +7,15 @@ import {
   ImageCollection,
 } from '../../types/index'
 import { motion } from 'motion/react'
-import { startTransition, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
+import {
+  startTransition,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import { isEditableTarget } from '../../app/keyboardShortcutUtils.ts'
 import UploadScreenIcon, { type UploadScreenIconName } from '../../components/UploadScreenIcon.tsx'
@@ -39,6 +47,7 @@ import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 
 interface UploadDashboardProps {
   activeWindow: Exclude<UploadWorkspaceWindow, 'start'>
+  paletteStyle?: CSSProperties
   savedGames: SavedGameSummary[]
   savedGamesCount: number
   loadingSaveId: string | null
@@ -67,6 +76,7 @@ interface UploadDashboardProps {
   onRequestStatsReset: () => void
   onRequestGalleryReset: () => void
   onReplayGalleryEntry: GalleryReplayRequestHandler
+  onFetchRandomImage?: (query?: string) => Promise<void> | void
   onDeleteGalleryEntries: (entryIds: string[]) => Promise<void>
   onUpdateGalleryTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
   onRetryGalleryTagging?: (entryId: string) => Promise<void>
@@ -105,6 +115,7 @@ function getDashboardMetricIconName(label: string): UploadScreenIconName {
 
 export default function UploadDashboard({
   activeWindow,
+  paletteStyle,
   savedGames,
   savedGamesCount,
   loadingSaveId,
@@ -133,6 +144,7 @@ export default function UploadDashboard({
   onRequestStatsReset,
   onRequestGalleryReset,
   onReplayGalleryEntry,
+  onFetchRandomImage = async () => undefined,
   onDeleteGalleryEntries,
   onUpdateGalleryTags = async () => undefined,
   onRetryGalleryTagging = async () => undefined,
@@ -558,6 +570,7 @@ export default function UploadDashboard({
       trapFocus
       restoreFocus
       lockScroll
+      overlayStyle={paletteStyle}
       initialFocusRef={
         activeWindow === 'savedGames'
           ? savedGamesNavButtonRef
@@ -747,6 +760,7 @@ export default function UploadDashboard({
                       isLoadingGallery={isLoadingGallery}
                       isLoadingCollections={isLoadingCollections}
                       onReplayEntry={onReplayGalleryEntry}
+                      onFetchRandomImage={onFetchRandomImage}
                       onDeleteEntries={onDeleteGalleryEntries}
                       onUpdateTags={onUpdateGalleryTags}
                       onRetryTagging={onRetryGalleryTagging}
@@ -754,6 +768,7 @@ export default function UploadDashboard({
                       onAddCollectionImages={onAddImageCollectionImages}
                       titleId="workspace-window-gallery-title"
                       panelRole="region"
+                      paletteStyle={paletteStyle}
                     />
                   </div>
                 </motion.div>
@@ -825,6 +840,7 @@ export default function UploadDashboard({
                       onRemoveCollectionImages={onRemoveImageCollectionImages}
                       titleId="workspace-window-collections-title"
                       panelRole="region"
+                      paletteStyle={paletteStyle}
                     />
                   </div>
                 </motion.div>

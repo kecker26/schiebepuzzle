@@ -437,6 +437,7 @@ export default function StartScreen({
             position={contextMenuPosition}
             items={startActions}
             onClose={() => setContextMenuPosition(null)}
+            paletteStyle={paletteStyle}
           />
         )}
       </AnimatePresence>

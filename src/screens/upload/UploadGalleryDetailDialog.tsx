@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { Search } from 'lucide-react'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
 import { type AiMetadataProvider, type ImageThemePalette, type SolvedGalleryEntry } from '../../types/index'
 import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
@@ -19,6 +20,10 @@ interface UploadGalleryDetailDialogProps {
   entry: GalleryDisplayEntry
   onReplayEntry: GalleryReplayRequestHandler
   onCollectEntry?: (entry: GalleryDisplayEntry) => void
+  onTagFilter?: (tagLabel: string) => void
+  onFetchRandomImage?: (tagLabel: string) => void
+  onOpenSimilarEntry?: (entry: GalleryDisplayEntry) => void
+  similarEntries?: GalleryDisplayEntry[]
   onRetryTagging?: (entry: SolvedGalleryEntry) => Promise<void>
   isRetryingTagging?: boolean
   onClose: () => void
@@ -48,6 +53,10 @@ export default function UploadGalleryDetailDialog({
   entry,
   onReplayEntry,
   onCollectEntry,
+  onTagFilter,
+  onFetchRandomImage,
+  onOpenSimilarEntry,
+  similarEntries = [],
   onRetryTagging,
   isRetryingTagging = false,
   onClose,
@@ -100,7 +109,9 @@ export default function UploadGalleryDetailDialog({
     ? replayButtonRef
     : onCollectEntry
       ? collectButtonRef
-      : closeButtonRef
+    : closeButtonRef
+  const canUseInteractiveTags = Boolean(onTagFilter)
+  const canSearchTags = Boolean(onFetchRandomImage)
 
   const handleActionKeyDown = useCallback((event: ReactKeyboardEvent<HTMLButtonElement>) => {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
@@ -172,6 +183,7 @@ export default function UploadGalleryDetailDialog({
     <AnimatedDialog
       overlayClassName="gallery-detail-overlay"
       dialogClassName="gallery-detail-dialog"
+      overlayStyle={detailPaletteStyle}
       dialogStyle={detailPaletteStyle}
       titleId="gallery-detail-title"
       descriptionId={descriptionId}
@@ -289,7 +301,27 @@ export default function UploadGalleryDetailDialog({
               {aiTags.length > 0 ? (
                 <div className="gallery-detail-ai-tags" aria-label="KI-Tags">
                   {aiTags.map((tag) => (
-                    <span key={tag.label}>#{tag.label}</span>
+                    <span key={tag.label} className="gallery-detail-ai-tag-chip">
+                      <button
+                        type="button"
+                        className="gallery-detail-ai-tag-filter"
+                        onClick={() => onTagFilter?.(tag.label)}
+                        disabled={!canUseInteractiveTags}
+                        title={`Galerie nach ${tag.label} filtern`}
+                      >
+                        #{tag.label}
+                      </button>
+                      <button
+                        type="button"
+                        className="gallery-detail-ai-tag-search"
+                        onClick={() => onFetchRandomImage?.(tag.label)}
+                        disabled={!canSearchTags}
+                        title={`Neues Online-Motiv zu ${tag.label} suchen`}
+                        aria-label={`Neues Online-Motiv zu ${tag.label} suchen`}
+                      >
+                        <Search aria-hidden="true" size={13} strokeWidth={2.4} />
+                      </button>
+                    </span>
                   ))}
                 </div>
               ) : null}
@@ -304,6 +336,53 @@ export default function UploadGalleryDetailDialog({
                   ))}
                 </div>
               ) : null}
+            </section>
+          ) : null}
+
+          {similarEntries.length > 0 ? (
+            <section className="gallery-detail-similar-motifs" aria-labelledby="gallery-detail-similar-title">
+              <div className="gallery-detail-replay-header">
+                <span id="gallery-detail-similar-title" className="saved-games-kicker">Aehnliche Motive</span>
+                <p className="gallery-detail-replay-copy">
+                  Motive mit ueberschneidenden KI-Tags aus deiner lokalen Galerie.
+                </p>
+              </div>
+
+              <div className="gallery-detail-similar-strip" aria-label="Aehnliche Galerie-Motive">
+                {similarEntries.map((similarEntry) => {
+                  const similarRepresentativeEntry = similarEntry.representativeEntry
+                  const similarImage = similarRepresentativeEntry.previewImage ?? similarRepresentativeEntry.sourceImage
+                  const similarTags = (similarRepresentativeEntry.tags ?? []).slice(0, 3)
+
+                  return (
+                    <button
+                      key={similarEntry.id}
+                      type="button"
+                      className="gallery-detail-similar-motif"
+                      onClick={() => onOpenSimilarEntry?.(similarEntry)}
+                      aria-label={`Aehnliches Motiv ${formatDifficultyLabel(similarRepresentativeEntry.config)} vom ${formatDate(similarRepresentativeEntry.completedAt)} anzeigen`}
+                    >
+                      {similarImage ? (
+                        <img
+                          src={similarImage}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <span className="gallery-detail-similar-placeholder">Archiv</span>
+                      )}
+                      <span className="gallery-detail-similar-overlay">
+                        <strong>{formatDifficultyLabel(similarRepresentativeEntry.config)}</strong>
+                        <span>{formatGallerySolveCount(similarEntry.totalSolveCount)}</span>
+                        {similarTags.length > 0 ? (
+                          <small>{similarTags.map((tag) => `#${tag.label}`).join(' ')}</small>
+                        ) : null}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             </section>
           ) : null}
 

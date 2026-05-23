@@ -74,9 +74,14 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
   return readBlobAsDataUrl(await response.blob())
 }
 
-async function fetchCuratedPexelsPhotos(page: number): Promise<PexelsPhoto[]> {
+async function fetchCuratedPexelsPhotos(page: number, query?: string): Promise<PexelsPhoto[]> {
+  const searchQuery = query?.trim()
+  const endpoint = searchQuery
+    ? `${PEXELS_API_BASE_URL}/search?query=${encodeURIComponent(searchQuery)}&page=${page}&per_page=${PEXELS_PER_PAGE}`
+    : `${PEXELS_API_BASE_URL}/curated?page=${page}&per_page=${PEXELS_PER_PAGE}`
+
   const response = await fetch(
-    `${PEXELS_API_BASE_URL}/curated?page=${page}&per_page=${PEXELS_PER_PAGE}`,
+    endpoint,
     {
       cache: 'no-store',
       headers: {
@@ -97,14 +102,14 @@ export function isPexelsConfigured(): boolean {
   return PEXELS_API_KEY.length > 0
 }
 
-export async function fetchRandomPexelsImage(): Promise<string> {
+export async function fetchRandomPexelsImage(query?: string): Promise<string> {
   if (!isPexelsConfigured()) {
     throw new Error('Pexels-API-Key fehlt')
   }
 
   for (let attempt = 0; attempt < PEXELS_MAX_ATTEMPTS; attempt += 1) {
     const page = randomInt(1, PEXELS_RANDOM_PAGE_MAX)
-    const photos = await fetchCuratedPexelsPhotos(page)
+    const photos = await fetchCuratedPexelsPhotos(page, query)
     const selectedPhoto = pickRandomPexelsPhoto(photos)
     const imageUrl = selectedPhoto ? getPexelsImageUrl(selectedPhoto) : null
 

@@ -1848,11 +1848,14 @@
   height: clamp(320px, 42dvh, 520px);
   min-height: 320px;
   border-radius: 28px;
-  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 16%, rgba(148, 163, 184, 0.2));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 62%, rgba(148, 163, 184, 0.2));
   background:
-    radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 54%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 145%, transparent) 0%, transparent 54%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--image-glow) 28%, transparent) 0%, transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, rgba(255, 255, 255, 0.18) 82%, var(--image-accent-soft)), color-mix(in srgb, rgba(255, 255, 255, 0.08) 82%, var(--image-accent-strong)));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 34px color-mix(in srgb, var(--image-radiance) 10%, transparent);
   overflow: hidden;
 }
 
@@ -1940,9 +1943,13 @@
   min-height: 138px;
   padding: 16px 18px;
   border-radius: 22px;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  box-shadow: var(--panel-shadow);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 54%, var(--card-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 22%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--card-bg) 80%, var(--image-accent-soft));
+  box-shadow:
+    var(--panel-shadow),
+    0 10px 24px color-mix(in srgb, var(--primary-color) 7%, transparent);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1979,9 +1986,13 @@
 .dashboard-insight-card,
 .dashboard-difficulty-card,
 .dashboard-history-item {
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  box-shadow: var(--panel-shadow);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 54%, var(--card-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 22%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--card-bg) 80%, var(--image-accent-soft));
+  box-shadow:
+    var(--panel-shadow),
+    0 10px 24px color-mix(in srgb, var(--primary-color) 7%, transparent);
 }
 
 .dashboard-insight-card {
@@ -2028,12 +2039,12 @@
   min-width: 0;
   padding: 14px;
   border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 16%, var(--card-border));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 54%, var(--card-border));
   background:
-    radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 58%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 130%, transparent) 0%, transparent 58%),
     linear-gradient(180deg,
-      color-mix(in srgb, var(--image-accent-solid) 6%, var(--surface-elevated)),
-      color-mix(in srgb, var(--image-accent-solid) 10%, var(--surface-soft)));
+      color-mix(in srgb, var(--image-accent-solid) 14%, var(--surface-elevated)),
+      color-mix(in srgb, var(--image-accent-solid) 18%, var(--surface-soft)));
 }
 
 .dashboard-difficulty-legend-item strong {
@@ -2099,12 +2110,12 @@
   min-height: 122px;
   padding: 12px;
   border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 18%, var(--card-border));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 56%, var(--card-border));
   background:
-    radial-gradient(circle at top left, var(--image-accent-soft) 0%, transparent 56%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 135%, transparent) 0%, transparent 56%),
     linear-gradient(180deg,
-      color-mix(in srgb, var(--image-accent-solid) 8%, var(--surface-elevated)),
-      color-mix(in srgb, var(--image-accent-solid) 12%, var(--surface-soft)));
+      color-mix(in srgb, var(--image-accent-solid) 16%, var(--surface-elevated)),
+      color-mix(in srgb, var(--image-accent-solid) 20%, var(--surface-soft)));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
@@ -2166,8 +2177,8 @@
   min-height: 34px;
   padding: 7px 12px;
   border-radius: 999px;
-  border: 1px solid var(--secondary-border);
-  background: var(--secondary-bg);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 44%, var(--secondary-border));
+  background: color-mix(in srgb, var(--secondary-bg) 72%, var(--image-accent-soft));
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
@@ -2176,9 +2187,14 @@
 }
 
 .dashboard-filter-chip.is-active {
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-radiance-ring) 18%, transparent) 0%, transparent 58%),
+    linear-gradient(135deg, var(--primary-color), color-mix(in srgb, var(--primary-hover) 78%, var(--image-accent-solid)));
   border-color: transparent;
   color: var(--text-on-primary);
+  box-shadow:
+    var(--secondary-shadow),
+    0 10px 20px color-mix(in srgb, var(--primary-color) 20%, transparent);
 }
 
 .dashboard-history-shell,
@@ -2335,8 +2351,8 @@
   min-height: 34px;
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid var(--secondary-border);
-  background: var(--secondary-bg);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 44%, var(--secondary-border));
+  background: color-mix(in srgb, var(--secondary-bg) 72%, var(--image-accent-soft));
   box-shadow: var(--secondary-shadow);
   color: var(--text-secondary);
   font-size: 12px;
@@ -3937,6 +3953,10 @@
   min-width: 0;
 }
 
+.gallery-detail-ai-tags {
+  gap: 8px;
+}
+
 .gallery-card-ai-tags button,
 .gallery-card-ai-tags span,
 .gallery-card-ai-retry,
@@ -3963,7 +3983,99 @@
     border-color 0.2s ease,
     background 0.2s ease,
     color 0.2s ease,
-    transform 0.2s ease;
+  transform 0.2s ease;
+}
+
+.gallery-detail-ai-tag-chip {
+  isolation: isolate;
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--image-radiance-ring) 34%, var(--secondary-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--image-accent-solid) 16%, transparent), transparent 64%),
+    color-mix(in srgb, var(--glass-bg) 72%, var(--secondary-bg));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 18px color-mix(in srgb, var(--image-radiance) 10%, transparent);
+  overflow: hidden;
+  transition:
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.22s ease,
+    background 0.22s ease;
+}
+
+.gallery-detail-ai-tag-chip:hover,
+.gallery-detail-ai-tag-chip:focus-within {
+  border-color: color-mix(in srgb, var(--image-radiance-ring) 58%, var(--secondary-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--image-radiance) 20%, transparent), transparent 62%),
+    color-mix(in srgb, var(--image-accent-solid) 14%, var(--secondary-bg));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 24px color-mix(in srgb, var(--image-radiance) 18%, transparent);
+  transform: translateY(-1px);
+}
+
+.gallery-detail-ai-tag-filter,
+.gallery-detail-ai-tag-search {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 0;
+  min-height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: color-mix(in srgb, var(--image-radiance-ring) 76%, var(--text-main));
+  cursor: pointer;
+  font: inherit;
+}
+
+.gallery-detail-ai-tag-filter {
+  padding: 5px 9px 5px 11px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.gallery-detail-ai-tag-search {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  padding: 0;
+  color: color-mix(in srgb, var(--image-radiance-ring) 82%, var(--primary-color));
+  background: color-mix(in srgb, var(--image-radiance) 12%, transparent);
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.gallery-detail-ai-tag-search:hover:not(:disabled),
+.gallery-detail-ai-tag-search:focus-visible {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--image-radiance) 24%, var(--primary-color));
+  transform: scale(1.04);
+}
+
+.gallery-detail-ai-tag-filter:focus-visible,
+.gallery-detail-ai-tag-search:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--image-radiance-ring) 70%, transparent);
+  outline-offset: 1px;
+}
+
+.gallery-detail-ai-tag-filter:disabled,
+.gallery-detail-ai-tag-search:disabled {
+  cursor: default;
+  opacity: 0.62;
 }
 
 .gallery-card-ai-tags button:hover:not(:disabled),
@@ -4011,7 +4123,6 @@
 }
 
 .gallery-detail-dialog .saved-game-chip,
-.gallery-detail-dialog .gallery-detail-ai-tags span,
 .gallery-detail-dialog .gallery-detail-ai-suggestions span,
 .gallery-detail-dialog .gallery-detail-timeline-insights span {
   border-color: color-mix(in srgb, var(--image-radiance-ring) 28%, var(--secondary-border));
@@ -4042,6 +4153,148 @@
   color: var(--danger-color);
   font-size: 0.85rem;
   line-height: 1.4;
+}
+
+.gallery-detail-similar-motifs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 24%, var(--card-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-radiance) 20%, transparent) 0%, transparent 58%),
+    color-mix(in srgb, var(--image-accent-solid) 8%, var(--card-bg));
+  box-shadow:
+    var(--panel-shadow),
+    0 0 24px color-mix(in srgb, var(--image-radiance) 10%, transparent);
+}
+
+.gallery-detail-similar-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(148px, 184px);
+  gap: 12px;
+  min-width: 0;
+  padding: 2px 2px 10px;
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x proximity;
+  scrollbar-gutter: stable;
+}
+
+.gallery-detail-similar-motif {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 4 / 3;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--image-radiance-ring) 30%, var(--card-border));
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 20% 16%, color-mix(in srgb, var(--image-radiance) 22%, transparent), transparent 56%),
+    var(--preview-bg);
+  box-shadow:
+    0 12px 26px rgba(2, 6, 23, 0.16),
+    0 0 18px color-mix(in srgb, var(--image-radiance) 10%, transparent);
+  cursor: pointer;
+  overflow: hidden;
+  scroll-snap-align: start;
+  transition:
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    transform 0.24s ease;
+}
+
+.gallery-detail-similar-motif:hover,
+.gallery-detail-similar-motif:focus-visible {
+  border-color: color-mix(in srgb, var(--image-radiance-ring) 62%, var(--card-border));
+  box-shadow:
+    0 16px 32px rgba(2, 6, 23, 0.22),
+    0 0 30px color-mix(in srgb, var(--image-radiance) 24%, transparent);
+  transform: translateY(-2px) scale(1.015);
+}
+
+.gallery-detail-similar-motif:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--image-radiance-ring) 70%, transparent);
+  outline-offset: 3px;
+}
+
+.gallery-detail-similar-motif img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1);
+  transition: transform 0.3s ease;
+}
+
+.gallery-detail-similar-motif:hover img,
+.gallery-detail-similar-motif:focus-visible img {
+  transform: scale(1.06);
+}
+
+.gallery-detail-similar-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.gallery-detail-similar-overlay {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 28px 10px 10px;
+  background:
+    linear-gradient(180deg, transparent, rgba(2, 6, 23, 0.82));
+  color: #fff;
+  text-align: left;
+  transform: translateY(8px);
+  opacity: 0.92;
+  transition:
+    opacity 0.24s ease,
+    transform 0.24s ease;
+}
+
+.gallery-detail-similar-motif:hover .gallery-detail-similar-overlay,
+.gallery-detail-similar-motif:focus-visible .gallery-detail-similar-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.gallery-detail-similar-overlay strong,
+.gallery-detail-similar-overlay span,
+.gallery-detail-similar-overlay small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-detail-similar-overlay strong {
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.gallery-detail-similar-overlay span,
+.gallery-detail-similar-overlay small {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
 }
 
 .gallery-tag-manager-overlay {
@@ -5916,8 +6169,10 @@
   position: relative;
   padding: 20px;
   border-radius: 24px;
-  border: 1px solid var(--glass-panel-border);
-  background: var(--glass-panel-bg);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 58%, var(--glass-panel-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 22%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg) 82%, var(--image-accent-soft));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
     var(--glass-panel-shadow);
@@ -5930,8 +6185,10 @@
   position: relative;
   padding: 0;
   border-radius: 24px;
-  border: 1px solid var(--glass-panel-border);
-  background: var(--glass-panel-bg);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 58%, var(--glass-panel-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 22%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg) 82%, var(--image-accent-soft));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
     var(--glass-panel-shadow);
@@ -5950,7 +6207,8 @@
   inset: 0;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 18%),
-    radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 32%);
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-radiance) 18%, transparent), transparent 32%),
+    radial-gradient(circle at bottom left, color-mix(in srgb, var(--image-accent-solid) 10%, transparent), transparent 36%);
   pointer-events: none;
 }
 
@@ -5972,7 +6230,9 @@
 }
 
 .stats-report-section-summary:hover {
-  background: var(--glass-panel-bg-hover);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 28%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg-hover) 78%, var(--image-accent-soft));
 }
 
 .stats-report-section-summary-main {
@@ -6014,8 +6274,8 @@
   min-height: 28px;
   padding: 4px 12px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--secondary-bg) 82%, transparent);
-  border: 1px solid color-mix(in srgb, var(--secondary-border) 88%, rgba(255, 255, 255, 0.12));
+  background: color-mix(in srgb, var(--secondary-bg) 68%, var(--image-accent-soft));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 46%, rgba(255, 255, 255, 0.12));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     var(--secondary-shadow);
@@ -6031,8 +6291,8 @@
   min-height: 32px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--secondary-bg) 82%, transparent);
-  border: 1px solid color-mix(in srgb, var(--secondary-border) 88%, rgba(255, 255, 255, 0.12));
+  background: color-mix(in srgb, var(--secondary-bg) 68%, var(--image-accent-soft));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 46%, rgba(255, 255, 255, 0.12));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: var(--text-secondary);
   font-size: 12px;
@@ -6112,8 +6372,10 @@
   min-width: 0;
   padding: 16px 18px;
   border-radius: 20px;
-  border: 1px solid var(--glass-panel-border);
-  background: var(--glass-panel-bg);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 54%, var(--glass-panel-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 20%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg) 80%, var(--image-accent-soft));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     var(--secondary-shadow);
@@ -6182,14 +6444,14 @@
   border-color: color-mix(in srgb, #16a34a 28%, var(--glass-panel-border));
   background:
     radial-gradient(circle at top left, color-mix(in srgb, #22c55e 18%, transparent) 0%, transparent 56%),
-    var(--glass-panel-bg);
+    color-mix(in srgb, var(--glass-panel-bg) 82%, var(--image-accent-soft));
 }
 
 .stats-report-run-card.is-negative {
   border-color: color-mix(in srgb, var(--danger-color) 28%, var(--glass-panel-border));
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--danger-color) 16%, transparent) 0%, transparent 56%),
-    var(--glass-panel-bg);
+    color-mix(in srgb, var(--glass-panel-bg) 82%, var(--image-accent-soft));
 }
 
 
@@ -6207,10 +6469,11 @@
   gap: 10px;
   padding: 11px;
   border-radius: 24px;
-  border: 1px solid var(--glass-panel-border);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 58%, var(--glass-panel-border));
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 58%, transparent), transparent),
-    var(--glass-panel-bg);
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 22%, transparent) 0%, transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 54%, var(--image-accent-soft)), transparent),
+    color-mix(in srgb, var(--glass-panel-bg) 82%, var(--image-accent-soft));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     inset 0 -1px 0 rgba(0, 0, 0, 0.18),
@@ -6229,9 +6492,10 @@
   min-height: 52px;
   padding: 11px 17px;
   border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--secondary-border) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 42%, var(--secondary-border));
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 54%, transparent), color-mix(in srgb, var(--secondary-bg) 90%, transparent));
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 62%, transparent) 0%, transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 54%, var(--image-accent-soft)), color-mix(in srgb, var(--secondary-bg) 78%, var(--image-accent-strong)));
   color: color-mix(in srgb, var(--text-main) 84%, var(--text-secondary));
   font-size: 14px;
   font-weight: 900;
@@ -6259,17 +6523,19 @@
 .stats-visual-tab:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--primary-color) 34%, var(--secondary-border));
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--primary-color) 13%, var(--surface-elevated)), color-mix(in srgb, var(--secondary-bg) 92%, transparent));
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 90%, transparent) 0%, transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--primary-color) 18%, var(--surface-elevated)), color-mix(in srgb, var(--secondary-bg) 76%, var(--image-accent-strong)));
   transform: translateY(-1px);
 }
 
 .stats-visual-tab.is-active {
   border-color: color-mix(in srgb, var(--primary-color) 88%, var(--secondary-border));
   background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-radiance-ring) 16%, transparent) 0%, transparent 56%),
     linear-gradient(
       180deg,
       color-mix(in srgb, var(--primary-color) 54%, var(--surface-elevated)),
-      color-mix(in srgb, var(--primary-color) 32%, var(--secondary-bg))
+      color-mix(in srgb, var(--primary-color) 32%, var(--image-accent-solid))
     );
   color: var(--text-main);
   box-shadow:
@@ -6463,8 +6729,10 @@
   min-width: 0;
   padding: 16px;
   border-radius: 18px;
-  border: 1px solid var(--glass-panel-border);
-  background: color-mix(in srgb, var(--glass-panel-bg) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 50%, var(--glass-panel-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 18%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg) 78%, var(--image-accent-soft));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
     0 8px 18px color-mix(in srgb, var(--image-accent-solid) 4%, rgba(2, 6, 23, 0.08));
@@ -6535,8 +6803,10 @@
   align-items: center;
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1px solid var(--glass-panel-border);
-  background: var(--glass-panel-bg);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 50%, var(--glass-panel-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 18%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg) 78%, var(--image-accent-soft));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     var(--secondary-shadow);
@@ -6602,8 +6872,8 @@
 .stats-visual-help-detail-chips span {
   padding: 4px 7px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--secondary-border) 72%, transparent);
-  background: color-mix(in srgb, var(--surface-soft) 56%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 38%, var(--secondary-border));
+  background: color-mix(in srgb, var(--surface-soft) 56%, var(--image-accent-soft));
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 800;
@@ -6615,8 +6885,8 @@
   height: 12px;
   border-radius: 999px;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--secondary-border) 80%, transparent);
-  background: color-mix(in srgb, var(--surface-soft) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 42%, var(--secondary-border));
+  background: color-mix(in srgb, var(--surface-soft) 68%, var(--image-accent-soft));
 }
 
 .stats-visual-bar-fill {
@@ -6718,11 +6988,13 @@
   padding: 18px 18px 34px 54px;
   margin: 6px 0;
   border-radius: 18px;
-  border: 1px solid var(--glass-panel-border);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 56%, var(--glass-panel-border));
   background:
-    radial-gradient(circle at 18% 10%, color-mix(in srgb, var(--primary-color) 12%, transparent) 0%, transparent 36%),
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 78%, transparent), transparent),
-    color-mix(in srgb, var(--surface-soft) 60%, transparent);
+    radial-gradient(circle at 18% 10%, color-mix(in srgb, var(--image-radiance) 22%, transparent) 0%, transparent 36%),
+    radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--image-glow) 18%, transparent) 0%, transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 70%, var(--image-accent-soft)), transparent),
+    color-mix(in srgb, var(--surface-soft) 60%, var(--image-accent-strong));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   overflow: visible;
 }
 
@@ -7051,8 +7323,10 @@
   margin: 0 -4px;
   padding: 8px;
   border-radius: 20px;
-  border: 1px solid var(--glass-panel-border);
-  background: var(--glass-panel-bg);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 50%, var(--glass-panel-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 16%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg) 80%, var(--image-accent-soft));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     var(--secondary-shadow);
@@ -7074,9 +7348,9 @@
   top: 0;
   z-index: 1;
   padding: 12px 12px;
-  border-top: 1px solid var(--secondary-border);
-  border-bottom: 1px solid var(--secondary-border);
-  background: var(--secondary-bg);
+  border-top: 1px solid color-mix(in srgb, var(--image-radiance-border) 36%, var(--secondary-border));
+  border-bottom: 1px solid color-mix(in srgb, var(--image-radiance-border) 36%, var(--secondary-border));
+  background: color-mix(in srgb, var(--secondary-bg) 70%, var(--image-accent-soft));
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 800;
@@ -7127,8 +7401,8 @@
 .stats-data-table tbody td {
   padding: 14px 16px;
   vertical-align: top;
-  border-bottom: 1px solid var(--divider);
-  background: color-mix(in srgb, var(--surface-elevated) 86%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--image-radiance-border) 24%, var(--divider));
+  background: color-mix(in srgb, var(--surface-elevated) 78%, var(--image-accent-soft));
 }
 
 .stats-data-table tbody th {
@@ -7242,11 +7516,11 @@
   min-height: 26px;
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid var(--secondary-border);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 42%, var(--secondary-border));
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, rgba(255, 255, 255, 0.18) 60%, var(--surface-elevated)),
-    color-mix(in srgb, rgba(255, 255, 255, 0.08) 40%, var(--surface-soft))
+    color-mix(in srgb, rgba(255, 255, 255, 0.18) 60%, var(--image-accent-soft)),
+    color-mix(in srgb, rgba(255, 255, 255, 0.08) 40%, var(--image-accent-strong))
   );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
@@ -7722,8 +7996,10 @@
   padding: 10px 16px;
   margin-bottom: 6px;
   border-radius: 14px;
-  background: var(--glass-panel-bg);
-  border: 1px solid var(--glass-panel-border);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 16%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg) 80%, var(--image-accent-soft));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 48%, var(--glass-panel-border));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
     var(--secondary-shadow);
@@ -7753,8 +8029,10 @@
 .stats-report-table-row {
   position: relative;
   border-radius: 18px;
-  border: 1px solid var(--glass-panel-border);
-  background: var(--glass-panel-bg);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 48%, var(--glass-panel-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 16%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg) 80%, var(--image-accent-soft));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     var(--secondary-shadow);
@@ -7779,7 +8057,9 @@
 }
 
 .stats-report-table-summary:hover {
-  background: var(--glass-panel-bg-hover);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 24%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg-hover) 78%, var(--image-accent-soft));
 }
 
 .stats-report-table-summary-difficulties {
@@ -7841,7 +8121,7 @@
 
 .stats-report-row-details {
   padding: 2px 16px 16px;
-  border-top: 1px solid var(--card-border);
+  border-top: 1px solid color-mix(in srgb, var(--image-radiance-border) 38%, var(--card-border));
 }
 
 .stats-report-detail-grid {
@@ -7855,8 +8135,10 @@
   position: relative;
   padding: 14px;
   border-radius: 16px;
-  border: 1px solid var(--glass-panel-border);
-  background: var(--glass-panel-bg);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 48%, var(--glass-panel-border));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 16%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--glass-panel-bg) 80%, var(--image-accent-soft));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     var(--secondary-shadow);

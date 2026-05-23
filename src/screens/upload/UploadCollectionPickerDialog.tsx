@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
 import { ImageCollection } from '../../types/index'
@@ -12,6 +12,7 @@ interface UploadCollectionPickerDialogProps {
   onCreateCollection: (name: string, imageIds: string[]) => Promise<void>
   onAddToCollection: (collectionId: string, imageIds: string[]) => Promise<void>
   onClose: () => void
+  paletteStyle?: CSSProperties
 }
 
 export default function UploadCollectionPickerDialog({
@@ -22,6 +23,7 @@ export default function UploadCollectionPickerDialog({
   onCreateCollection,
   onAddToCollection,
   onClose,
+  paletteStyle,
 }: UploadCollectionPickerDialogProps) {
   const titleId = 'collection-picker-title'
   const descriptionId = 'collection-picker-description'
@@ -79,6 +81,7 @@ export default function UploadCollectionPickerDialog({
       trapFocus
       restoreFocus
       lockScroll
+      overlayStyle={paletteStyle}
       initialFocusRef={initialFocusRef}
     >
       <h3 id={titleId}>Zu Sammlung hinzufuegen</h3>

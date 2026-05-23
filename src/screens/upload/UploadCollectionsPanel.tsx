@@ -1,4 +1,4 @@
-import type { AriaRole, KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react'
+import type { AriaRole, CSSProperties, KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import {
@@ -36,6 +36,7 @@ interface UploadCollectionsPanelProps {
   titleId?: string
   panelRole?: AriaRole
   primaryActionRef?: RefObject<HTMLButtonElement>
+  paletteStyle?: CSSProperties
 }
 
 interface RenameState {
@@ -65,6 +66,7 @@ export default function UploadCollectionsPanel({
   titleId = 'workspace-window-collections-title',
   panelRole = 'region',
   primaryActionRef,
+  paletteStyle,
 }: UploadCollectionsPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const pendingImageRemovalFocusRef = useRef<PendingCollectionImageRemovalFocus | null>(null)
@@ -376,6 +378,7 @@ export default function UploadCollectionsPanel({
           isBusy={busyCollectionId === renamingCollection.collection.id}
           onCancel={() => setRenamingCollection(null)}
           onConfirm={() => void handleRenameSubmit()}
+          paletteStyle={paletteStyle}
         />
       ) : null}
 
@@ -394,6 +397,7 @@ export default function UploadCollectionsPanel({
           isBusy={busyCollectionId === pendingDeleteCollection.id}
           onCancel={() => setPendingDeleteCollection(null)}
           onConfirm={() => void handleDeleteConfirm()}
+          paletteStyle={paletteStyle}
         />
       ) : null}
     </>

@@ -1,6 +1,15 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { createPortal } from 'react-dom'
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from 'react'
 import {
   CircleHelp,
   Command,
@@ -38,6 +47,7 @@ interface ThemeSwitcherProps {
   onOpenCommandPalette?: () => void
   onOpenHelp?: () => void
   saveStatus?: ThemeSwitcherSaveStatus | null
+  paletteStyle?: CSSProperties
 }
 
 type ThemeSwitcherPopover = 'music' | 'style' | null
@@ -87,6 +97,7 @@ export default function ThemeSwitcher({
   onOpenCommandPalette,
   onOpenHelp,
   saveStatus = null,
+  paletteStyle,
 }: ThemeSwitcherProps) {
   const { emotionThemeEnabled, imagePalette, mode, toggleEmotionTheme, toggleMode } = useTheme()
   const isMusicMuted = useMusicMuted()
@@ -510,7 +521,7 @@ export default function ThemeSwitcher({
   ].filter(Boolean).join(' ')
 
   const switcher = (
-    <div className={switcherClassName} ref={switcherRef}>
+    <div className={switcherClassName} ref={switcherRef} style={paletteStyle}>
       <div className="theme-switcher-shell">
         <div className="theme-switcher-rail-head">
           <span className="theme-switcher-rail-mark" aria-hidden="true">SP</span>

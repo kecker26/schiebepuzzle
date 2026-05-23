@@ -5,7 +5,7 @@
 - Halte Aenderungen klein, nachvollziehbar und kompatibel mit dem bestehenden React-, TypeScript- und Vite-Setup.
 
 ## Projektueberblick
-- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, Gemini-Tagging, Gemini-Spielstandstiteln, sentiment-basiertem Bild-Theme, Sammlungen, Backup und Musik.
+- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, interaktivem KI-Tag-System, Gemini-Tagging, Gemini-Spielstandstiteln, sentiment-basiertem Bild-Theme, Sammlungen, Backup und Musik.
 - Frontend: React 18 + TypeScript.
 - Animationen: `motion` / `motion/react`.
 - Icons: `lucide-react` fuer React-SVG-Icons, plus kuratierte lokale SVGs unter `src/assets/system/`.
@@ -32,7 +32,7 @@
 - `src/workers/puzzle-solver.worker.ts`: Worker fuer rechenintensive Solver-Aufgaben.
 - `src/services/SaveService.ts`, `StatsService.ts`, `GalleryService.ts`, `CollectionService.ts`, `BackupService.ts`, `MusicService.ts`: Frontend-Zugriff auf lokale `/api/*`-Routen.
 - `src/services/ImageThemeService.ts`: lokale Farbanalyse, lokale Stimmungsklassifikation und intensive semantische Theme-Paletten fuer Bilder.
-- `src/services/RandomImageService.ts`, `PromptImageService.ts` und Provider-Dateien wie `NasaImageProvider.ts`, `MetMuseumImageProvider.ts`, `PicsumImageProvider.ts`, `PixabayImageProvider.ts`, `PexelsImageProvider.ts`, `WikimediaImageProvider.ts`, `SmithsonianImageProvider.ts`, `ArtInstituteImageProvider.ts`, `GeneratedImageProvider.ts`: Zufallsbild- und Prompt-Bild-Quellen.
+- `src/services/RandomImageService.ts`, `PromptImageService.ts` und Provider-Dateien wie `NasaImageProvider.ts`, `MetMuseumImageProvider.ts`, `PicsumImageProvider.ts`, `PixabayImageProvider.ts`, `PexelsImageProvider.ts`, `WikimediaImageProvider.ts`, `SmithsonianImageProvider.ts`, `ArtInstituteImageProvider.ts`, `GeneratedImageProvider.ts`: Zufallsbild-, Tag-Suchbild- und Prompt-Bild-Quellen.
 - `src/services/AudioService.ts`, `MusicPlaybackController.ts`, `services/music/` und `musicStyles.ts`: lokale und externe Musikauswahl, Fallback-Tracks und Wiedergabezustand.
 - `src/services/api/apiClient.ts`: gemeinsamer Fetch-/Fehler-Wrapper fuer Frontend-API-Calls.
 - `localApi.ts`: lokale Dateipersistenz und API-Routen fuer Saves, Stats, Galerie, Sammlungen, Backup, Clipboard und Musik.

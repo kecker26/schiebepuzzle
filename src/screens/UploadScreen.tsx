@@ -76,7 +76,7 @@ interface UploadScreenProps {
   collectionsError?: string | null
   isFetchingRandom: boolean
   randomImageError: string | null
-  onFetchRandomImage: () => Promise<void> | void
+  onFetchRandomImage: (query?: string) => Promise<void> | void
   onLoadSavedGame: (saveId: string) => Promise<void>
   onDeleteSavedGame: (saveId: string) => Promise<void>
   onDeleteAllSavedGames: () => Promise<void>
@@ -1033,34 +1033,20 @@ export default function UploadScreen({
     palette: ImageThemePalette | null
     source: string | null
   }>(() => {
-    if (activeWindow === 'savedGames' && latestSavedGame) {
-      return {
-        palette: latestSavedGame.imageTheme ?? null,
-        source: latestSavedGame.previewImage,
-      }
-    }
-
-    if ((activeWindow === 'gallery' || activeWindow === 'collections') && latestGalleryEntry) {
-      return {
-        palette: latestGalleryEntry.imageTheme ?? null,
-        source: latestGalleryEntry.previewImage ?? latestGalleryEntry.sourceImage,
-      }
-    }
-
     const latestSaveTime = latestSavedGame ? Date.parse(latestSavedGame.updatedAt) : Number.NEGATIVE_INFINITY
     const latestGalleryTime = latestGalleryEntry ? Date.parse(latestGalleryEntry.completedAt) : Number.NEGATIVE_INFINITY
 
-    if (latestGalleryEntry && latestGalleryTime > latestSaveTime) {
-      return {
-        palette: latestGalleryEntry.imageTheme ?? null,
-        source: latestGalleryEntry.previewImage ?? latestGalleryEntry.sourceImage,
-      }
-    }
-
-    if (latestSavedGame) {
+    if (latestSavedGame && latestSaveTime >= latestGalleryTime) {
       return {
         palette: latestSavedGame.imageTheme ?? null,
         source: latestSavedGame.previewImage,
+      }
+    }
+
+    if (latestGalleryEntry) {
+      return {
+        palette: latestGalleryEntry.imageTheme ?? null,
+        source: latestGalleryEntry.previewImage ?? latestGalleryEntry.sourceImage,
       }
     }
 
@@ -1068,7 +1054,7 @@ export default function UploadScreen({
       palette: null,
       source: null,
     }
-  }, [activeWindow, latestGalleryEntry, latestSavedGame])
+  }, [latestGalleryEntry, latestSavedGame])
   const { activePalette, paletteStyle } = useUploadImagePalette({
     paletteSource: uploadPaletteCandidate.source,
     storedPalette: uploadPaletteCandidate.palette,
@@ -1355,6 +1341,7 @@ export default function UploadScreen({
         <ErrorToast
           message={error || savedGamesError || statsError || galleryError || collectionsError || randomImageError || null}
           onDismiss={clearError}
+          paletteStyle={paletteStyle}
         />
 
         <input
@@ -1453,6 +1440,7 @@ export default function UploadScreen({
           {!isWorkspaceExiting && activeWindow !== 'start' && (
             <UploadDashboard
               activeWindow={activeWindow}
+              paletteStyle={paletteStyle}
               savedGames={savedGames}
               savedGamesCount={savedGamesCount}
               loadingSaveId={loadingSaveId}
@@ -1484,6 +1472,7 @@ export default function UploadScreen({
               onDeleteGalleryEntries={onDeleteGalleryEntries}
               onUpdateGalleryTags={onUpdateGalleryTags}
               onRetryGalleryTagging={onRetryGalleryTagging}
+              onFetchRandomImage={onFetchRandomImage}
               onCreateImageCollection={handleCreateCollection}
               onUpdateImageCollection={handleUpdateCollection}
               onDeleteImageCollection={handleDeleteCollection}
@@ -1504,6 +1493,7 @@ export default function UploadScreen({
               isLoading={isLoadingBackupFiles}
               deletingFileName={deletingBackupFileName}
               restoreFocusFallbackRef={backupImportActionRef}
+              paletteStyle={paletteStyle}
               onClose={handleCloseBackupBrowser}
               onDeleteBackup={(backup) => {
                 void handleDeleteBackupFile(backup)
@@ -1532,6 +1522,7 @@ export default function UploadScreen({
               }}
               confirmButtonRef={importBackupConfirmButtonRef}
               restoreFocusFallbackRef={backupImportActionRef}
+              paletteStyle={paletteStyle}
             />
           ) : null}
         </AnimatePresence>
@@ -1557,6 +1548,7 @@ export default function UploadScreen({
                 void handleConfirmDelete()
               }}
               confirmButtonRef={deleteConfirmButtonRef}
+              paletteStyle={paletteStyle}
             />
           )}
 
@@ -1579,6 +1571,7 @@ export default function UploadScreen({
                 void handleConfirmDeleteAllSavedGames()
               }}
               confirmButtonRef={deleteAllConfirmButtonRef}
+              paletteStyle={paletteStyle}
             />
           )}
 
@@ -1601,6 +1594,7 @@ export default function UploadScreen({
                 void handleConfirmStatsReset()
               }}
               confirmButtonRef={resetStatsConfirmButtonRef}
+              paletteStyle={paletteStyle}
             />
           )}
 
@@ -1624,6 +1618,7 @@ export default function UploadScreen({
                 void handleConfirmGalleryReset()
               }}
               confirmButtonRef={resetGalleryConfirmButtonRef}
+              paletteStyle={paletteStyle}
             />
           )}
 
@@ -1635,6 +1630,7 @@ export default function UploadScreen({
               position={contextMenuState}
               items={uploadContextActions}
               onClose={closeContextMenu}
+              paletteStyle={paletteStyle}
             />
           )}
         </AnimatePresence>

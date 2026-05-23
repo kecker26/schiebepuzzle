@@ -1,4 +1,4 @@
-import type { AriaRole, RefObject } from 'react'
+import type { AriaRole, CSSProperties, RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ensureElementVisible } from '../../app/focusVisibility.ts'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
@@ -16,6 +16,7 @@ import {
   formatGallerySolveCount,
   GalleryDisplayEntry,
   getGalleryMotifKey,
+  getSimilarGalleryEntries,
   sortGalleryDisplayEntries,
 } from './UploadGalleryDisplayUtils.ts'
 import UploadGalleryToolbar, { type GalleryTagFilterOption } from './UploadGalleryToolbar.tsx'
@@ -35,6 +36,7 @@ interface UploadGalleryPanelProps {
   isLoadingGallery: boolean
   isLoadingCollections?: boolean
   onReplayEntry: GalleryReplayRequestHandler
+  onFetchRandomImage?: (query?: string) => Promise<void> | void
   onDeleteEntries: (entryIds: string[]) => Promise<void>
   onUpdateTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
   onRetryTagging?: (entryId: string) => Promise<void>
@@ -43,6 +45,7 @@ interface UploadGalleryPanelProps {
   titleId?: string
   panelRole?: AriaRole
   primaryFilterRef?: RefObject<HTMLSelectElement>
+  paletteStyle?: CSSProperties
 }
 
 type GalleryAction = 'preview' | 'play-primary' | 'details' | 'collect' | 'tag' | 'delete'
@@ -107,6 +110,7 @@ export default function UploadGalleryPanel({
   isLoadingGallery,
   isLoadingCollections = false,
   onReplayEntry,
+  onFetchRandomImage = async () => undefined,
   onDeleteEntries,
   onUpdateTags = async () => undefined,
   onRetryTagging = async () => undefined,
@@ -115,6 +119,7 @@ export default function UploadGalleryPanel({
   titleId = 'workspace-window-gallery-title',
   panelRole = 'region',
   primaryFilterRef,
+  paletteStyle,
 }: UploadGalleryPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const difficultySelectInternalRef = useRef<HTMLSelectElement>(null)
@@ -219,6 +224,10 @@ export default function UploadGalleryPanel({
 
     return sortGalleryDisplayEntries(filteredEntries, sortOption)
   }, [baseFilteredEntries, sortOption, tagFilters])
+  const similarEntries = useMemo(
+    () => selectedEntry ? getSimilarGalleryEntries(selectedEntry, groupedEntries) : [],
+    [groupedEntries, selectedEntry]
+  )
   const galleryPageCount = Math.max(1, Math.ceil(visibleEntries.length / GALLERY_MOTIFS_PER_PAGE))
   const activeGalleryPage = Math.min(currentPage, galleryPageCount)
   const pagedVisibleEntries = useMemo(() => {
@@ -486,6 +495,17 @@ export default function UploadGalleryPanel({
     setCurrentPage(1)
     setTagFilters([getGalleryTagKey(tagLabel)])
   }, [])
+
+  const handleDetailTagFilter = useCallback((tagLabel: string) => {
+    handleTagFilterRequest(tagLabel)
+    setSelectedEntry(null)
+  }, [handleTagFilterRequest])
+
+  const handleDetailTagImageSearch = useCallback((tagLabel: string) => {
+    handleTagFilterRequest(tagLabel)
+    setSelectedEntry(null)
+    void onFetchRandomImage(tagLabel)
+  }, [handleTagFilterRequest, onFetchRandomImage])
 
   const handleApplyTagFilters = useCallback((tagKeys: string[]) => {
     const normalizedTagKeys = Array.from(new Set(tagKeys.map((tagKey) => getGalleryTagKey(tagKey)).filter(Boolean)))
@@ -786,6 +806,10 @@ export default function UploadGalleryPanel({
           entry={selectedEntry}
           onReplayEntry={onReplayEntry}
           onCollectEntry={handleCollectEntryFromDetails}
+          onTagFilter={handleDetailTagFilter}
+          onFetchRandomImage={handleDetailTagImageSearch}
+          onOpenSimilarEntry={setSelectedEntry}
+          similarEntries={similarEntries}
           onRetryTagging={handleRetryTagging}
           isRetryingTagging={retryingTagEntryId === selectedEntry.representativeEntry.id}
           onClose={() => setSelectedEntry(null)}
@@ -810,6 +834,7 @@ export default function UploadGalleryPanel({
           onConfirm={() => {
             void handleConfirmDeleteEntry()
           }}
+          paletteStyle={paletteStyle}
         />
       )}
 
@@ -826,6 +851,7 @@ export default function UploadGalleryPanel({
               setCollectingEntry(null)
             }
           }}
+          paletteStyle={paletteStyle}
         />
       )}
 
@@ -842,6 +868,7 @@ export default function UploadGalleryPanel({
               setIsManagingTags(false)
             }
           }}
+          paletteStyle={paletteStyle}
         />
       )}
     </>

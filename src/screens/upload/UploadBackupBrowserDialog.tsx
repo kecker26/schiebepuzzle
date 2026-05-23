@@ -1,4 +1,10 @@
-import { type KeyboardEvent as ReactKeyboardEvent, type RefObject, useCallback, useRef } from 'react'
+import {
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
+  useCallback,
+  useRef,
+} from 'react'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
 import { PuzzleDataBackupFile } from '../../types/index'
 
@@ -10,6 +16,7 @@ interface UploadBackupBrowserDialogProps {
   onDeleteBackup: (backup: PuzzleDataBackupFile) => void
   onSelectBackup: (backup: PuzzleDataBackupFile) => void
   restoreFocusFallbackRef?: RefObject<HTMLElement | null>
+  paletteStyle?: CSSProperties
 }
 
 function formatBackupTimestamp(value: string | null): string {
@@ -48,6 +55,7 @@ export default function UploadBackupBrowserDialog({
   onDeleteBackup,
   onSelectBackup,
   restoreFocusFallbackRef,
+  paletteStyle,
 }: UploadBackupBrowserDialogProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const primaryActionRef = useRef<HTMLButtonElement>(null)
@@ -158,6 +166,7 @@ export default function UploadBackupBrowserDialog({
       restoreFocus
       restoreFocusFallbackRef={restoreFocusFallbackRef}
       lockScroll
+      overlayStyle={paletteStyle}
       initialFocusRef={initialFocusRef}
     >
       <div className="backup-browser-header">

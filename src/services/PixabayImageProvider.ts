@@ -72,9 +72,22 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
   return readBlobAsDataUrl(await response.blob())
 }
 
-async function fetchPixabayImages(page: number): Promise<PixabayImageHit[]> {
+async function fetchPixabayImages(page: number, query?: string): Promise<PixabayImageHit[]> {
+  const params = new URLSearchParams({
+    key: PIXABAY_API_KEY,
+    image_type: 'photo',
+    safesearch: 'false',
+    order: 'popular',
+    page: String(page),
+    per_page: String(PIXABAY_PER_PAGE),
+  })
+  const searchQuery = query?.trim()
+  if (searchQuery) {
+    params.set('q', searchQuery)
+  }
+
   const response = await fetch(
-    `${PIXABAY_API_BASE_URL}?key=${encodeURIComponent(PIXABAY_API_KEY)}&image_type=photo&safesearch=false&order=popular&page=${page}&per_page=${PIXABAY_PER_PAGE}`,
+    `${PIXABAY_API_BASE_URL}?${params.toString()}`,
     { cache: 'no-store' }
   )
 
@@ -90,14 +103,14 @@ export function isPixabayConfigured(): boolean {
   return PIXABAY_API_KEY.length > 0
 }
 
-export async function fetchRandomPixabayImage(): Promise<string> {
+export async function fetchRandomPixabayImage(query?: string): Promise<string> {
   if (!isPixabayConfigured()) {
     throw new Error('Pixabay-API-Key fehlt')
   }
 
   for (let attempt = 0; attempt < PIXABAY_MAX_ATTEMPTS; attempt += 1) {
     const page = randomInt(1, PIXABAY_RANDOM_PAGE_MAX)
-    const hits = await fetchPixabayImages(page)
+    const hits = await fetchPixabayImages(page, query)
     const selectedHit = pickRandomPixabayHit(hits)
     const imageUrl = selectedHit?.largeImageURL ?? selectedHit?.webformatURL
 

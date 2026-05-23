@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import '../styles/components/status-toast.css'
 
@@ -11,9 +11,10 @@ interface StatusToastProps {
   toast: StatusToastPayload | null
   onDismiss?: (toastId: number) => void
   autoDismissMs?: number
+  paletteStyle?: CSSProperties
 }
 
-export default function StatusToast({ toast, onDismiss, autoDismissMs = 2800 }: StatusToastProps) {
+export default function StatusToast({ toast, onDismiss, autoDismissMs = 2800, paletteStyle }: StatusToastProps) {
   const timerRef = useRef<number | null>(null)
   const [visible, setVisible] = useState(false)
   const [displayedToast, setDisplayedToast] = useState<StatusToastPayload | null>(null)
@@ -56,6 +57,7 @@ export default function StatusToast({ toast, onDismiss, autoDismissMs = 2800 }: 
   return createPortal(
     <div
       className={`status-toast-container${visible ? ' is-visible' : ''}`}
+      style={paletteStyle}
       role="status"
       aria-live="polite"
       aria-atomic="true"

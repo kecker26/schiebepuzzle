@@ -7,7 +7,8 @@
   justify-content: center;
   padding: 44px 24px 24px;
   background:
-    radial-gradient(circle at top center, color-mix(in srgb, var(--image-glow) 24%, transparent), transparent 44%),
+    radial-gradient(circle at top center, color-mix(in srgb, var(--image-radiance) 34%, transparent), transparent 44%),
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--image-accent-strong) 24%, transparent), transparent 32%),
     rgba(2, 6, 23, 0.36);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -21,9 +22,14 @@
   padding: 24px;
   overflow: hidden;
   border-radius: 30px;
-  border: 1px solid color-mix(in srgb, var(--glass-dialog-border) 96%, transparent);
-  background: var(--glass-dialog-bg);
-  box-shadow: var(--glass-dialog-shadow);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 72%, var(--glass-dialog-border));
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--image-accent-strong) 92%, transparent) 0%, transparent 32%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--image-radiance) 48%, transparent) 0%, transparent 30%),
+    color-mix(in srgb, var(--glass-dialog-bg) 82%, var(--image-accent-soft));
+  box-shadow:
+    var(--glass-dialog-shadow),
+    0 0 62px color-mix(in srgb, var(--image-radiance) 18%, transparent);
   backdrop-filter: blur(var(--glass-dialog-blur)) saturate(155%);
   -webkit-backdrop-filter: blur(var(--glass-dialog-blur)) saturate(155%);
 }
@@ -90,10 +96,10 @@
   min-height: 34px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 22%, var(--glass-border));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 68%, var(--glass-border));
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 36%, transparent), transparent 56%),
-    rgba(255, 255, 255, 0.05);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-radiance) 30%, transparent), transparent 56%),
+    color-mix(in srgb, var(--surface-elevated) 56%, var(--image-accent-soft));
   color: var(--text-main);
   font-size: 0.8rem;
   font-weight: 700;
@@ -115,19 +121,22 @@
   min-height: 60px;
   padding: 16px 94px 16px 18px;
   border-radius: 22px;
-  border: 1px solid color-mix(in srgb, var(--glass-border) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 62%, var(--glass-border));
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 20%, transparent), transparent 54%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 84%, transparent), transparent 54%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 24%, transparent), transparent 42%),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--surface-strong) 92%, transparent),
-      color-mix(in srgb, var(--surface-soft) 88%, transparent)
+      color-mix(in srgb, var(--surface-strong) 82%, var(--image-accent-soft)),
+      color-mix(in srgb, var(--surface-soft) 82%, var(--image-accent-strong))
     );
   color: var(--text-main);
   font: inherit;
   font-size: 1rem;
   line-height: 1.2;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 12px 28px color-mix(in srgb, var(--primary-color) 8%, transparent);
 }
 
 .command-palette-search-input::placeholder {
@@ -150,8 +159,8 @@
   min-height: 28px;
   padding: 0 10px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--glass-border) 88%, rgba(255, 255, 255, 0.14));
-  background: rgba(3, 7, 18, 0.54);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 58%, rgba(255, 255, 255, 0.14));
+  background: color-mix(in srgb, rgba(3, 7, 18, 0.54) 72%, var(--image-accent-soft));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 5px 10px rgba(2, 6, 23, 0.12);
@@ -244,14 +253,15 @@
   gap: 14px;
   width: 100%;
   padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--glass-border) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 52%, var(--glass-border));
   border-radius: 22px;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 18%, transparent), transparent 58%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 76%, transparent), transparent 58%),
+    radial-gradient(circle at 96% 18%, color-mix(in srgb, var(--image-glow) 18%, transparent), transparent 44%),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--surface-strong) 90%, transparent),
-      color-mix(in srgb, var(--surface-soft) 86%, transparent)
+      color-mix(in srgb, var(--surface-strong) 82%, var(--image-accent-soft)),
+      color-mix(in srgb, var(--surface-soft) 80%, var(--image-accent-strong))
     );
   color: var(--text-main);
   text-align: left;
@@ -270,14 +280,15 @@
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--image-accent-solid) 52%, var(--glass-border));
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 34%, transparent), transparent 56%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 118%, transparent), transparent 56%),
+    radial-gradient(circle at 96% 18%, color-mix(in srgb, var(--image-glow) 28%, transparent), transparent 44%),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--surface-elevated) 96%, transparent),
-      color-mix(in srgb, var(--surface-soft) 92%, transparent)
+      color-mix(in srgb, var(--surface-elevated) 82%, var(--image-accent-soft)),
+      color-mix(in srgb, var(--surface-soft) 82%, var(--image-accent-strong))
     );
   box-shadow:
-    0 14px 30px color-mix(in srgb, var(--image-accent-solid) 10%, transparent),
+    0 14px 30px color-mix(in srgb, var(--image-radiance) 16%, transparent),
     var(--focus-ring);
 }
 
@@ -288,11 +299,13 @@
   width: 44px;
   height: 44px;
   border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 28%, rgba(255, 255, 255, 0.08));
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 58%, rgba(255, 255, 255, 0.08));
   background:
-    radial-gradient(circle, color-mix(in srgb, var(--image-accent-solid) 18%, rgba(255, 255, 255, 0.08)), transparent 72%),
-    rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    radial-gradient(circle, color-mix(in srgb, var(--image-radiance) 24%, rgba(255, 255, 255, 0.08)), transparent 72%),
+    color-mix(in srgb, rgba(255, 255, 255, 0.04) 78%, var(--image-accent-soft));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 18px color-mix(in srgb, var(--primary-color) 10%, transparent);
 }
 
 .command-palette-item-icon {
@@ -329,8 +342,8 @@
   min-height: 26px;
   padding: 0 10px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--glass-border) 88%, rgba(255, 255, 255, 0.16));
-  background: rgba(3, 7, 18, 0.56);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 54%, rgba(255, 255, 255, 0.16));
+  background: color-mix(in srgb, rgba(3, 7, 18, 0.56) 72%, var(--image-accent-soft));
   color: var(--text-muted);
   font-size: 0.66rem;
   font-weight: 900;
@@ -343,13 +356,13 @@
   gap: 6px;
   padding: 18px 20px;
   border-radius: 22px;
-  border: 1px solid color-mix(in srgb, var(--glass-border) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 50%, var(--glass-border));
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 18%, transparent), transparent 54%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--image-accent-soft) 72%, transparent), transparent 54%),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--surface-strong) 88%, transparent),
-      color-mix(in srgb, var(--surface-soft) 84%, transparent)
+      color-mix(in srgb, var(--surface-strong) 80%, var(--image-accent-soft)),
+      color-mix(in srgb, var(--surface-soft) 78%, var(--image-accent-strong))
     );
 }
 

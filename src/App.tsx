@@ -91,6 +91,7 @@ import { getMusicStyleDefinition, MUSIC_STYLE_DEFINITIONS } from './services/mus
 import { type UploadCommandRequest, type UploadCommandRequestAction } from './screens/upload/uploadCommandRequest.ts'
 import { type GalleryReplayMode } from './screens/upload/galleryReplayRequest.ts'
 import { type HistoryFilter, type UploadWorkspaceWindow } from './screens/upload/uploadUtils.ts'
+import { useUploadImagePalette } from './screens/upload/uploadImagePalette.ts'
 import {
   AppState,
   PersistedPuzzleProgress,
@@ -1877,15 +1878,15 @@ export default function App() {
     })()
   }, [config, createCompletionPayload, setStatsError, setStatsOverview, winStats])
 
-  const handleFetchRandomImage = useCallback(async () => {
+  const handleFetchRandomImage = useCallback(async (query?: string) => {
     setRandomImageError(null)
     setIsFetchingRandom(true)
 
     try {
-      const randomImage = await fetchRandomPuzzleImageResult()
+      const randomImage = await fetchRandomPuzzleImageResult(query)
       handleImageLoaded(randomImage.imageSrc, true, randomImage.source)
     } catch (error) {
-      setRandomImageError(`Zufaelliges Bild konnte nicht geladen werden: ${getErrorMessage(error)}`)
+      setRandomImageError(`${query ? `Bildsuche fuer "${query}"` : 'Zufaelliges Bild'} konnte nicht geladen werden: ${getErrorMessage(error)}`)
     } finally {
       setIsFetchingRandom(false)
     }
@@ -2265,18 +2266,14 @@ export default function App() {
     handleReplayGalleryEntry(latestGalleryEntry)
   }, [appState, flushPendingSave, handleReplayGalleryEntry, latestGalleryEntry])
 
-  const startScreenPaletteCandidate = useMemo<{
+  const latestPlayedPaletteCandidate = useMemo<{
     palette: ImageThemePalette | null
     source: string | null
   }>(() => {
-    if (startResumeCandidate?.kind === 'save') {
-      return {
-        palette: startResumeCandidate.save.imageTheme ?? null,
-        source: startResumeCandidate.save.previewImage,
-      }
-    }
+    const latestSaveTime = latestSavedGame ? Date.parse(latestSavedGame.updatedAt) : Number.NEGATIVE_INFINITY
+    const latestGalleryTime = latestGalleryEntry ? Date.parse(latestGalleryEntry.completedAt) : Number.NEGATIVE_INFINITY
 
-    if (latestSavedGame) {
+    if (latestSavedGame && latestSaveTime >= latestGalleryTime) {
       return {
         palette: latestSavedGame.imageTheme ?? null,
         source: latestSavedGame.previewImage,
@@ -2291,10 +2288,61 @@ export default function App() {
     }
 
     return {
+      palette: null,
+      source: null,
+    }
+  }, [latestGalleryEntry, latestSavedGame])
+  const startScreenPaletteCandidate = useMemo<{
+    palette: ImageThemePalette | null
+    source: string | null
+  }>(() => {
+    if (latestPlayedPaletteCandidate.palette || latestPlayedPaletteCandidate.source) {
+      return latestPlayedPaletteCandidate
+    }
+
+    return {
       palette: activeImageThemePalette,
       source: startScreenHeroImage,
     }
-  }, [activeImageThemePalette, latestGalleryEntry, latestSavedGame, startResumeCandidate, startScreenHeroImage])
+  }, [activeImageThemePalette, latestPlayedPaletteCandidate, startScreenHeroImage])
+  const globalOverlayPaletteCandidate = useMemo<{
+    palette: ImageThemePalette | null
+    source: string | null
+  }>(() => {
+    if (analyzedImageThemePalette) {
+      return {
+        palette: analyzedImageThemePalette,
+        source: croppedImage ?? image,
+      }
+    }
+
+    if (latestPlayedPaletteCandidate.palette || latestPlayedPaletteCandidate.source) {
+      return latestPlayedPaletteCandidate
+    }
+
+    if (themeImagePalette?.source !== 'fallback') {
+      return {
+        palette: themeImagePalette,
+        source: croppedImage ?? image ?? startScreenHeroImage,
+      }
+    }
+
+    return {
+      palette: null,
+      source: startScreenHeroImage,
+    }
+  }, [
+    analyzedImageThemePalette,
+    croppedImage,
+    image,
+    latestPlayedPaletteCandidate,
+    startScreenHeroImage,
+    themeImagePalette,
+  ])
+  const { paletteStyle: globalOverlayPaletteStyle } = useUploadImagePalette({
+    paletteSource: globalOverlayPaletteCandidate.source,
+    storedPalette: globalOverlayPaletteCandidate.palette,
+  })
 
   const handleStartRandomImageFromPalette = useCallback(async () => {
     if (appState === 'playing') {
@@ -2757,6 +2805,7 @@ export default function App() {
         onOpenCommandPalette={openCommandPalette}
         onOpenHelp={openHelp}
         saveStatus={visibleSaveStatus}
+        paletteStyle={globalOverlayPaletteStyle}
       />
       <AnimatePresence initial={false} mode="wait">
         {activeScreen && <AnimatedScreen key={activeScreen.key}>{activeScreen.content}</AnimatedScreen>}
@@ -2801,6 +2850,7 @@ export default function App() {
           <GlobalHelpOverlay
             key="global-help"
             helpContext={helpContext}
+            paletteStyle={globalOverlayPaletteStyle}
             onClose={closeHelp}
           />
         ) : activeGlobalOverlay === 'commandPalette' ? (
@@ -2808,12 +2858,13 @@ export default function App() {
             key="command-palette"
             commands={commandPaletteCommands}
             contextLabel={getHelpView(helpContext).kicker}
+            paletteStyle={globalOverlayPaletteStyle}
             onClose={closeCommandPalette}
           />
         ) : null}
       </AnimatePresence>
 
-      <StatusToast toast={statusToast} onDismiss={handleDismissStatusToast} />
+      <StatusToast toast={statusToast} onDismiss={handleDismissStatusToast} paletteStyle={globalOverlayPaletteStyle} />
 
       <AccessibilityAnnouncerHost />
     </div>

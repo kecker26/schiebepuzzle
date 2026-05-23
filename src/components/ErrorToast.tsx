@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import '../styles/components/error-toast.css'
 
@@ -6,9 +6,10 @@ interface ErrorToastProps {
   message: string | null
   onDismiss?: () => void
   autoDismissMs?: number
+  paletteStyle?: CSSProperties
 }
 
-export default function ErrorToast({ message, onDismiss, autoDismissMs = 8000 }: ErrorToastProps) {
+export default function ErrorToast({ message, onDismiss, autoDismissMs = 8000, paletteStyle }: ErrorToastProps) {
   const timerRef = useRef<number | null>(null)
   const [visible, setVisible] = useState(false)
   const [displayedMessage, setDisplayedMessage] = useState<string | null>(null)
@@ -56,6 +57,7 @@ export default function ErrorToast({ message, onDismiss, autoDismissMs = 8000 }:
   return createPortal(
     <div
       className={`error-toast-container${visible ? ' is-visible' : ''}`}
+      style={paletteStyle}
       role="alert"
       aria-live="assertive"
       onTransitionEnd={handleTransitionEnd}

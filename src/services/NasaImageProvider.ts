@@ -93,9 +93,19 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
   return readBlobAsDataUrl(await response.blob())
 }
 
-async function fetchNasaSearchItems(page: number): Promise<NasaCollectionItem[]> {
+async function fetchNasaSearchItems(page: number, query?: string): Promise<NasaCollectionItem[]> {
+  const params = new URLSearchParams({
+    media_type: 'image',
+    page: String(page),
+    page_size: String(NASA_SEARCH_PAGE_SIZE),
+  })
+  const searchQuery = query?.trim()
+  if (searchQuery) {
+    params.set('q', searchQuery)
+  }
+
   const response = await fetch(
-    `${NASA_API_BASE_URL}/search?media_type=image&page=${page}&page_size=${NASA_SEARCH_PAGE_SIZE}`,
+    `${NASA_API_BASE_URL}/search?${params.toString()}`,
     { cache: 'no-store' }
   )
 
@@ -112,10 +122,10 @@ async function fetchNasaSearchItems(page: number): Promise<NasaCollectionItem[]>
   return Array.isArray(payload.collection?.items) ? payload.collection.items : []
 }
 
-export async function fetchRandomNasaImage(): Promise<string> {
+export async function fetchRandomNasaImage(query?: string): Promise<string> {
   for (let attempt = 0; attempt < NASA_MAX_ATTEMPTS; attempt += 1) {
     const page = randomInt(1, NASA_RANDOM_PAGE_MAX)
-    const items = await fetchNasaSearchItems(page)
+    const items = await fetchNasaSearchItems(page, query)
     const selectedItem = pickRandomNasaItem(items)
 
     if (!selectedItem) {

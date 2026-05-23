@@ -117,13 +117,18 @@ export function isSmithsonianConfigured(): boolean {
   return SMITHSONIAN_API_KEY.length > 0
 }
 
-export async function fetchRandomSmithsonianImage(): Promise<string> {
+export async function fetchRandomSmithsonianImage(query?: string): Promise<string> {
   if (!isSmithsonianConfigured()) {
     throw new Error('Smithsonian-API-Key fehlt')
   }
 
+  const searchQuery = query?.trim()
+  const smithsonianQuery = searchQuery
+    ? `${SMITHSONIAN_IMAGE_QUERY} AND ${searchQuery}`
+    : SMITHSONIAN_IMAGE_QUERY
+
   for (let attempt = 0; attempt < SMITHSONIAN_MAX_ATTEMPTS; attempt += 1) {
-    const rows = await searchSmithsonianImages(SMITHSONIAN_IMAGE_QUERY)
+    const rows = await searchSmithsonianImages(smithsonianQuery)
     const selectedRow = pickRandomSmithsonianRow(rows)
     const imageUrl = selectedRow ? extractSmithsonianImageUrl(selectedRow) : null
 
