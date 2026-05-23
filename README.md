@@ -11,10 +11,10 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Schiebepuzzle mit Canvas-Rendering, Drag-/Keyboard-Interaktion und visuellen Hervorhebungen.
 - Loesbare Shuffle-Logik, Hinweise und Solver-Unterstuetzung.
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
-- Autosave, kreative Gemini-Titel fuer neue Spielstaende, motivbasierte Titel-Wiederverwendung, maximal 30 aktive Spielstaende mit 5er-Seitennavigation, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
+- Autosave, kreative KI-Titel fuer neue Spielstaende, motivbasierte Titel-Wiederverwendung, maximal 30 aktive Spielstaende mit 5er-Seitennavigation, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
 - Sentiment-basiertes Bild-Theme: hochgeladene, generierte oder wiederverwendete Motive praegen standardmaessig die komplette UI-Farbwelt; Stimmung und Palette werden rein lokal aus Farbe, Helligkeit, Kontrast und Waerme berechnet und zentral im Menue ein- oder ausgeschaltet.
 - Statistik mit vier visuellen Hauptansichten fuer Ueberblick, Analyse, Verlauf und Rohdaten-Explorer; Analyse buendelt Stufen, Rekorde und Sauberkeit, der Rohdaten-Explorer speichert CSV-/JSON-Exporte direkt im Projektordner.
-- Galerie geloester Motive inklusive bildspezifischer Paletten fuer Galerie-, Spielstand-, Sammlungs- und Detailkarten, die dem zentralen Palette-Schalter folgen, Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, 9er-Seitennavigation, optionalem Gemini-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und kategorisierter Tag-Verwaltung mit Mehrfachauswahl.
+- Galerie geloester Motive inklusive bildspezifischer Paletten fuer Galerie-, Spielstand-, Sammlungs- und Detailkarten, die dem zentralen Palette-Schalter folgen, Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, 9er-Seitennavigation, optionalem KI-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und kategorisierter Tag-Verwaltung mit Mehrfachauswahl.
 - Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit 9er-Seitennavigation, KI-Sammlungsvorschlaegen und motivweit deduplizierten Sammlungen aus Tag-Treffern.
 - Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
 - Musik- und Sound-Unterstuetzung mit lokalen Fallback-Tracks.
@@ -51,11 +51,17 @@ CLOUDFLARE_API_TOKEN=dein_cloudflare_workers_ai_token
 CLOUDFLARE_IMAGE_MODEL=@cf/black-forest-labs/flux-1-schnell
 GEMINI_API_KEY=dein_gemini_api_key
 GEMINI_GALLERY_MODEL=gemini-2.5-flash
+LLM_PROVIDER=gemini
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_API_KEY=dein_openrouter_oder_groq_key
+LLM_MODEL=openrouter/free
+GROQ_API_KEY=dein_groq_api_key
+GROQ_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
 ```
 
 `POLLINATIONS_API_KEY` ist ein serverseitiger Secret Key und wird nur von der lokalen Vite-Middleware genutzt. Er darf nicht als `VITE_`-Variable ins Frontend gegeben werden. `zimage` ist ein fuer den getesteten Key freigegebenes schnelles Pollinations-Bildmodell.
 `CLOUDFLARE_API_TOKEN` ist der serverseitige Fallback fuer KI-Bilder, wenn Pollinations fehlschlaegt. Der Token braucht Zugriff auf Workers AI fuer die angegebene `CLOUDFLARE_ACCOUNT_ID`; `CLOUDFLARE_IMAGE_MODEL` ist standardmaessig `@cf/black-forest-labs/flux-1-schnell`.
-`GEMINI_API_KEY` ist ein serverseitiger Secret Key fuer automatische Galerie-Tags, Sammlungsvorschlaege und kreative Spielstand-Titel. Ohne Key speichert die App geloeste Bilder und Spielstaende weiterhin normal. Bildstimmungs-Themes laufen bewusst rein lokal im Browser, damit der Theme-Wechsel sofort greift. `GEMINI_GALLERY_MODEL` ist standardmaessig `gemini-2.5-flash` und wird auch fuer Spielstand-Titel genutzt.
+`GEMINI_API_KEY` ist ein serverseitiger Secret Key fuer automatische Galerie-Tags, Sammlungsvorschlaege und kreative Spielstand-Titel. Ohne Key speichert die App geloeste Bilder und Spielstaende weiterhin normal. Bildstimmungs-Themes laufen bewusst rein lokal im Browser, damit der Theme-Wechsel sofort greift. `GEMINI_GALLERY_MODEL` ist standardmaessig `gemini-2.5-flash` und wird auch fuer Spielstand-Titel genutzt. Alternativ kann `LLM_PROVIDER=openrouter` mit `LLM_API_KEY`, `LLM_BASE_URL` und `LLM_MODEL` verwendet werden. Fuer kostenlose OpenRouter-Vision-Anfragen ist `openrouter/free` der empfohlene Default, weil OpenRouter dabei ein aktuell verfuegbares Free-Modell mit passenden Bild- und JSON-Faehigkeiten waehlt. Wird zusaetzlich `GROQ_API_KEY` konfiguriert, nutzt die App Groq Cloud automatisch als Fallback, wenn alle OpenRouter-Modellkandidaten fehlschlagen. `GROQ_MODEL` ist standardmaessig `meta-llama/llama-4-scout-17b-16e-instruct`.
 
 ## Start und Befehle
 
@@ -101,10 +107,10 @@ Diese Nutzdaten und Build-Artefakte sind fuer manuelle Bearbeitung tabu, sofern 
 Die Frontend-Services greifen ueber lokale API-Routen auf die Middleware zu:
 
 - `/api/saves`: Spielstaende erstellen, laden, aktualisieren und loeschen.
-- `/api/saves/:saveId/title`: Spielstand-Motiv mit Gemini betiteln oder einen vorhandenen Titel fuer dasselbe Motiv wiederverwenden.
+- `/api/saves/:saveId/title`: Spielstand-Motiv mit Gemini oder einem OpenAI-kompatiblen LLM betiteln oder einen vorhandenen Titel fuer dasselbe Motiv wiederverwenden.
 - `/api/stats`: Statistik laden, zuruecksetzen, Abschluesse aufzeichnen und Rohdaten-Exporte speichern.
 - `/api/gallery`: Galerie geloester Motive laden, erweitern und bereinigen.
-- `/api/gallery/:entryId/analyze`: Galerie-Motiv mit Gemini taggen und Sammlungsvorschlaege speichern.
+- `/api/gallery/:entryId/analyze`: Galerie-Motiv mit Gemini oder einem OpenAI-kompatiblen LLM taggen und Sammlungsvorschlaege speichern.
 - `/api/collections`: Bild-Sammlungen laden, erstellen, bearbeiten und mit Galerie-Motiven verknuepfen.
 - `/api/backup`: Daten exportieren, importieren und lokale Backup-Dateien verwalten.
 - `/api/clipboard`: Clipboard-Hilfen fuer lokale Bild- und Textablage.
@@ -149,9 +155,9 @@ Wichtige Einstiegspunkte:
 3. Motiv zuschneiden und Puzzle-Groesse waehlen; bei neuen Galerie-Wiedereinstiegen laesst sich der gespeicherte Startzustand direkt erneut herausfordern oder dasselbe Motiv komplett neu ueber den Crop-Flow starten, alte Eintraege fallen auf gespeicherten Ausschnitt mit neu gemischten Kacheln zurueck.
 4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
 5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
-6. Neue Galerie-Motive optional automatisch mit Gemini taggen, fehlgeschlagene Taggings erneut versuchen, Tags bereinigen, einzelne Tags direkt oder mehrere Tags ueber die Tagverwaltung als Und-Filter anwenden und Tag-Treffer als Sammlung uebernehmen.
+6. Neue Galerie-Motive optional automatisch mit KI taggen, fehlgeschlagene Taggings erneut versuchen, Tags bereinigen, einzelne Tags direkt oder mehrere Tags ueber die Tagverwaltung als Und-Filter anwenden und Tag-Treffer als Sammlung uebernehmen.
 7. Die aktive Bildstimmung faerbt die UI automatisch ein; im Darstellungsbereich kann die Bildpalette zentral fuer UI und bildspezifische Karten auf Standard zurueckgeschaltet werden.
-8. Neue Spielstaende erhalten im Hintergrund einen Gemini-Titel; taucht dasselbe Motiv mehrfach auf, wird der vorhandene Motivtitel wiederverwendet.
+8. Neue Spielstaende erhalten im Hintergrund einen KI-Titel; taucht dasselbe Motiv mehrfach auf, wird der vorhandene Motivtitel wiederverwendet.
 9. Spielstaende, Galerie, Sammlungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
 
 ## Entwicklungshinweise

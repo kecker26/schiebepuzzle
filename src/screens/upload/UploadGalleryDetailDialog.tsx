@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
-import { type ImageThemePalette, type SolvedGalleryEntry } from '../../types/index'
+import { type AiMetadataProvider, type ImageThemePalette, type SolvedGalleryEntry } from '../../types/index'
 import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
@@ -35,6 +35,13 @@ function findStoredDetailPalette(entry: GalleryDisplayEntry): ImageThemePalette 
     ?? entry.allEntries.find((galleryEntry) => galleryEntry.imageTheme)?.imageTheme
     ?? null
   )
+}
+
+function formatAiProviderLabel(provider?: AiMetadataProvider | null): string {
+  if (provider === 'openrouter') return 'OpenRouter'
+  if (provider === 'openai-compatible') return 'der LLM-Dienst'
+  if (provider === 'groq') return 'Groq'
+  return 'Gemini'
 }
 
 export default function UploadGalleryDetailDialog({
@@ -78,6 +85,7 @@ export default function UploadGalleryDetailDialog({
       : `Motivweit ueber alle Stufen liegen ${motifSolveCountLabel} vor, derzeit aber ohne gespeichertes Replay-Bild.`
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
+  const aiProviderLabel = formatAiProviderLabel(aiTagging?.provider)
   const canRetryAiTagging = aiTagging?.status === 'failed' || aiTagging?.status === 'unavailable'
   const aiCollectionSuggestions = aiTagging?.collectionSuggestions ?? []
   const timelineEntries = motifReplaySummary.allEntries.length > 0
@@ -253,11 +261,16 @@ export default function UploadGalleryDetailDialog({
                 <span id="gallery-detail-ai-title" className="saved-games-kicker">KI-Sortierung</span>
                 <p className="gallery-detail-replay-copy">
                   {aiTagging?.status === 'tagged'
-                    ? 'Gemini hat Tags und passende Sammlungsvorschlaege fuer dieses Motiv erstellt.'
+                    ? `${aiProviderLabel} hat Tags und passende Sammlungsvorschlaege fuer dieses Motiv erstellt.`
                     : aiTagging?.status === 'unavailable'
-                      ? 'Gemini-Tagging ist noch nicht konfiguriert.'
-                      : 'Gemini konnte dieses Motiv noch nicht taggen.'}
+                      ? `${aiProviderLabel}-Tagging ist noch nicht konfiguriert.`
+                      : `${aiProviderLabel} konnte dieses Motiv noch nicht taggen.`}
                 </p>
+                {aiTagging?.status === 'failed' && aiTagging.error && (
+                  <div className="gallery-detail-ai-error">
+                    <strong>Fehler:</strong> {aiTagging.error}
+                  </div>
+                )}
                 {canRetryAiTagging ? (
                   <button
                     type="button"

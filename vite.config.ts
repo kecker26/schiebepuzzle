@@ -17,6 +17,12 @@ export default defineConfig(({ mode }) => {
         cloudflareImageModel: env.CLOUDFLARE_IMAGE_MODEL ?? '',
         geminiApiKey: env.GEMINI_API_KEY ?? '',
         geminiGalleryModel: env.GEMINI_GALLERY_MODEL ?? '',
+        llmProvider: env.LLM_PROVIDER ?? 'gemini',
+        llmApiKey: env.LLM_API_KEY ?? '',
+        llmBaseUrl: env.LLM_BASE_URL ?? '',
+        llmModel: env.LLM_MODEL ?? '',
+        groqApiKey: env.GROQ_API_KEY ?? '',
+        groqModel: env.GROQ_MODEL ?? '',
       }),
     ],
     server: {
