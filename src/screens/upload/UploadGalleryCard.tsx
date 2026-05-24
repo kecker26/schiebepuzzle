@@ -218,6 +218,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                     type="button"
                     data-gallery-action="tag"
                     data-gallery-entry-id={entry.id}
+                    {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
                     onClick={() => onTagFilter?.(tag.label)}
                     onKeyDown={handleActionKeyDown}
                     disabled={isDeleting || !onTagFilter}
@@ -242,7 +243,11 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                       key={collection.id}
                       type="button"
                       className="gallery-card-ai-suggestion"
+                      data-gallery-action="suggestion"
+                      data-gallery-entry-id={entry.id}
+                      {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
                       onClick={() => onAddSuggestedCollection?.(collection.id, entry)}
+                      onKeyDown={handleActionKeyDown}
                       disabled={isDeleting || isBusy || !onAddSuggestedCollection}
                       title={suggestion.reason || `Vorschlag fuer ${collection.name}`}
                     >
