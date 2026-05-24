@@ -224,6 +224,26 @@ export default function UploadGalleryPanel({
 
     return sortGalleryDisplayEntries(filteredEntries, sortOption)
   }, [baseFilteredEntries, sortOption, tagFilters])
+  const visibleTagOptions = useMemo<GalleryTagFilterOption[]>(() => {
+    const tagCounts = new Map<string, GalleryTagFilterOption>()
+
+    for (const entry of visibleEntries) {
+      const seenTagsForCard = new Set<string>()
+      const motifEntryId = entry.representativeEntry.id
+      for (const galleryEntry of entry.visibleEntries) {
+        for (const tag of galleryEntry.tags ?? []) {
+          const key = getGalleryTagKey(tag.label)
+          if (!key || seenTagsForCard.has(key)) continue
+
+          seenTagsForCard.add(key)
+          addMotifTagOption(tagCounts, key, tag.label, motifEntryId)
+        }
+      }
+    }
+
+    return Array.from(tagCounts.values())
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'de'))
+  }, [visibleEntries])
   const similarEntries = useMemo(
     () => selectedEntry ? getSimilarGalleryEntries(selectedEntry, groupedEntries) : [],
     [groupedEntries, selectedEntry]
@@ -496,6 +516,23 @@ export default function UploadGalleryPanel({
     setTagFilters([getGalleryTagKey(tagLabel)])
   }, [])
 
+  const handleTagFilterToggle = useCallback((tagKey: string) => {
+    const normalizedTagKey = getGalleryTagKey(tagKey)
+    if (!normalizedTagKey) return
+
+    setCurrentPage(1)
+    setTagFilters((currentTagFilters) => (
+      currentTagFilters.includes(normalizedTagKey)
+        ? currentTagFilters.filter((currentTagKey) => currentTagKey !== normalizedTagKey)
+        : [...currentTagFilters, normalizedTagKey]
+    ))
+  }, [])
+
+  const handleClearTagFilters = useCallback(() => {
+    setCurrentPage(1)
+    setTagFilters([])
+  }, [])
+
   const handleDetailTagFilter = useCallback((tagLabel: string) => {
     handleTagFilterRequest(tagLabel)
     setSelectedEntry(null)
@@ -741,6 +778,8 @@ export default function UploadGalleryPanel({
                 assistanceFilter={assistanceFilter}
                 activeTagFilterCount={tagFilters.length}
                 activeTagFilterLabel={activeTagOption?.label ?? null}
+                activeTagFilterKeys={tagFilters}
+                tagOptions={visibleTagOptions}
                 sortOption={sortOption}
                 visibleCount={visibleEntries.length}
                 totalCount={groupedEntries.length}
@@ -751,6 +790,8 @@ export default function UploadGalleryPanel({
                 onDifficultyFilterChange={handleDifficultyFilterChange}
                 onAssistanceFilterChange={handleAssistanceFilterChange}
                 onSortOptionChange={handleSortOptionChange}
+                onTagFilterToggle={handleTagFilterToggle}
+                onClearTagFilters={handleClearTagFilters}
                 onCreateCollectionFromTag={() => {
                   void handleCreateCollectionFromTag()
                 }}
