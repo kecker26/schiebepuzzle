@@ -3625,6 +3625,34 @@ describe('keyboard smoke tests', () => {
     })
   })
 
+  it('reloads a random crop image without forwarding the click event as a query', async () => {
+    const onFetchNewRandomImage = vi.fn()
+
+    render(
+      <CropScreen
+        image="data:image/png;base64,test"
+        config={{ rows: 4, cols: 4 }}
+        onOpenHelp={vi.fn()}
+        registerAppContextMenuHandler={vi.fn()}
+        isRandomImage
+        randomImageSource={{
+          label: 'Lorem Picsum',
+          url: 'https://picsum.photos/',
+        }}
+        onFetchNewRandomImage={onFetchNewRandomImage}
+        onConfigChange={vi.fn()}
+        onCropConfirmed={vi.fn()}
+        onBack={vi.fn()}
+        onGoToStartScreen={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Anderes Bild laden/i }))
+
+    expect(onFetchNewRandomImage).toHaveBeenCalledTimes(1)
+    expect(onFetchNewRandomImage).toHaveBeenCalledWith()
+  })
+
   it('allows switching windows after restoring a last session', async () => {
     const user = userEvent.setup()
     const baseStats = createCompletionResult().stats

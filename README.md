@@ -5,7 +5,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 ## Funktionsumfang
 
 - Eigene Bilder hochladen und als Puzzle-Motiv verwenden.
-- Zufallsbilder aus mehreren Quellen laden, mit lokalen und externen Providern.
+- Zufallsbilder aus mehreren Quellen laden, darunter keylose Openverse- und LoremFlickr-Suchen sowie weitere lokale und externe Provider.
 - KI-generierte Puzzle-Motive per Prompt ueber Pollinations Z-Image Turbo erstellen.
 - Bildzuschnitt mit Crop-Ansicht, Transform und Puzzle-Konfiguration.
 - Schiebepuzzle mit Canvas-Rendering, Drag-/Keyboard-Interaktion und visuellen Hervorhebungen.

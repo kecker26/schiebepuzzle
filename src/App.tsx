@@ -1881,11 +1881,12 @@ export default function App() {
   }, [config, createCompletionPayload, setStatsError, setStatsOverview, winStats])
 
   const handleFetchRandomImage = useCallback(async (query?: string) => {
-    const shouldShowCropLoading = Boolean(query && appState === 'idle')
+    const searchQuery = typeof query === 'string' ? query.trim() : ''
+    const shouldShowCropLoading = Boolean(searchQuery && appState === 'idle')
 
     setRandomImageError(null)
     setIsFetchingRandom(true)
-    setPendingCropImageQuery(query?.trim() || null)
+    setPendingCropImageQuery(searchQuery || null)
 
     if (shouldShowCropLoading) {
       releaseAppFocus()
@@ -1901,10 +1902,10 @@ export default function App() {
     }
 
     try {
-      const randomImage = await fetchRandomPuzzleImageResult(query)
+      const randomImage = await fetchRandomPuzzleImageResult(searchQuery || undefined)
       handleImageLoaded(randomImage.imageSrc, true, randomImage.source)
     } catch (error) {
-      setRandomImageError(`${query ? `Bildsuche fuer "${query}"` : 'Zufaelliges Bild'} konnte nicht geladen werden: ${getErrorMessage(error)}`)
+      setRandomImageError(`${searchQuery ? `Bildsuche fuer "${searchQuery}"` : 'Zufaelliges Bild'} konnte nicht geladen werden: ${getErrorMessage(error)}`)
       setPendingCropImageQuery(null)
       if (shouldShowCropLoading) {
         setAppState('idle')
