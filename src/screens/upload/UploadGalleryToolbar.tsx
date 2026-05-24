@@ -1,4 +1,6 @@
 import type { RefObject } from 'react'
+import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
+import { FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE } from '../../app/focusVisibility.ts'
 import {
   GALLERY_ASSISTANCE_FILTER_OPTIONS,
   GALLERY_SORT_OPTIONS,
@@ -184,7 +186,7 @@ export default function UploadGalleryToolbar({
             <span>Tags</span>
             <small>{`${activeTagFilterCount} aktiv`}</small>
           </div>
-          <div className="gallery-toolbar-tag-chip-list">
+          <div className="gallery-toolbar-tag-chip-list" onKeyDown={handleDirectionalFocusNavigation}>
             {tagOptions.map((tagOption) => {
               const isActive = activeTagKeySet.has(tagOption.id)
 
@@ -193,6 +195,7 @@ export default function UploadGalleryToolbar({
                   key={tagOption.id}
                   type="button"
                   className="gallery-toolbar-tag-chip"
+                  {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-toolbar-tag-chips' }}
                   aria-pressed={isActive}
                   aria-label={`Tag #${tagOption.label} ${isActive ? 'entfernen' : 'hinzufuegen'}, ${tagOption.count} ${tagOption.count === 1 ? 'Motiv' : 'Motive'}`}
                   onClick={() => onTagFilterToggle(tagOption.id)}
@@ -207,6 +210,7 @@ export default function UploadGalleryToolbar({
               <button
                 type="button"
                 className="gallery-toolbar-tag-chip gallery-toolbar-tag-chip-clear"
+                {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-toolbar-tag-chips' }}
                 onClick={onClearTagFilters}
               >
                 Tags zuruecksetzen

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Search } from 'lucide-react'
+import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
+import { FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE } from '../../app/focusVisibility.ts'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
 import { type AiMetadataProvider, type ImageThemePalette, type SolvedGalleryEntry } from '../../types/index'
 import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
@@ -96,7 +98,6 @@ export default function UploadGalleryDetailDialog({
   const aiTagging = representativeEntry.aiTagging ?? null
   const aiProviderLabel = formatAiProviderLabel(aiTagging?.provider)
   const canRetryAiTagging = aiTagging?.status === 'failed' || aiTagging?.status === 'unavailable'
-  const aiCollectionSuggestions = aiTagging?.collectionSuggestions ?? []
   const timelineEntries = motifReplaySummary.allEntries.length > 0
     ? motifReplaySummary.allEntries
     : entry.allEntries
@@ -299,12 +300,13 @@ export default function UploadGalleryDetailDialog({
               </div>
 
               {aiTags.length > 0 ? (
-                <div className="gallery-detail-ai-tags" aria-label="KI-Tags">
+                <div className="gallery-detail-ai-tags" aria-label="KI-Tags" onKeyDown={handleDirectionalFocusNavigation}>
                   {aiTags.map((tag) => (
                     <span key={tag.label} className="gallery-detail-ai-tag-chip">
                       <button
                         type="button"
                         className="gallery-detail-ai-tag-filter"
+                        {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-detail-ai' }}
                         onClick={() => onTagFilter?.(tag.label)}
                         disabled={!canUseInteractiveTags}
                         title={`Galerie nach ${tag.label} filtern`}
@@ -314,6 +316,7 @@ export default function UploadGalleryDetailDialog({
                       <button
                         type="button"
                         className="gallery-detail-ai-tag-search"
+                        {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-detail-ai' }}
                         onClick={() => onFetchRandomImage?.(tag.label)}
                         disabled={!canSearchTags}
                         title={`Neues Online-Motiv zu ${tag.label} suchen`}
@@ -327,16 +330,6 @@ export default function UploadGalleryDetailDialog({
                 </div>
               ) : null}
 
-              {aiCollectionSuggestions.length > 0 ? (
-                <div className="gallery-detail-ai-suggestions" aria-label="KI-Sammlungsvorschlaege">
-                  {aiCollectionSuggestions.map((suggestion) => (
-                    <span key={suggestion.collectionId}>
-                      {suggestion.collectionName}
-                      {suggestion.reason ? `: ${suggestion.reason}` : ''}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
             </section>
           ) : null}
 

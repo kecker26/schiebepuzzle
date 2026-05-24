@@ -1472,6 +1472,45 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(secondPreviewButton)
   })
 
+  it('moves through gallery card tag buttons with the same action navigation', () => {
+    const entry = createGalleryDisplayEntry('1', '2026-04-11T10:00:00.000Z')
+    entry.representativeEntry.tags = [
+      { label: 'Stadt', confidence: 0.94, source: 'gemini' },
+      { label: 'Nacht', confidence: 0.88, source: 'gemini' },
+    ]
+
+    render(
+      <div className="gallery-grid">
+        <UploadGalleryCard
+          entry={entry}
+          onOpenDetails={vi.fn()}
+          onTagFilter={vi.fn()}
+          onDeleteEntry={vi.fn()}
+          isDeleting={false}
+        />
+      </div>
+    )
+
+    const stadtTagButton = screen.getByRole('button', { name: '#Stadt' })
+    const nachtTagButton = screen.getByRole('button', { name: '#Nacht' })
+    const detailsButton = screen.getByRole('button', {
+      name: /spielen und details zu normal 4x4 vom/i,
+    })
+
+    stadtTagButton.focus()
+    fireEvent.keyDown(stadtTagButton, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(nachtTagButton)
+
+    fireEvent.keyDown(nachtTagButton, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(detailsButton)
+
+    fireEvent.keyDown(detailsButton, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(nachtTagButton)
+
+    fireEvent.keyDown(nachtTagButton, { key: 'Home' })
+    expect(document.activeElement).toBe(stadtTagButton)
+  })
+
   it('moves through gallery actions by the visible card grid', () => {
     const firstEntry = createGalleryDisplayEntry('1', '2026-04-11T10:00:00.000Z')
     const secondEntry = createGalleryDisplayEntry('2', '2026-04-11T11:00:00.000Z')
@@ -2769,6 +2808,56 @@ describe('keyboard smoke tests', () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(opener)
     })
+  })
+
+  it('moves through gallery detail tag actions with arrows', () => {
+    const detailEntry = createGalleryDisplayEntry('12', '2026-04-11T12:00:00.000Z')
+    detailEntry.representativeEntry.tags = [
+      { label: 'Stadt', confidence: 0.94, source: 'gemini' },
+      { label: 'Nacht', confidence: 0.88, source: 'gemini' },
+    ]
+    detailEntry.representativeEntry.aiTagging = {
+      status: 'tagged',
+      provider: 'gemini',
+      model: 'gemini-test',
+      generatedAt: '2026-04-11T12:00:00.000Z',
+      error: null,
+      collectionSuggestions: [],
+    }
+
+    render(
+      <UploadGalleryDetailDialog
+        entry={detailEntry}
+        onReplayEntry={vi.fn()}
+        onCollectEntry={vi.fn()}
+        onTagFilter={vi.fn()}
+        onFetchRandomImage={vi.fn()}
+        onClose={vi.fn()}
+      />
+    )
+
+    const stadtFilterButton = screen.getByRole('button', { name: '#Stadt' })
+    const stadtSearchButton = screen.getByRole('button', { name: 'Neues Online-Motiv zu Stadt suchen' })
+    const nachtFilterButton = screen.getByRole('button', { name: '#Nacht' })
+    const nachtSearchButton = screen.getByRole('button', { name: 'Neues Online-Motiv zu Nacht suchen' })
+
+    mockElementRect(stadtFilterButton, { left: 0, top: 0, width: 80, height: 32 })
+    mockElementRect(stadtSearchButton, { left: 84, top: 0, width: 64, height: 32 })
+    mockElementRect(nachtFilterButton, { left: 160, top: 0, width: 80, height: 32 })
+    mockElementRect(nachtSearchButton, { left: 244, top: 0, width: 64, height: 32 })
+
+    stadtFilterButton.focus()
+    fireEvent.keyDown(stadtFilterButton, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(stadtSearchButton)
+
+    fireEvent.keyDown(stadtSearchButton, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(nachtFilterButton)
+
+    fireEvent.keyDown(nachtFilterButton, { key: 'End' })
+    expect(document.activeElement).toBe(nachtSearchButton)
+
+    fireEvent.keyDown(nachtSearchButton, { key: 'Home' })
+    expect(document.activeElement).toBe(stadtFilterButton)
   })
 
   it('moves through win dialog actions with arrows, Pos1 and Ende', async () => {
