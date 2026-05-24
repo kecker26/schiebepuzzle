@@ -542,10 +542,20 @@ textarea {
 .app-screen-fallback {
   width: min(960px, 100%);
   min-height: min(560px, calc(100vh - 44px));
+  margin-inline: auto;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
+}
+
+.app-screen-fallback--screen-center {
+  width: 100%;
+  min-height: calc(100vh - 44px);
+}
+
+.app-screen-fallback--screen-center .app-screen-fallback-card {
+  text-align: center;
 }
 
 .app-screen-fallback-card {

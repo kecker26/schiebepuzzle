@@ -3989,7 +3989,7 @@
 .gallery-detail-ai-tag-chip {
   isolation: isolate;
   display: inline-grid;
-  grid-template-columns: minmax(0, 1fr) 28px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 2px;
   min-width: 0;
@@ -4047,16 +4047,26 @@
 }
 
 .gallery-detail-ai-tag-search {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: auto;
+  min-width: 54px;
+  padding: 0 8px 0 7px;
   color: color-mix(in srgb, var(--image-radiance-ring) 82%, var(--primary-color));
   background: color-mix(in srgb, var(--image-radiance) 12%, transparent);
   transition:
     color 0.18s ease,
     background 0.18s ease,
     transform 0.18s ease;
+}
+
+.gallery-detail-ai-tag-search-label {
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .gallery-detail-ai-tag-search:hover:not(:disabled),

@@ -314,9 +314,9 @@ type StartResumeCandidate =
       detail: string
     }
 
-function AppScreenFallback({ title, copy }: AppScreenFallbackProps) {
+function AppScreenFallback({ title, copy, className }: AppScreenFallbackProps & { className?: string }) {
   return (
-    <div className="app-screen-fallback" role="status" aria-live="polite">
+    <div className={`app-screen-fallback${className ? ` ${className}` : ''}`} role="status" aria-live="polite">
       <div className="app-screen-fallback-card">
         <span className="app-screen-fallback-kicker">Ansicht wird geladen</span>
         <strong className="app-screen-fallback-title">{title}</strong>
@@ -349,6 +349,7 @@ export default function App() {
   const [quitHint, setQuitHint] = useState<string | null>(null)
   const [isFetchingRandom, setIsFetchingRandom] = useState(false)
   const [randomImageError, setRandomImageError] = useState<string | null>(null)
+  const [pendingCropImageQuery, setPendingCropImageQuery] = useState<string | null>(null)
   const [randomImageSource, setRandomImageSource] = useState<RandomImageSourceInfo | null>(null)
   const [activeGlobalOverlay, setActiveGlobalOverlay] = useState<GlobalOverlayKind | null>(null)
   const [helpContext, setHelpContext] = useState<HelpContext>(() => getDefaultHelpContext('welcome'))
@@ -1284,6 +1285,7 @@ export default function App() {
     setImage(imgSrc)
     setIsRandomImage(isRandom)
     setRandomImageSource(isRandom ? source : null)
+    setPendingCropImageQuery(null)
     setIsFetchingRandom(false)
     setRandomImageError(null)
     setCroppedImage(null)
@@ -1879,18 +1881,38 @@ export default function App() {
   }, [config, createCompletionPayload, setStatsError, setStatsOverview, winStats])
 
   const handleFetchRandomImage = useCallback(async (query?: string) => {
+    const shouldShowCropLoading = Boolean(query && appState === 'idle')
+
     setRandomImageError(null)
     setIsFetchingRandom(true)
+    setPendingCropImageQuery(query?.trim() || null)
+
+    if (shouldShowCropLoading) {
+      releaseAppFocus()
+      scrollViewportToTop()
+      audioService.stopTransientEffects()
+      resetRunArtifacts()
+      clearGalleryChallengeState()
+      confirmedCropSnapshotRef.current = null
+      setReplayCropTransform(null)
+      setImage(null)
+      setCroppedImage(null)
+      setAppState('imageLoaded')
+    }
 
     try {
       const randomImage = await fetchRandomPuzzleImageResult(query)
       handleImageLoaded(randomImage.imageSrc, true, randomImage.source)
     } catch (error) {
       setRandomImageError(`${query ? `Bildsuche fuer "${query}"` : 'Zufaelliges Bild'} konnte nicht geladen werden: ${getErrorMessage(error)}`)
+      setPendingCropImageQuery(null)
+      if (shouldShowCropLoading) {
+        setAppState('idle')
+      }
     } finally {
       setIsFetchingRandom(false)
     }
-  }, [handleImageLoaded])
+  }, [appState, clearGalleryChallengeState, handleImageLoaded, releaseAppFocus, resetRunArtifacts])
 
   const handleReplayGalleryEntry = useCallback((entry: SolvedGalleryEntry, mode: GalleryReplayMode = 'motif') => {
     const replayImage = entry.sourceImage ?? entry.previewImage
@@ -2729,40 +2751,55 @@ export default function App() {
             </Suspense>
           ),
         }
-        : appState === 'imageLoaded' && image
-          ? {
-              key: 'imageLoaded',
-              content: (
-                <Suspense
-                  fallback={
-                    <AppScreenFallback
-                      title="Bildzuschnitt wird vorbereitet"
-                      copy="Werkzeuge und Vorschau werden fuer dein Motiv geladen."
+        : appState === 'imageLoaded'
+          ? image
+            ? {
+                key: 'imageLoaded',
+                content: (
+                  <Suspense
+                    fallback={
+                      <AppScreenFallback
+                        title="Bildzuschnitt wird vorbereitet"
+                        copy="Werkzeuge und Vorschau werden fuer dein Motiv geladen."
+                      />
+                    }
+                  >
+                    <CropScreen
+                      image={image}
+                      config={config}
+                      onOpenHelp={openHelp}
+                      registerAppContextMenuHandler={registerAppContextMenuHandler}
+                      isRandomImage={isRandomImage}
+                      isFetchingRandom={isFetchingRandom}
+                      randomImageError={randomImageError}
+                      randomImageSource={randomImageSource}
+                      onFetchNewRandomImage={handleFetchRandomImage}
+                      initialTransform={cropDraftSnapshotRef.current?.transform ?? cropDraftSnapshot?.transform ?? null}
+                      initialUseFullImage={cropDraftSnapshotRef.current?.useFullImage ?? cropDraftSnapshot?.useFullImage ?? false}
+                      replayCropTransform={replayCropTransform}
+                      onSessionDraftChange={handleCropSessionDraftChange}
+                      onConfigChange={handleConfigChange}
+                      onCropConfirmed={handleCropConfirmed}
+                      onBack={handleReset}
+                      onGoToStartScreen={handleGoToStartScreen}
                     />
-                  }
-                >
-                  <CropScreen
-                    image={image}
-                    config={config}
-                    onOpenHelp={openHelp}
-                    registerAppContextMenuHandler={registerAppContextMenuHandler}
-                    isRandomImage={isRandomImage}
-                    isFetchingRandom={isFetchingRandom}
-                    randomImageError={randomImageError}
-                    randomImageSource={randomImageSource}
-                    onFetchNewRandomImage={handleFetchRandomImage}
-                    initialTransform={cropDraftSnapshotRef.current?.transform ?? cropDraftSnapshot?.transform ?? null}
-                    initialUseFullImage={cropDraftSnapshotRef.current?.useFullImage ?? cropDraftSnapshot?.useFullImage ?? false}
-                    replayCropTransform={replayCropTransform}
-                    onSessionDraftChange={handleCropSessionDraftChange}
-                    onConfigChange={handleConfigChange}
-                    onCropConfirmed={handleCropConfirmed}
-                    onBack={handleReset}
-                    onGoToStartScreen={handleGoToStartScreen}
+                  </Suspense>
+                ),
+              }
+            : {
+                key: 'imageLoading',
+                content: (
+                  <AppScreenFallback
+                    className="app-screen-fallback--screen-center"
+                    title="Online-Motiv wird gesucht"
+                    copy={
+                      pendingCropImageQuery
+                        ? `Die Bildsuche fuer #${pendingCropImageQuery} laeuft. Danach geht es direkt in den Zuschnitt.`
+                        : 'Die Bildsuche laeuft. Danach geht es direkt in den Zuschnitt.'
+                    }
                   />
-                </Suspense>
-              ),
-            }
+                ),
+              }
           : (appState === 'playing' || appState === 'solved') && croppedImage
             ? {
                 key: 'puzzle',

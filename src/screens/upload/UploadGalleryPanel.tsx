@@ -502,10 +502,9 @@ export default function UploadGalleryPanel({
   }, [handleTagFilterRequest])
 
   const handleDetailTagImageSearch = useCallback((tagLabel: string) => {
-    handleTagFilterRequest(tagLabel)
     setSelectedEntry(null)
     void onFetchRandomImage(tagLabel)
-  }, [handleTagFilterRequest, onFetchRandomImage])
+  }, [onFetchRandomImage])
 
   const handleApplyTagFilters = useCallback((tagKeys: string[]) => {
     const normalizedTagKeys = Array.from(new Set(tagKeys.map((tagKey) => getGalleryTagKey(tagKey)).filter(Boolean)))

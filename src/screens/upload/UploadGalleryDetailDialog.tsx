@@ -320,6 +320,7 @@ export default function UploadGalleryDetailDialog({
                         aria-label={`Neues Online-Motiv zu ${tag.label} suchen`}
                       >
                         <Search aria-hidden="true" size={13} strokeWidth={2.4} />
+                        <span className="gallery-detail-ai-tag-search-label">Online</span>
                       </button>
                     </span>
                   ))}
