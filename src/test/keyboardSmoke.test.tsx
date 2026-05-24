@@ -1172,6 +1172,59 @@ describe('keyboard smoke tests', () => {
     })
   })
 
+  it('starts a tagged online motif from gallery details without filtering back to the gallery', async () => {
+    const onFetchRandomImage = vi.fn()
+    const galleryEntries = [
+      {
+        ...createSolvedGalleryEntry('1', '2026-04-11T12:00:00.000Z'),
+        previewImage: 'data:image/png;base64,preview-1',
+        sourceImage: 'data:image/png;base64,source-1',
+        tags: [{ label: 'Stadt', confidence: 0.91, source: 'gemini' as const }],
+      },
+      {
+        ...createSolvedGalleryEntry('2', '2026-04-11T11:00:00.000Z'),
+        previewImage: 'data:image/png;base64,preview-2',
+        sourceImage: 'data:image/png;base64,source-2',
+        tags: [{ label: 'Wald', confidence: 0.88, source: 'gemini' as const }],
+      },
+    ]
+
+    render(
+      <div className="workspace-window-shell is-gallery">
+        <button type="button" className="workspace-window-nav-button" aria-current="page">
+          Galerie
+        </button>
+        <UploadGalleryPanel
+          gallery={{
+            entries: galleryEntries,
+            totalEntries: galleryEntries.length,
+            lastCompletedAt: galleryEntries[0].completedAt,
+            lastUpdatedAt: galleryEntries[0].completedAt,
+          }}
+          isLoadingGallery={false}
+          onReplayEntry={vi.fn()}
+          onFetchRandomImage={onFetchRandomImage}
+          onDeleteEntries={vi.fn(() => Promise.resolve())}
+          titleId="gallery-panel-title"
+          panelRole="region"
+        />
+      </div>
+    )
+
+    expect(screen.getByText('2 von 2 Motiven sichtbar')).not.toBeNull()
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Details zu Normal 4x4 vom/i })[0]!)
+    const tagSearchButton = await screen.findByRole('button', { name: 'Neues Online-Motiv zu Stadt suchen' })
+    expect(within(tagSearchButton).getByText('Online')).not.toBeNull()
+    fireEvent.click(tagSearchButton)
+
+    expect(onFetchRandomImage).toHaveBeenCalledWith('Stadt')
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Neues Online-Motiv zu Stadt suchen' })).toBeNull()
+      expect(screen.getByText('2 von 2 Motiven sichtbar')).not.toBeNull()
+    })
+  })
+
   it('moves through statistics jump and footer actions with arrows, Pos1 and Ende', () => {
     const completionResult = createCompletionResult()
 
