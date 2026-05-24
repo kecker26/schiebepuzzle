@@ -22,6 +22,8 @@ interface UploadGalleryToolbarProps {
   assistanceFilter: GalleryAssistanceFilter
   activeTagFilterCount: number
   activeTagFilterLabel: string | null
+  activeTagFilterKeys: string[]
+  tagOptions: GalleryTagFilterOption[]
   sortOption: GallerySortOption
   visibleCount: number
   totalCount: number
@@ -32,6 +34,8 @@ interface UploadGalleryToolbarProps {
   onDifficultyFilterChange: (value: GalleryDifficultyFilter) => void
   onAssistanceFilterChange: (value: GalleryAssistanceFilter) => void
   onSortOptionChange: (value: GallerySortOption) => void
+  onTagFilterToggle: (tagKey: string) => void
+  onClearTagFilters: () => void
   onCreateCollectionFromTag: () => void
   onManageTags: () => void
   onReset: () => void
@@ -47,6 +51,8 @@ export default function UploadGalleryToolbar({
   assistanceFilter,
   activeTagFilterCount,
   activeTagFilterLabel,
+  activeTagFilterKeys,
+  tagOptions,
   sortOption,
   visibleCount,
   totalCount,
@@ -57,6 +63,8 @@ export default function UploadGalleryToolbar({
   onDifficultyFilterChange,
   onAssistanceFilterChange,
   onSortOptionChange,
+  onTagFilterToggle,
+  onClearTagFilters,
   onCreateCollectionFromTag,
   onManageTags,
   onReset,
@@ -67,6 +75,7 @@ export default function UploadGalleryToolbar({
 }: UploadGalleryToolbarProps) {
   const hasSingleActiveTag = activeTagFilterCount === 1 && activeTagFilterLabel !== null
   const hasActiveTagCollection = hasSingleActiveTag && activeTagCollectionCount > 0
+  const activeTagKeySet = new Set(activeTagFilterKeys)
   const hasActiveCriteria =
     difficultyFilter !== 'all' ||
     assistanceFilter !== 'all' ||
@@ -168,6 +177,44 @@ export default function UploadGalleryToolbar({
           Zuruecksetzen
         </button>
       </div>
+
+      {activeTagFilterCount > 0 ? (
+        <div className="gallery-toolbar-tag-chips" aria-label="KI-Tags als UND-Filter">
+          <div className="gallery-toolbar-tag-chips-header">
+            <span>Tags</span>
+            <small>{`${activeTagFilterCount} aktiv`}</small>
+          </div>
+          <div className="gallery-toolbar-tag-chip-list">
+            {tagOptions.map((tagOption) => {
+              const isActive = activeTagKeySet.has(tagOption.id)
+
+              return (
+                <button
+                  key={tagOption.id}
+                  type="button"
+                  className="gallery-toolbar-tag-chip"
+                  aria-pressed={isActive}
+                  aria-label={`Tag #${tagOption.label} ${isActive ? 'entfernen' : 'hinzufuegen'}, ${tagOption.count} ${tagOption.count === 1 ? 'Motiv' : 'Motive'}`}
+                  onClick={() => onTagFilterToggle(tagOption.id)}
+                  title={`${isActive ? 'Tag entfernen' : 'Tag hinzufuegen'}: #${tagOption.label}`}
+                >
+                  <span>#{tagOption.label}</span>
+                  <small>{tagOption.count}</small>
+                </button>
+              )
+            })}
+            {activeTagFilterCount > 0 ? (
+              <button
+                type="button"
+                className="gallery-toolbar-tag-chip gallery-toolbar-tag-chip-clear"
+                onClick={onClearTagFilters}
+              >
+                Tags zuruecksetzen
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
