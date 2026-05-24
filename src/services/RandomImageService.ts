@@ -1,7 +1,9 @@
 import { fetchRandomArtInstituteImage } from './ArtInstituteImageProvider.ts'
 import { createGeneratedRandomImage } from './GeneratedImageProvider.ts'
+import { fetchRandomLoremFlickrImage } from './LoremFlickrImageProvider.ts'
 import { fetchRandomMetMuseumImage } from './MetMuseumImageProvider.ts'
 import { fetchRandomNasaImage } from './NasaImageProvider.ts'
+import { fetchRandomOpenverseImage } from './OpenverseImageProvider.ts'
 import { fetchRandomPexelsImage, isPexelsConfigured } from './PexelsImageProvider.ts'
 import { fetchRandomPicsumImage } from './PicsumImageProvider.ts'
 import { fetchRandomPixabayImage, isPixabayConfigured } from './PixabayImageProvider.ts'
@@ -24,6 +26,8 @@ interface RandomImageProvider {
   fetch: (query?: string) => Promise<string>
 }
 
+const RANDOM_IMAGE_PROVIDER_TIMEOUT_MS = 5000
+
 function shuffleProviders<T>(providers: T[]): T[] {
   const result = [...providers]
   for (let index = result.length - 1; index > 0; index -= 1) {
@@ -31,6 +35,28 @@ function shuffleProviders<T>(providers: T[]): T[] {
     ;[result[index], result[swapIndex]] = [result[swapIndex], result[index]]
   }
   return result
+}
+
+async function fetchProviderImageWithTimeout(
+  provider: RandomImageProvider,
+  query?: string
+): Promise<string> {
+  let timeoutId: number | null = null
+
+  try {
+    return await Promise.race([
+      provider.fetch(query),
+      new Promise<string>((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(`${provider.source.label} hat zu lange gebraucht`))
+        }, RANDOM_IMAGE_PROVIDER_TIMEOUT_MS)
+      }),
+    ])
+  } finally {
+    if (timeoutId !== null) {
+      window.clearTimeout(timeoutId)
+    }
+  }
 }
 
 export async function fetchRandomPuzzleImageResult(query?: string): Promise<RandomPuzzleImageResult> {
@@ -49,6 +75,22 @@ export async function fetchRandomPuzzleImageResult(query?: string): Promise<Rand
         url: 'https://picsum.photos/',
       },
       fetch: () => fetchRandomPicsumImage(),
+    },
+    {
+      source: {
+        label: 'Openverse',
+        url: 'https://openverse.org/',
+      },
+      supportsSearch: true,
+      fetch: (providerQuery) => fetchRandomOpenverseImage(providerQuery),
+    },
+    {
+      source: {
+        label: 'LoremFlickr',
+        url: 'https://loremflickr.com/',
+      },
+      supportsSearch: true,
+      fetch: (providerQuery) => fetchRandomLoremFlickrImage(providerQuery),
     },
     {
       source: {
@@ -123,7 +165,7 @@ export async function fetchRandomPuzzleImageResult(query?: string): Promise<Rand
   for (const provider of shuffledProviders) {
     try {
       return {
-        imageSrc: await provider.fetch(searchQuery),
+        imageSrc: await fetchProviderImageWithTimeout(provider, searchQuery),
         source: provider.source,
       }
     } catch {

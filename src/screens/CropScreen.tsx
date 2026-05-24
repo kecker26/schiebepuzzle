@@ -638,7 +638,7 @@ export default function CropScreen({
             label: 'Anderes Bild laden',
             icon: 'refreshCw',
             meta: isFetchingRandom ? 'Laedt ...' : 'Zufall',
-            onClick: onFetchNewRandomImage,
+            onClick: () => onFetchNewRandomImage(),
             disabled: Boolean(isFetchingRandom),
           } satisfies ContextMenuItem,
         ]
@@ -950,7 +950,7 @@ export default function CropScreen({
         <AnimatedStaggerGroup className="crop-actions" level="subtle" onKeyDown={handleDirectionalFocusNavigation}>
           {isRandomImage && onFetchNewRandomImage && (
             <AnimatedButton
-              onClick={onFetchNewRandomImage}
+              onClick={() => onFetchNewRandomImage()}
               className="secondary random-refresh-btn"
               disabled={isFetchingRandom}
               reveal
