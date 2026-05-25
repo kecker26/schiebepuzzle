@@ -198,13 +198,13 @@ function getAssistanceBadgeMeta(entry: PuzzleCompletionRecord): AssistanceBadgeM
     entry.suggestedMoveCount > 0 ? `${entry.suggestedMoveCount} Auto` : null,
   ].filter((detail): detail is string => detail !== null)
 
-  if (entry.assistanceMode === 'clean' || details.length === 0) {
+  if (entry.assistanceMode === 'clean') {
     return {
       label: formatAssistanceModeLabel('clean'),
       tone: 'clean',
       icon: 'C',
       detail: null,
-      title: 'Clean: 0 Hinweise, 0 Auto',
+      title: 'Clean: ohne Hilfen',
     }
   }
 
@@ -215,8 +215,8 @@ function getAssistanceBadgeMeta(entry: PuzzleCompletionRecord): AssistanceBadgeM
       label: formatAssistanceModeLabel('hinted'),
       tone: 'hinted',
       icon: 'H',
-      detail,
-      title: `${formatAssistanceModeLabel('hinted')}: ${detail}`,
+      detail: detail || null,
+      title: detail ? `${formatAssistanceModeLabel('hinted')}: ${detail}` : formatAssistanceModeLabel('hinted'),
     }
   }
 
@@ -226,8 +226,8 @@ function getAssistanceBadgeMeta(entry: PuzzleCompletionRecord): AssistanceBadgeM
     label: formatAssistanceModeLabel('auto-assisted'),
     tone: 'auto',
     icon: 'A',
-    detail,
-    title: `${formatAssistanceModeLabel('auto-assisted')}: ${detail}`,
+    detail: detail || null,
+    title: detail ? `${formatAssistanceModeLabel('auto-assisted')}: ${detail}` : formatAssistanceModeLabel('auto-assisted'),
   }
 }
 

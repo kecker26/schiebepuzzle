@@ -1,3 +1,10 @@
+:root {
+  --stats-assist-clean: #16a34a;
+  --stats-assist-hinted: #38bdf8;
+  --stats-assist-auto: #f59e0b;
+  --stats-assist-legacy: color-mix(in srgb, var(--text-muted) 58%, transparent);
+}
+
 .upload-screen {
   display: flex;
   justify-content: center;
@@ -6774,19 +6781,19 @@
 }
 
 .stats-visual-bar-legend .is-clean i {
-  background: #16a34a;
+  background: var(--stats-assist-clean);
 }
 
 .stats-visual-bar-legend .is-hinted i {
-  background: #38bdf8;
+  background: var(--stats-assist-hinted);
 }
 
 .stats-visual-bar-legend .is-auto i {
-  background: #f59e0b;
+  background: var(--stats-assist-auto);
 }
 
 .stats-visual-bar-legend .is-legacy i {
-  background: color-mix(in srgb, var(--text-muted) 58%, transparent);
+  background: var(--stats-assist-legacy);
 }
 
 .stats-visual-bar-note {
@@ -7017,6 +7024,12 @@
   font-size: 11px;
   font-weight: 800;
   line-height: 1.1;
+}
+
+.stats-visual-help-detail-chips span.is-clean {
+  border-color: color-mix(in srgb, var(--stats-assist-clean) 28%, var(--secondary-border));
+  background: color-mix(in srgb, var(--stats-assist-clean) 10%, var(--surface-soft));
+  color: color-mix(in srgb, var(--stats-assist-clean) 68%, var(--text-secondary));
 }
 
 .stats-visual-bar-track {
@@ -7396,22 +7409,22 @@
 
 .stats-visual-stacked-segment.is-clean,
 .stats-visual-segment-legend .is-clean i {
-  background: #16a34a;
+  background: var(--stats-assist-clean);
 }
 
 .stats-visual-stacked-segment.is-hinted,
 .stats-visual-segment-legend .is-hinted i {
-  background: #38bdf8;
+  background: var(--stats-assist-hinted);
 }
 
 .stats-visual-stacked-segment.is-auto,
 .stats-visual-segment-legend .is-auto i {
-  background: #f59e0b;
+  background: var(--stats-assist-auto);
 }
 
 .stats-visual-stacked-segment.is-legacy,
 .stats-visual-segment-legend .is-legacy i {
-  background: color-mix(in srgb, var(--text-muted) 58%, transparent);
+  background: var(--stats-assist-legacy);
 }
 
 .stats-visual-segment-legend {
@@ -7830,19 +7843,19 @@
 }
 
 .stats-assistance-badge.is-clean {
-  --stats-assistance-accent: var(--image-radiance-ring);
+  --stats-assistance-accent: var(--stats-assist-clean);
 }
 
 .stats-assistance-badge.is-hinted {
-  --stats-assistance-accent: color-mix(in srgb, var(--image-radiance) 78%, var(--primary-color));
+  --stats-assistance-accent: var(--stats-assist-hinted);
 }
 
 .stats-assistance-badge.is-auto {
-  --stats-assistance-accent: color-mix(in srgb, var(--primary-hover) 74%, var(--image-glow));
+  --stats-assistance-accent: var(--stats-assist-auto);
 }
 
 .stats-assistance-badge.is-legacy {
-  --stats-assistance-accent: var(--text-muted);
+  --stats-assistance-accent: var(--stats-assist-legacy);
 }
 
 .stats-data-badge + .stats-extra-moves-badge,

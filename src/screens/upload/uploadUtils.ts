@@ -87,6 +87,14 @@ export interface DifficultyReportRow {
   lastHasDetailedProfile: boolean | null
 }
 
+interface DifficultyAssistanceCounts {
+  solveCount: number
+  cleanSolveCount: number
+  assistedSolveCount: number
+  autoAssistedSolveCount: number
+  profiledSolveCount: number
+}
+
 export const STATS_DASHBOARD_TABS: DashboardTabDefinition[] = [
   {
     id: 'overview',
@@ -317,10 +325,46 @@ function calculateRate(part: number, total: number): number | null {
   return Math.round((part / total) * 100)
 }
 
+function buildDifficultyAssistanceCounts(
+  completionHistory: PuzzleCompletionRecord[]
+): Map<HistoryFilter, DifficultyAssistanceCounts> {
+  return completionHistory.reduce<Map<HistoryFilter, DifficultyAssistanceCounts>>((countsByDifficulty, entry) => {
+    const difficultyId = getDifficultyFilterId(entry.config)
+    const counts = countsByDifficulty.get(difficultyId) ?? {
+      solveCount: 0,
+      cleanSolveCount: 0,
+      assistedSolveCount: 0,
+      autoAssistedSolveCount: 0,
+      profiledSolveCount: 0,
+    }
+
+    counts.solveCount += 1
+
+    if (entry.hasDetailedProfile) {
+      counts.profiledSolveCount += 1
+
+      if (entry.hintCount > 0) {
+        counts.assistedSolveCount += 1
+      } else if (entry.suggestedMoveCount > 0) {
+        counts.assistedSolveCount += 1
+        counts.autoAssistedSolveCount += 1
+      } else if (entry.assistanceMode === 'clean') {
+        counts.cleanSolveCount += 1
+      } else {
+        counts.assistedSolveCount += 1
+      }
+    }
+
+    countsByDifficulty.set(difficultyId, counts)
+    return countsByDifficulty
+  }, new Map())
+}
+
 export function buildDifficultyReportRows(
   standardDifficultyStats: StandardDifficultyStatsEntry[],
   completionHistory: PuzzleCompletionRecord[]
 ): DifficultyReportRow[] {
+  const assistanceCountsByDifficulty = buildDifficultyAssistanceCounts(completionHistory)
   const worstByDifficulty = completionHistory.reduce<
     Map<`${number}x${number}`, { worstTime: number; worstMoves: number }>
   >((accumulator, entry) => {
@@ -343,19 +387,35 @@ export function buildDifficultyReportRows(
   return standardDifficultyStats.map(({ option, stats }) => {
     const difficultyId = getDifficultyFilterId({ rows: option.rows, cols: option.cols })
     const worstValues = worstByDifficulty.get(difficultyId)
-    const solveCount = stats?.solveCount ?? 0
-    const profiledSolveCount = stats?.profiledSolveCount ?? 0
+    const assistanceCounts = assistanceCountsByDifficulty.get(difficultyId)
+    const solveCount = Math.max(stats?.solveCount ?? 0, assistanceCounts?.solveCount ?? 0)
+    const hasHistoryCounts = (assistanceCounts?.solveCount ?? 0) > 0
+    const cleanSolveCount = hasHistoryCounts
+      ? assistanceCounts?.cleanSolveCount ?? 0
+      : stats?.cleanSolveCount ?? 0
+    const assistedSolveCount = hasHistoryCounts
+      ? assistanceCounts?.assistedSolveCount ?? 0
+      : stats?.assistedSolveCount ?? 0
+    const autoAssistedSolveCount = hasHistoryCounts
+      ? assistanceCounts?.autoAssistedSolveCount ?? 0
+      : stats?.autoAssistedSolveCount ?? 0
+    const profiledSolveCount = hasHistoryCounts
+      ? assistanceCounts?.profiledSolveCount ?? 0
+      : stats?.profiledSolveCount ?? 0
+    const legacySolveCount = hasHistoryCounts
+      ? Math.max(0, solveCount - profiledSolveCount)
+      : stats?.legacySolveCount ?? 0
 
     return {
       option,
       stats,
       solveCount,
-      cleanSolveCount: stats?.cleanSolveCount ?? 0,
-      assistedSolveCount: stats?.assistedSolveCount ?? 0,
-      autoAssistedSolveCount: stats?.autoAssistedSolveCount ?? 0,
+      cleanSolveCount,
+      assistedSolveCount,
+      autoAssistedSolveCount,
       profiledSolveCount,
-      legacySolveCount: stats?.legacySolveCount ?? 0,
-      cleanRate: calculateRate(stats?.cleanSolveCount ?? 0, solveCount),
+      legacySolveCount,
+      cleanRate: calculateRate(cleanSolveCount, solveCount),
       profileCoverage: calculateRate(profiledSolveCount, solveCount),
       bestTime: stats?.bestTime ?? null,
       worstTime: worstValues?.worstTime ?? null,

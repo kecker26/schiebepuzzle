@@ -3082,7 +3082,7 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(difficultyFilterButton)
 
     const sortButtons = screen.getAllByRole('button', {
-      name: /datum|stufe|zeit|netto-zuege|gesamt-zuege|extra-zuege|laufart/i,
+      name: /datum|stufe|zeit|zuege|laufart/i,
     })
     const firstSortButton = sortButtons[0]!
     const secondSortButton = sortButtons[1]!
@@ -3097,6 +3097,99 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.keyDown(lastSortButton, { key: 'Home' })
     expect(document.activeElement).toBe(firstSortButton)
+  })
+
+  it('renders the compact statistics history table without obsolete move columns or empty assistance details', () => {
+    const cleanRun: PuzzleCompletionRecord = {
+      ...createCompletionRecord('1', '2026-04-10T10:00:00.000Z'),
+      id: 'clean-run',
+      moves: 30,
+      actionMoves: 30,
+      hintCount: 0,
+      suggestedMoveCount: 0,
+      assistanceMode: 'clean',
+    }
+    const hintedExtraRun: PuzzleCompletionRecord = {
+      ...createCompletionRecord('2', '2026-04-11T10:00:00.000Z'),
+      id: 'hinted-extra-run',
+      moves: 32,
+      actionMoves: 35,
+      hintCount: 1,
+      suggestedMoveCount: 0,
+      assistanceMode: 'hinted',
+    }
+    const normalRun: PuzzleCompletionRecord = {
+      ...createCompletionRecord('3', '2026-04-12T10:00:00.000Z'),
+      id: 'normal-run',
+      moves: 34,
+      actionMoves: 34,
+      hintCount: 0,
+      suggestedMoveCount: 0,
+      assistanceMode: 'clean',
+    }
+    const autoRunWithoutDetail: PuzzleCompletionRecord = {
+      ...createCompletionRecord('4', '2026-04-13T10:00:00.000Z'),
+      id: 'auto-run-without-detail',
+      moves: 36,
+      actionMoves: 36,
+      hintCount: 0,
+      suggestedMoveCount: 0,
+      assistanceMode: 'auto-assisted',
+    }
+    const autoRunWithDetail: PuzzleCompletionRecord = {
+      ...createCompletionRecord('5', '2026-04-14T10:00:00.000Z'),
+      id: 'auto-run-with-detail',
+      moves: 38,
+      actionMoves: 40,
+      hintCount: 0,
+      suggestedMoveCount: 2,
+      assistanceMode: 'auto-assisted',
+    }
+    const completionHistory = [
+      cleanRun,
+      hintedExtraRun,
+      normalRun,
+      autoRunWithoutDetail,
+      autoRunWithDetail,
+    ]
+
+    const { container } = render(
+      <UploadStatsHistorySection
+        isLoadingStats={false}
+        completionHistory={completionHistory}
+        filteredHistory={completionHistory}
+        historyFilter="all"
+        historyFilterOptions={[{ id: 'all', label: 'Alle Siege' }]}
+        standardDifficultyStats={[]}
+        onHistoryFilterChange={vi.fn()}
+        onReloadView={vi.fn()}
+        onBackToStart={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByRole('columnheader', { name: /gesamt-zuege/i })).toBeNull()
+    expect(screen.queryByRole('columnheader', { name: /extra-zuege/i })).toBeNull()
+    expect(screen.queryByText(/gesamt-zuege/i)).toBeNull()
+    expect(screen.queryByText(/^laufzeit$/i)).toBeNull()
+    expect(screen.queryByText(/^netto$/i)).toBeNull()
+    expect(screen.queryByText(/^grid$/i)).toBeNull()
+
+    const extraMoveBadges = Array.from(container.querySelectorAll('.stats-extra-moves-badge'))
+    expect(extraMoveBadges.map((badge) => badge.textContent?.trim())).toEqual(['+2 Extra', '+3 Extra'])
+
+    const assistanceBadges = Array.from(container.querySelectorAll<HTMLElement>('.stats-assistance-badge'))
+    const cleanBadges = assistanceBadges.filter((badge) => badge.textContent?.includes('Clean'))
+    const autoBadges = assistanceBadges.filter((badge) => badge.textContent?.includes('Auto-Zug'))
+
+    expect(cleanBadges.length).toBe(2)
+    expect(cleanBadges.every((badge) => !badge.textContent?.includes('0 Hinweise'))).toBe(true)
+    expect(cleanBadges.every((badge) => !badge.textContent?.includes('0 Auto'))).toBe(true)
+    expect(cleanBadges.every((badge) => !badge.getAttribute('title')?.includes('0 Hinweise'))).toBe(true)
+    expect(cleanBadges.every((badge) => !badge.getAttribute('title')?.includes('0 Auto'))).toBe(true)
+
+    expect(autoBadges.length).toBe(2)
+    expect(autoBadges.filter((badge) => badge.textContent?.includes('2 Auto'))).toHaveLength(1)
+    expect(autoBadges.every((badge) => !badge.textContent?.includes('0 Auto'))).toBe(true)
   })
 
   it('keeps focus on the same statistics sort button after resorting the history table', async () => {
