@@ -24,9 +24,9 @@ type HistorySortKey =
   | 'difficulty'
   | 'time'
   | 'moves'
-  | 'actionMoves'
-  | 'extraMoves'
   | 'assistanceMode'
+
+type AssistanceBadgeTone = 'clean' | 'hinted' | 'auto' | 'legacy'
 
 interface UploadStatsHistorySectionProps {
   isLoadingStats: boolean
@@ -53,7 +53,6 @@ interface HistoryDisplayEntry {
   completedAtValue: number | null
   difficultyRows: number
   difficultyCols: number
-  actionMovesValue: number | null
   extraMovesValue: number | null
   assistanceRank: number
   isBestTime: boolean
@@ -64,21 +63,25 @@ interface HistoryDisplayEntry {
   moveBadges: string[]
 }
 
+interface AssistanceBadgeMeta {
+  label: string
+  tone: AssistanceBadgeTone
+  icon: string
+  detail: string | null
+  title: string
+}
+
 const HISTORY_SORT_LABELS: Record<HistorySortKey, string> = {
   completedAt: 'Datum',
   difficulty: 'Stufe',
   time: 'Zeit',
-  moves: 'Netto-Zuege',
-  actionMoves: 'Gesamt-Zuege',
-  extraMoves: 'Extra-Zuege',
+  moves: 'Zuege',
   assistanceMode: 'Laufart',
 }
 
 const HISTORY_COLUMN_HELP: Partial<Record<HistorySortKey, string>> = {
   time: 'Die gespeicherte Laufzeit des einzelnen Siegs.',
   moves: 'Netto-Zuege sind die eigentlichen Puzzle-Zuege bis zur Loesung.',
-  actionMoves: 'Gesamt-Zuege enthalten alle gezaehlten Aktionen inklusive Hilfen, soweit ein Laufprofil vorhanden ist.',
-  extraMoves: 'Extra-Zuege sind Gesamt-Zuege minus Netto-Zuege und zeigen Umwege oder Zusatzaktionen.',
   assistanceMode: 'Clean bedeutet ohne Hilfe. Hinweise und Auto-Zug markieren unterstuetzte Laeufe. Legacy hat kein vollstaendiges Laufprofil.',
 }
 
@@ -98,13 +101,6 @@ function getTimeCopyLabel(isBest: boolean, isWorst: boolean): string {
   if (isBest) return 'Bestzeit'
   if (isWorst) return 'langsamste Zeit'
   return 'Laufzeit'
-}
-
-function getMovesCopyLabel(isBest: boolean, isWorst: boolean): string {
-  if (isBest && isWorst) return 'wenigste und meiste Netto-Zuege'
-  if (isBest) return 'wenigste Netto-Zuege'
-  if (isWorst) return 'meiste Netto-Zuege'
-  return 'Netto'
 }
 
 function getExtremeBadges(isBest: boolean, isWorst: boolean, bestLabel: string, worstLabel: string): string[] {
@@ -135,6 +131,30 @@ function parseOptionalTimestamp(timestamp: string | null | undefined): number | 
   return Number.isNaN(parsed) ? null : parsed
 }
 
+function formatHistoryDate(isoDate: string): string {
+  const parsed = new Date(isoDate)
+  if (Number.isNaN(parsed.getTime())) return '--'
+
+  return parsed.toLocaleDateString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+  })
+}
+
+function formatHistoryTime(isoDate: string): string {
+  const parsed = new Date(isoDate)
+  if (Number.isNaN(parsed.getTime())) return '--:--'
+
+  return parsed.toLocaleTimeString('de-DE', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatHistoryDateTitle(isoDate: string): string {
+  return formatDate(isoDate)
+}
+
 function compareDifficulty(
   left: Pick<HistoryDisplayEntry, 'difficultyRows' | 'difficultyCols'>,
   right: Pick<HistoryDisplayEntry, 'difficultyRows' | 'difficultyCols'>,
@@ -156,6 +176,59 @@ function getAssistanceRank(entry: PuzzleCompletionRecord): number {
   if (entry.assistanceMode === 'clean') return 0
   if (entry.assistanceMode === 'hinted') return 1
   return 2
+}
+
+function formatCountLabel(count: number, singular: string, plural: string): string {
+  return `${count} ${count === 1 ? singular : plural}`
+}
+
+function getAssistanceBadgeMeta(entry: PuzzleCompletionRecord): AssistanceBadgeMeta {
+  if (!entry.hasDetailedProfile) {
+    return {
+      label: 'Legacy',
+      tone: 'legacy',
+      icon: 'L',
+      detail: 'ohne Laufprofil',
+      title: 'Legacy: ohne Laufprofil',
+    }
+  }
+
+  const details = [
+    entry.hintCount > 0 ? formatCountLabel(entry.hintCount, 'Hinweis', 'Hinweise') : null,
+    entry.suggestedMoveCount > 0 ? `${entry.suggestedMoveCount} Auto` : null,
+  ].filter((detail): detail is string => detail !== null)
+
+  if (entry.assistanceMode === 'clean' || details.length === 0) {
+    return {
+      label: formatAssistanceModeLabel('clean'),
+      tone: 'clean',
+      icon: 'C',
+      detail: null,
+      title: 'Clean: 0 Hinweise, 0 Auto',
+    }
+  }
+
+  if (entry.assistanceMode === 'hinted') {
+    const detail = details.join(', ')
+
+    return {
+      label: formatAssistanceModeLabel('hinted'),
+      tone: 'hinted',
+      icon: 'H',
+      detail,
+      title: `${formatAssistanceModeLabel('hinted')}: ${detail}`,
+    }
+  }
+
+  const detail = details.join(', ')
+
+  return {
+    label: formatAssistanceModeLabel('auto-assisted'),
+    tone: 'auto',
+    icon: 'A',
+    detail,
+    title: `${formatAssistanceModeLabel('auto-assisted')}: ${detail}`,
+  }
 }
 
 function getSortIndicator(key: HistorySortKey, activeKey: HistorySortKey, direction: SortDirection): string {
@@ -203,7 +276,6 @@ function buildHistoryDisplayEntries(
       completedAtValue: parseOptionalTimestamp(entry.completedAt),
       difficultyRows: entry.config.rows,
       difficultyCols: entry.config.cols,
-      actionMovesValue: entry.hasDetailedProfile ? entry.actionMoves : null,
       extraMovesValue: entry.hasDetailedProfile ? getCompletionExtraMoves(entry) : null,
       assistanceRank: getAssistanceRank(entry),
       isBestTime,
@@ -236,12 +308,6 @@ function sortHistoryEntries(
         break
       case 'moves':
         result = compareNullableNumbers(left.entry.moves, right.entry.moves, direction)
-        break
-      case 'actionMoves':
-        result = compareNullableNumbers(left.actionMovesValue, right.actionMovesValue, direction)
-        break
-      case 'extraMoves':
-        result = compareNullableNumbers(left.extraMovesValue, right.extraMovesValue, direction)
         break
       case 'assistanceMode':
         result = compareNullableNumbers(left.assistanceRank, right.assistanceRank, direction)
@@ -518,7 +584,7 @@ export default function UploadStatsHistorySection({
                     </p>
                   </div>
                 ) : (
-                  <div className="stats-table-shell">
+                  <div className="stats-table-shell stats-table-shell-history">
                     <table className="stats-data-table stats-history-table">
                       <thead>
                         <tr>
@@ -587,52 +653,12 @@ export default function UploadStatsHistorySection({
                             onClick={() => handleSort('moves')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
-                            {renderHistoryHeaderLabel('Netto-Zuege')}
+                            {renderHistoryHeaderLabel('Zuege')}
                             <span className="stats-table-sort-indicator" aria-hidden="true">
                               {getSortIndicator('moves', sortKey, sortDirection)}
                             </span>
                           </AnimatedButton>
                           {renderHistoryColumnHelpBadge('moves')}
-                        </th>
-                        <th
-                          scope="col"
-                          aria-sort={sortKey === 'actionMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
-                          {...getHistoryHelpHeaderProps('actionMoves')}
-                        >
-                          <AnimatedButton
-                            className="stats-table-sort"
-                            data-history-sort-key="actionMoves"
-                            interaction="chip"
-                            title="Alle gezahlten Zuege inklusive Hilfen, soweit ein Laufprofil vorhanden ist"
-                            onClick={() => handleSort('actionMoves')}
-                            onKeyDown={handleSortButtonKeyDown}
-                          >
-                            {renderHistoryHeaderLabel('Gesamt-Zuege')}
-                            <span className="stats-table-sort-indicator" aria-hidden="true">
-                              {getSortIndicator('actionMoves', sortKey, sortDirection)}
-                            </span>
-                          </AnimatedButton>
-                          {renderHistoryColumnHelpBadge('actionMoves')}
-                        </th>
-                        <th
-                          scope="col"
-                          aria-sort={sortKey === 'extraMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
-                          {...getHistoryHelpHeaderProps('extraMoves')}
-                        >
-                          <AnimatedButton
-                            className="stats-table-sort"
-                            data-history-sort-key="extraMoves"
-                            interaction="chip"
-                            title="Differenz zwischen Gesamt- und Netto-Zuegen"
-                            onClick={() => handleSort('extraMoves')}
-                            onKeyDown={handleSortButtonKeyDown}
-                          >
-                            {renderHistoryHeaderLabel('Extra-Zuege')}
-                            <span className="stats-table-sort-indicator" aria-hidden="true">
-                              {getSortIndicator('extraMoves', sortKey, sortDirection)}
-                            </span>
-                          </AnimatedButton>
-                          {renderHistoryColumnHelpBadge('extraMoves')}
                         </th>
                         <th
                           scope="col"
@@ -656,28 +682,31 @@ export default function UploadStatsHistorySection({
                         </tr>
                       </thead>
                       <tbody>
-                        {sortedHistory.map((historyEntry) => (
+                        {sortedHistory.map((historyEntry) => {
+                          const assistanceBadge = getAssistanceBadgeMeta(historyEntry.entry)
+
+                          return (
                           <tr key={historyEntry.entry.id}>
                           <td>
-                            <span className="stats-data-cell-main">{formatDate(historyEntry.entry.completedAt)}</span>
+                            <span className="stats-data-cell-main" title={formatHistoryDateTitle(historyEntry.entry.completedAt)}>
+                              {formatHistoryDate(historyEntry.entry.completedAt)}
+                            </span>
+                            <span className="stats-data-cell-copy">
+                              {formatHistoryTime(historyEntry.entry.completedAt)}
+                            </span>
                           </td>
                           <td>
                             <span className="stats-data-cell-main">{formatDifficultyLabel(historyEntry.entry.config)}</span>
-                            <span className="stats-data-cell-copy">
-                              {historyEntry.entry.config.rows}x{historyEntry.entry.config.cols}
-                            </span>
                           </td>
                           <td className={getHistoryCellTone(historyEntry.isBestTime, historyEntry.isWorstTime).trim()}>
                             <span className="stats-data-cell-main">{formatTime(historyEntry.entry.time)}</span>
-                            <span className="stats-data-cell-copy">
-                              {getTimeCopyLabel(historyEntry.isBestTime, historyEntry.isWorstTime)}
-                            </span>
                             {historyEntry.timeBadges.length > 0 ? (
                               <div className="stats-data-badges">
                                 {historyEntry.timeBadges.map((badge) => (
                                   <span
                                     key={badge}
                                     className={`stats-data-badge${badge === 'Bestzeit' ? ' is-positive' : ' is-negative'}`}
+                                    title={getTimeCopyLabel(historyEntry.isBestTime, historyEntry.isWorstTime)}
                                   >
                                     {badge}
                                   </span>
@@ -687,10 +716,7 @@ export default function UploadStatsHistorySection({
                           </td>
                           <td className={getHistoryCellTone(historyEntry.isBestMoves, historyEntry.isWorstMoves).trim()}>
                             <span className="stats-data-cell-main">{historyEntry.entry.moves}</span>
-                            <span className="stats-data-cell-copy">
-                              {getMovesCopyLabel(historyEntry.isBestMoves, historyEntry.isWorstMoves)}
-                            </span>
-                            {historyEntry.moveBadges.length > 0 ? (
+                            {historyEntry.moveBadges.length > 0 || (historyEntry.extraMovesValue ?? 0) > 0 ? (
                               <div className="stats-data-badges">
                                 {historyEntry.moveBadges.map((badge) => (
                                   <span
@@ -700,33 +726,28 @@ export default function UploadStatsHistorySection({
                                     {badge}
                                   </span>
                                 ))}
+                                {(historyEntry.extraMovesValue ?? 0) > 0 ? (
+                                  <span className="stats-extra-moves-badge">
+                                    +{historyEntry.extraMovesValue} Extra
+                                  </span>
+                                ) : null}
                               </div>
                             ) : null}
                           </td>
                           <td>
-                            <span className="stats-data-cell-main">
-                              {historyEntry.actionMovesValue !== null ? `${historyEntry.actionMovesValue}` : '--'}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="stats-data-cell-main">
-                              {historyEntry.extraMovesValue !== null ? `${historyEntry.extraMovesValue}` : '--'}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="stats-data-cell-main">
-                              {historyEntry.entry.hasDetailedProfile
-                                ? formatAssistanceModeLabel(historyEntry.entry.assistanceMode)
-                                : 'Legacy'}
-                            </span>
-                            <span className="stats-data-cell-copy">
-                              {historyEntry.entry.hasDetailedProfile
-                                ? `${historyEntry.entry.hintCount} Hinweise, ${historyEntry.entry.suggestedMoveCount} Auto`
-                                : 'ohne Laufprofil'}
+                            <span className={`stats-assistance-badge is-${assistanceBadge.tone}`} title={assistanceBadge.title}>
+                              <span className="stats-assistance-badge-icon" aria-hidden="true">
+                                {assistanceBadge.icon}
+                              </span>
+                              <span className="stats-assistance-badge-copy">
+                                <span>{assistanceBadge.label}</span>
+                                {assistanceBadge.detail ? <small>{assistanceBadge.detail}</small> : null}
+                              </span>
                             </span>
                           </td>
                           </tr>
-                        ))}
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
