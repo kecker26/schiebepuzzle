@@ -45,6 +45,15 @@ type HistoryChartMode = 'chronological' | 'perDifficulty'
 
 type RawStatsView = 'difficulties' | 'history' | 'matrix'
 
+interface AssistanceSummary {
+  totalSolved: number
+  cleanSolvedCount: number
+  hintedSolvedCount: number
+  autoAssistedSolvedCount: number
+  legacySolvedCount: number
+  cleanRate: number | null
+}
+
 interface UploadStatsVisualReportProps {
   stats: PuzzleStats | null
   latestCompletion: PuzzleCompletionRecord | null
@@ -159,6 +168,62 @@ function getCleanRate(stats: PuzzleStats | null): number | null {
   return Math.round((stats.cleanSolvedCount / stats.totalSolved) * 100)
 }
 
+function getDerivedAssistanceSummary(
+  stats: PuzzleStats | null,
+  completionHistory: PuzzleCompletionRecord[]
+): AssistanceSummary {
+  if (completionHistory.length === 0) {
+    const totalSolved = stats?.totalSolved ?? 0
+    const cleanSolvedCount = stats?.cleanSolvedCount ?? 0
+
+    return {
+      totalSolved,
+      cleanSolvedCount,
+      hintedSolvedCount: stats ? Math.max(0, stats.assistedSolvedCount - stats.autoAssistedSolvedCount) : 0,
+      autoAssistedSolvedCount: stats?.autoAssistedSolvedCount ?? 0,
+      legacySolvedCount: stats?.legacySolvedCount ?? 0,
+      cleanRate: getCleanRate(stats),
+    }
+  }
+
+  const counts = completionHistory.reduce(
+    (summary, entry) => {
+      if (!entry.hasDetailedProfile) return summary
+
+      summary.profiledSolvedCount += 1
+
+      if (entry.hintCount > 0) {
+        summary.hintedSolvedCount += 1
+      } else if (entry.suggestedMoveCount > 0) {
+        summary.autoAssistedSolvedCount += 1
+      } else if (entry.assistanceMode === 'clean') {
+        summary.cleanSolvedCount += 1
+      } else {
+        summary.hintedSolvedCount += 1
+      }
+
+      return summary
+    },
+    {
+      cleanSolvedCount: 0,
+      hintedSolvedCount: 0,
+      autoAssistedSolvedCount: 0,
+      profiledSolvedCount: 0,
+    }
+  )
+  const totalSolved = Math.max(stats?.totalSolved ?? 0, completionHistory.length)
+  const cleanRate = totalSolved > 0 ? Math.round((counts.cleanSolvedCount / totalSolved) * 100) : null
+
+  return {
+    totalSolved,
+    cleanSolvedCount: counts.cleanSolvedCount,
+    hintedSolvedCount: counts.hintedSolvedCount,
+    autoAssistedSolvedCount: counts.autoAssistedSolvedCount,
+    legacySolvedCount: Math.max(0, totalSolved - counts.profiledSolvedCount),
+    cleanRate,
+  }
+}
+
 function getMetricValue(entry: PuzzleCompletionRecord, metric: HistoryMetric): number | null {
   switch (metric) {
     case 'time':
@@ -198,6 +263,23 @@ function formatShortDate(isoDate: string): string {
   return parsed.toLocaleDateString('de-DE', {
     day: '2-digit',
     month: '2-digit',
+  })
+}
+
+function formatChartTooltipDate(isoDate: string, includeTime = true): string {
+  const parsed = new Date(isoDate)
+  if (Number.isNaN(parsed.getTime())) return '--'
+
+  return parsed.toLocaleDateString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    ...(includeTime
+      ? {
+          hour: '2-digit',
+          minute: '2-digit',
+        }
+      : {}),
   })
 }
 
@@ -327,11 +409,9 @@ function buildMatrixCsv(
   difficultyRows: DifficultyReportRow[]
 ): string {
   const profiledHistory = completionHistory.filter((entry) => entry.hasDetailedProfile)
-  const totalCleanRate = stats && stats.totalSolved > 0
-    ? Math.round((stats.cleanSolvedCount / stats.totalSolved) * 100)
-    : null
-  const totalProfileCoverage = stats && stats.totalSolved > 0
-    ? Math.round((stats.profiledSolvedCount / stats.totalSolved) * 100)
+  const assistanceSummary = getDerivedAssistanceSummary(stats, completionHistory)
+  const totalProfileCoverage = assistanceSummary.totalSolved > 0
+    ? Math.round((profiledHistory.length / assistanceSummary.totalSolved) * 100)
     : null
   const totalAverageExtraMoves = profiledHistory.length > 0
     ? Math.round(
@@ -342,8 +422,8 @@ function buildMatrixCsv(
   const columns = [
     {
       label: 'Gesamt',
-      solveCount: stats?.totalSolved ?? 0,
-      cleanRate: totalCleanRate,
+      solveCount: assistanceSummary.totalSolved,
+      cleanRate: assistanceSummary.cleanRate,
       bestTime: stats?.bestTime ?? null,
       worstTime: getMaximum(completionHistory.map((entry) => entry.time)),
       bestMoves: stats?.bestMoves ?? null,
@@ -452,6 +532,11 @@ interface DifficultyHelpSummary {
   totalAutoMoves: number
 }
 
+interface HelpDetailChip {
+  label: string
+  className?: string
+}
+
 function getCompletionDifficultyKey(entry: PuzzleCompletionRecord): string {
   return `${entry.config.rows}x${entry.config.cols}`
 }
@@ -480,6 +565,21 @@ function buildDifficultyHelpSummaries(entries: PuzzleCompletionRecord[]): Map<st
 
     return summaryMap
   }, new Map())
+}
+
+function getHelpDetailChips(summary: DifficultyHelpSummary, hasCompletedRuns: boolean): HelpDetailChip[] {
+  if (!hasCompletedRuns) return []
+
+  const chips = [
+    summary.hintedRuns > 0 ? { label: `${summary.hintedRuns} Hinweis-Laeufe` } : null,
+    summary.totalHints > 0 ? { label: `${summary.totalHints} Hinweise` } : null,
+    summary.autoRuns > 0 ? { label: `${summary.autoRuns} Auto-Laeufe` } : null,
+    summary.totalAutoMoves > 0 ? { label: `${summary.totalAutoMoves} Auto-Zuege` } : null,
+  ].filter((chip): chip is HelpDetailChip => chip !== null)
+
+  return chips.length > 0
+    ? chips
+    : [{ label: 'Ohne Hilfe', className: 'is-clean' }]
 }
 
 function getMultiLineChartData(
@@ -603,8 +703,12 @@ function findBestEntry(
   ), matchingEntries[0])
 }
 
-function renderMetricCards(stats: PuzzleStats | null, latestCompletion: PuzzleCompletionRecord | null) {
-  const cleanRate = getCleanRate(stats)
+function renderMetricCards(
+  stats: PuzzleStats | null,
+  latestCompletion: PuzzleCompletionRecord | null,
+  cleanRate: number | null,
+  cleanSolvedCount: number
+) {
   const cards = [
     {
       label: 'Siege',
@@ -624,7 +728,7 @@ function renderMetricCards(stats: PuzzleStats | null, latestCompletion: PuzzleCo
     {
       label: 'Clean-Quote',
       value: formatPercent(cleanRate),
-      detail: `${stats?.cleanSolvedCount ?? 0} clean geloest`,
+      detail: `${cleanSolvedCount} clean geloest`,
     },
   ]
 
@@ -705,6 +809,10 @@ export default function UploadStatsVisualReport({
   const visibleHistorySeriesCount = historySeriesOptions.filter(
     (series) => !hiddenHistoryDifficultyKeys.includes(series.key)
   ).length
+  const assistanceSummary = useMemo(
+    () => getDerivedAssistanceSummary(stats, completionHistory),
+    [completionHistory, stats]
+  )
   const bestTimeEntry = findBestEntry(completionHistory, () => true, (entry) => entry.time)
   const bestMovesEntry = findBestEntry(completionHistory, () => true, (entry) => entry.moves)
   const bestCleanTimeEntry = findBestEntry(
@@ -717,16 +825,13 @@ export default function UploadStatsVisualReport({
     (entry) => entry.hasDetailedProfile,
     (entry) => getCompletionExtraMoves(entry)
   )
-  const cleanRate = getCleanRate(stats)
-  const assistedCount = stats
-    ? Math.max(0, stats.assistedSolvedCount - stats.autoAssistedSolvedCount)
-    : 0
-  const assistanceTotal = Math.max(1, stats?.totalSolved ?? 0)
+  const cleanRate = assistanceSummary.cleanRate
+  const assistanceTotal = Math.max(1, assistanceSummary.totalSolved)
   const assistanceSegments = [
-    { label: 'Clean', value: stats?.cleanSolvedCount ?? 0, className: 'is-clean' },
-    { label: 'Hinweise', value: assistedCount, className: 'is-hinted' },
-    { label: 'Auto-Zug', value: stats?.autoAssistedSolvedCount ?? 0, className: 'is-auto' },
-    { label: 'Legacy', value: stats?.legacySolvedCount ?? 0, className: 'is-legacy' },
+    { label: 'Clean', value: assistanceSummary.cleanSolvedCount, className: 'is-clean' },
+    { label: 'Hinweise', value: assistanceSummary.hintedSolvedCount, className: 'is-hinted' },
+    { label: 'Auto-Zug', value: assistanceSummary.autoAssistedSolvedCount, className: 'is-auto' },
+    { label: 'Legacy', value: assistanceSummary.legacySolvedCount, className: 'is-legacy' },
   ]
   const overviewFocusCards: RecordCard[] = [
     {
@@ -891,7 +996,7 @@ export default function UploadStatsVisualReport({
         >
           {activeView === 'overview' ? (
             <>
-              {renderMetricCards(stats, latestCompletion)}
+              {renderMetricCards(stats, latestCompletion, cleanRate, assistanceSummary.cleanSolvedCount)}
 
               <div className="stats-visual-overview-grid">
                 {overviewFocusCards.map((card) => (
@@ -909,7 +1014,7 @@ export default function UploadStatsVisualReport({
                     {renderStackedSegments(assistanceSegments, assistanceTotal)}
                   </div>
                   <p className="stats-report-card-copy">
-                    {stats?.cleanSolvedCount ?? 0} clean, {stats?.assistedSolvedCount ?? 0} unterstuetzt.
+                    {assistanceSummary.cleanSolvedCount} clean, {assistanceSummary.hintedSolvedCount + assistanceSummary.autoAssistedSolvedCount} unterstuetzt.
                   </p>
                 </article>
               </div>
@@ -956,6 +1061,7 @@ export default function UploadStatsVisualReport({
                             totalHints: 0,
                             totalAutoMoves: 0,
                           }
+                          const helpDetailChips = getHelpDetailChips(helpSummary, row.solveCount > 0)
                           return (
                             <article key={row.option.key} className={`stats-visual-difficulty-row${row.solveCount === 0 ? ' is-muted' : ''}`}>
                               <div className="stats-visual-difficulty-title">
@@ -976,12 +1082,15 @@ export default function UploadStatsVisualReport({
                                     {renderStackedSegments(getAssistanceSegments(row), rowTotal)}
                                   </div>
                                 </div>
-                                <div className="stats-visual-help-detail-chips" aria-label={`Hilfedetails fuer ${row.option.label}`}>
-                                  <span>{helpSummary.hintedRuns} Hinweis-Laeufe</span>
-                                  <span>{helpSummary.totalHints} Hinweise</span>
-                                  <span>{helpSummary.autoRuns} Auto-Laeufe</span>
-                                  <span>{helpSummary.totalAutoMoves} Auto-Zuege</span>
-                                </div>
+                                {helpDetailChips.length > 0 ? (
+                                  <div className="stats-visual-help-detail-chips" aria-label={`Hilfedetails fuer ${row.option.label}`}>
+                                    {helpDetailChips.map((chip) => (
+                                      <span key={chip.label} className={chip.className}>
+                                        {chip.label}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null}
                               </div>
 
                               <div className="stats-visual-difficulty-metrics">
@@ -1169,26 +1278,30 @@ export default function UploadStatsVisualReport({
                         ))}
                       </svg>
                       <div className="stats-visual-chart-points" aria-label={`${lineChartMetricLabel} im Verlauf`}>
-                        {lineChart.values.map((point) => (
-                          <button
-                            key={`${point.seriesKey}-${point.entry.id}`}
-                            type="button"
-                            className={`stats-visual-chart-point${visibleHistorySeriesCount === 1 ? ' is-solo-series' : ''}`}
-                            style={{
-                              '--series-color': point.color,
-                              left: `${point.x}%`,
-                              top: `${point.y}%`,
-                            } as CSSProperties}
-                            aria-label={`${point.seriesLabel}, ${formatMetricValue(point.value, historyMetric)}, ${formatShortDate(point.entry.completedAt)}`}
-                          >
-                            <span className="stats-visual-chart-tooltip" role="tooltip">
-                              <strong>{formatMetricValue(point.value, historyMetric)}</strong>
-                              <span>{point.seriesLabel}</span>
-                              {historyChartMode === 'perDifficulty' ? <span>Lauf #{point.localIndex + 1}</span> : null}
-                              <span>{formatShortDate(point.entry.completedAt)}</span>
-                            </span>
-                          </button>
-                        ))}
+                        {lineChart.values.map((point) => {
+                          const tooltipDate = formatChartTooltipDate(point.entry.completedAt)
+
+                          return (
+                            <button
+                              key={`${point.seriesKey}-${point.entry.id}`}
+                              type="button"
+                              className={`stats-visual-chart-point${visibleHistorySeriesCount === 1 ? ' is-solo-series' : ''}`}
+                              style={{
+                                '--series-color': point.color,
+                                left: `${point.x}%`,
+                                top: `${point.y}%`,
+                              } as CSSProperties}
+                              aria-label={`${point.seriesLabel}, ${formatMetricValue(point.value, historyMetric)}, ${tooltipDate}`}
+                            >
+                              <span className="stats-visual-chart-tooltip" role="tooltip">
+                                <strong>{formatMetricValue(point.value, historyMetric)}</strong>
+                                <span>{point.seriesLabel}</span>
+                                {historyChartMode === 'perDifficulty' ? <span>Lauf #{point.localIndex + 1}</span> : null}
+                                <span>{tooltipDate}</span>
+                              </span>
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                     <div className="stats-visual-axis-date stats-visual-axis-date-start">
