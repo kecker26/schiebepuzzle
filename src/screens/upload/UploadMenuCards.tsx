@@ -1,4 +1,4 @@
-import type { FormEvent, KeyboardEvent, Ref, RefObject } from 'react'
+import type { FormEvent, KeyboardEvent, MouseEvent, Ref, RefObject } from 'react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import AnimatedCardButton from '../../motion/AnimatedCardButton.tsx'
@@ -11,8 +11,10 @@ interface UploadMenuCardsProps {
   isDragActive: boolean
   isFetchingRandom: boolean
   isGeneratingPromptImage: boolean
+  randomQueryValue?: string
   promptValue: string
   onFetchRandomImage: (query?: string) => Promise<void> | void
+  onRandomQueryChange?: (value: string) => void
   onPromptValueChange: (value: string) => void
   onGeneratePromptImage: () => Promise<void> | void
 }
@@ -24,11 +26,33 @@ export default function UploadMenuCards({
   isDragActive,
   isFetchingRandom,
   isGeneratingPromptImage,
+  randomQueryValue = '',
   promptValue,
   onFetchRandomImage,
+  onRandomQueryChange = () => undefined,
   onPromptValueChange,
   onGeneratePromptImage,
 }: UploadMenuCardsProps) {
+  const randomQuery = randomQueryValue
+
+  const handleRandomSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    void onFetchRandomImage(randomQuery)
+  }
+
+  const handleRandomCardClick = (event: MouseEvent<HTMLFormElement>) => {
+    if (isFetchingRandom) return
+    if (event.target instanceof Element && event.target.closest('input, button, textarea, select, label')) {
+      return
+    }
+
+    void onFetchRandomImage(randomQuery)
+  }
+
+  const handleRandomClear = () => {
+    onRandomQueryChange('')
+  }
+
   const handlePromptSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     void onGeneratePromptImage()
@@ -76,14 +100,10 @@ export default function UploadMenuCards({
         </span>
       </AnimatedCardButton>
 
-      <AnimatedCardButton
-        className="menu-card menu-card-random"
-        onClick={() => {
-          void onFetchRandomImage()
-        }}
-        disabled={isFetchingRandom}
-        reveal
-        revealLevel="medium"
+      <form
+        className={`menu-card menu-card-random${isFetchingRandom ? ' is-loading' : ''}`}
+        onClick={handleRandomCardClick}
+        onSubmit={handleRandomSubmit}
       >
         <span className="menu-card-glow" aria-hidden="true" />
         <span className="menu-card-eyebrow">Ueberraschung</span>
@@ -94,12 +114,42 @@ export default function UploadMenuCards({
           {isFetchingRandom ? 'Wird geladen...' : 'Zufaelliges Bild'}
         </span>
         <span className="menu-card-desc">Ein ueberraschendes Motiv fuer eine spontane Runde ohne Auswahlstress.</span>
-        <span className="menu-card-hint">Perfekt fuer schnelle Abwechslung und neue Motive.</span>
-        <span className="menu-card-arrow">
+        <label className="random-image-query-label" htmlFor="random-image-query-input">
+          Suchbegriffe
+        </label>
+        <span className="random-image-query-row">
+          <span className="random-image-query-field">
+            <input
+              id="random-image-query-input"
+              className="random-image-query-input"
+              type="search"
+              value={randomQuery}
+              onChange={(event) => onRandomQueryChange(event.target.value)}
+              placeholder="Leer = echter Zufall"
+              disabled={isFetchingRandom}
+            />
+            <button
+              className="random-image-query-clear"
+              type="button"
+              aria-label="Suchbegriffe loeschen"
+              onClick={handleRandomClear}
+              disabled={!randomQuery.trim() || isFetchingRandom}
+            >
+              <UploadScreenIcon name="x" className="random-image-query-clear-icon" />
+            </button>
+          </span>
+        </span>
+        <span className="menu-card-hint">Optional nach Motiv, Thema oder Stil suchen.</span>
+        <button
+          className="menu-card-arrow random-image-submit"
+          type="submit"
+          aria-label={isFetchingRandom ? 'Zufaelliges Bild wird geladen' : 'Zufaelliges Bild starten'}
+          disabled={isFetchingRandom}
+        >
           <UploadScreenIcon name="sparkles" className="menu-card-arrow-icon" />
           Direkt starten
-        </span>
-      </AnimatedCardButton>
+        </button>
+      </form>
 
       <form className="menu-card menu-card-prompt" onSubmit={handlePromptSubmit}>
         <span className="menu-card-glow" aria-hidden="true" />

@@ -5,7 +5,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 ## Funktionsumfang
 
 - Eigene Bilder hochladen und als Puzzle-Motiv verwenden.
-- Zufallsbilder aus mehreren Quellen laden, darunter keylose Openverse- und LoremFlickr-Suchen sowie weitere lokale und externe Provider.
+- Zufallsbilder aus mehreren Quellen laden, optional mit Suchbegriffen, darunter keylose Openverse- und LoremFlickr-Suchen sowie weitere lokale und externe Provider.
 - KI-generierte Puzzle-Motive per Prompt ueber Pollinations Z-Image Turbo erstellen.
 - Bildzuschnitt mit Crop-Ansicht, Transform und Puzzle-Konfiguration.
 - Schiebepuzzle mit Canvas-Rendering, Drag-/Keyboard-Interaktion und visuellen Hervorhebungen.
@@ -151,7 +151,7 @@ Wichtige Einstiegspunkte:
 ## User Flow
 
 1. Startscreen oeffnen und optional letzte Sitzung fortsetzen.
-2. Bild hochladen, Zufallsbild laden oder Galerie-/Save-Eintrag wiederverwenden.
+2. Bild hochladen, Zufallsbild leer oder mit Suchbegriffen laden oder Galerie-/Save-Eintrag wiederverwenden.
 3. Motiv zuschneiden und Puzzle-Groesse waehlen; bei neuen Galerie-Wiedereinstiegen laesst sich der gespeicherte Startzustand direkt erneut herausfordern oder dasselbe Motiv komplett neu ueber den Crop-Flow starten, alte Eintraege fallen auf gespeicherten Ausschnitt mit neu gemischten Kacheln zurueck.
 4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
 5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
