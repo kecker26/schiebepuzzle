@@ -16,6 +16,13 @@ import {
   CollectionDisplayEntry,
   formatCollectionImageCount,
 } from './UploadCollectionDisplayUtils.ts'
+import UploadGalleryDetailDialog from './UploadGalleryDetailDialog.tsx'
+import {
+  buildGalleryDisplayEntries,
+  GalleryDisplayEntry,
+  getGalleryMotifKey,
+  getSimilarGalleryEntries,
+} from './UploadGalleryDisplayUtils.ts'
 import { formatDate, formatTime } from './uploadUtils.ts'
 import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 import UploadPageNavigation from './UploadPageNavigation.tsx'
@@ -45,7 +52,7 @@ interface RenameState {
   description: string
 }
 
-type CollectionImageAction = 'preview' | 'play' | 'remove'
+type CollectionImageAction = 'preview' | 'details' | 'remove'
 
 interface PendingCollectionImageRemovalFocus {
   action: CollectionImageAction
@@ -75,7 +82,15 @@ export default function UploadCollectionsPanel({
     () => buildCollectionDisplayEntries(collections, galleryEntries),
     [collections, galleryEntries]
   )
+  const galleryDetailEntries = useMemo(
+    () => buildGalleryDisplayEntries(galleryEntries, {
+      difficultyFilter: 'all',
+      assistanceFilter: 'all',
+    }),
+    [galleryEntries]
+  )
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(displayEntries[0]?.collection.id ?? null)
+  const [selectedDetailEntry, setSelectedDetailEntry] = useState<GalleryDisplayEntry | null>(null)
   const [renamingCollection, setRenamingCollection] = useState<RenameState | null>(null)
   const [pendingDeleteCollection, setPendingDeleteCollection] = useState<ImageCollection | null>(null)
   const [busyCollectionId, setBusyCollectionId] = useState<string | null>(null)
@@ -89,6 +104,10 @@ export default function UploadCollectionsPanel({
     Math.ceil((selectedDisplayEntry?.entries.length ?? 0) / COLLECTION_MOTIFS_PER_PAGE)
   )
   const activeCollectionPage = Math.min(currentCollectionPage, collectionPageCount)
+  const similarDetailEntries = useMemo(
+    () => selectedDetailEntry ? getSimilarGalleryEntries(selectedDetailEntry, galleryDetailEntries) : [],
+    [galleryDetailEntries, selectedDetailEntry]
+  )
   const pagedCollectionEntries = useMemo(() => {
     const entries = selectedDisplayEntry?.entries ?? []
     const startIndex = (activeCollectionPage - 1) * COLLECTION_MOTIFS_PER_PAGE
@@ -266,6 +285,14 @@ export default function UploadCollectionsPanel({
     }
   }
 
+  function handleOpenImageDetails(galleryEntry: SolvedGalleryEntry) {
+    const motifKey = getGalleryMotifKey(galleryEntry)
+    const detailEntry = galleryDetailEntries.find((entry) => entry.id === motifKey)
+    if (detailEntry) {
+      setSelectedDetailEntry(detailEntry)
+    }
+  }
+
   return (
     <>
       <div
@@ -327,7 +354,7 @@ export default function UploadCollectionsPanel({
                   busyCollectionId={busyCollectionId}
                   pageCount={collectionPageCount}
                   pagedEntries={pagedCollectionEntries}
-                  onReplayEntry={onReplayEntry}
+                  onOpenImageDetails={handleOpenImageDetails}
                   onPageChange={setCurrentCollectionPage}
                   onRename={() => setRenamingCollection({
                     collection: selectedDisplayEntry.collection,
@@ -400,6 +427,16 @@ export default function UploadCollectionsPanel({
           paletteStyle={paletteStyle}
         />
       ) : null}
+
+      {selectedDetailEntry ? (
+        <UploadGalleryDetailDialog
+          entry={selectedDetailEntry}
+          onReplayEntry={onReplayEntry}
+          onOpenSimilarEntry={setSelectedDetailEntry}
+          similarEntries={similarDetailEntries}
+          onClose={() => setSelectedDetailEntry(null)}
+        />
+      ) : null}
     </>
   )
 }
@@ -459,7 +496,7 @@ function CollectionDetail({
   busyCollectionId,
   pageCount,
   pagedEntries,
-  onReplayEntry,
+  onOpenImageDetails,
   onPageChange,
   onRename,
   onDelete,
@@ -470,7 +507,7 @@ function CollectionDetail({
   busyCollectionId: string | null
   pageCount: number
   pagedEntries: CollectionDisplayEntry['entries']
-  onReplayEntry: GalleryReplayRequestHandler
+  onOpenImageDetails: (galleryEntry: SolvedGalleryEntry) => void
   onPageChange: (page: number) => void
   onRename: () => void
   onDelete: () => void
@@ -596,7 +633,7 @@ function CollectionDetail({
                 isBusy={isBusy}
                 onActionKeyDown={handleImageActionKeyDown}
                 onRemoveImage={onRemoveImage}
-                onReplayEntry={onReplayEntry}
+                onOpenDetails={onOpenImageDetails}
               />
             ))}
           </div>
@@ -619,20 +656,19 @@ function CollectionImageCard({
   isBusy,
   onActionKeyDown,
   onRemoveImage,
-  onReplayEntry,
+  onOpenDetails,
 }: {
   collectionId: string
   galleryEntry: SolvedGalleryEntry
   isBusy: boolean
   onActionKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => void
   onRemoveImage: (collectionId: string, imageId: string) => Promise<void>
-  onReplayEntry: GalleryReplayRequestHandler
+  onOpenDetails: (galleryEntry: SolvedGalleryEntry) => void
 }) {
   const { activePalette, paletteStyle } = useUploadImagePalette({
     paletteSource: galleryEntry.previewImage ?? galleryEntry.sourceImage,
     storedPalette: galleryEntry.imageTheme ?? null,
   })
-  const canReplayEntry = Boolean(galleryEntry.sourceImage ?? galleryEntry.previewImage)
   const difficultyLabel = formatDifficultyLabel(galleryEntry.config)
 
   return (
@@ -648,10 +684,10 @@ function CollectionImageCard({
         data-collection-image-action="preview"
         data-collection-image-id={galleryEntry.id}
         {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
-        onClick={() => onReplayEntry(galleryEntry)}
+        onClick={() => onOpenDetails(galleryEntry)}
         onKeyDown={onActionKeyDown}
-        disabled={isBusy || !canReplayEntry}
-        aria-label={`${difficultyLabel} aus Sammlung spielen`}
+        disabled={isBusy}
+        aria-label={`Details zu ${difficultyLabel} aus Sammlung anzeigen`}
       >
         {galleryEntry.previewImage ? (
           <img
@@ -676,18 +712,17 @@ function CollectionImageCard({
       </div>
       <div className="collection-image-actions">
         <AnimatedButton
-          className="secondary"
-          data-collection-image-action="play"
+          data-collection-image-action="details"
           data-collection-image-id={galleryEntry.id}
           {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
-          onClick={() => onReplayEntry(galleryEntry)}
+          onClick={() => onOpenDetails(galleryEntry)}
           onKeyDown={onActionKeyDown}
-          disabled={isBusy || !canReplayEntry}
+          disabled={isBusy}
         >
-          Spielen
+          Details
         </AnimatedButton>
         <AnimatedButton
-          className="secondary"
+          className="secondary gallery-card-delete-button"
           data-collection-image-action="remove"
           data-collection-image-id={galleryEntry.id}
           {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}

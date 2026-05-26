@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { createPortal } from 'react-dom'
 import { Search } from 'lucide-react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import { FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE } from '../../app/focusVisibility.ts'
@@ -176,11 +175,7 @@ export default function UploadGalleryDetailDialog({
     }
   }, [canReplayMotif])
 
-  if (typeof document === 'undefined') {
-    return null
-  }
-
-  return createPortal(
+  return (
     <AnimatedDialog
       overlayClassName="gallery-detail-overlay"
       dialogClassName="gallery-detail-dialog"
@@ -548,7 +543,6 @@ export default function UploadGalleryDetailDialog({
             </button>
           </div>
         </div>
-    </AnimatedDialog>,
-    document.body
+    </AnimatedDialog>
   )
 }
