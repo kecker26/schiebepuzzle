@@ -12,6 +12,7 @@ export interface CropDraftSnapshot {
   config: PuzzleConfig
   isRandomImage: boolean
   randomImageSource: RandomImageSourceInfo | null
+  randomImageQuery: string
   transform: CropTransform
   useFullImage: boolean
 }
@@ -22,6 +23,7 @@ interface CropDraftSnapshotInput {
   config: PuzzleConfig
   isRandomImage?: boolean
   randomImageSource?: RandomImageSourceInfo | null
+  randomImageQuery?: string | null
   transform?: CropTransform
   useFullImage?: boolean
 }
@@ -75,6 +77,17 @@ function isCropTransform(value: unknown): value is CropTransform {
     && Number.isFinite(candidate.offsetY)
 }
 
+function normalizeRandomImageQuery(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function normalizeCropDraftSnapshot(snapshot: CropDraftSnapshot): CropDraftSnapshot {
+  return {
+    ...snapshot,
+    randomImageQuery: normalizeRandomImageQuery(snapshot.randomImageQuery),
+  }
+}
+
 function isCropDraftSnapshot(value: unknown): value is CropDraftSnapshot {
   if (!value || typeof value !== 'object') {
     return false
@@ -89,6 +102,10 @@ function isCropDraftSnapshot(value: unknown): value is CropDraftSnapshot {
     && isPuzzleConfig(candidate.config)
     && typeof candidate.isRandomImage === 'boolean'
     && isRandomImageSourceInfo(candidate.randomImageSource)
+    && (
+      typeof candidate.randomImageQuery === 'undefined'
+      || typeof candidate.randomImageQuery === 'string'
+    )
     && isCropTransform(candidate.transform)
     && typeof candidate.useFullImage === 'boolean'
 }
@@ -102,7 +119,7 @@ export function readCropDraftSessionSnapshot(): CropDraftSnapshot | null {
     const rawValue = window.localStorage.getItem(CROP_DRAFT_SESSION_STORAGE_KEY)
     if (rawValue) {
       const parsedValue = JSON.parse(rawValue) as unknown
-      return isCropDraftSnapshot(parsedValue) ? parsedValue : null
+      return isCropDraftSnapshot(parsedValue) ? normalizeCropDraftSnapshot(parsedValue) : null
     }
   } catch {
     return null
@@ -126,7 +143,7 @@ export function readCropDraftSessionSnapshot(): CropDraftSnapshot | null {
       // Ignore migration failures. Crop restore is best-effort only.
     }
 
-    return parsedLegacyValue
+    return normalizeCropDraftSnapshot(parsedLegacyValue)
   } catch {
     return null
   }
@@ -142,6 +159,7 @@ export function writeCropDraftSessionSnapshot(input: CropDraftSnapshotInput): Cr
     config: input.config,
     isRandomImage: input.isRandomImage ?? false,
     randomImageSource: isRandomImageSourceInfo(input.randomImageSource) ? input.randomImageSource ?? null : null,
+    randomImageQuery: normalizeRandomImageQuery(input.randomImageQuery),
     transform: isCropTransform(input.transform) ? input.transform : createDefaultCropTransform(),
     useFullImage: input.useFullImage ?? false,
   }

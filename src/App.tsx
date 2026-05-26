@@ -351,6 +351,7 @@ export default function App() {
   const [randomImageError, setRandomImageError] = useState<string | null>(null)
   const [pendingCropImageQuery, setPendingCropImageQuery] = useState<string | null>(null)
   const [randomImageSource, setRandomImageSource] = useState<RandomImageSourceInfo | null>(null)
+  const [randomImageQuery, setRandomImageQuery] = useState('')
   const [activeGlobalOverlay, setActiveGlobalOverlay] = useState<GlobalOverlayKind | null>(null)
   const [helpContext, setHelpContext] = useState<HelpContext>(() => getDefaultHelpContext('welcome'))
   const [statusToast, setStatusToast] = useState<StatusToastPayload | null>(null)
@@ -755,6 +756,7 @@ export default function App() {
     config: PuzzleConfig
     isRandomImage: boolean
     randomImageSource: RandomImageSourceInfo | null
+    randomImageQuery: string
     transform: CropDraftSnapshot['transform']
     useFullImage: boolean
   }>): CropDraftSnapshot | null => {
@@ -771,10 +773,11 @@ export default function App() {
       config: overrides?.config ?? config,
       isRandomImage: overrides?.isRandomImage ?? isRandomImage,
       randomImageSource: overrides?.randomImageSource ?? randomImageSource,
+      randomImageQuery: overrides?.randomImageQuery ?? randomImageQuery,
       transform: overrides?.transform ?? currentDraft?.transform ?? createDefaultCropTransform(),
       useFullImage: overrides?.useFullImage ?? currentDraft?.useFullImage ?? false,
     }
-  }, [config, image, isRandomImage, randomImageSource])
+  }, [config, image, isRandomImage, randomImageQuery, randomImageSource])
 
   useEffect(() => {
     if (appState !== 'playing' || !currentSaveId) {
@@ -1197,6 +1200,7 @@ export default function App() {
     setImage(snapshot.image)
     setIsRandomImage(snapshot.isRandomImage)
     setRandomImageSource(snapshot.randomImageSource)
+    setRandomImageQuery(snapshot.randomImageQuery)
     setCroppedImage(null)
     setAppState('imageLoaded')
   }, [
@@ -1263,12 +1267,19 @@ export default function App() {
     }
   }, [appState, flushPendingSave])
 
-  const handleImageLoaded = useCallback((imgSrc: string, isRandom = false, source: RandomImageSourceInfo | null = null) => {
+  const handleImageLoaded = useCallback((
+    imgSrc: string,
+    isRandom = false,
+    source: RandomImageSourceInfo | null = null,
+    query = ''
+  ) => {
+    const nextRandomImageQuery = isRandom ? query.trim() : ''
     const initialCropDraft = writeCropDraftSessionSnapshot({
       image: imgSrc,
       config,
       isRandomImage: isRandom,
       randomImageSource: isRandom ? source : null,
+      randomImageQuery: nextRandomImageQuery,
       transform: createDefaultCropTransform(),
       useFullImage: false,
     })
@@ -1285,6 +1296,7 @@ export default function App() {
     setImage(imgSrc)
     setIsRandomImage(isRandom)
     setRandomImageSource(isRandom ? source : null)
+    setRandomImageQuery(nextRandomImageQuery)
     setPendingCropImageQuery(null)
     setIsFetchingRandom(false)
     setRandomImageError(null)
@@ -1315,6 +1327,7 @@ export default function App() {
       setSavedProgress(loaded.progress)
       setIsRandomImage(false)
       setRandomImageSource(null)
+      setRandomImageQuery('')
       setWinStats(null)
       setRandomImageError(null)
       resetCompletionFeedback()
@@ -1551,6 +1564,8 @@ export default function App() {
     setDeferredRecoverySaveId(null)
     setImage(null)
     setIsRandomImage(false)
+    setRandomImageSource(null)
+    setRandomImageQuery('')
     setCroppedImage(null)
     setSavedGames(result.savedGames)
     setSavedGamesError(null)
@@ -1882,38 +1897,22 @@ export default function App() {
 
   const handleFetchRandomImage = useCallback(async (query?: string) => {
     const searchQuery = typeof query === 'string' ? query.trim() : ''
-    const shouldShowCropLoading = Boolean(searchQuery && appState === 'idle')
 
     setRandomImageError(null)
     setIsFetchingRandom(true)
+    setRandomImageQuery(searchQuery)
     setPendingCropImageQuery(searchQuery || null)
-
-    if (shouldShowCropLoading) {
-      releaseAppFocus()
-      scrollViewportToTop()
-      audioService.stopTransientEffects()
-      resetRunArtifacts()
-      clearGalleryChallengeState()
-      confirmedCropSnapshotRef.current = null
-      setReplayCropTransform(null)
-      setImage(null)
-      setCroppedImage(null)
-      setAppState('imageLoaded')
-    }
 
     try {
       const randomImage = await fetchRandomPuzzleImageResult(searchQuery || undefined)
-      handleImageLoaded(randomImage.imageSrc, true, randomImage.source)
+      handleImageLoaded(randomImage.imageSrc, true, randomImage.source, searchQuery)
     } catch (error) {
       setRandomImageError(`${searchQuery ? `Bildsuche fuer "${searchQuery}"` : 'Zufaelliges Bild'} konnte nicht geladen werden: ${getErrorMessage(error)}`)
       setPendingCropImageQuery(null)
-      if (shouldShowCropLoading) {
-        setAppState('idle')
-      }
     } finally {
       setIsFetchingRandom(false)
     }
-  }, [appState, clearGalleryChallengeState, handleImageLoaded, releaseAppFocus, resetRunArtifacts])
+  }, [handleImageLoaded])
 
   const handleReplayGalleryEntry = useCallback((entry: SolvedGalleryEntry, mode: GalleryReplayMode = 'motif') => {
     const replayImage = entry.sourceImage ?? entry.previewImage
@@ -1952,6 +1951,7 @@ export default function App() {
             config: entry.config,
             isRandomImage: false,
             randomImageSource: null,
+            randomImageQuery: '',
             transform: replayTransform,
             useFullImage: entry.useFullImage ?? false,
           }
@@ -1971,6 +1971,7 @@ export default function App() {
           setCroppedImage(directCroppedImage)
           setIsRandomImage(false)
           setRandomImageSource(null)
+          setRandomImageQuery('')
           restartPuzzleRun()
           setAppState('playing')
         } catch (error) {
@@ -1994,6 +1995,7 @@ export default function App() {
       config: entry.config,
       isRandomImage: false,
       randomImageSource: null,
+      randomImageQuery: '',
       transform: mode === 'run' ? replayTransform : createDefaultCropTransform(),
       useFullImage: mode === 'run' ? (entry.useFullImage ?? false) : false,
     }), {
@@ -2013,6 +2015,7 @@ export default function App() {
     setCroppedImage(null)
     setIsRandomImage(false)
     setRandomImageSource(null)
+    setRandomImageQuery('')
     setGalleryError(null)
     setAppState('imageLoaded')
   }, [
@@ -2043,6 +2046,7 @@ export default function App() {
     setImage(null)
     setIsRandomImage(false)
     setRandomImageSource(null)
+    setRandomImageQuery('')
     setCroppedImage(null)
     setAppState(targetState)
     void refreshSavedGames(false)
@@ -2124,6 +2128,7 @@ export default function App() {
       config,
       isRandomImage,
       randomImageSource,
+      randomImageQuery,
       transform: createDefaultCropTransform(),
       useFullImage: false,
     }), {
@@ -2142,6 +2147,7 @@ export default function App() {
     flushPendingSave,
     image,
     isRandomImage,
+    randomImageQuery,
     randomImageSource,
     releaseAppFocus,
     resetRunArtifacts,
@@ -2730,7 +2736,9 @@ export default function App() {
                 collectionsError={collectionsError}
                 isFetchingRandom={isFetchingRandom}
                 randomImageError={randomImageError}
+                randomImageQuery={randomImageQuery}
                 onFetchRandomImage={handleFetchRandomImage}
+                onRandomImageQueryChange={setRandomImageQuery}
                 onLoadSavedGame={handleLoadSavedGame}
                 onDeleteSavedGame={handleDeleteSavedGame}
                 onDeleteAllSavedGames={handleDeleteAllSavedGames}
@@ -2774,6 +2782,8 @@ export default function App() {
                       isFetchingRandom={isFetchingRandom}
                       randomImageError={randomImageError}
                       randomImageSource={randomImageSource}
+                      randomImageQuery={randomImageQuery}
+                      onRandomImageQueryChange={setRandomImageQuery}
                       onFetchNewRandomImage={handleFetchRandomImage}
                       initialTransform={cropDraftSnapshotRef.current?.transform ?? cropDraftSnapshot?.transform ?? null}
                       initialUseFullImage={cropDraftSnapshotRef.current?.useFullImage ?? cropDraftSnapshot?.useFullImage ?? false}

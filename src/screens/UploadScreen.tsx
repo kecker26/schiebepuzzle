@@ -76,7 +76,9 @@ interface UploadScreenProps {
   collectionsError?: string | null
   isFetchingRandom: boolean
   randomImageError: string | null
+  randomImageQuery?: string
   onFetchRandomImage: (query?: string) => Promise<void> | void
+  onRandomImageQueryChange?: (query: string) => void
   onLoadSavedGame: (saveId: string) => Promise<void>
   onDeleteSavedGame: (saveId: string) => Promise<void>
   onDeleteAllSavedGames: () => Promise<void>
@@ -183,7 +185,9 @@ export default function UploadScreen({
   collectionsError = null,
   isFetchingRandom,
   randomImageError,
+  randomImageQuery = '',
   onFetchRandomImage,
+  onRandomImageQueryChange = () => undefined,
   onLoadSavedGame,
   onDeleteSavedGame,
   onDeleteAllSavedGames,
@@ -246,6 +250,11 @@ export default function UploadScreen({
   const [uploadClipboardPasteStatus, setUploadClipboardPasteStatus] = useState<UploadClipboardPasteStatus>('idle')
   const [promptImagePrompt, setPromptImagePrompt] = useState('')
   const [isGeneratingPromptImage, setIsGeneratingPromptImage] = useState(false)
+
+  const handleFetchRandomFromSelection = useCallback(() => {
+    const searchQuery = randomImageQuery.trim()
+    return onFetchRandomImage(searchQuery || undefined)
+  }, [onFetchRandomImage, randomImageQuery])
 
   const alignSelectionViewportToTop = useCallback(() => {
     screenRef.current?.scrollIntoView({ block: 'start', inline: 'nearest' })
@@ -1252,7 +1261,7 @@ export default function UploadScreen({
       label: 'Zufaelliges Bild',
       icon: 'shuffle',
       meta: isFetchingRandom ? 'Laedt ...' : 'Zufall',
-      onClick: onFetchRandomImage,
+      onClick: handleFetchRandomFromSelection,
       disabled: isFetchingRandom,
     },
     {
@@ -1383,8 +1392,10 @@ export default function UploadScreen({
               isDragActive={isDragActive}
               isFetchingRandom={isFetchingRandom}
               isGeneratingPromptImage={isGeneratingPromptImage}
+              randomQueryValue={randomImageQuery}
               promptValue={promptImagePrompt}
-              onFetchRandomImage={onFetchRandomImage}
+              onFetchRandomImage={handleFetchRandomFromSelection}
+              onRandomQueryChange={onRandomImageQueryChange}
               onPromptValueChange={setPromptImagePrompt}
               onGeneratePromptImage={handleGeneratePromptImage}
             />

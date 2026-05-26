@@ -24,6 +24,7 @@ import {
   Trophy,
   Trash2,
   UploadCloud,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -55,6 +56,7 @@ const uploadScreenIconAssets = {
   trophy: Trophy,
   trash: Trash2,
   uploadCloud: UploadCloud,
+  x: X,
 } as const satisfies Record<string, LucideIcon>
 
 type UploadScreenIconName = keyof typeof uploadScreenIconAssets

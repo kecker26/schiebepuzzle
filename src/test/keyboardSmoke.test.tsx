@@ -531,6 +531,7 @@ describe('keyboard smoke tests', () => {
         label: 'Lorem Picsum',
         url: 'https://picsum.photos/',
       },
+      randomImageQuery: 'Wald',
       transform: {
         zoom: 1.5,
         rotationDeg: 90,
@@ -545,6 +546,7 @@ describe('keyboard smoke tests', () => {
     expect(snapshot?.config).toEqual({ rows: 4, cols: 4 })
     expect(snapshot?.isRandomImage).toBe(true)
     expect(snapshot?.randomImageSource?.label).toBe('Lorem Picsum')
+    expect(snapshot?.randomImageQuery).toBe('Wald')
     expect(snapshot?.transform.zoom).toBe(1.5)
     expect(snapshot?.useFullImage).toBe(true)
 
@@ -1006,6 +1008,51 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.keyDown(promptInput, { key: 'Enter', shiftKey: true })
     expect(onGeneratePromptImage).toHaveBeenCalledTimes(1)
+  })
+
+  it('submits and clears search terms for the random image card', async () => {
+    const fileInputRef = {
+      current: document.createElement('input'),
+    } as React.RefObject<HTMLInputElement>
+    const user = userEvent.setup()
+    const onFetchRandomImage = vi.fn()
+
+    function RandomCardHarness() {
+      const [query, setQuery] = React.useState('')
+
+      return (
+        <UploadMenuCards
+          fileInputRef={fileInputRef}
+          isDragActive={false}
+          isFetchingRandom={false}
+          isGeneratingPromptImage={false}
+          randomQueryValue={query}
+          promptValue=""
+          onFetchRandomImage={onFetchRandomImage}
+          onRandomQueryChange={setQuery}
+          onPromptValueChange={vi.fn()}
+          onGeneratePromptImage={vi.fn()}
+        />
+      )
+    }
+
+    render(<RandomCardHarness />)
+
+    const queryInput = screen.getByLabelText('Suchbegriffe')
+    fireEvent.change(queryInput, { target: { value: 'Stadt Nacht' } })
+
+    fireEvent.click(screen.getByText('Zufaelliges Bild'))
+    expect(onFetchRandomImage).toHaveBeenCalledWith('Stadt Nacht')
+
+    onFetchRandomImage.mockClear()
+    await user.click(screen.getByRole('button', { name: 'Zufaelliges Bild starten' }))
+
+    expect(onFetchRandomImage).toHaveBeenCalledWith('Stadt Nacht')
+
+    await user.click(screen.getByRole('button', { name: 'Suchbegriffe loeschen' }))
+    await waitFor(() => {
+      expect((screen.getByLabelText('Suchbegriffe') as HTMLInputElement).value).toBe('')
+    })
   })
 
   it('focuses workspace navigation cards and jumps to the first navigation item with V', async () => {
@@ -3833,6 +3880,146 @@ describe('keyboard smoke tests', () => {
 
     expect(onFetchNewRandomImage).toHaveBeenCalledTimes(1)
     expect(onFetchNewRandomImage).toHaveBeenCalledWith()
+  })
+
+  it('reloads a random crop image with the transferred search terms', async () => {
+    const onFetchNewRandomImage = vi.fn()
+
+    render(
+      <CropScreen
+        image="data:image/png;base64,test"
+        config={{ rows: 4, cols: 4 }}
+        onOpenHelp={vi.fn()}
+        registerAppContextMenuHandler={vi.fn()}
+        isRandomImage
+        randomImageSource={{
+          label: 'Openverse',
+          url: 'https://openverse.org/',
+        }}
+        randomImageQuery="Stadt Nacht"
+        onFetchNewRandomImage={onFetchNewRandomImage}
+        onConfigChange={vi.fn()}
+        onCropConfirmed={vi.fn()}
+        onBack={vi.fn()}
+        onGoToStartScreen={vi.fn()}
+      />
+    )
+
+    expect((screen.getByLabelText('Suchbegriffe') as HTMLInputElement).value).toBe('Stadt Nacht')
+    fireEvent.click(screen.getByRole('button', { name: /Anderes Bild laden/i }))
+
+    expect(onFetchNewRandomImage).toHaveBeenCalledTimes(1)
+    expect(onFetchNewRandomImage).toHaveBeenCalledWith('Stadt Nacht')
+  })
+
+  it('keeps the random crop search input editable and tabs through to the play button', async () => {
+    const OriginalImage = window.Image
+    const OriginalGlobalImage = globalThis.Image
+    const originalGetClientRects = HTMLElement.prototype.getClientRects
+
+    class LoadingImage {
+      onload: ((event: Event) => void) | null = null
+      onerror: ((event: Event) => void) | null = null
+      naturalWidth = 640
+      naturalHeight = 480
+      width = 640
+      height = 480
+      private currentSrc = ''
+
+      get src() {
+        return this.currentSrc
+      }
+
+      set src(value: string) {
+        this.currentSrc = value
+        window.setTimeout(() => this.onload?.(new Event('load')), 0)
+      }
+    }
+
+    function CropTabNavigationHarness() {
+      const scopeRef = React.useRef<HTMLDivElement>(null)
+      useButtonOnlyTabNavigation(scopeRef)
+
+      return (
+        <div ref={scopeRef}>
+          <CropScreen
+            image="data:image/png;base64,test"
+            config={{ rows: 4, cols: 4 }}
+            onOpenHelp={vi.fn()}
+            registerAppContextMenuHandler={vi.fn()}
+            isRandomImage
+            randomImageSource={{
+              label: 'Openverse',
+              url: 'https://openverse.org/',
+            }}
+            randomImageQuery="Berlin"
+            initialUseFullImage
+            onRandomImageQueryChange={vi.fn()}
+            onFetchNewRandomImage={vi.fn()}
+            onConfigChange={vi.fn()}
+            onCropConfirmed={vi.fn()}
+            onBack={vi.fn()}
+            onGoToStartScreen={vi.fn()}
+          />
+        </div>
+      )
+    }
+
+    Object.defineProperty(window, 'Image', {
+      configurable: true,
+      writable: true,
+      value: LoadingImage,
+    })
+    Object.defineProperty(globalThis, 'Image', {
+      configurable: true,
+      writable: true,
+      value: LoadingImage,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'getClientRects', {
+      configurable: true,
+      writable: true,
+      value() {
+        return [{ length: 1 }]
+      },
+    })
+
+    try {
+      render(<CropTabNavigationHarness />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Spiel starten/i }).hasAttribute('disabled')).toBe(false)
+      })
+      const searchInput = screen.getByLabelText('Suchbegriffe')
+      const playButton = screen.getByRole('button', { name: /Spiel starten/i })
+
+      searchInput.focus()
+      fireEvent.keyDown(searchInput, { key: 'b' })
+
+      expect(document.activeElement).toBe(searchInput)
+
+      fireEvent.keyDown(window, { key: 'Tab' })
+      fireEvent.keyDown(window, { key: 'Tab' })
+      fireEvent.keyDown(window, { key: 'Tab' })
+      fireEvent.keyDown(window, { key: 'Tab' })
+
+      expect(document.activeElement).toBe(playButton)
+    } finally {
+      Object.defineProperty(window, 'Image', {
+        configurable: true,
+        writable: true,
+        value: OriginalImage,
+      })
+      Object.defineProperty(globalThis, 'Image', {
+        configurable: true,
+        writable: true,
+        value: OriginalGlobalImage,
+      })
+      Object.defineProperty(HTMLElement.prototype, 'getClientRects', {
+        configurable: true,
+        writable: true,
+        value: originalGetClientRects,
+      })
+    }
   })
 
   it('allows switching windows after restoring a last session', async () => {

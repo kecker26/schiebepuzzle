@@ -3,6 +3,7 @@ import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import { type AppContextMenuHandler, type AppContextMenuRequest } from '../app/appContextMenu.ts'
 import { handleDirectionalFocusNavigation } from '../app/directionalFocusNavigation.ts'
 import { handleSelectEnterKeyDown } from '../app/formControlUtils.ts'
+import { isEditableTarget } from '../app/keyboardShortcutUtils.ts'
 import CropScreenIcon, { type CropScreenIconName } from '../components/CropScreenIcon.tsx'
 import CompactContextMenu, { type ContextMenuItem, type ContextMenuPosition } from '../components/CompactContextMenu.tsx'
 import AnimatedButton from '../motion/AnimatedButton.tsx'
@@ -33,7 +34,9 @@ interface CropScreenProps {
   isFetchingRandom?: boolean
   randomImageError?: string | null
   randomImageSource?: RandomImageSourceInfo | null
-  onFetchNewRandomImage?: () => void
+  randomImageQuery?: string
+  onRandomImageQueryChange?: (query: string) => void
+  onFetchNewRandomImage?: (query?: string) => void
   initialTransform?: CropTransform | null
   initialUseFullImage?: boolean
   replayCropTransform?: CropTransform | null
@@ -59,6 +62,8 @@ export default function CropScreen({
   isFetchingRandom,
   randomImageError,
   randomImageSource,
+  randomImageQuery = '',
+  onRandomImageQueryChange,
   onFetchNewRandomImage,
   initialTransform = null,
   initialUseFullImage = false,
@@ -105,6 +110,7 @@ export default function CropScreen({
   const previewTileCount = config.rows * config.cols
   const fullImageRotationDeg = ((transform.rotationDeg % 360) + 360) % 360
   const hasReplayCrop = replayCropTransform !== null
+  const trimmedRandomImageQuery = randomImageQuery.trim()
 
   useEffect(() => {
     initialTransformRef.current = initialTransform
@@ -189,6 +195,10 @@ export default function CropScreen({
         !(activeElement instanceof HTMLElement)
         || !screenRef.current?.contains(activeElement)
       ) {
+        return
+      }
+
+      if (isEditableTarget(event.target)) {
         return
       }
 
@@ -580,6 +590,22 @@ export default function CropScreen({
     }
   }
 
+  const handleFetchRandomWithCurrentQuery = () => {
+    if (!onFetchNewRandomImage) return
+
+    if (trimmedRandomImageQuery) {
+      onFetchNewRandomImage(trimmedRandomImageQuery)
+      return
+    }
+
+    onFetchNewRandomImage()
+  }
+
+  const handleRandomSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    handleFetchRandomWithCurrentQuery()
+  }
+
   const cropActions: ContextMenuItem[] = [
     {
       groupTitle: 'Navigation',
@@ -638,7 +664,7 @@ export default function CropScreen({
             label: 'Anderes Bild laden',
             icon: 'refreshCw',
             meta: isFetchingRandom ? 'Laedt ...' : 'Zufall',
-            onClick: () => onFetchNewRandomImage(),
+            onClick: handleFetchRandomWithCurrentQuery,
             disabled: Boolean(isFetchingRandom),
           } satisfies ContextMenuItem,
         ]
@@ -949,18 +975,55 @@ export default function CropScreen({
 
         <AnimatedStaggerGroup className="crop-actions" level="subtle" onKeyDown={handleDirectionalFocusNavigation}>
           {isRandomImage && onFetchNewRandomImage && (
-            <AnimatedButton
-              onClick={() => onFetchNewRandomImage()}
-              className="secondary random-refresh-btn"
-              disabled={isFetchingRandom}
-              reveal
-              revealLevel="subtle"
-            >
-              <span className="crop-inline-button-content">
-                <CropScreenIcon name="refreshCw" className="crop-inline-button-icon" />
-                <span>{isFetchingRandom ? 'Lade...' : 'Anderes Bild laden'}</span>
-              </span>
-            </AnimatedButton>
+            <div className="crop-random-refresh-group">
+              <AnimatedButton
+                onClick={handleFetchRandomWithCurrentQuery}
+                className="secondary random-refresh-btn"
+                disabled={isFetchingRandom}
+                reveal
+                revealLevel="subtle"
+              >
+                <span className="crop-inline-button-content">
+                  <CropScreenIcon name="refreshCw" className="crop-inline-button-icon" />
+                  <span>{isFetchingRandom ? 'Lade...' : 'Anderes Bild laden'}</span>
+                </span>
+              </AnimatedButton>
+              <form className="crop-random-search" onSubmit={handleRandomSearchSubmit}>
+                <label className="crop-random-search-label" htmlFor="crop-random-query-input">
+                  Suchbegriffe
+                </label>
+                <span className="crop-random-search-row">
+                  <span className="crop-random-search-field">
+                    <input
+                      id="crop-random-query-input"
+                      className="crop-random-search-input"
+                      type="search"
+                      value={randomImageQuery}
+                      onChange={(event) => onRandomImageQueryChange?.(event.target.value)}
+                      placeholder="Leer = echter Zufall"
+                      disabled={Boolean(isFetchingRandom)}
+                    />
+                    <button
+                      type="button"
+                      className="crop-random-search-clear"
+                      aria-label="Suchbegriffe loeschen"
+                      onClick={() => onRandomImageQueryChange?.('')}
+                      disabled={!trimmedRandomImageQuery || Boolean(isFetchingRandom)}
+                    >
+                      <CropScreenIcon name="x" className="crop-random-search-icon" />
+                    </button>
+                  </span>
+                  <button
+                    type="submit"
+                    className="crop-random-search-submit"
+                    aria-label="Anderes Bild mit diesen Suchbegriffen laden"
+                    disabled={Boolean(isFetchingRandom)}
+                  >
+                    <CropScreenIcon name="search" className="crop-random-search-icon" />
+                  </button>
+                </span>
+              </form>
+            </div>
           )}
           <AnimatedButton onClick={onBack} className="secondary" reveal revealLevel="subtle">
             Zurueck

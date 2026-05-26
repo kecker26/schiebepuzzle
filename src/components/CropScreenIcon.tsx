@@ -10,7 +10,9 @@ import {
   RotateCcw,
   RotateCw,
   Scan,
+  Search,
   SlidersHorizontal,
+  X,
   ZoomIn,
   type LucideIcon,
 } from 'lucide-react'
@@ -27,7 +29,9 @@ const cropScreenIconAssets = {
   rotateCcw: RotateCcw,
   rotateCw: RotateCw,
   scan: Scan,
+  search: Search,
   sliders: SlidersHorizontal,
+  x: X,
   zoomIn: ZoomIn,
 } as const satisfies Record<string, LucideIcon>
 
