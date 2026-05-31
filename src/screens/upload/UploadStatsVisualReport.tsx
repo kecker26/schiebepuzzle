@@ -7,8 +7,11 @@ import {
   Table2,
 } from 'lucide-react'
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Legend,
   Line,
   LineChart,
@@ -90,12 +93,35 @@ interface KpiCard {
   title?: string
 }
 
-interface MiniMetricBar {
+interface ScoreBreakdown {
+  score: number
+  correctionPenalty: number
+  hintPenalty: number
+  autoPenalty: number
+  assistancePenalty: number
+  corrections: number
+  hints: number
+  autoMoves: number
+}
+
+interface ScoreBreakdownDatum {
+  key: 'score' | 'corrections' | 'hints' | 'auto' | 'assistance'
   label: string
-  value: string
-  percent: number
+  value: number
+  displayValue: string
   detail: string
-  tone?: 'good' | 'warn' | 'neutral'
+  color: string
+}
+
+interface FavoriteDifficultyDatum {
+  key: string
+  label: string
+  solveCount: number
+  share: number
+  medianTime: number | null
+  medianMoves: number | null
+  isFavorite: boolean
+  color: string
 }
 
 interface DonutSegment {
@@ -145,7 +171,7 @@ interface ChartTooltipPayload {
   value?: unknown
   color?: string
   dataKey?: unknown
-  payload?: TrendSeriesChartPoint | DonutSegment
+  payload?: TrendSeriesChartPoint | DonutSegment | ScoreBreakdownDatum | FavoriteDifficultyDatum
 }
 
 interface ChartTooltipProps {
@@ -181,8 +207,8 @@ const TREND_METRICS: Array<{
   },
   {
     id: 'quality',
-    label: 'Qualitaet',
-    description: 'Qualitaetsscore ueber die Zeit, getrennt nach Schwierigkeit.',
+    label: 'Lauf-Score',
+    description: 'Lauf-Score ueber die Zeit, getrennt nach Schwierigkeit.',
   },
 ]
 
@@ -543,13 +569,26 @@ function buildRawStatsJson(payload: {
 }
 
 function calculateAverage(values: number[]): number | null {
-  if (values.length === 0) return null
-  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+  const average = calculateAverageValue(values)
+  return average === null ? null : Math.round(average)
 }
 
-function getVisualPercent(value: number, maximum: number): number {
-  if (maximum <= 0) return 0
-  return Math.max(4, Math.min(100, Math.round((value / maximum) * 100)))
+function calculateAverageValue(values: number[]): number | null {
+  if (values.length === 0) return null
+  return values.reduce((sum, value) => sum + value, 0) / values.length
+}
+
+function formatAverageCount(value: number | null): string {
+  if (value === null) return '--'
+
+  const roundedValue = Math.round(value * 10) / 10
+  if (roundedValue === 0 && value > 0) return '<0,1'
+  if (Number.isInteger(roundedValue)) return `${roundedValue}`
+
+  return roundedValue.toLocaleString('de-DE', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })
 }
 
 function calculateMedian(values: number[]): number | null {
@@ -562,7 +601,7 @@ function calculateMedian(values: number[]): number | null {
     : sortedValues[middleIndex]
 }
 
-function calculateQualityScore(entry: PuzzleCompletionRecord): number | null {
+function calculateQualityBreakdown(entry: PuzzleCompletionRecord): ScoreBreakdown | null {
   if (!entry.hasDetailedProfile) return null
 
   const corrections = getCompletionExtraMoves(entry)
@@ -571,7 +610,201 @@ function calculateQualityScore(entry: PuzzleCompletionRecord): number | null {
   const autoPenalty = Math.min(36, entry.suggestedMoveCount * 12)
   const assistancePenalty = entry.assistanceMode === 'clean' ? 0 : 8
 
-  return Math.max(0, Math.round(100 - correctionPenalty - hintPenalty - autoPenalty - assistancePenalty))
+  return {
+    score: Math.max(0, Math.round(100 - correctionPenalty - hintPenalty - autoPenalty - assistancePenalty)),
+    correctionPenalty,
+    hintPenalty,
+    autoPenalty,
+    assistancePenalty,
+    corrections,
+    hints: entry.hintCount,
+    autoMoves: entry.suggestedMoveCount,
+  }
+}
+
+function calculateQualityScore(entry: PuzzleCompletionRecord): number | null {
+  return calculateQualityBreakdown(entry)?.score ?? null
+}
+
+function getAverageScoreBreakdown(entries: PuzzleCompletionRecord[]): ScoreBreakdown | null {
+  const breakdowns = entries
+    .map((entry) => calculateQualityBreakdown(entry))
+    .filter((breakdown): breakdown is ScoreBreakdown => breakdown !== null)
+
+  if (breakdowns.length === 0) return null
+
+  const average = (selector: (breakdown: ScoreBreakdown) => number): number =>
+    breakdowns.reduce((sum, breakdown) => sum + selector(breakdown), 0) / breakdowns.length
+
+  return {
+    score: Math.round(average((breakdown) => breakdown.score)),
+    correctionPenalty: average((breakdown) => breakdown.correctionPenalty),
+    hintPenalty: average((breakdown) => breakdown.hintPenalty),
+    autoPenalty: average((breakdown) => breakdown.autoPenalty),
+    assistancePenalty: average((breakdown) => breakdown.assistancePenalty),
+    corrections: average((breakdown) => breakdown.corrections),
+    hints: average((breakdown) => breakdown.hints),
+    autoMoves: average((breakdown) => breakdown.autoMoves),
+  }
+}
+
+function formatPenaltyValue(value: number): string {
+  const formattedValue = formatAverageCount(value)
+  return value > 0 ? `-${formattedValue}` : '0'
+}
+
+function formatShare(part: number, total: number): string {
+  if (total <= 0) return '0%'
+  return `${Math.round((part / total) * 100)}%`
+}
+
+function buildScoreBreakdownData(breakdown: ScoreBreakdown | null): ScoreBreakdownDatum[] {
+  if (!breakdown) return []
+
+  return [
+    {
+      key: 'score',
+      label: 'Score',
+      value: breakdown.score,
+      displayValue: `${breakdown.score}/100`,
+      detail: 'Verbleibende Punkte nach allen Abzuegen.',
+      color: '#34d399',
+    },
+    {
+      key: 'corrections',
+      label: 'Korrekturen',
+      value: breakdown.correctionPenalty,
+      displayValue: formatPenaltyValue(breakdown.correctionPenalty),
+      detail: `${formatAverageCount(breakdown.corrections)} Korrekturen, 4 Punkte Abzug je Korrektur, maximal 48.`,
+      color: '#f59e0b',
+    },
+    {
+      key: 'hints',
+      label: 'Hinweise',
+      value: breakdown.hintPenalty,
+      displayValue: formatPenaltyValue(breakdown.hintPenalty),
+      detail: `${formatAverageCount(breakdown.hints)} Hinweise, 8 Punkte Abzug je Hinweis, maximal 28.`,
+      color: '#f97316',
+    },
+    {
+      key: 'auto',
+      label: 'Auto-Zuege',
+      value: breakdown.autoPenalty,
+      displayValue: breakdown.autoPenalty >= 36 ? '-36 max.' : formatPenaltyValue(breakdown.autoPenalty),
+      detail: `${formatAverageCount(breakdown.autoMoves)} Auto-Zuege, 12 Punkte Abzug je Auto-Zug, maximal 36.`,
+      color: '#ef4444',
+    },
+    {
+      key: 'assistance',
+      label: 'Hilfe-Modus',
+      value: breakdown.assistancePenalty,
+      displayValue: formatPenaltyValue(breakdown.assistancePenalty),
+      detail: breakdown.assistancePenalty > 0 ? '8 Punkte Abzug, sobald der Lauf nicht clean ist.' : 'Kein Abzug bei cleanem Lauf.',
+      color: '#a855f7',
+    },
+  ]
+}
+
+function buildAverageScoreBreakdownData(
+  entries: PuzzleCompletionRecord[],
+  breakdown: ScoreBreakdown | null
+): ScoreBreakdownDatum[] {
+  const data = buildScoreBreakdownData(breakdown)
+  const profiledEntries = entries.filter((entry) => entry.hasDetailedProfile)
+
+  if (!breakdown || profiledEntries.length === 0) return data
+
+  const totalActionMoves = profiledEntries.reduce((sum, entry) => sum + entry.actionMoves, 0)
+  const totalNetMoves = profiledEntries.reduce((sum, entry) => sum + entry.moves, 0)
+  const totalCorrections = profiledEntries.reduce((sum, entry) => sum + getCompletionExtraMoves(entry), 0)
+  const totalHints = profiledEntries.reduce((sum, entry) => sum + entry.hintCount, 0)
+  const totalAutoMoves = profiledEntries.reduce((sum, entry) => sum + entry.suggestedMoveCount, 0)
+  const assistedRuns = profiledEntries.filter((entry) => entry.assistanceMode !== 'clean').length
+
+  return data.map((datum) => {
+    switch (datum.key) {
+      case 'score':
+        return {
+          ...datum,
+          detail: `Durchschnitt aus ${profiledEntries.length} Laufprofilen mit ${totalActionMoves} Aktionen insgesamt (${totalNetMoves} Netto-Zuege).`,
+        }
+      case 'corrections':
+        return {
+          ...datum,
+          detail: `${totalCorrections} Korrekturen bei ${totalActionMoves} Aktionen insgesamt (${formatShare(totalCorrections, totalActionMoves)}). Im Schnitt ${formatAverageCount(breakdown.corrections)} pro Lauf.`,
+        }
+      case 'hints':
+        return {
+          ...datum,
+          detail: `${totalHints} Hinweise bei ${totalActionMoves} Aktionen insgesamt (${formatShare(totalHints, totalActionMoves)}). Im Schnitt ${formatAverageCount(breakdown.hints)} pro Lauf.`,
+        }
+      case 'auto':
+        return {
+          ...datum,
+          detail: `${totalAutoMoves} Auto-Zuege bei ${totalActionMoves} Aktionen insgesamt (${formatShare(totalAutoMoves, totalActionMoves)}). Die Score-Strafe ist bei 36 Punkten gedeckelt.`,
+        }
+      case 'assistance':
+        return {
+          ...datum,
+          detail: `${assistedRuns} von ${profiledEntries.length} Laufprofilen waren nicht clean. Dafuer fallen im Schnitt ${formatPenaltyValue(breakdown.assistancePenalty)} Punkte an.`,
+        }
+      default:
+        return datum
+    }
+  })
+}
+
+function buildFavoriteDifficultyData(
+  rows: DifficultyReportRow[],
+  favoriteDifficultyKey: string | null
+): FavoriteDifficultyDatum[] {
+  const solvedRows = rows
+    .filter((row) => row.solveCount > 0)
+    .sort((left, right) => right.solveCount - left.solveCount || left.option.label.localeCompare(right.option.label))
+  const totalSolves = solvedRows.reduce((sum, row) => sum + row.solveCount, 0)
+  if (totalSolves === 0) return []
+
+  const favoriteRow = favoriteDifficultyKey
+    ? solvedRows.find((row) => `${row.option.rows}x${row.option.cols}` === favoriteDifficultyKey)
+    : null
+  const featuredRows =
+    favoriteRow && solvedRows.slice(0, 4).every((row) => row !== favoriteRow)
+      ? [...solvedRows.filter((row) => row !== favoriteRow).slice(0, 3), favoriteRow]
+      : solvedRows.slice(0, 4)
+  const featuredKeys = new Set(featuredRows.map((row) => `${row.option.rows}x${row.option.cols}`))
+  const remainingRows = solvedRows.filter((row) => !featuredKeys.has(`${row.option.rows}x${row.option.cols}`))
+
+  const data = featuredRows.map((row, index) => {
+    const key = `${row.option.rows}x${row.option.cols}`
+    const isFavorite = key === favoriteDifficultyKey
+
+    return {
+      key,
+      label: row.option.label,
+      solveCount: row.solveCount,
+      share: Math.round((row.solveCount / totalSolves) * 100),
+      medianTime: row.medianTime,
+      medianMoves: row.medianMoves,
+      isFavorite,
+      color: isFavorite ? '#34d399' : DIFFICULTY_TREND_COLORS[index % DIFFICULTY_TREND_COLORS.length],
+    }
+  })
+
+  if (remainingRows.length > 0) {
+    const remainingSolves = remainingRows.reduce((sum, row) => sum + row.solveCount, 0)
+    data.push({
+      key: 'other',
+      label: 'Weitere',
+      solveCount: remainingSolves,
+      share: Math.round((remainingSolves / totalSolves) * 100),
+      medianTime: null,
+      medianMoves: null,
+      isFavorite: false,
+      color: '#94a3b8',
+    })
+  }
+
+  return data
 }
 
 function buildTrendPoints(entries: PuzzleCompletionRecord[]): TrendPoint[] {
@@ -674,7 +907,7 @@ function getTrendValueFormatter(metric: TrendMetric): (value: unknown) => string
   return (value) => {
     if (typeof value !== 'number') return '--'
     if (metric === 'time') return formatOptionalDuration(value)
-    if (metric === 'quality') return `${value}%`
+    if (metric === 'quality') return `${value}/100`
     return `${value}`
   }
 }
@@ -692,7 +925,7 @@ function buildKpiCards(
 ): KpiCard[] {
   const profiledHistory = completionHistory.filter((entry) => entry.hasDetailedProfile)
   const averageActionMoves = calculateAverage(profiledHistory.map((entry) => entry.actionMoves))
-  const averageCorrections = calculateAverage(profiledHistory.map((entry) => getCompletionExtraMoves(entry)))
+  const averageCorrections = calculateAverageValue(profiledHistory.map((entry) => getCompletionExtraMoves(entry)))
 
   return [
     {
@@ -719,7 +952,7 @@ function buildKpiCards(
     },
     {
       label: 'Durchschn. Korrekturen (Undos)',
-      value: averageCorrections === null ? '--' : `${averageCorrections}`,
+      value: formatAverageCount(averageCorrections),
       detail: 'Aktionen minus Netto-Zuege.',
       title: 'Korrekturen (Undos) sind die Differenz aus Gesamtaktionen und Netto-Zuegen. Das Tracking bleibt intern kompatibel.',
     },
@@ -741,83 +974,6 @@ function buildDonutSegments(assistanceSummary: AssistanceSummary): DonutSegment[
   ].filter((segment) => segment.value > 0)
 }
 
-function getDifficultyRowForCompletion(
-  difficultyRows: DifficultyReportRow[],
-  completion: PuzzleCompletionRecord | null
-): DifficultyReportRow | null {
-  if (!completion) return null
-  const completionKey = getCompletionDifficultyKey(completion)
-  return difficultyRows.find((row) => `${row.option.rows}x${row.option.cols}` === completionKey) ?? null
-}
-
-function buildLatestRunMetricBars(
-  latestCompletion: PuzzleCompletionRecord | null,
-  difficultyRows: DifficultyReportRow[]
-): MiniMetricBar[] {
-  if (!latestCompletion) return []
-
-  const difficultyRow = getDifficultyRowForCompletion(difficultyRows, latestCompletion)
-  const timeReference = difficultyRow?.medianTime ?? difficultyRow?.averageTime ?? difficultyRow?.bestTime ?? latestCompletion.time
-  const movesReference = difficultyRow?.medianMoves ?? difficultyRow?.averageMoves ?? difficultyRow?.bestMoves ?? latestCompletion.moves
-  const quality = calculateQualityScore(latestCompletion)
-
-  return [
-    {
-      label: 'Zeit',
-      value: formatOptionalDuration(latestCompletion.time),
-      percent: getVisualPercent(latestCompletion.time, Math.max(latestCompletion.time, timeReference)),
-      detail: `Median ${formatOptionalDuration(timeReference)}`,
-      tone: latestCompletion.time <= timeReference ? 'good' : 'warn',
-    },
-    {
-      label: 'Netto-Zuege',
-      value: formatOptionalMoves(latestCompletion.moves),
-      percent: getVisualPercent(latestCompletion.moves, Math.max(latestCompletion.moves, movesReference)),
-      detail: `Median ${formatOptionalMoves(movesReference)}`,
-      tone: latestCompletion.moves <= movesReference ? 'good' : 'warn',
-    },
-    {
-      label: 'Qualitaet',
-      value: quality === null ? '--' : `${quality}%`,
-      percent: quality ?? 0,
-      detail: `${formatExtraMoves(getCompletionExtraMoves(latestCompletion))} Korrekturen`,
-      tone: quality === null ? 'neutral' : quality >= 70 ? 'good' : 'warn',
-    },
-  ]
-}
-
-function buildQualityMetricBars(entries: PuzzleCompletionRecord[]): MiniMetricBar[] {
-  const profiledEntries = entries.filter((entry) => entry.hasDetailedProfile)
-  const averageCorrections = calculateAverage(profiledEntries.map((entry) => getCompletionExtraMoves(entry)))
-  const averageHints = calculateAverage(profiledEntries.map((entry) => entry.hintCount))
-  const averageAutoMoves = calculateAverage(profiledEntries.map((entry) => entry.suggestedMoveCount))
-  const maximumAveragePenalty = Math.max(1, averageCorrections ?? 0, averageHints ?? 0, averageAutoMoves ?? 0)
-
-  return [
-    {
-      label: 'Korrekturen',
-      value: averageCorrections === null ? '--' : `${averageCorrections}`,
-      percent: averageCorrections === null ? 0 : getVisualPercent(averageCorrections, maximumAveragePenalty),
-      detail: 'Aktionen minus Netto-Zuege',
-      tone: 'neutral',
-    },
-    {
-      label: 'Hinweise',
-      value: averageHints === null ? '--' : `${averageHints}`,
-      percent: averageHints === null ? 0 : getVisualPercent(averageHints, maximumAveragePenalty),
-      detail: 'pro Laufprofil',
-      tone: 'warn',
-    },
-    {
-      label: 'Auto-Zuege',
-      value: averageAutoMoves === null ? '--' : `${averageAutoMoves}`,
-      percent: averageAutoMoves === null ? 0 : getVisualPercent(averageAutoMoves, maximumAveragePenalty),
-      detail: 'pro Laufprofil',
-      tone: 'warn',
-    },
-  ]
-}
-
 function renderKpiCards(cards: KpiCard[]) {
   return (
     <div className="stats-visual-kpi-grid">
@@ -832,23 +988,132 @@ function renderKpiCards(cards: KpiCard[]) {
   )
 }
 
-function renderMiniMetricBars(bars: MiniMetricBar[]) {
-  if (bars.length === 0) return null
+function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string) {
+  if (data.length === 0) {
+    return (
+      <div className="stats-empty-state dashboard-empty-state">
+        <span className="empty-icon" aria-hidden="true"><Activity /></span>
+        <p>Noch keine Laufprofil-Daten vorhanden.</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="stats-visual-mini-bars">
-      {bars.map((bar) => (
-        <div key={bar.label} className={`stats-visual-mini-bar${bar.tone ? ` is-${bar.tone}` : ''}`}>
-          <div>
-            <span>{bar.label}</span>
-            <strong>{bar.value}</strong>
-          </div>
-          <span className="stats-visual-mini-bar-track" aria-hidden="true">
-            <i style={{ width: `${bar.percent}%` }} />
-          </span>
-          <small>{bar.detail}</small>
+    <div className="stats-score-breakdown-frame" aria-label={label}>
+      <div className="stats-score-breakdown-layout">
+        <div className="stats-score-breakdown-categories" aria-label="Score-Kategorien">
+          {data.map((datum) => (
+            <div key={datum.key} className="stats-score-breakdown-category">
+              <span>{datum.label}</span>
+              <button
+                type="button"
+                className="stats-score-breakdown-help-badge"
+                aria-label={`${datum.label}: ${datum.detail}`}
+                data-tooltip={datum.detail}
+              >
+                ?
+              </button>
+            </div>
+          ))}
         </div>
-      ))}
+        <div className="stats-score-breakdown-chart">
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart
+              data={data}
+              layout="vertical"
+              margin={{ top: 10, right: 54, bottom: 8, left: 0 }}
+            >
+              <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+              <XAxis
+                type="number"
+                domain={[0, 100]}
+                ticks={[0, 50, 100]}
+                tickFormatter={(value) => `${value}`}
+              />
+              <YAxis
+                type="category"
+                dataKey="label"
+                width={0}
+                tick={false}
+                tickLine={false}
+                axisLine={false}
+              />
+              <Bar dataKey="value" radius={[0, 999, 999, 0]} barSize={16}>
+                {data.map((datum) => (
+                  <Cell key={datum.key} fill={datum.color} />
+                ))}
+                <LabelList dataKey="displayValue" position="right" className="stats-score-breakdown-label" />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <p className="stats-score-breakdown-note">
+        100 Startpunkte minus Abzuege. Die Auto-Zug-Strafe ist bei 36 Punkten gedeckelt.
+      </p>
+    </div>
+  )
+}
+
+function renderFavoriteDifficultyTooltip({ active, payload }: ChartTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null
+
+  const datum = payload[0]?.payload as FavoriteDifficultyDatum | undefined
+  if (!datum) return null
+
+  return (
+    <div className="stats-recharts-tooltip">
+      <strong>{datum.label}</strong>
+      <span>{datum.solveCount} Siege</span>
+      <span>{datum.share}% Anteil an allen sichtbaren Siegen</span>
+      <div className="stats-recharts-tooltip-list">
+        <span>Medianzeit: {formatOptionalDuration(datum.medianTime)}</span>
+        <span>Median-Zuege: {formatOptionalMoves(datum.medianMoves)}</span>
+      </div>
+      {datum.isFavorite ? <small>Aktuelle Lieblingsstufe nach Siegzahl.</small> : null}
+    </div>
+  )
+}
+
+function renderFavoriteDifficultyChart(data: FavoriteDifficultyDatum[]) {
+  if (data.length === 0) {
+    return (
+      <div className="stats-empty-state dashboard-empty-state">
+        <span className="empty-icon" aria-hidden="true"><Activity /></span>
+        <p>Noch keine geloesten Stufen vorhanden.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="stats-favorite-difficulty-frame" aria-label="Siege nach Lieblingsstufe">
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 10, right: 46, bottom: 8, left: 0 }}
+        >
+          <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+          <XAxis type="number" allowDecimals={false} tickFormatter={(value) => `${value}`} />
+          <YAxis
+            type="category"
+            dataKey="label"
+            width={82}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip content={renderFavoriteDifficultyTooltip} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
+          <Bar dataKey="solveCount" radius={[0, 999, 999, 0]} barSize={16}>
+            {data.map((datum) => (
+              <Cell key={datum.key} fill={datum.color} />
+            ))}
+            <LabelList dataKey="solveCount" position="right" className="stats-favorite-difficulty-label" />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <p className="stats-favorite-difficulty-note">
+        Balken zeigen Siege je Stufe; der Tooltip zeigt Anteil und Medianwerte.
+      </p>
     </div>
   )
 }
@@ -872,7 +1137,7 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
       <div className="stats-recharts-tooltip-list">
         <span>
           <i aria-hidden="true" style={{ backgroundColor: visiblePayload[0]?.color ?? 'currentColor' }} />
-          {metric === 'time' ? 'Zeit' : metric === 'quality' ? 'Qualitaet' : 'Netto-Zuege'}: {formatter(metricValue)}
+          {metric === 'time' ? 'Zeit' : metric === 'quality' ? 'Lauf-Score' : 'Netto-Zuege'}: {formatter(metricValue)}
         </span>
         <span>Aktionen: {formatOptionalMoves(point.actions)}</span>
         <span>Korrekturen: {formatExtraMoves(point.corrections)}</span>
@@ -928,7 +1193,10 @@ export default function UploadStatsVisualReport({
     () => buildDifficultyReportRows(standardDifficultyStats, completionHistory),
     [completionHistory, standardDifficultyStats]
   )
-  const solvedDifficultyRows = difficultyRows.filter((row) => row.solveCount > 0)
+  const solvedDifficultyRows = useMemo(
+    () => difficultyRows.filter((row) => row.solveCount > 0),
+    [difficultyRows]
+  )
   const rangedHistory = useMemo(
     () => getHistoryRangeEntries(completionHistory, historyRange),
     [completionHistory, historyRange]
@@ -974,27 +1242,31 @@ export default function UploadStatsVisualReport({
     [assistanceSummary, completionHistory, latestCompletion, stats]
   )
   const donutSegments = useMemo(() => buildDonutSegments(selectedAssistanceSummary), [selectedAssistanceSummary])
-  const latestRunMetricBars = useMemo(
-    () => buildLatestRunMetricBars(latestCompletion, difficultyRows),
-    [difficultyRows, latestCompletion]
+  const latestScoreBreakdown = useMemo(
+    () => latestCompletion ? calculateQualityBreakdown(latestCompletion) : null,
+    [latestCompletion]
+  )
+  const averageScoreBreakdown = useMemo(
+    () => getAverageScoreBreakdown(selectedDifficultyEntries),
+    [selectedDifficultyEntries]
+  )
+  const latestScoreBreakdownData = useMemo(
+    () => buildScoreBreakdownData(latestScoreBreakdown),
+    [latestScoreBreakdown]
+  )
+  const averageScoreBreakdownData = useMemo(
+    () => buildAverageScoreBreakdownData(selectedDifficultyEntries, averageScoreBreakdown),
+    [averageScoreBreakdown, selectedDifficultyEntries]
   )
   const favoriteDifficultyKey = favoriteDifficulty ? getCompletionDifficultyKey(favoriteDifficulty) : null
-  const maximumDifficultySolves = solvedDifficultyRows.reduce(
-    (maximum, row) => Math.max(maximum, row.solveCount),
-    0
-  )
-  const qualityMetricBars = useMemo(
-    () => buildQualityMetricBars(selectedDifficultyEntries),
-    [selectedDifficultyEntries]
+  const favoriteDifficultyChartData = useMemo(
+    () => buildFavoriteDifficultyData(solvedDifficultyRows, favoriteDifficultyKey),
+    [favoriteDifficultyKey, solvedDifficultyRows]
   )
   const focusedTrendStats = getTrendReferenceStats(trendPoints, trendMetric, focusedTrendSeries?.key ?? null)
   const trendFormatter = getTrendValueFormatter(trendMetric)
   const selectedTrend = TREND_METRICS.find((metric) => metric.id === trendMetric) ?? TREND_METRICS[0]
-  const averageQuality = calculateAverage(
-    selectedDifficultyEntries
-      .map((entry) => calculateQualityScore(entry))
-      .filter((value): value is number => value !== null)
-  )
+  const averageQuality = averageScoreBreakdown?.score ?? null
 
   const handleToggleTrendSeries = (seriesKey: string) => {
     setHiddenTrendDifficultyKeys((current) => {
@@ -1194,16 +1466,16 @@ export default function UploadStatsVisualReport({
                   <div className="stats-visual-card-head">
                     <span className="saved-games-kicker">Letzter Lauf</span>
                     <strong className="stats-report-card-value">
-                      {latestCompletion ? formatOptionalDuration(latestCompletion.time) : '--'}
+                      {latestScoreBreakdown ? `${latestScoreBreakdown.score}/100` : '--'}
                     </strong>
                     <p className="stats-report-card-copy">
                       {latestCompletion
-                        ? `${formatDifficultyLabel(latestCompletion.config)}, ${formatAssistanceModeLabel(latestCompletion.assistanceMode)}.`
+                        ? `${formatDifficultyLabel(latestCompletion.config)}, ${formatOptionalDuration(latestCompletion.time)}, ${latestCompletion.moves} Netto-Zuege, ${formatAssistanceModeLabel(latestCompletion.assistanceMode)}.`
                         : 'Nach dem naechsten Sieg erscheint hier die direkte Einordnung.'}
                     </p>
                   </div>
                   <div className="stats-visual-card-visual">
-                    {latestRunMetricBars.length > 0 ? renderMiniMetricBars(latestRunMetricBars) : null}
+                    {renderScoreBreakdownChart(latestScoreBreakdownData, 'Score-Aufschluesselung fuer den letzten Lauf')}
                   </div>
                 </article>
 
@@ -1218,49 +1490,22 @@ export default function UploadStatsVisualReport({
                     </p>
                   </div>
                   <div className="stats-visual-card-visual">
-                    {solvedDifficultyRows.length > 0 ? (
-                      <div className="stats-visual-difficulty-sparkbars">
-                        {solvedDifficultyRows.map((row) => {
-                          const difficultyKey = `${row.option.rows}x${row.option.cols}`
-                          const isFavorite = difficultyKey === favoriteDifficultyKey
-
-                          return (
-                            <div
-                              key={difficultyKey}
-                              className={`stats-visual-difficulty-sparkbar${isFavorite ? ' is-favorite' : ''}`}
-                            >
-                              <span>{row.option.label}</span>
-                              <i aria-hidden="true">
-                                <b style={{ width: `${getVisualPercent(row.solveCount, maximumDifficultySolves)}%` }} />
-                              </i>
-                              <strong>{row.solveCount}</strong>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : null}
+                    {renderFavoriteDifficultyChart(favoriteDifficultyChartData)}
                   </div>
                 </article>
 
-                <article className="stats-report-card stats-visual-focus-card stats-visual-quality-card" title="Kombinierter Score aus Clean-Lauf, Korrekturen, Hinweisen und Auto-Zuegen.">
+                <article className="stats-report-card stats-visual-focus-card stats-visual-quality-card">
                   <div className="stats-visual-card-head">
-                    <span className="saved-games-kicker">Durchschn. Qualitaet</span>
+                    <span className="saved-games-kicker">Durchschn. Laufanalyse</span>
                     <strong className="stats-report-card-value">
-                      {averageQuality === null ? '--' : `${averageQuality}%`}
+                      {averageQuality === null ? '--' : `${averageQuality}/100`}
                     </strong>
                     <p className="stats-report-card-copy">
-                      Je weniger Korrekturen, Hinweise und Auto-Zuege, desto hoeher der Score.
+                      Durchschnittlicher Score mit sichtbaren Abzuegen. Niedrige Abzuege bedeuten sauberere Laeufe.
                     </p>
                   </div>
                   <div className="stats-visual-card-visual">
-                    <div
-                      className="stats-visual-quality-gauge"
-                      style={{ '--quality-score': `${averageQuality ?? 0}%` } as CSSProperties}
-                      aria-label={averageQuality === null ? 'Keine Qualitaetsdaten' : `Durchschnittliche Qualitaet ${averageQuality}%`}
-                    >
-                      <span aria-hidden="true" />
-                    </div>
-                    {renderMiniMetricBars(qualityMetricBars)}
+                    {renderScoreBreakdownChart(averageScoreBreakdownData, 'Durchschnittliche Score-Aufschluesselung')}
                   </div>
                 </article>
               </div>
