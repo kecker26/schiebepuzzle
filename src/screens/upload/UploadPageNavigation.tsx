@@ -1,4 +1,5 @@
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 
 interface UploadPageNavigationProps {
   activePage: number
@@ -6,6 +7,16 @@ interface UploadPageNavigationProps {
   isDisabled?: boolean
   onPageChange: (page: number) => void
   pageCount: number
+}
+
+function scrollPaginationContextToTop(target: HTMLElement): void {
+  const panel = target.closest<HTMLElement>('.dashboard-panel-scroll')
+  const overlay = target.closest<HTMLElement>('.workspace-window-overlay')
+  const shell = target.closest<HTMLElement>('.workspace-window-shell')
+
+  panel?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  overlay?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  shell?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
 }
 
 export default function UploadPageNavigation({
@@ -17,6 +28,19 @@ export default function UploadPageNavigation({
 }: UploadPageNavigationProps) {
   if (pageCount <= 1) {
     return null
+  }
+
+  const handlePageClick = (event: ReactMouseEvent<HTMLButtonElement>, page: number) => {
+    onPageChange(page)
+
+    const button = event.currentTarget
+    window.requestAnimationFrame(() => {
+      scrollPaginationContextToTop(button)
+
+      window.requestAnimationFrame(() => {
+        scrollPaginationContextToTop(button)
+      })
+    })
   }
 
   return (
@@ -38,7 +62,7 @@ export default function UploadPageNavigation({
               type="button"
               className="saved-games-page-link"
               aria-current={page === activePage ? 'page' : undefined}
-              onClick={() => onPageChange(page)}
+              onClick={(event) => handlePageClick(event, page)}
               disabled={isDisabled}
             >
               {page}
