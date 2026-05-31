@@ -8,6 +8,7 @@
 - App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, interaktivem KI-Tag-System, Gemini-Tagging, Gemini-Spielstandstiteln, sentiment-basiertem Bild-Theme, Sammlungen, Backup und Musik.
 - Frontend: React 18 + TypeScript.
 - Animationen: `motion` / `motion/react`.
+- Statistik-Charts: `recharts` fuer responsive Donut- und Line-Charts.
 - Icons: `lucide-react` fuer React-SVG-Icons, plus kuratierte lokale SVGs unter `src/assets/system/`.
 - Build, Dev-Server und Tests: Vite, TypeScript, Vitest und ESLint.
 - Lokale API: `localApi.ts` wird ueber `vite.config.ts` als Vite-Plugin eingebunden.

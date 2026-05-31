@@ -1441,8 +1441,8 @@ describe('keyboard smoke tests', () => {
     fireEvent.keyDown(resetButton, { key: 'End' })
     expect(document.activeElement).toBe(headerStartButton)
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Rohdaten' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Expertenmatrix' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Rohdaten & Details' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Vergleichsmatrix' }))
 
     const detailsButton = screen.getByRole('button', { name: 'Detailtabelle' })
     const comparisonSection = detailsButton.closest<HTMLElement>('.stats-report-section, .stats-report-section-collapsible')
@@ -3222,7 +3222,7 @@ describe('keyboard smoke tests', () => {
     expect(screen.queryByText(/^grid$/i)).toBeNull()
 
     const extraMoveBadges = Array.from(container.querySelectorAll('.stats-extra-moves-badge'))
-    expect(extraMoveBadges.map((badge) => badge.textContent?.trim())).toEqual(['+2 Extra', '+3 Extra'])
+    expect(extraMoveBadges.map((badge) => badge.textContent?.trim())).toEqual(['+2 Korr.', '+3 Korr.'])
 
     const assistanceBadges = Array.from(container.querySelectorAll<HTMLElement>('.stats-assistance-badge'))
     const cleanBadges = assistanceBadges.filter((badge) => badge.textContent?.includes('Clean'))
@@ -3782,8 +3782,8 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Rohdaten' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Einzellauf-Historie' }))
+    fireEvent.click(await screen.findByRole('tab', { name: 'Rohdaten & Details' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Einzellauf-Tabelle' }))
 
     await waitFor(() => {
       expect(screen.getByText('1 von 2 Eintraegen sichtbar')).toBeTruthy()

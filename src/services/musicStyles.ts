@@ -361,7 +361,7 @@ export const MUSIC_STYLE_DEFINITIONS: MusicStyleDefinition[] = [
     id: 'garage-rock',
     label: 'Garage Rock',
     shortLabel: 'Garage',
-    description: 'Rau, schmutzig und ohne grossen Umweg nach vorne.',
+    description: 'Rau, schmutzig und direkt nach vorne.',
     discoveryProfiles: [
       {
         order: 'popularity_total',

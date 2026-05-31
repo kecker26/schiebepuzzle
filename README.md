@@ -13,7 +13,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
 - Autosave, kreative KI-Titel fuer neue Spielstaende, motivbasierte Titel-Wiederverwendung, maximal 30 aktive Spielstaende mit 5er-Seitennavigation, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
 - Sentiment-basiertes Bild-Theme: hochgeladene, generierte oder wiederverwendete Motive praegen standardmaessig die komplette UI-Farbwelt; Stimmung und Palette werden rein lokal aus Farbe, Helligkeit, Kontrast und Waerme berechnet und zentral im Menue ein- oder ausgeschaltet.
-- Statistik mit vier visuellen Hauptansichten fuer Ueberblick, Analyse, Verlauf und Rohdaten-Explorer; Analyse buendelt Stufen, Rekorde und Sauberkeit, der Rohdaten-Explorer speichert CSV-/JSON-Exporte direkt im Projektordner.
+- Statistik mit drei visuellen Hauptansichten fuer Dashboard, Verlauf & Trends sowie Rohdaten & Details; Recharts visualisiert Laufarten als Donut-Chart und interaktive Trends fuer Aktionen, Zeit und Qualitaet, waehrend CSV-/JSON-Exporte direkt im Projektordner landen.
 - Galerie geloester Motive inklusive bildspezifischer Paletten fuer Galerie-, Spielstand-, Sammlungs- und Detailkarten, die dem zentralen Palette-Schalter folgen, Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, 9er-Seitennavigation, optionalem KI-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und kontextuellen Multi-Tag-Chips mit UND-Verknuepfung, Tag-Bildersuche fuer Online-Provider mit direktem Crop-Flow, aehnlichen Motiven nach Tag-Ueberschneidung und kategorisierter Tag-Verwaltung mit Mehrfachauswahl.
 - Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit 9er-Seitennavigation, KI-Sammlungsvorschlaegen und motivweit deduplizierten Sammlungen aus Tag-Treffern.
 - Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
@@ -26,6 +26,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Vite 5 als Dev-Server und Build-Tool
 - HTML5 Canvas fuer Puzzle-Rendering
 - `motion` / `motion/react` fuer Animationen
+- `recharts` fuer responsive Statistikdiagramme
 - `lucide-react` fuer konsistente React-SVG-Icons
 - Vitest, Testing Library und jsdom fuer Tests
 - ESLint mit TypeScript-, React-Hooks- und React-Refresh-Regeln

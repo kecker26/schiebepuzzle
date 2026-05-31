@@ -384,7 +384,7 @@ export default function UploadGalleryDetailDialog({
             <article className="gallery-detail-metric">
               <span className="gallery-detail-metric-label">Netto-Zuege</span>
               <strong className="gallery-detail-metric-value">{representativeEntry.moves}</strong>
-              <span className="gallery-detail-metric-copy">Direkter geloester Zugweg ohne Umwege.</span>
+              <span className="gallery-detail-metric-copy">Direkter geloester Zugweg ohne Korrekturen.</span>
             </article>
             <article className="gallery-detail-metric">
               <span className="gallery-detail-metric-label">Aktionen</span>

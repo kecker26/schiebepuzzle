@@ -322,7 +322,7 @@ export default function WinDialog({
         {
           label: 'Netto-Zuege',
           value: `${currentRun.moves}`,
-          copy: `${currentRun.actionMoves} Aktionen, ${extraMoves} Umwege in diesem Lauf.`,
+          copy: `${currentRun.actionMoves} Aktionen, ${extraMoves} Korrekturen in diesem Lauf.`,
           tone: resolveComparisonTone(movesComparison.trend, movesGapComparison.trend),
           badges: [
             createMovesBadge(movesComparison.deltaToPrevious),
@@ -478,7 +478,7 @@ export default function WinDialog({
           <AnimatedReveal className="stat-item" interaction="surface" level="subtle">
             <span className="stat-label">
               <Medal className="stat-icon" strokeWidth={2.2} absoluteStrokeWidth />
-              <span>Umwege</span>
+              <span>Korrekturen</span>
             </span>
             <span className="stat-value">{extraMoves}</span>
           </AnimatedReveal>

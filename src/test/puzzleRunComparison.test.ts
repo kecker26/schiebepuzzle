@@ -68,7 +68,7 @@ describe('puzzleRunComparison', () => {
     ).toBe(false)
   })
 
-  it('berechnet Umwege aus Aktionszuegen und klemmt negative Werte auf null', () => {
+  it('berechnet Korrekturen aus Aktionszuegen und klemmt negative Werte auf null', () => {
     expect(countExtraMoves({ moves: 40, actionMoves: 46 })).toBe(6)
     expect(countExtraMoves({ moves: 40, actionMoves: 35 })).toBe(0)
   })
