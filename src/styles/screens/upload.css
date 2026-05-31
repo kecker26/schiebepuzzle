@@ -753,13 +753,14 @@
 .saved-game-meta {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
   min-width: 0;
+  text-align: center;
 }
 
 .saved-game-kicker {
   display: inline-flex;
-  align-self: flex-start;
   align-items: center;
   min-height: 24px;
   padding: 3px 9px;
@@ -774,16 +775,19 @@
 }
 
 .saved-game-meta strong {
+  max-width: 100%;
   color: var(--text-main);
   font-size: 20px;
   line-height: 1.08;
   font-weight: 800;
   letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
 }
 
 .saved-game-chips {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
 
