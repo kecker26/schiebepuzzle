@@ -238,7 +238,7 @@ export default function UploadStatsRunComparison({
 
   const extraBadges = [
     extraComparison
-      ? createMovesDeltaBadge(extraComparison.deltaToPrevious, 'Umweg', 'Umwege')
+      ? createMovesDeltaBadge(extraComparison.deltaToPrevious, 'Korrektur', 'Korrekturen')
       : null,
     actionComparison
       ? createMovesDeltaBadge(actionComparison.deltaToPrevious, 'Aktion', 'Aktionen')
@@ -326,13 +326,13 @@ export default function UploadStatsRunComparison({
           ) : null}
           <p className="stats-report-card-copy">
             {currentRun.hasDetailedProfile
-              ? `${currentRun.actionMoves} Aktionen, ${formatExtraMoves(currentExtraMoves)} Umwege.`
+              ? `${currentRun.actionMoves} Aktionen, ${formatExtraMoves(currentExtraMoves)} Korrekturen.`
               : 'Nur Basiswerte fuer diesen Lauf vorhanden.'}
           </p>
         </article>
 
         <article className={`stats-report-card stats-report-run-card${getToneClass(extraTone)}`}>
-          <span className="saved-games-kicker">Umwege</span>
+          <span className="saved-games-kicker">Korrekturen (Undos)</span>
           <strong className="stats-report-card-value">
             {currentExtraMoves === null ? '--' : formatExtraMoves(currentExtraMoves)}
           </strong>
@@ -353,7 +353,7 @@ export default function UploadStatsRunComparison({
               ? 'Ohne volles Laufprofil laesst sich die Effizienz ueber Zusatzaktionen nicht sauber vergleichen.'
               : previousExtraMoves === null
                 ? `${currentRun.actionMoves} Aktionen insgesamt in diesem Lauf.`
-                : `Voriger Lauf: ${formatExtraMoves(previousExtraMoves)} Umwege bei ${previousRun?.actionMoves ?? '--'} Aktionen.`}
+                : `Voriger Lauf: ${formatExtraMoves(previousExtraMoves)} Korrekturen bei ${previousRun?.actionMoves ?? '--'} Aktionen.`}
           </p>
         </article>
 

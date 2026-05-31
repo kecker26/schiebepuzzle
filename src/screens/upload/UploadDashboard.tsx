@@ -541,7 +541,7 @@ export default function UploadDashboard({
 
   if (isStatsWindow) {
     title = 'Statistik, Verlauf und Rekorde'
-    copy = 'Analysiere deine Siege im Detail und wechsle ohne Umweg direkt zu offenen Spielstaenden oder in die Galerie.'
+    copy = 'Analysiere deine Siege im Detail und wechsle direkt zu offenen Spielstaenden oder in die Galerie.'
     kicker = 'Statistikfenster'
   }
 

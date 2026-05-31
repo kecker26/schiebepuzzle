@@ -190,8 +190,8 @@ export default function UploadStatsComparisonMatrix({
     },
     {
       id: 'averageExtraMoves',
-      label: 'Extra-Zuege',
-      copy: 'Gesamt-Zuege minus Netto-Zuege im Schnitt',
+      label: 'Korrekturen',
+      copy: 'Aktionen minus Netto-Zuege im Schnitt',
       tone: 'neutral',
       renderValue: (column) => formatExtraMoves(column.averageExtraMoves),
     },

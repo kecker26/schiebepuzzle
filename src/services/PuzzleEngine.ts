@@ -476,7 +476,7 @@ export default class PuzzleEngine {
       if (!isColAligned) {
         return {
           title: `Richte ${tileLabel} an ${targetColLabel} aus`,
-          body: `${tileLabel} ist bereits in der richtigen Reihe. Nutze den aktuellen Zugriff, um jetzt die Spaltenposition ohne Umweg zu stabilisieren.`,
+          body: `${tileLabel} ist bereits in der richtigen Reihe. Nutze den aktuellen Zugriff, um jetzt die Spaltenposition direkt zu stabilisieren.`,
         }
       }
 
@@ -496,7 +496,7 @@ export default class PuzzleEngine {
     if (emptyDistance === 2) {
       return {
         title: `Hole das Leerfeld an ${tileLabel}`,
-        body: `Das Leerfeld braucht nur noch einen kurzen Umweg. Fuehre es von ${emptyPositionLabel} an ${tilePositionLabel} heran und richte dann ${tileLabel} weiter aus.`,
+        body: `Das Leerfeld braucht nur noch einen kurzen Zwischenschritt. Fuehre es von ${emptyPositionLabel} an ${tilePositionLabel} heran und richte dann ${tileLabel} weiter aus.`,
       }
     }
 

@@ -480,7 +480,7 @@ export const GALLERY_SORT_OPTIONS: GallerySelectOption<GallerySortOption>[] = [
   { id: 'fastest', label: 'Schnellste Zeit' },
   { id: 'fewest-moves', label: 'Wenigste Netto-Zuege' },
   { id: 'fewest-actions', label: 'Wenigste Aktionen' },
-  { id: 'fewest-detours', label: 'Wenigste Umwege' },
+  { id: 'fewest-detours', label: 'Wenigste Korrekturen' },
 ]
 
 export function matchesGalleryDifficultyFilter(

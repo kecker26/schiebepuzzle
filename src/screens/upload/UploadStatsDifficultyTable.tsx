@@ -32,7 +32,7 @@ const DIFFICULTY_COLUMN_HELP: Partial<Record<DifficultySortKey, string>> = {
   bestMoves: 'Die niedrigste Zahl an Netto-Zuegen, also reine Puzzle-Zuege ohne Zusatzaktionen.',
   medianTime: 'Der mittlere Zeitwert dieser Stufe. Ausreisser zaehlen dadurch weniger stark als beim Durchschnitt.',
   medianMoves: 'Der mittlere Wert der Netto-Zuege dieser Stufe.',
-  averageExtraMoves: 'Durchschnittliche Differenz zwischen Gesamt-Zuegen und Netto-Zuegen. Nur mit Laufprofilen berechenbar.',
+  averageExtraMoves: 'Durchschnittliche Korrekturen (Undos): Gesamtaktionen minus Netto-Zuege. Nur mit Laufprofilen berechenbar.',
   lastCompletedAt: 'Der zuletzt gespeicherte Sieg dieser Stufe mit Zeit und Netto-Zuegen.',
 }
 
@@ -318,8 +318,8 @@ export default function UploadStatsDifficultyTable({
                 {renderColumnHelpBadge('medianMoves')}
               </th>
               <th scope="col" aria-sort={sortKey === 'averageExtraMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('averageExtraMoves')}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" title="Durchschnittliche Differenz zwischen Gesamt- und Netto-Zuegen" onClick={() => handleSort('averageExtraMoves')} onKeyDown={handleSortButtonKeyDown}>
-                  {renderHeaderLabel('Extra-Zuege')}
+                <AnimatedButton className="stats-table-sort" interaction="chip" title="Korrekturen (Undos): durchschnittliche Differenz zwischen Gesamtaktionen und Netto-Zuegen" onClick={() => handleSort('averageExtraMoves')} onKeyDown={handleSortButtonKeyDown}>
+                  {renderHeaderLabel('Korrekturen')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('averageExtraMoves', sortKey, sortDirection)}
                   </span>

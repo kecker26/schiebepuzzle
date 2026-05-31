@@ -24,6 +24,7 @@ type HistorySortKey =
   | 'difficulty'
   | 'time'
   | 'moves'
+  | 'extraMoves'
   | 'assistanceMode'
 
 type AssistanceBadgeTone = 'clean' | 'hinted' | 'auto' | 'legacy'
@@ -76,12 +77,14 @@ const HISTORY_SORT_LABELS: Record<HistorySortKey, string> = {
   difficulty: 'Stufe',
   time: 'Zeit',
   moves: 'Zuege',
+  extraMoves: 'Korrekturen',
   assistanceMode: 'Laufart',
 }
 
 const HISTORY_COLUMN_HELP: Partial<Record<HistorySortKey, string>> = {
   time: 'Die gespeicherte Laufzeit des einzelnen Siegs.',
   moves: 'Netto-Zuege sind die eigentlichen Puzzle-Zuege bis zur Loesung.',
+  extraMoves: 'Korrekturen (Undos) sind die Differenz aus Gesamtaktionen und Netto-Zuegen. Nur mit Laufprofilen berechenbar.',
   assistanceMode: 'Clean bedeutet ohne Hilfe. Hinweise und Auto-Zug markieren unterstuetzte Laeufe. Legacy hat kein vollstaendiges Laufprofil.',
 }
 
@@ -308,6 +311,9 @@ function sortHistoryEntries(
         break
       case 'moves':
         result = compareNullableNumbers(left.entry.moves, right.entry.moves, direction)
+        break
+      case 'extraMoves':
+        result = compareNullableNumbers(left.extraMovesValue, right.extraMovesValue, direction)
         break
       case 'assistanceMode':
         result = compareNullableNumbers(left.assistanceRank, right.assistanceRank, direction)
@@ -662,6 +668,26 @@ export default function UploadStatsHistorySection({
                         </th>
                         <th
                           scope="col"
+                          aria-sort={sortKey === 'extraMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                          {...getHistoryHelpHeaderProps('extraMoves')}
+                        >
+                          <AnimatedButton
+                            className="stats-table-sort"
+                            data-history-sort-key="extraMoves"
+                            interaction="chip"
+                            title="Korrekturen (Undos): Aktionen minus Netto-Zuege"
+                            onClick={() => handleSort('extraMoves')}
+                            onKeyDown={handleSortButtonKeyDown}
+                          >
+                            {renderHistoryHeaderLabel('Korrekturen')}
+                            <span className="stats-table-sort-indicator" aria-hidden="true">
+                              {getSortIndicator('extraMoves', sortKey, sortDirection)}
+                            </span>
+                          </AnimatedButton>
+                          {renderHistoryColumnHelpBadge('extraMoves')}
+                        </th>
+                        <th
+                          scope="col"
                           aria-sort={sortKey === 'assistanceMode' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                           {...getHistoryHelpHeaderProps('assistanceMode')}
                         >
@@ -716,7 +742,7 @@ export default function UploadStatsHistorySection({
                           </td>
                           <td className={getHistoryCellTone(historyEntry.isBestMoves, historyEntry.isWorstMoves).trim()}>
                             <span className="stats-data-cell-main">{historyEntry.entry.moves}</span>
-                            {historyEntry.moveBadges.length > 0 || (historyEntry.extraMovesValue ?? 0) > 0 ? (
+                            {historyEntry.moveBadges.length > 0 ? (
                               <div className="stats-data-badges">
                                 {historyEntry.moveBadges.map((badge) => (
                                   <span
@@ -726,13 +752,24 @@ export default function UploadStatsHistorySection({
                                     {badge}
                                   </span>
                                 ))}
-                                {(historyEntry.extraMovesValue ?? 0) > 0 ? (
-                                  <span className="stats-extra-moves-badge">
-                                    +{historyEntry.extraMovesValue} Extra
-                                  </span>
-                                ) : null}
                               </div>
                             ) : null}
+                          </td>
+                          <td>
+                            <span className="stats-data-cell-main">
+                              {historyEntry.extraMovesValue === null ? '--' : historyEntry.extraMovesValue}
+                            </span>
+                            {historyEntry.extraMovesValue !== null && historyEntry.extraMovesValue > 0 ? (
+                              <div className="stats-data-badges">
+                                <span className="stats-extra-moves-badge" title="Korrekturen (Undos)">
+                                  +{historyEntry.extraMovesValue} Korr.
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="stats-data-cell-copy">
+                                {historyEntry.extraMovesValue === null ? 'kein Laufprofil' : 'cleaner Zugweg'}
+                              </span>
+                            )}
                           </td>
                           <td>
                             <span className={`stats-assistance-badge is-${assistanceBadge.tone}`} title={assistanceBadge.title}>
