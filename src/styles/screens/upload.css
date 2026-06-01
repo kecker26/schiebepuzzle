@@ -6712,6 +6712,11 @@
   min-width: 0;
 }
 
+.stats-visual-panel-swap {
+  position: relative;
+  z-index: 1;
+}
+
 .stats-visual-panel {
   display: flex;
   flex-direction: column;
@@ -6762,6 +6767,21 @@
   gap: 14px;
 }
 
+.stats-visual-latest-card,
+.stats-visual-favorite-card,
+.stats-visual-quality-card {
+  overflow: visible;
+}
+
+.stats-visual-latest-card:hover,
+.stats-visual-latest-card:focus-within,
+.stats-visual-favorite-card:hover,
+.stats-visual-favorite-card:focus-within,
+.stats-visual-quality-card:hover,
+.stats-visual-quality-card:focus-within {
+  z-index: 20;
+}
+
 .stats-visual-latest-card .stats-visual-card-head,
 .stats-visual-favorite-card .stats-visual-card-head,
 .stats-visual-quality-card .stats-visual-card-head {
@@ -6805,6 +6825,179 @@
 .stats-recharts-donut-frame {
   min-height: 220px;
   padding: 6px;
+}
+
+.stats-score-breakdown-frame {
+  min-width: 0;
+  padding: 8px 4px 0;
+  overflow: visible;
+}
+
+.stats-score-breakdown-layout {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.45fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  min-width: 0;
+  overflow: visible;
+}
+
+.stats-score-breakdown-categories {
+  position: relative;
+  z-index: 8;
+  display: grid;
+  grid-template-rows: repeat(5, 1fr);
+  align-items: center;
+  height: 172px;
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 760;
+  overflow: visible;
+}
+
+.stats-score-breakdown-category {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.stats-score-breakdown-help-badge {
+  position: relative;
+  z-index: 4;
+  flex: 0 0 auto;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 15px;
+  height: 15px;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text-secondary) 46%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 86%, var(--image-accent-soft));
+  box-shadow: none;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0;
+  cursor: help;
+  overflow: visible;
+  isolation: auto;
+  outline: none;
+  transform: none;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.stats-score-breakdown-help-tooltip {
+  position: absolute;
+  z-index: 50;
+  top: 50%;
+  left: calc(100% + 8px);
+  min-width: 176px;
+  max-width: min(260px, 50vw);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  transform: translateY(-50%) scale(0.96);
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease,
+    visibility 0.14s ease;
+}
+
+.stats-score-breakdown-category:first-child .stats-score-breakdown-help-tooltip {
+  top: 0;
+  transform: scale(0.96);
+}
+
+.stats-score-breakdown-category:last-child .stats-score-breakdown-help-tooltip {
+  top: auto;
+  bottom: 0;
+  transform: scale(0.96);
+}
+
+.stats-score-breakdown-help-badge:hover,
+.stats-score-breakdown-help-badge:focus-visible {
+  border-color: color-mix(in srgb, var(--primary-color) 72%, var(--text-secondary));
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--primary-color) 22%, var(--surface-elevated));
+}
+
+.stats-score-breakdown-help-badge:hover:not(:disabled),
+.stats-score-breakdown-help-badge:focus-visible:not(:disabled) {
+  transform: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent);
+}
+
+.stats-score-breakdown-help-badge:hover .stats-score-breakdown-help-tooltip,
+.stats-score-breakdown-help-badge:focus-visible .stats-score-breakdown-help-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.stats-score-breakdown-help-badge:hover .stats-score-breakdown-help-tooltip,
+.stats-score-breakdown-help-badge:focus-visible .stats-score-breakdown-help-tooltip {
+  transform: translateY(-50%) scale(1);
+}
+
+.stats-score-breakdown-category:first-child .stats-score-breakdown-help-badge:hover .stats-score-breakdown-help-tooltip,
+.stats-score-breakdown-category:first-child .stats-score-breakdown-help-badge:focus-visible .stats-score-breakdown-help-tooltip,
+.stats-score-breakdown-category:last-child .stats-score-breakdown-help-badge:hover .stats-score-breakdown-help-tooltip,
+.stats-score-breakdown-category:last-child .stats-score-breakdown-help-badge:focus-visible .stats-score-breakdown-help-tooltip {
+  transform: scale(1);
+}
+
+.stats-score-breakdown-chart {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  overflow: visible;
+}
+
+.stats-score-breakdown-frame .recharts-cartesian-grid line {
+  stroke: color-mix(in srgb, var(--secondary-border) 62%, transparent);
+}
+
+.stats-score-breakdown-frame .recharts-cartesian-axis-tick text,
+.stats-score-breakdown-frame .recharts-label {
+  fill: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.stats-score-breakdown-frame .recharts-label {
+  fill: var(--text-main);
+}
+
+.stats-score-breakdown-label {
+  fill: var(--text-main);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.stats-score-breakdown-note {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 760;
 }
 
 .stats-visual-mini-bars {
@@ -6918,6 +7111,51 @@
 .stats-visual-difficulty-sparkbar.is-favorite b {
   background: linear-gradient(90deg, var(--primary-color), #f59e0b);
   box-shadow: 0 0 18px color-mix(in srgb, var(--primary-color) 28%, transparent);
+}
+
+.stats-favorite-difficulty-frame {
+  width: 100%;
+  min-width: 0;
+}
+
+.stats-favorite-difficulty-frame .recharts-wrapper {
+  overflow: visible;
+}
+
+.stats-favorite-difficulty-frame .recharts-surface {
+  overflow: visible;
+}
+
+.stats-favorite-difficulty-frame .recharts-cartesian-grid line {
+  stroke: color-mix(in srgb, var(--secondary-border) 56%, transparent);
+}
+
+.stats-favorite-difficulty-frame .recharts-cartesian-axis-line {
+  stroke: color-mix(in srgb, var(--secondary-border) 70%, transparent);
+}
+
+.stats-favorite-difficulty-frame .recharts-cartesian-axis-tick-line {
+  stroke: color-mix(in srgb, var(--secondary-border) 52%, transparent);
+}
+
+.stats-favorite-difficulty-frame .recharts-cartesian-axis-tick text {
+  fill: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.stats-favorite-difficulty-label {
+  fill: var(--text-main);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stats-favorite-difficulty-note {
+  margin: -2px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 780;
+  line-height: 1.35;
 }
 
 .stats-visual-quality-gauge {
@@ -7770,6 +8008,8 @@
 }
 
 .stats-visual-latest-run {
+  position: relative;
+  z-index: 2;
   margin-top: 2px;
 }
 
