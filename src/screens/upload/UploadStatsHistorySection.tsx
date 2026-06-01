@@ -1,4 +1,4 @@
-import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAccessibilityAnnouncer } from '../../app/accessibilityAnnouncer.tsx'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedChipButton from '../../motion/AnimatedChipButton.tsx'
@@ -9,11 +9,13 @@ import {
   HistoryFilter,
   HistoryFilterDefinition,
   StandardDifficultyStatsEntry,
+  buildStatsDifficultyColorMap,
   buildDifficultyReportRows,
   formatAssistanceModeLabel,
   formatDate,
   formatTime,
   getCompletionExtraMoves,
+  getStatsDifficultyKey,
 } from './uploadUtils.ts'
 import UploadStatsSection from './UploadStatsSection.tsx'
 
@@ -346,10 +348,20 @@ export default function UploadStatsHistorySection({
   const [sortKey, setSortKey] = useState<HistorySortKey>('completedAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
-  const difficultyReportMap = useMemo(() => {
-    const rows = buildDifficultyReportRows(standardDifficultyStats, completionHistory)
-    return new Map(rows.map((row) => [`${row.option.rows}x${row.option.cols}`, row]))
-  }, [completionHistory, standardDifficultyStats])
+  const difficultyRows = useMemo(
+    () => buildDifficultyReportRows(standardDifficultyStats, completionHistory),
+    [completionHistory, standardDifficultyStats]
+  )
+  const difficultyReportMap = useMemo(
+    () => new Map<string, HistoryDifficultyReportSummary>(
+      difficultyRows.map((row) => [getStatsDifficultyKey(row.option), row])
+    ),
+    [difficultyRows]
+  )
+  const difficultyColorMap = useMemo(
+    () => buildStatsDifficultyColorMap(difficultyRows),
+    [difficultyRows]
+  )
 
   const historyDisplayEntries = useMemo(
     () => buildHistoryDisplayEntries(filteredHistory, difficultyReportMap),
@@ -710,6 +722,14 @@ export default function UploadStatsHistorySection({
                       <tbody>
                         {sortedHistory.map((historyEntry) => {
                           const assistanceBadge = getAssistanceBadgeMeta(historyEntry.entry)
+                          const difficultyColor = difficultyColorMap.get(getStatsDifficultyKey(historyEntry.entry.config))
+                          const difficultyCellClassName = [
+                            'stats-history-difficulty-cell',
+                            difficultyColor ? 'has-difficulty-color' : '',
+                          ].filter(Boolean).join(' ')
+                          const difficultyCellStyle = difficultyColor
+                            ? ({ '--stats-difficulty-color': difficultyColor } as CSSProperties)
+                            : undefined
 
                           return (
                           <tr key={historyEntry.entry.id}>
@@ -721,7 +741,7 @@ export default function UploadStatsHistorySection({
                               {formatHistoryTime(historyEntry.entry.completedAt)}
                             </span>
                           </td>
-                          <td>
+                          <td className={difficultyCellClassName} style={difficultyCellStyle}>
                             <span className="stats-data-cell-main">{formatDifficultyLabel(historyEntry.entry.config)}</span>
                           </td>
                           <td className={getHistoryCellTone(historyEntry.isBestTime, historyEntry.isWorstTime).trim()}>

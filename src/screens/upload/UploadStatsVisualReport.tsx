@@ -39,6 +39,7 @@ import {
   HistoryFilter,
   HistoryFilterDefinition,
   StandardDifficultyStatsEntry,
+  STATS_DIFFICULTY_COLORS,
   buildDifficultyReportRows,
   formatAssistanceModeLabel,
   formatDate,
@@ -250,7 +251,13 @@ const ASSISTANCE_COLORS = {
   legacy: '#94a3b8',
 }
 
-const DIFFICULTY_TREND_COLORS = ['#60a5fa', '#34d399', '#f59e0b', '#f472b6', '#a78bfa', '#22d3ee']
+const SCORE_BREAKDOWN_COLORS = {
+  score: '#dc2626',
+  corrections: '#ea580c',
+  hints: '#b45309',
+  auto: '#991b1b',
+  assistance: '#78350f',
+}
 
 function getCompletionTimestamp(entry: PuzzleCompletionRecord): number {
   const parsed = Date.parse(entry.completedAt)
@@ -668,7 +675,7 @@ function buildScoreBreakdownData(breakdown: ScoreBreakdown | null): ScoreBreakdo
       value: breakdown.score,
       displayValue: `${breakdown.score}/100`,
       detail: 'Verbleibende Punkte nach allen Abzuegen.',
-      color: '#34d399',
+      color: SCORE_BREAKDOWN_COLORS.score,
     },
     {
       key: 'corrections',
@@ -676,7 +683,7 @@ function buildScoreBreakdownData(breakdown: ScoreBreakdown | null): ScoreBreakdo
       value: breakdown.correctionPenalty,
       displayValue: formatPenaltyValue(breakdown.correctionPenalty),
       detail: `${formatAverageCount(breakdown.corrections)} Korrekturen, 4 Punkte Abzug je Korrektur, maximal 48.`,
-      color: '#f59e0b',
+      color: SCORE_BREAKDOWN_COLORS.corrections,
     },
     {
       key: 'hints',
@@ -684,7 +691,7 @@ function buildScoreBreakdownData(breakdown: ScoreBreakdown | null): ScoreBreakdo
       value: breakdown.hintPenalty,
       displayValue: formatPenaltyValue(breakdown.hintPenalty),
       detail: `${formatAverageCount(breakdown.hints)} Hinweise, 8 Punkte Abzug je Hinweis, maximal 28.`,
-      color: '#f97316',
+      color: SCORE_BREAKDOWN_COLORS.hints,
     },
     {
       key: 'auto',
@@ -692,7 +699,7 @@ function buildScoreBreakdownData(breakdown: ScoreBreakdown | null): ScoreBreakdo
       value: breakdown.autoPenalty,
       displayValue: breakdown.autoPenalty >= 36 ? '-36 max.' : formatPenaltyValue(breakdown.autoPenalty),
       detail: `${formatAverageCount(breakdown.autoMoves)} Auto-Zuege, 12 Punkte Abzug je Auto-Zug, maximal 36.`,
-      color: '#ef4444',
+      color: SCORE_BREAKDOWN_COLORS.auto,
     },
     {
       key: 'assistance',
@@ -700,7 +707,7 @@ function buildScoreBreakdownData(breakdown: ScoreBreakdown | null): ScoreBreakdo
       value: breakdown.assistancePenalty,
       displayValue: formatPenaltyValue(breakdown.assistancePenalty),
       detail: breakdown.assistancePenalty > 0 ? '8 Punkte Abzug, sobald der Lauf nicht clean ist.' : 'Kein Abzug bei cleanem Lauf.',
-      color: '#a855f7',
+      color: SCORE_BREAKDOWN_COLORS.assistance,
     },
   ]
 }
@@ -756,7 +763,8 @@ function buildAverageScoreBreakdownData(
 
 function buildFavoriteDifficultyData(
   rows: DifficultyReportRow[],
-  favoriteDifficultyKey: string | null
+  favoriteDifficultyKey: string | null,
+  difficultyColorMap: ReadonlyMap<string, string>
 ): FavoriteDifficultyDatum[] {
   const solvedRows = rows
     .filter((row) => row.solveCount > 0)
@@ -786,7 +794,7 @@ function buildFavoriteDifficultyData(
       medianTime: row.medianTime,
       medianMoves: row.medianMoves,
       isFavorite,
-      color: isFavorite ? '#34d399' : DIFFICULTY_TREND_COLORS[index % DIFFICULTY_TREND_COLORS.length],
+      color: difficultyColorMap.get(key) ?? STATS_DIFFICULTY_COLORS[index % STATS_DIFFICULTY_COLORS.length],
     }
   })
 
@@ -1239,9 +1247,13 @@ export default function UploadStatsVisualReport({
     () => solvedDifficultyRows.map((row, index) => ({
       key: `${row.option.rows}x${row.option.cols}`,
       label: row.option.label,
-      color: DIFFICULTY_TREND_COLORS[index % DIFFICULTY_TREND_COLORS.length],
+      color: STATS_DIFFICULTY_COLORS[index % STATS_DIFFICULTY_COLORS.length],
     })),
     [solvedDifficultyRows]
+  )
+  const trendSeriesColorMap = useMemo(
+    () => new Map(trendSeriesOptions.map((series) => [series.key, series.color])),
+    [trendSeriesOptions]
   )
   const visibleTrendSeries = trendSeriesOptions.filter((series) => !hiddenTrendDifficultyKeys.includes(series.key))
   const focusedTrendSeries = visibleTrendSeries.length === 1 ? visibleTrendSeries[0] : null
@@ -1280,8 +1292,8 @@ export default function UploadStatsVisualReport({
   )
   const favoriteDifficultyKey = favoriteDifficulty ? getCompletionDifficultyKey(favoriteDifficulty) : null
   const favoriteDifficultyChartData = useMemo(
-    () => buildFavoriteDifficultyData(solvedDifficultyRows, favoriteDifficultyKey),
-    [favoriteDifficultyKey, solvedDifficultyRows]
+    () => buildFavoriteDifficultyData(solvedDifficultyRows, favoriteDifficultyKey, trendSeriesColorMap),
+    [favoriteDifficultyKey, solvedDifficultyRows, trendSeriesColorMap]
   )
   const focusedTrendStats = getTrendReferenceStats(trendPoints, trendMetric, focusedTrendSeries?.key ?? null)
   const trendFormatter = getTrendValueFormatter(trendMetric)
@@ -1757,6 +1769,7 @@ export default function UploadStatsVisualReport({
                       standardDifficultyStats={standardDifficultyStats}
                       onReloadView={onReloadView}
                       onBackToStart={onBackToStart}
+                      onRawViewChange={setRawStatsView}
                     />
                   ) : null}
                 </div>
