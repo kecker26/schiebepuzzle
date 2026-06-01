@@ -95,6 +95,28 @@ interface DifficultyAssistanceCounts {
   profiledSolveCount: number
 }
 
+export const STATS_DIFFICULTY_COLORS = ['#60a5fa', '#34d399', '#f59e0b', '#f472b6', '#a78bfa', '#22d3ee']
+
+export function getStatsDifficultyKey(config: Pick<PuzzleConfig, 'rows' | 'cols'>): `${number}x${number}` {
+  return `${config.rows}x${config.cols}`
+}
+
+export function buildStatsDifficultyColorMap(rows: DifficultyReportRow[]): Map<string, string> {
+  let colorIndex = 0
+
+  return rows.reduce<Map<string, string>>((colorMap, row) => {
+    if (row.solveCount <= 0) return colorMap
+
+    colorMap.set(
+      getStatsDifficultyKey(row.option),
+      STATS_DIFFICULTY_COLORS[colorIndex % STATS_DIFFICULTY_COLORS.length]
+    )
+    colorIndex += 1
+
+    return colorMap
+  }, new Map())
+}
+
 export const STATS_DASHBOARD_TABS: DashboardTabDefinition[] = [
   {
     id: 'overview',
@@ -281,7 +303,7 @@ export function formatDayLabel(days: number): string {
 }
 
 function getDifficultyFilterId(config: PuzzleConfig): `${number}x${number}` {
-  return `${config.rows}x${config.cols}`
+  return getStatsDifficultyKey(config)
 }
 
 function parseTimestamp(timestamp: string | null | undefined): number {
