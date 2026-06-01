@@ -988,7 +988,22 @@ function renderKpiCards(cards: KpiCard[]) {
   )
 }
 
-function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string) {
+function renderScoreBreakdownHelpTooltip(datum: ScoreBreakdownDatum, tooltipId: string) {
+  return (
+    <span id={tooltipId} className="stats-recharts-tooltip stats-score-breakdown-help-tooltip" role="tooltip">
+      <strong>{datum.label}</strong>
+      <span>{datum.detail}</span>
+      <span className="stats-recharts-tooltip-list">
+        <span>
+          <i aria-hidden="true" style={{ backgroundColor: datum.color, color: datum.color }} />
+          Wert: {datum.displayValue}
+        </span>
+      </span>
+    </span>
+  )
+}
+
+function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string, tooltipIdPrefix: string) {
   if (data.length === 0) {
     return (
       <div className="stats-empty-state dashboard-empty-state">
@@ -1002,19 +1017,24 @@ function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string) {
     <div className="stats-score-breakdown-frame" aria-label={label}>
       <div className="stats-score-breakdown-layout">
         <div className="stats-score-breakdown-categories" aria-label="Score-Kategorien">
-          {data.map((datum) => (
-            <div key={datum.key} className="stats-score-breakdown-category">
-              <span>{datum.label}</span>
-              <button
-                type="button"
-                className="stats-score-breakdown-help-badge"
-                aria-label={`${datum.label}: ${datum.detail}`}
-                data-tooltip={datum.detail}
-              >
-                ?
-              </button>
-            </div>
-          ))}
+          {data.map((datum) => {
+            const tooltipId = `${tooltipIdPrefix}-${datum.key}-tooltip`
+
+            return (
+              <div key={datum.key} className="stats-score-breakdown-category">
+                <span>{datum.label}</span>
+                <button
+                  type="button"
+                  className="stats-score-breakdown-help-badge"
+                  aria-label={`${datum.label}: ${datum.detail}`}
+                  aria-describedby={tooltipId}
+                >
+                  ?
+                  {renderScoreBreakdownHelpTooltip(datum, tooltipId)}
+                </button>
+              </div>
+            )
+          })}
         </div>
         <div className="stats-score-breakdown-chart">
           <ResponsiveContainer width="100%" height={220}>
@@ -1475,7 +1495,11 @@ export default function UploadStatsVisualReport({
                     </p>
                   </div>
                   <div className="stats-visual-card-visual">
-                    {renderScoreBreakdownChart(latestScoreBreakdownData, 'Score-Aufschluesselung fuer den letzten Lauf')}
+                    {renderScoreBreakdownChart(
+                      latestScoreBreakdownData,
+                      'Score-Aufschluesselung fuer den letzten Lauf',
+                      'latest-score-breakdown'
+                    )}
                   </div>
                 </article>
 
@@ -1505,7 +1529,11 @@ export default function UploadStatsVisualReport({
                     </p>
                   </div>
                   <div className="stats-visual-card-visual">
-                    {renderScoreBreakdownChart(averageScoreBreakdownData, 'Durchschnittliche Score-Aufschluesselung')}
+                    {renderScoreBreakdownChart(
+                      averageScoreBreakdownData,
+                      'Durchschnittliche Score-Aufschluesselung',
+                      'average-score-breakdown'
+                    )}
                   </div>
                 </article>
               </div>
