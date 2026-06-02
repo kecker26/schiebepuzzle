@@ -1,17 +1,20 @@
 import type { CSSProperties, RefObject } from 'react'
+import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
+import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import { PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats } from '../../types/index'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import UploadStatsSection from './UploadStatsSection.tsx'
 import {
   StandardDifficultyStatsEntry,
+  buildStatsDifficultyColorMap,
   buildDifficultyReportRows,
   formatDate,
   formatExtraMoves,
   formatOptionalDuration,
   formatOptionalMoves,
   formatPercent,
+  getStatsDifficultyKey,
 } from './uploadUtils.ts'
-import { buildDifficultyColorMap, getDifficultyColorStyle } from './uploadStatsDifficultyColors.ts'
 
 interface UploadStatsComparisonMatrixProps {
   stats: PuzzleStats | null
@@ -22,6 +25,7 @@ interface UploadStatsComparisonMatrixProps {
   standardDifficultyStats: StandardDifficultyStatsEntry[]
   onReloadView: () => void
   onBackToStart: () => void
+  onRawViewChange?: (view: 'difficulties' | 'history') => void
   defaultOpen?: boolean
   summaryButtonRef?: RefObject<HTMLButtonElement>
 }
@@ -41,11 +45,7 @@ interface MatrixColumn {
   averageExtraMoves: number | null
   profileCoverage: number | null
   lastCompletedAt: string | null
-  difficultyColorStyle: DifficultyColorStyle | undefined
-}
-
-type DifficultyColorStyle = CSSProperties & {
-  '--stats-difficulty-color'?: string
+  difficultyColor: string | null
 }
 
 type MatrixTone = 'neutral' | 'positive' | 'negative'
@@ -64,11 +64,12 @@ export default function UploadStatsComparisonMatrix({
   standardDifficultyStats,
   onReloadView,
   onBackToStart,
+  onRawViewChange,
   defaultOpen = true,
   summaryButtonRef,
 }: UploadStatsComparisonMatrixProps) {
   const difficultyRows = buildDifficultyReportRows(standardDifficultyStats, completionHistory)
-  const difficultyColorMap = buildDifficultyColorMap(difficultyRows)
+  const difficultyColorMap = buildStatsDifficultyColorMap(difficultyRows)
   const profiledHistory = completionHistory.filter((entry) => entry.hasDetailedProfile)
   const totalCleanRate = stats && stats.totalSolved > 0
     ? Math.round((stats.cleanSolvedCount / stats.totalSolved) * 100)
@@ -98,25 +99,29 @@ export default function UploadStatsComparisonMatrix({
       averageExtraMoves: totalAverageExtraMoves,
       profileCoverage: totalProfileCoverage,
       lastCompletedAt: latestCompletion?.completedAt ?? stats?.lastCompletedAt ?? null,
-      difficultyColorStyle: undefined,
+      difficultyColor: null,
     },
-    ...difficultyRows.map((row) => ({
-      id: row.option.key,
-      label: row.option.label,
-      description: formatPuzzleSize({ rows: row.option.rows, cols: row.option.cols }),
-      solveCount: row.solveCount,
-      cleanRate: row.cleanRate,
-      bestTime: row.bestTime,
-      worstTime: row.worstTime,
-      bestMoves: row.bestMoves,
-      worstMoves: row.worstMoves,
-      medianTime: row.medianTime,
-      medianMoves: row.medianMoves,
-      averageExtraMoves: row.averageExtraMoves,
-      profileCoverage: row.profileCoverage,
-      lastCompletedAt: row.lastCompletedAt,
-      difficultyColorStyle: getDifficultyColorStyle(difficultyColorMap, row.option),
-    })),
+    ...difficultyRows.map((row) => {
+      const difficultyColor = difficultyColorMap.get(getStatsDifficultyKey(row.option)) ?? null
+
+      return {
+        id: row.option.key,
+        label: row.option.label,
+        description: formatPuzzleSize({ rows: row.option.rows, cols: row.option.cols }),
+        solveCount: row.solveCount,
+        cleanRate: row.cleanRate,
+        bestTime: row.bestTime,
+        worstTime: row.worstTime,
+        bestMoves: row.bestMoves,
+        worstMoves: row.worstMoves,
+        medianTime: row.medianTime,
+        medianMoves: row.medianMoves,
+        averageExtraMoves: row.averageExtraMoves,
+        profileCoverage: row.profileCoverage,
+        lastCompletedAt: row.lastCompletedAt,
+        difficultyColor,
+      }
+    }),
   ]
 
   const matrixRows: Array<{
@@ -208,7 +213,6 @@ export default function UploadStatsComparisonMatrix({
   return (
     <UploadStatsSection
       id="stats-report-comparison"
-      className="stats-report-section-table"
       kicker="Expertenansicht"
       title="Erweiterte Vergleichsmatrix"
       copy="Die Matrix stellt Gesamtwert, Schwierigkeit und Extremwerte direkt nebeneinander. Sie ist als Pruef- und Vergleichsansicht gedacht, wenn du alle Kennzahlen in einer Pivot-Tabelle sehen moechtest."
@@ -229,7 +233,25 @@ export default function UploadStatsComparisonMatrix({
       defaultOpen={defaultOpen}
       onReloadView={onReloadView}
       onBackToStart={onBackToStart}
-      summaryButtonRef={summaryButtonRef}
+        summaryButtonRef={summaryButtonRef}
+        actions={
+          <div className="stats-report-jump-row" onKeyDown={handleDirectionalFocusNavigation}>
+            <AnimatedButton
+              className="secondary"
+              interaction="chip"
+              onClick={() => onRawViewChange?.('difficulties')}
+            >
+              Detailtabelle
+            </AnimatedButton>
+            <AnimatedButton
+              className="secondary"
+              interaction="chip"
+              onClick={() => onRawViewChange?.('history')}
+            >
+              Verlaufstabelle
+            </AnimatedButton>
+        </div>
+      }
     >
       {completionHistory.length === 0 ? (
         <div className="stats-empty-state dashboard-empty-state">
@@ -248,18 +270,18 @@ export default function UploadStatsComparisonMatrix({
                   Kennzahl
                 </th>
                 {matrixColumns.map((column) => {
-                  const hasDifficultyColor = Boolean(column.difficultyColorStyle)
+                  const columnStyle = column.difficultyColor
+                    ? ({ '--stats-difficulty-color': column.difficultyColor } as CSSProperties)
+                    : undefined
 
                   return (
                     <th
                       key={column.id}
                       scope="col"
-                      className={`stats-matrix-header-cell${hasDifficultyColor ? ' has-difficulty-column-accent' : ''}`}
-                      style={column.difficultyColorStyle}
+                      className={`stats-matrix-header-cell${column.difficultyColor ? ' has-difficulty-color' : ''}`}
+                      style={columnStyle}
                     >
-                      <span className={`stats-matrix-column-title${hasDifficultyColor ? ' stats-difficulty-label-chip' : ''}`}>
-                        {column.label}
-                      </span>
+                      <span className="stats-matrix-column-title">{column.label}</span>
                       <span className="stats-matrix-column-copy">{column.description}</span>
                     </th>
                   )
@@ -275,13 +297,15 @@ export default function UploadStatsComparisonMatrix({
                   </th>
                   {matrixColumns.map((column) => {
                     const value = row.renderValue(column)
-                    const hasDifficultyColor = Boolean(column.difficultyColorStyle)
+                    const columnStyle = column.difficultyColor
+                      ? ({ '--stats-difficulty-color': column.difficultyColor } as CSSProperties)
+                      : undefined
 
                     return (
                       <td
                         key={`${row.id}-${column.id}`}
-                        className={`stats-matrix-cell${hasDifficultyColor ? ' has-difficulty-column-accent' : ''}${row.tone === 'positive' ? ' is-positive' : row.tone === 'negative' ? ' is-negative' : ''}`}
-                        style={column.difficultyColorStyle}
+                        className={`stats-matrix-cell${column.difficultyColor ? ' has-difficulty-color' : ''}${row.tone === 'positive' ? ' is-positive' : row.tone === 'negative' ? ' is-negative' : ''}`}
+                        style={columnStyle}
                       >
                         <span className="stats-matrix-value">{value}</span>
                       </td>
