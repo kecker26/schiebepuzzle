@@ -15,6 +15,8 @@ import {
   formatTime,
   getCompletionExtraMoves,
 } from './uploadUtils.ts'
+import { buildDifficultyColorMap, getDifficultyColorStyle } from './uploadStatsDifficultyColors.ts'
+import UploadPageNavigation from './UploadPageNavigation.tsx'
 import UploadStatsSection from './UploadStatsSection.tsx'
 
 type SortDirection = 'asc' | 'desc'
@@ -87,6 +89,8 @@ const HISTORY_COLUMN_HELP: Partial<Record<HistorySortKey, string>> = {
   extraMoves: 'Korrekturen (Undos) sind die Differenz aus Gesamtaktionen und Netto-Zuegen. Nur mit Laufprofilen berechenbar.',
   assistanceMode: 'Clean bedeutet ohne Hilfe. Hinweise und Auto-Zug markieren unterstuetzte Laeufe. Legacy hat kein vollstaendiges Laufprofil.',
 }
+
+const HISTORY_ENTRIES_PER_PAGE = 25
 
 function getDifficultyKey(entry: Pick<PuzzleCompletionRecord, 'config'>): `${number}x${number}` {
   return `${entry.config.rows}x${entry.config.cols}`
@@ -345,11 +349,20 @@ export default function UploadStatsHistorySection({
   const pendingSortFocusRef = useRef<HistorySortKey | null>(null)
   const [sortKey, setSortKey] = useState<HistorySortKey>('completedAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [currentPage, setCurrentPage] = useState(1)
 
-  const difficultyReportMap = useMemo(() => {
-    const rows = buildDifficultyReportRows(standardDifficultyStats, completionHistory)
-    return new Map(rows.map((row) => [`${row.option.rows}x${row.option.cols}`, row]))
-  }, [completionHistory, standardDifficultyStats])
+  const difficultyRows = useMemo(
+    () => buildDifficultyReportRows(standardDifficultyStats, completionHistory),
+    [completionHistory, standardDifficultyStats]
+  )
+  const difficultyReportMap = useMemo(
+    () => new Map(difficultyRows.map((row) => [`${row.option.rows}x${row.option.cols}`, row])),
+    [difficultyRows]
+  )
+  const difficultyColorMap = useMemo(
+    () => buildDifficultyColorMap(difficultyRows),
+    [difficultyRows]
+  )
 
   const historyDisplayEntries = useMemo(
     () => buildHistoryDisplayEntries(filteredHistory, difficultyReportMap),
@@ -360,7 +373,17 @@ export default function UploadStatsHistorySection({
     () => sortHistoryEntries(historyDisplayEntries, sortKey, sortDirection),
     [historyDisplayEntries, sortDirection, sortKey]
   )
-  const historySwapKey = `${historyFilter}:${sortKey}:${sortDirection}`
+  const historyPageCount = Math.max(1, Math.ceil(sortedHistory.length / HISTORY_ENTRIES_PER_PAGE))
+  const activeHistoryPage = Math.min(currentPage, historyPageCount)
+  const pagedHistory = useMemo(() => {
+    const startIndex = (activeHistoryPage - 1) * HISTORY_ENTRIES_PER_PAGE
+    return sortedHistory.slice(startIndex, startIndex + HISTORY_ENTRIES_PER_PAGE)
+  }, [activeHistoryPage, sortedHistory])
+  const historySwapKey = `${historyFilter}:${sortKey}:${sortDirection}:${activeHistoryPage}`
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, historyPageCount))
+  }, [historyPageCount])
 
   const focusButton = useCallback((button: HTMLButtonElement | undefined) => {
     if (!button) {
@@ -464,12 +487,14 @@ export default function UploadStatsHistorySection({
   }, [focusButton])
 
   const handleHistoryFilterSelect = useCallback((filterId: HistoryFilter, label: string) => {
+    setCurrentPage(1)
     onHistoryFilterChange(filterId)
     announceAccessibility(`Verlauffilter: ${label}.`)
   }, [announceAccessibility, onHistoryFilterChange])
 
   const handleSort = useCallback((nextKey: HistorySortKey) => {
     pendingSortFocusRef.current = nextKey
+    setCurrentPage(1)
 
     if (nextKey === sortKey) {
       const nextDirection = sortDirection === 'asc' ? 'desc' : 'asc'
@@ -487,6 +512,10 @@ export default function UploadStatsHistorySection({
       `Verlauf sortiert nach ${HISTORY_SORT_LABELS[nextKey]}, ${nextDirection === 'asc' ? 'aufsteigend' : 'absteigend'}.`
     )
   }, [announceAccessibility, sortDirection, sortKey])
+
+  const handlePageClick = useCallback((page: number) => {
+    setCurrentPage(page)
+  }, [])
 
   useEffect(() => {
     const focusSortKey = pendingSortFocusRef.current
@@ -535,6 +564,7 @@ export default function UploadStatsHistorySection({
   return (
     <UploadStatsSection
       id="stats-report-history"
+      className="stats-report-section-table"
       kicker="Verlaufstabelle"
       title="Komplette Sieg-Historie"
       copy="Jeder Abschluss bleibt erhalten und kann nach Datum, Schwierigkeit, Zeit, Zuegen oder Hilfen sortiert werden. Der Filter oben schraenkt die Tabelle auf einzelne Stufen ein."
@@ -576,6 +606,7 @@ export default function UploadStatsHistorySection({
 
               <span className="dashboard-section-note">
                 {sortedHistory.length} von {completionHistory.length} Eintraegen sichtbar
+                {historyPageCount > 1 ? `, ${pagedHistory.length} auf dieser Seite` : ''}
               </span>
             </div>
 
@@ -708,11 +739,15 @@ export default function UploadStatsHistorySection({
                         </tr>
                       </thead>
                       <tbody>
-                        {sortedHistory.map((historyEntry) => {
+                        {pagedHistory.map((historyEntry) => {
                           const assistanceBadge = getAssistanceBadgeMeta(historyEntry.entry)
 
                           return (
-                          <tr key={historyEntry.entry.id}>
+                          <tr
+                            key={historyEntry.entry.id}
+                            className="has-difficulty-accent"
+                            style={getDifficultyColorStyle(difficultyColorMap, historyEntry.entry.config)}
+                          >
                           <td>
                             <span className="stats-data-cell-main" title={formatHistoryDateTitle(historyEntry.entry.completedAt)}>
                               {formatHistoryDate(historyEntry.entry.completedAt)}
@@ -722,7 +757,9 @@ export default function UploadStatsHistorySection({
                             </span>
                           </td>
                           <td>
-                            <span className="stats-data-cell-main">{formatDifficultyLabel(historyEntry.entry.config)}</span>
+                            <span className="stats-data-cell-main stats-difficulty-label-chip">
+                              {formatDifficultyLabel(historyEntry.entry.config)}
+                            </span>
                           </td>
                           <td className={getHistoryCellTone(historyEntry.isBestTime, historyEntry.isWorstTime).trim()}>
                             <span className="stats-data-cell-main">{formatTime(historyEntry.entry.time)}</span>
@@ -787,6 +824,12 @@ export default function UploadStatsHistorySection({
                         })}
                       </tbody>
                     </table>
+                    <UploadPageNavigation
+                      activePage={activeHistoryPage}
+                      ariaLabel="Einzellaufseiten"
+                      onPageChange={handlePageClick}
+                      pageCount={historyPageCount}
+                    />
                   </div>
                 )}
               </div>

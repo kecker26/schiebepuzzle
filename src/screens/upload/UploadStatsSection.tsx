@@ -7,6 +7,7 @@ import { motionTransitions } from '../../motion/tokens.ts'
 
 interface UploadStatsSectionProps {
   id?: string
+  className?: string
   kicker: string
   title: string
   copy: string
@@ -24,6 +25,7 @@ const OPEN_SCROLL_SETTLE_DELAY_MS = Math.round(motionTransitions.panelEnter.dura
 
 export default function UploadStatsSection({
   id,
+  className,
   kicker,
   title,
   copy,
@@ -268,42 +270,44 @@ export default function UploadStatsSection({
       <section
         ref={sectionRef}
         id={id}
-        className="stats-report-section stats-report-section-collapsible"
+        className={`stats-report-section stats-report-section-collapsible${className ? ` ${className}` : ''}`}
         data-open={isOpen ? 'true' : 'false'}
         data-stats-collapsible="true"
       >
-        <AnimatedButton
-          ref={summaryButtonRef}
-          className="stats-report-section-summary"
-          interaction="surface"
-          aria-expanded={isOpen}
-          aria-controls={bodyId}
-          onClick={handleSummaryToggle}
-          onKeyDown={handleSummaryKeyDown}
-        >
-          <span className="stats-report-section-summary-main">
-            <span className="stats-report-section-heading">
-              <span className="saved-games-kicker">{kicker}</span>
-              <span className="stats-report-section-title" role="heading" aria-level={3}>
-                {title}
+        <div className="stats-report-section-chrome">
+          <AnimatedButton
+            ref={summaryButtonRef}
+            className="stats-report-section-summary"
+            interaction="surface"
+            aria-expanded={isOpen}
+            aria-controls={bodyId}
+            onClick={handleSummaryToggle}
+            onKeyDown={handleSummaryKeyDown}
+          >
+            <span className="stats-report-section-summary-main">
+              <span className="stats-report-section-heading">
+                <span className="saved-games-kicker">{kicker}</span>
+                <span className="stats-report-section-title" role="heading" aria-level={3}>
+                  {title}
+                </span>
               </span>
             </span>
-          </span>
 
-          <span className="stats-report-section-summary-side">
-            {summaryMeta ? (
-              <span className="stats-report-section-summary-meta">{summaryMeta}</span>
-            ) : null}
+            <span className="stats-report-section-summary-side">
+              {summaryMeta ? (
+                <span className="stats-report-section-summary-meta">{summaryMeta}</span>
+              ) : null}
 
-            <span className="dashboard-disclosure-toggle stats-report-section-toggle">
-              <span className="stats-report-section-toggle-open-label">Aufklappen</span>
-              <span className="stats-report-section-toggle-close-label">Einklappen</span>
-              <span className="dashboard-disclosure-icon" aria-hidden="true">
-                &#9662;
+              <span className="dashboard-disclosure-toggle stats-report-section-toggle">
+                <span className="stats-report-section-toggle-open-label">Aufklappen</span>
+                <span className="stats-report-section-toggle-close-label">Einklappen</span>
+                <span className="dashboard-disclosure-icon" aria-hidden="true">
+                  &#9662;
+                </span>
               </span>
             </span>
-          </span>
-        </AnimatedButton>
+          </AnimatedButton>
+        </div>
 
         <AnimatedCollapse isOpen={isOpen} className="stats-report-section-collapse">
           <div id={bodyId} className="stats-report-section-body">
@@ -318,19 +322,23 @@ export default function UploadStatsSection({
   }
 
   return (
-    <section ref={sectionRef} id={id} className="stats-report-section">
-      <div className="stats-report-section-head">
-        <div className="stats-report-section-heading">
-          <span className="saved-games-kicker">{kicker}</span>
-          <h3 className="stats-report-section-title">{title}</h3>
-        </div>
+    <section ref={sectionRef} id={id} className={`stats-report-section${className ? ` ${className}` : ''}`}>
+      <div className="stats-report-section-chrome">
+        <div className="stats-report-section-head">
+          <div className="stats-report-section-heading">
+            <span className="saved-games-kicker">{kicker}</span>
+            <h3 className="stats-report-section-title">{title}</h3>
+          </div>
 
-        {actions ? <div className="stats-report-section-actions">{actions}</div> : null}
+          {actions ? <div className="stats-report-section-actions">{actions}</div> : null}
+        </div>
       </div>
 
-      <p className="stats-report-section-copy">{copy}</p>
-      {children}
-      {footerNavigation}
+      <div className="stats-report-section-body">
+        <p className="stats-report-section-copy">{copy}</p>
+        {children}
+        {footerNavigation}
+      </div>
     </section>
   )
 }

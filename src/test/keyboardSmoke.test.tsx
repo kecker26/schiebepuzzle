@@ -3239,6 +3239,45 @@ describe('keyboard smoke tests', () => {
     expect(autoBadges.every((badge) => !badge.textContent?.includes('0 Auto'))).toBe(true)
   })
 
+  it('paginates the statistics history table with 25 runs per page', async () => {
+    const completionHistory = Array.from({ length: 26 }, (_, index) => {
+      const id = String(index + 1)
+      const completedAt = new Date(Date.UTC(2026, 3, 1, 10, index)).toISOString()
+      return createCompletionRecord(id, completedAt)
+    })
+
+    const { container } = render(
+      <div className="workspace-window-shell">
+        <div className="workspace-window-overlay">
+          <div className="dashboard-panel-scroll">
+            <UploadStatsHistorySection
+              isLoadingStats={false}
+              completionHistory={completionHistory}
+              filteredHistory={completionHistory}
+              historyFilter="all"
+              historyFilterOptions={[{ id: 'all', label: 'Alle Siege' }]}
+              standardDifficultyStats={[]}
+              onHistoryFilterChange={vi.fn()}
+              onReloadView={vi.fn()}
+              onBackToStart={vi.fn()}
+            />
+          </div>
+        </div>
+      </div>
+    )
+
+    expect(container.querySelectorAll('.stats-history-table tbody tr')).toHaveLength(25)
+    expect(screen.getByRole('navigation', { name: 'Einzellaufseiten' })).toBeTruthy()
+    expect(screen.getByText('Seite 1 von 2')).toBeTruthy()
+
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Einzellaufseiten' })).getByRole('button', { name: '2' }))
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('.stats-history-table tbody tr')).toHaveLength(1)
+    })
+    expect(screen.getByText('Seite 2 von 2')).toBeTruthy()
+  })
+
   it('keeps focus on the same statistics sort button after resorting the history table', async () => {
     const completionHistory = [
       createCompletionRecord('1', '2026-04-10T10:00:00.000Z'),
