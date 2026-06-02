@@ -213,6 +213,7 @@ export default function UploadStatsComparisonMatrix({
   return (
     <UploadStatsSection
       id="stats-report-comparison"
+      className="stats-report-section-table"
       kicker="Expertenansicht"
       title="Erweiterte Vergleichsmatrix"
       copy="Die Matrix stellt Gesamtwert, Schwierigkeit und Extremwerte direkt nebeneinander. Sie ist als Pruef- und Vergleichsansicht gedacht, wenn du alle Kennzahlen in einer Pivot-Tabelle sehen moechtest."
@@ -233,23 +234,23 @@ export default function UploadStatsComparisonMatrix({
       defaultOpen={defaultOpen}
       onReloadView={onReloadView}
       onBackToStart={onBackToStart}
-        summaryButtonRef={summaryButtonRef}
-        actions={
-          <div className="stats-report-jump-row" onKeyDown={handleDirectionalFocusNavigation}>
-            <AnimatedButton
-              className="secondary"
-              interaction="chip"
-              onClick={() => onRawViewChange?.('difficulties')}
-            >
-              Detailtabelle
-            </AnimatedButton>
-            <AnimatedButton
-              className="secondary"
-              interaction="chip"
-              onClick={() => onRawViewChange?.('history')}
-            >
-              Verlaufstabelle
-            </AnimatedButton>
+      summaryButtonRef={summaryButtonRef}
+      actions={
+        <div className="stats-report-jump-row" onKeyDown={handleDirectionalFocusNavigation}>
+          <AnimatedButton
+            className="secondary"
+            interaction="chip"
+            onClick={() => onRawViewChange?.('difficulties')}
+          >
+            Detailtabelle
+          </AnimatedButton>
+          <AnimatedButton
+            className="secondary"
+            interaction="chip"
+            onClick={() => onRawViewChange?.('history')}
+          >
+            Verlaufstabelle
+          </AnimatedButton>
         </div>
       }
     >

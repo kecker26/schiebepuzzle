@@ -248,6 +248,7 @@ export default function UploadStatsDifficultyTable({
   return (
     <UploadStatsSection
       id="stats-report-difficulties"
+      className="stats-report-section-table"
       kicker="Detailtabelle"
       title="Sortierbarer Vergleich je Schwierigkeit"
       copy="Jede Spalte laesst sich sortieren. Die Tabelle konzentriert sich auf Siege, typische Werte, Rekorde und den letzten Abschluss je Stufe."

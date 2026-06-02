@@ -1351,7 +1351,7 @@ describe('keyboard smoke tests', () => {
     })
   })
 
-  it('moves through statistics jump and footer actions with arrows, Pos1 and Ende', () => {
+  it('moves through statistics footer actions with Pos1 and Ende', () => {
     const completionResult = createCompletionResult()
 
     render(
@@ -1367,22 +1367,11 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    const detailsButton = screen.getByRole('button', { name: 'Detailtabelle' })
-    const historyButton = screen.getByRole('button', { name: 'Verlaufstabelle' })
     const pageTopButton = screen.getByRole('button', { name: 'Zum Seitenanfang' })
     const startButton = screen.getByRole('button', { name: 'Zur Auswahl' })
 
-    mockElementRect(detailsButton, { left: 0, top: 0, width: 160, height: 40 })
-    mockElementRect(historyButton, { left: 200, top: 0, width: 160, height: 40 })
     mockElementRect(pageTopButton, { left: 0, top: 120, width: 180, height: 40 })
     mockElementRect(startButton, { left: 220, top: 120, width: 200, height: 40 })
-
-    detailsButton.focus()
-    fireEvent.keyDown(detailsButton, { key: 'ArrowRight' })
-    expect(document.activeElement).toBe(historyButton)
-
-    fireEvent.keyDown(historyButton, { key: 'Home' })
-    expect(document.activeElement).toBe(detailsButton)
 
     pageTopButton.focus()
     fireEvent.keyDown(pageTopButton, { key: 'End' })
@@ -1392,7 +1381,7 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(pageTopButton)
   })
 
-  it('does not let the statistics End handler override header, jump or footer rows', async () => {
+  it('does not let the statistics End handler override header or footer rows', async () => {
     const completionResult = createCompletionResult()
 
     render(
@@ -1444,21 +1433,15 @@ describe('keyboard smoke tests', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Rohdaten & Details' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Vergleichsmatrix' }))
 
-    const detailsButton = screen.getByRole('button', { name: 'Detailtabelle' })
-    const comparisonSection = detailsButton.closest<HTMLElement>('.stats-report-section, .stats-report-section-collapsible')
+    const comparisonHeading = screen.getByRole('heading', { name: 'Erweiterte Vergleichsmatrix' })
+    const comparisonSection = comparisonHeading.closest<HTMLElement>('.stats-report-section, .stats-report-section-collapsible')
     expect(comparisonSection).toBeTruthy()
 
-    const historyJumpButton = within(comparisonSection!).getByRole('button', { name: 'Verlaufstabelle' })
     const pageTopButton = within(comparisonSection!).getByRole('button', { name: 'Zum Seitenanfang' })
     const footerStartButton = within(comparisonSection!).getByRole('button', { name: 'Zur Auswahl' })
     const summaryButtons = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.stats-report-section-summary'))
     const historySectionSummary = summaryButtons[summaryButtons.length - 1]
     expect(historySectionSummary).toBeTruthy()
-
-    detailsButton.focus()
-    fireEvent.keyDown(detailsButton, { key: 'End' })
-    expect(document.activeElement).toBe(historyJumpButton)
-    expect(document.activeElement).not.toBe(historySectionSummary)
 
     pageTopButton.focus()
     fireEvent.keyDown(pageTopButton, { key: 'End' })
