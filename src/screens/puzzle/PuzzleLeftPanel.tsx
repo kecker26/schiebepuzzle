@@ -4,6 +4,7 @@ import PuzzleScreenIcon from '../../components/PuzzleScreenIcon.tsx'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
+import SpringNumber from '../../motion/SpringNumber.tsx'
 import { type PuzzleProgressMetrics } from '../../services/PuzzleSolver.ts'
 import { type GhostPreviewMode } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
@@ -208,7 +209,9 @@ export default function PuzzleLeftPanel({
               </span>
               <span className="puzzle-stat-label">Deine Zuege</span>
             </div>
-            <strong className="puzzle-stat-value">{moveCount}</strong>
+            <strong className="puzzle-stat-value">
+              <SpringNumber value={moveCount} />
+            </strong>
             <span className="puzzle-stat-detail">{optimalMoveSummary}</span>
           </div>
           <div className="puzzle-stat-card">
@@ -218,7 +221,9 @@ export default function PuzzleLeftPanel({
               </span>
               <span className="puzzle-stat-label">Zeit</span>
             </div>
-            <strong className="puzzle-stat-value">{formatElapsedTime(elapsedTime)}</strong>
+            <strong className="puzzle-stat-value">
+              <SpringNumber value={elapsedTime} formatter={(value) => formatElapsedTime(Math.round(value))} />
+            </strong>
             <span className="puzzle-stat-detail">Aktuelle Runde</span>
           </div>
         </div>

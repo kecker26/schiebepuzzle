@@ -12,6 +12,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@react-spring/web": "^9.7.5",
+    "fast-average-color": "9.5.0",
     "lucide-react": "^1.14.0",
     "motion": "^12.38.0",
     "react": "^18.2.0",

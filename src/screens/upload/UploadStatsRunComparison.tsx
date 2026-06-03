@@ -1,4 +1,5 @@
 import type { RefObject } from 'react'
+import SpringNumber from '../../motion/SpringNumber.tsx'
 import { PuzzleCompletionRecord, PuzzleStats } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import {
@@ -289,7 +290,9 @@ export default function UploadStatsRunComparison({
       <div className="stats-report-card-grid stats-report-run-card-grid">
         <article className={`stats-report-card stats-report-run-card${getToneClass(timeTone)}`}>
           <span className="saved-games-kicker">Zeit</span>
-          <strong className="stats-report-card-value">{formatDuration(currentRun.time)}</strong>
+          <strong className="stats-report-card-value">
+            <SpringNumber value={currentRun.time} from={0} durationMs={1700} formatter={(value) => formatDuration(Math.round(value))} />
+          </strong>
           {timeBadges.length > 0 ? (
             <div className="stats-data-badges">
               {timeBadges.map((badge) => (
@@ -311,7 +314,9 @@ export default function UploadStatsRunComparison({
 
         <article className={`stats-report-card stats-report-run-card${getToneClass(movesTone)}`}>
           <span className="saved-games-kicker">Netto-Zuege</span>
-          <strong className="stats-report-card-value">{currentRun.moves}</strong>
+          <strong className="stats-report-card-value">
+            <SpringNumber value={currentRun.moves} from={0} durationMs={1700} />
+          </strong>
           {movesBadges.length > 0 ? (
             <div className="stats-data-badges">
               {movesBadges.map((badge) => (
@@ -334,7 +339,13 @@ export default function UploadStatsRunComparison({
         <article className={`stats-report-card stats-report-run-card${getToneClass(extraTone)}`}>
           <span className="saved-games-kicker">Korrekturen (Undos)</span>
           <strong className="stats-report-card-value">
-            {currentExtraMoves === null ? '--' : formatExtraMoves(currentExtraMoves)}
+            <SpringNumber
+              value={currentExtraMoves}
+              from={0}
+              durationMs={1700}
+              fallback="--"
+              formatter={(value) => formatExtraMoves(Math.round(value))}
+            />
           </strong>
           {extraBadges.length > 0 ? (
             <div className="stats-data-badges">

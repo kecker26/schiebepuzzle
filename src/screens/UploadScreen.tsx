@@ -1114,21 +1114,26 @@ export default function UploadScreen({
       label: 'Siege',
       value: isLoadingStats ? '...' : `${stats?.totalSolved ?? 0}`,
       detail: 'Abgeschlossene Runden',
+      springValue: isLoadingStats ? null : stats?.totalSolved ?? 0,
     },
     {
       label: 'Sauber',
       value: isLoadingStats ? '...' : `${stats?.cleanSolvedCount ?? 0}`,
       detail: 'Ohne Hinweise oder Auto-Zuege, soweit erfasst',
+      springValue: isLoadingStats ? null : stats?.cleanSolvedCount ?? 0,
     },
     {
       label: 'Unterstuetzt',
       value: isLoadingStats ? '...' : `${stats?.assistedSolvedCount ?? 0}`,
       detail: 'Mit Hinweisen oder Auto-Zuegen, soweit erfasst',
+      springValue: isLoadingStats ? null : stats?.assistedSolvedCount ?? 0,
     },
     {
       label: 'Bestzeit',
       value: isLoadingStats ? '...' : formatOptionalTime(stats?.bestTime ?? null),
       detail: 'Ueber alle Stufen',
+      springValue: isLoadingStats ? null : stats?.bestTime ?? null,
+      springFormatter: (value) => formatOptionalTime(Math.round(value)),
     },
   ]
 

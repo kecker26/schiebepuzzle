@@ -7,7 +7,7 @@ import { getRevealItemVariants } from './variants.ts'
 import { useReducedMotionPreference } from './useReducedMotionPreference.ts'
 
 interface AnimatedButtonProps extends Omit<HTMLMotionProps<'button'>, 'ref'> {
-  interaction?: InteractionPreset
+  interaction?: InteractionPreset | 'none'
   reveal?: boolean
   revealLevel?: RevealLevel
 }
@@ -25,7 +25,9 @@ const AnimatedButton = forwardRef<HTMLButtonElement, AnimatedButtonProps>(functi
   ref
 ) {
   const shouldReduceMotion = useReducedMotionPreference()
-  const interactionMotion = getInteractionMotion(interaction, shouldReduceMotion, disabled)
+  const interactionMotion = interaction === 'none'
+    ? {}
+    : getInteractionMotion(interaction, shouldReduceMotion, disabled)
 
   return (
     <motion.button

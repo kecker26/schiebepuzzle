@@ -27,6 +27,50 @@ vi.mock('motion/react', async () => {
   }
 })
 
+vi.mock('@react-spring/web', async () => {
+  const React = await import('react')
+
+  const createAnimatedComponent = (component: string | React.ComponentType<Record<string, unknown>>) =>
+    React.forwardRef<HTMLElement, Record<string, unknown> & { children?: ReactNode }>(function MockSpringComponent(
+      props,
+      ref
+    ) {
+      const { children, ...restProps } = props
+      return React.createElement(component, { ...restProps, ref }, children as ReactNode)
+    })
+
+  const animatedBase = (component: React.ComponentType<Record<string, unknown>>) => createAnimatedComponent(component)
+  const animated = new Proxy(animatedBase, {
+    get: (_target, tagName: string) => createAnimatedComponent(tagName),
+  })
+
+  const createSpringValue = (value: unknown) => ({
+    get: () => value,
+    to: (formatter: (value: never) => ReactNode) => formatter(value as never),
+  })
+
+  return {
+    animated,
+    to: (values: Array<{ get?: () => unknown } | unknown>, formatter: (...values: never[]) => ReactNode) =>
+      formatter(...values.map((value) => (
+        value && typeof value === 'object' && 'get' in value && typeof value.get === 'function'
+          ? value.get()
+          : value
+      )) as never[]),
+    useSpring: (config: Record<string, unknown> | (() => Record<string, unknown>)) => {
+      const usesApiTuple = typeof config === 'function'
+      const resolvedConfig = usesApiTuple ? config() : config
+      const springValues = Object.fromEntries(
+        Object.entries(resolvedConfig)
+          .filter(([key]) => !['config', 'from', 'immediate'].includes(key))
+          .map(([key, value]) => [key, createSpringValue(value)])
+      )
+
+      return usesApiTuple ? [springValues, { start: vi.fn() }] : springValues
+    },
+  }
+})
+
 afterEach(() => {
   cleanup()
 })
