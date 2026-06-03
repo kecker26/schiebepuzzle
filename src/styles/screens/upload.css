@@ -9652,6 +9652,139 @@
     0 10px 18px rgba(148, 163, 184, 0.16);
 }
 
+.stats-detail-table tbody tr.has-difficulty-color > th,
+.stats-detail-table tbody tr.has-difficulty-color > td,
+.stats-history-table tbody tr.has-difficulty-accent > th,
+.stats-history-table tbody tr.has-difficulty-accent > td,
+.stats-matrix-cell.has-difficulty-color {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--stats-difficulty-color) 18%, transparent),
+      color-mix(in srgb, var(--stats-difficulty-color) 8%, transparent)
+    ),
+    color-mix(in srgb, var(--surface-elevated) 78%, var(--image-accent-soft));
+}
+
+.stats-detail-table tbody tr.has-difficulty-color:nth-child(even) > th,
+.stats-detail-table tbody tr.has-difficulty-color:nth-child(even) > td,
+.stats-history-table tbody tr:nth-child(even).has-difficulty-accent > th,
+.stats-history-table tbody tr:nth-child(even).has-difficulty-accent > td,
+.stats-data-table tbody tr:nth-child(even) .stats-matrix-cell.has-difficulty-color {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--stats-difficulty-color) 19%, transparent),
+      color-mix(in srgb, var(--stats-difficulty-color) 9%, transparent)
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-elevated) 74%, var(--image-radiance) 4%),
+      color-mix(in srgb, var(--surface-soft) 76%, var(--image-accent-soft) 6%)
+    );
+}
+
+.stats-report-section-table .stats-detail-table tbody tr.has-difficulty-color > th,
+.stats-report-section-table .stats-detail-table tbody tr.has-difficulty-color > td,
+.stats-report-section-table .stats-history-table tbody tr.has-difficulty-accent > th,
+.stats-report-section-table .stats-history-table tbody tr.has-difficulty-accent > td,
+.stats-report-section-table .stats-matrix-cell.has-difficulty-color {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--stats-difficulty-color) 18%, transparent),
+      color-mix(in srgb, var(--stats-difficulty-color) 8%, transparent)
+    ),
+    var(--stats-raw-table-cell-bg);
+}
+
+.stats-report-section-table .stats-detail-table tbody tr:nth-child(even).has-difficulty-color > th,
+.stats-report-section-table .stats-detail-table tbody tr:nth-child(even).has-difficulty-color > td,
+.stats-report-section-table .stats-history-table tbody tr:nth-child(even).has-difficulty-accent > th,
+.stats-report-section-table .stats-history-table tbody tr:nth-child(even).has-difficulty-accent > td,
+.stats-report-section-table .stats-data-table tbody tr:nth-child(even) .stats-matrix-cell.has-difficulty-color {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--stats-difficulty-color) 19%, transparent),
+      color-mix(in srgb, var(--stats-difficulty-color) 9%, transparent)
+    ),
+    var(--stats-raw-table-cell-bg-alt);
+}
+
+.stats-matrix-header-cell.has-difficulty-color {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--stats-difficulty-color) 18%, var(--stats-raw-table-head-bg)),
+      color-mix(in srgb, var(--stats-difficulty-color) 10%, var(--stats-raw-table-head-bg-soft))
+    );
+}
+
+.stats-report-section-table .stats-matrix-table tbody .stats-matrix-cell.has-difficulty-color,
+.stats-report-section-table .stats-matrix-table tbody .stats-matrix-cell.has-difficulty-color.is-positive,
+.stats-report-section-table .stats-matrix-table tbody .stats-matrix-cell.has-difficulty-color.is-negative,
+.stats-report-section-table .stats-matrix-table tbody .stats-matrix-cell.has-difficulty-color.is-extreme-dual {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--stats-difficulty-color) 18%, transparent),
+      color-mix(in srgb, var(--stats-difficulty-color) 8%, transparent)
+    ),
+    var(--stats-raw-table-cell-bg) !important;
+}
+
+.stats-report-section-table .stats-matrix-table tbody tr:nth-child(even) .stats-matrix-cell.has-difficulty-color,
+.stats-report-section-table .stats-matrix-table tbody tr:nth-child(even) .stats-matrix-cell.has-difficulty-color.is-positive,
+.stats-report-section-table .stats-matrix-table tbody tr:nth-child(even) .stats-matrix-cell.has-difficulty-color.is-negative,
+.stats-report-section-table .stats-matrix-table tbody tr:nth-child(even) .stats-matrix-cell.has-difficulty-color.is-extreme-dual {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--stats-difficulty-color) 19%, transparent),
+      color-mix(in srgb, var(--stats-difficulty-color) 9%, transparent)
+    ),
+    var(--stats-raw-table-cell-bg-alt) !important;
+}
+
+.stats-report-section-table .stats-detail-table tbody tr.has-difficulty-color > th,
+.stats-report-section-table .stats-detail-table tbody tr.has-difficulty-color > td,
+.stats-report-section-table .stats-history-table tbody tr.has-difficulty-accent > th,
+.stats-report-section-table .stats-history-table tbody tr.has-difficulty-accent > td,
+.stats-report-section-table .stats-detail-table tbody tr.has-difficulty-color > td.is-positive,
+.stats-report-section-table .stats-detail-table tbody tr.has-difficulty-color > td.is-negative,
+.stats-report-section-table .stats-detail-table tbody tr.has-difficulty-color > td.is-extreme-dual,
+.stats-report-section-table .stats-history-table tbody tr.has-difficulty-accent > td.is-positive,
+.stats-report-section-table .stats-history-table tbody tr.has-difficulty-accent > td.is-negative,
+.stats-report-section-table .stats-history-table tbody tr.has-difficulty-accent > td.is-extreme-dual {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--stats-difficulty-color) 18%, transparent),
+      color-mix(in srgb, var(--stats-difficulty-color) 8%, transparent)
+    ),
+    var(--stats-raw-table-cell-bg) !important;
+}
+
+.stats-report-section-table .stats-detail-table tbody tr:nth-child(even).has-difficulty-color > th,
+.stats-report-section-table .stats-detail-table tbody tr:nth-child(even).has-difficulty-color > td,
+.stats-report-section-table .stats-history-table tbody tr:nth-child(even).has-difficulty-accent > th,
+.stats-report-section-table .stats-history-table tbody tr:nth-child(even).has-difficulty-accent > td,
+.stats-report-section-table .stats-detail-table tbody tr:nth-child(even).has-difficulty-color > td.is-positive,
+.stats-report-section-table .stats-detail-table tbody tr:nth-child(even).has-difficulty-color > td.is-negative,
+.stats-report-section-table .stats-detail-table tbody tr:nth-child(even).has-difficulty-color > td.is-extreme-dual,
+.stats-report-section-table .stats-history-table tbody tr:nth-child(even).has-difficulty-accent > td.is-positive,
+.stats-report-section-table .stats-history-table tbody tr:nth-child(even).has-difficulty-accent > td.is-negative,
+.stats-report-section-table .stats-history-table tbody tr:nth-child(even).has-difficulty-accent > td.is-extreme-dual {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--stats-difficulty-color) 19%, transparent),
+      color-mix(in srgb, var(--stats-difficulty-color) 9%, transparent)
+    ),
+    var(--stats-raw-table-cell-bg-alt) !important;
+}
+
 .stats-report-table-head {
   display: grid;
   gap: 8px;
