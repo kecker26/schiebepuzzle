@@ -37,6 +37,7 @@ interface UploadGalleryPanelProps {
   isLoadingCollections?: boolean
   onReplayEntry: GalleryReplayRequestHandler
   onFetchRandomImage?: (query?: string) => Promise<void> | void
+  requestedTagFilterLabel?: string | null
   onDeleteEntries: (entryIds: string[]) => Promise<void>
   onUpdateTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
   onRetryTagging?: (entryId: string) => Promise<void>
@@ -111,6 +112,7 @@ export default function UploadGalleryPanel({
   isLoadingCollections = false,
   onReplayEntry,
   onFetchRandomImage = async () => undefined,
+  requestedTagFilterLabel = null,
   onDeleteEntries,
   onUpdateTags = async () => undefined,
   onRetryTagging = async () => undefined,
@@ -314,6 +316,17 @@ export default function UploadGalleryPanel({
 
     setTagFilters(nextTagFilters)
   }, [tagFilters, tagOptions])
+
+  useEffect(() => {
+    if (!requestedTagFilterLabel) return
+
+    const requestedTagFilterKey = getGalleryTagKey(requestedTagFilterLabel)
+    if (!requestedTagFilterKey) return
+
+    pendingToolbarFocusRef.current = 'difficulty'
+    setCurrentPage(1)
+    setTagFilters([requestedTagFilterKey])
+  }, [requestedTagFilterLabel])
 
   useEffect(() => {
     if (!selectedEntry) return

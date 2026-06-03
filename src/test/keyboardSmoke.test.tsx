@@ -45,6 +45,7 @@ import UploadBackupBrowserDialog from '../screens/upload/UploadBackupBrowserDial
 import UploadGalleryCard from '../screens/upload/UploadGalleryCard.tsx'
 import UploadGalleryDetailDialog from '../screens/upload/UploadGalleryDetailDialog.tsx'
 import UploadGalleryPanel from '../screens/upload/UploadGalleryPanel.tsx'
+import UploadCollectionsPanel from '../screens/upload/UploadCollectionsPanel.tsx'
 import UploadMenuCards from '../screens/upload/UploadMenuCards.tsx'
 import WinDialog from '../components/WinDialog.tsx'
 import type { GalleryDisplayEntry } from '../screens/upload/UploadGalleryDisplayUtils.ts'
@@ -2888,6 +2889,63 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.keyDown(nachtSearchButton, { key: 'Home' })
     expect(document.activeElement).toBe(stadtFilterButton)
+  })
+
+  it('enables gallery detail tag actions when opened from collections', () => {
+    const galleryEntry = createSolvedGalleryEntry('13', '2026-04-11T12:00:00.000Z')
+    galleryEntry.tags = [
+      { label: 'Natur', confidence: 0.91, source: 'gemini' },
+    ]
+    galleryEntry.aiTagging = {
+      status: 'tagged',
+      provider: 'openrouter',
+      model: 'openrouter-test',
+      generatedAt: '2026-04-11T12:00:00.000Z',
+      error: null,
+      collectionSuggestions: [],
+    }
+    const gallery: SolvedGallery = {
+      entries: [galleryEntry],
+      totalEntries: 1,
+      lastCompletedAt: galleryEntry.completedAt,
+      lastUpdatedAt: galleryEntry.completedAt,
+    }
+    const onTagFilter = vi.fn()
+    const onFetchRandomImage = vi.fn()
+
+    render(
+      <UploadCollectionsPanel
+        collections={[{
+          id: 'collection-nature',
+          name: 'Natur',
+          createdAt: '2026-04-11T12:00:00.000Z',
+          updatedAt: '2026-04-11T12:00:00.000Z',
+          imageIds: [galleryEntry.id],
+        }]}
+        gallery={gallery}
+        isLoadingCollections={false}
+        onReplayEntry={vi.fn()}
+        onTagFilter={onTagFilter}
+        onFetchRandomImage={onFetchRandomImage}
+        onUpdateCollection={vi.fn()}
+        onDeleteCollection={vi.fn()}
+        onRemoveCollectionImages={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+    const tagFilterButton = screen.getByRole('button', { name: '#Natur' })
+    const onlineSearchButton = screen.getByRole('button', { name: 'Neues Online-Motiv zu Natur suchen' })
+
+    expect(tagFilterButton).not.toHaveProperty('disabled', true)
+    expect(onlineSearchButton).not.toHaveProperty('disabled', true)
+
+    fireEvent.click(tagFilterButton)
+    expect(onTagFilter).toHaveBeenCalledWith('Natur')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Neues Online-Motiv zu Natur suchen' }))
+    expect(onFetchRandomImage).toHaveBeenCalledWith('Natur')
   })
 
   it('moves through win dialog actions with arrows, Pos1 and Ende', async () => {

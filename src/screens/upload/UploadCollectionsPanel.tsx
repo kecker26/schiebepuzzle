@@ -34,6 +34,8 @@ interface UploadCollectionsPanelProps {
   gallery: SolvedGallery | null
   isLoadingCollections: boolean
   onReplayEntry: GalleryReplayRequestHandler
+  onTagFilter?: (tagLabel: string) => void
+  onFetchRandomImage?: (query?: string) => Promise<void> | void
   onUpdateCollection: (
     collectionId: string,
     updates: Pick<ImageCollection, 'name'> & Partial<Pick<ImageCollection, 'description'>>
@@ -67,6 +69,8 @@ export default function UploadCollectionsPanel({
   gallery,
   isLoadingCollections,
   onReplayEntry,
+  onTagFilter,
+  onFetchRandomImage,
   onUpdateCollection,
   onDeleteCollection,
   onRemoveCollectionImages,
@@ -293,6 +297,16 @@ export default function UploadCollectionsPanel({
     }
   }
 
+  const handleDetailTagFilter = useCallback((tagLabel: string) => {
+    setSelectedDetailEntry(null)
+    onTagFilter?.(tagLabel)
+  }, [onTagFilter])
+
+  const handleDetailTagImageSearch = useCallback((tagLabel: string) => {
+    setSelectedDetailEntry(null)
+    void onFetchRandomImage?.(tagLabel)
+  }, [onFetchRandomImage])
+
   return (
     <>
       <div
@@ -432,6 +446,8 @@ export default function UploadCollectionsPanel({
         <UploadGalleryDetailDialog
           entry={selectedDetailEntry}
           onReplayEntry={onReplayEntry}
+          onTagFilter={onTagFilter ? handleDetailTagFilter : undefined}
+          onFetchRandomImage={onFetchRandomImage ? handleDetailTagImageSearch : undefined}
           onOpenSimilarEntry={setSelectedDetailEntry}
           similarEntries={similarDetailEntries}
           onClose={() => setSelectedDetailEntry(null)}
