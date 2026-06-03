@@ -159,6 +159,7 @@ export default function UploadDashboard({
 }: UploadDashboardProps) {
   const [statsViewReloadKey, setStatsViewReloadKey] = useState(0)
   const [statsVisualView, setStatsVisualView] = useState<VisualStatsView>('overview')
+  const [requestedGalleryTagFilterLabel, setRequestedGalleryTagFilterLabel] = useState<string | null>(null)
   const savedGamesNavButtonRef = useRef<HTMLButtonElement>(null)
   const statsNavButtonRef = useRef<HTMLButtonElement>(null)
   const galleryNavButtonRef = useRef<HTMLButtonElement>(null)
@@ -206,6 +207,10 @@ export default function UploadDashboard({
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     onWindowChange('start')
   }
+  const handleOpenGalleryTagFilter = useCallback((tagLabel: string) => {
+    setRequestedGalleryTagFilterLabel(tagLabel)
+    onWindowChange('gallery')
+  }, [onWindowChange])
   const resetWorkspaceScrollPosition = useCallback(() => {
     const overlay = document.querySelector('.workspace-window-overlay')
     const shell = document.querySelector('.workspace-window-shell')
@@ -761,6 +766,7 @@ export default function UploadDashboard({
                       isLoadingCollections={isLoadingCollections}
                       onReplayEntry={onReplayGalleryEntry}
                       onFetchRandomImage={onFetchRandomImage}
+                      requestedTagFilterLabel={requestedGalleryTagFilterLabel}
                       onDeleteEntries={onDeleteGalleryEntries}
                       onUpdateTags={onUpdateGalleryTags}
                       onRetryTagging={onRetryGalleryTagging}
@@ -835,6 +841,8 @@ export default function UploadDashboard({
                       gallery={gallery}
                       isLoadingCollections={isLoadingCollections}
                       onReplayEntry={onReplayGalleryEntry}
+                      onTagFilter={handleOpenGalleryTagFilter}
+                      onFetchRandomImage={onFetchRandomImage}
                       onUpdateCollection={onUpdateImageCollection}
                       onDeleteCollection={onDeleteImageCollection}
                       onRemoveCollectionImages={onRemoveImageCollectionImages}
