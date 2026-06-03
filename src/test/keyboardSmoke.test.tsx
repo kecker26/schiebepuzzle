@@ -1367,24 +1367,19 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    const detailsButton = screen.getByRole('button', { name: 'Detailtabelle' })
-    const historyButton = screen.getByRole('button', { name: 'Verlaufstabelle' })
     const pageTopButton = screen.getByRole('button', { name: 'Zum Seitenanfang' })
     const startButton = screen.getByRole('button', { name: 'Zur Auswahl' })
 
-    mockElementRect(detailsButton, { left: 0, top: 0, width: 160, height: 40 })
-    mockElementRect(historyButton, { left: 200, top: 0, width: 160, height: 40 })
-    mockElementRect(pageTopButton, { left: 0, top: 120, width: 180, height: 40 })
-    mockElementRect(startButton, { left: 220, top: 120, width: 200, height: 40 })
-
-    detailsButton.focus()
-    fireEvent.keyDown(detailsButton, { key: 'ArrowRight' })
-    expect(document.activeElement).toBe(historyButton)
-
-    fireEvent.keyDown(historyButton, { key: 'Home' })
-    expect(document.activeElement).toBe(detailsButton)
+    mockElementRect(pageTopButton, { left: 0, top: 0, width: 180, height: 40 })
+    mockElementRect(startButton, { left: 220, top: 0, width: 200, height: 40 })
 
     pageTopButton.focus()
+    fireEvent.keyDown(pageTopButton, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(startButton)
+
+    fireEvent.keyDown(startButton, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(pageTopButton)
+
     fireEvent.keyDown(pageTopButton, { key: 'End' })
     expect(document.activeElement).toBe(startButton)
 
@@ -1442,23 +1437,16 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(headerStartButton)
 
     fireEvent.click(screen.getByRole('tab', { name: 'Rohdaten & Details' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Vergleichsmatrix' }))
 
-    const detailsButton = screen.getByRole('button', { name: 'Detailtabelle' })
-    const comparisonSection = detailsButton.closest<HTMLElement>('.stats-report-section, .stats-report-section-collapsible')
-    expect(comparisonSection).toBeTruthy()
+    const detailsButton = await screen.findByRole('button', { name: /Detailtabelle/ })
+    const difficultiesSection = detailsButton.closest<HTMLElement>('.stats-report-section, .stats-report-section-collapsible')
+    expect(difficultiesSection).toBeTruthy()
 
-    const historyJumpButton = within(comparisonSection!).getByRole('button', { name: 'Verlaufstabelle' })
-    const pageTopButton = within(comparisonSection!).getByRole('button', { name: 'Zum Seitenanfang' })
-    const footerStartButton = within(comparisonSection!).getByRole('button', { name: 'Zur Auswahl' })
+    const pageTopButton = within(difficultiesSection!).getByRole('button', { name: 'Zum Seitenanfang' })
+    const footerStartButton = within(difficultiesSection!).getByRole('button', { name: 'Zur Auswahl' })
     const summaryButtons = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.stats-report-section-summary'))
     const historySectionSummary = summaryButtons[summaryButtons.length - 1]
     expect(historySectionSummary).toBeTruthy()
-
-    detailsButton.focus()
-    fireEvent.keyDown(detailsButton, { key: 'End' })
-    expect(document.activeElement).toBe(historyJumpButton)
-    expect(document.activeElement).not.toBe(historySectionSummary)
 
     pageTopButton.focus()
     fireEvent.keyDown(pageTopButton, { key: 'End' })
@@ -3237,6 +3225,45 @@ describe('keyboard smoke tests', () => {
     expect(autoBadges.length).toBe(2)
     expect(autoBadges.filter((badge) => badge.textContent?.includes('2 Auto'))).toHaveLength(1)
     expect(autoBadges.every((badge) => !badge.textContent?.includes('0 Auto'))).toBe(true)
+  })
+
+  it('paginates the statistics history table with 25 runs per page', async () => {
+    const completionHistory = Array.from({ length: 26 }, (_, index) => {
+      const id = String(index + 1)
+      const completedAt = new Date(Date.UTC(2026, 3, 1, 10, index)).toISOString()
+      return createCompletionRecord(id, completedAt)
+    })
+
+    const { container } = render(
+      <div className="workspace-window-shell">
+        <div className="workspace-window-overlay">
+          <div className="dashboard-panel-scroll">
+            <UploadStatsHistorySection
+              isLoadingStats={false}
+              completionHistory={completionHistory}
+              filteredHistory={completionHistory}
+              historyFilter="all"
+              historyFilterOptions={[{ id: 'all', label: 'Alle Siege' }]}
+              standardDifficultyStats={[]}
+              onHistoryFilterChange={vi.fn()}
+              onReloadView={vi.fn()}
+              onBackToStart={vi.fn()}
+            />
+          </div>
+        </div>
+      </div>
+    )
+
+    expect(container.querySelectorAll('.stats-history-table tbody tr')).toHaveLength(25)
+    expect(screen.getByRole('navigation', { name: 'Einzellaufseiten' })).toBeTruthy()
+    expect(screen.getByText('Seite 1 von 2')).toBeTruthy()
+
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Einzellaufseiten' })).getByRole('button', { name: '2' }))
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('.stats-history-table tbody tr')).toHaveLength(1)
+    })
+    expect(screen.getByText('Seite 2 von 2')).toBeTruthy()
   })
 
   it('keeps focus on the same statistics sort button after resorting the history table', async () => {

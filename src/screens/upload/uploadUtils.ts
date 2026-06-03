@@ -12,7 +12,6 @@ import { DIFFICULTY_OPTIONS } from '../../utils/puzzleDifficulty.ts'
 
 export type UploadWorkspaceWindow = 'start' | 'savedGames' | 'stats' | 'gallery' | 'collections'
 
-export type StatsDashboardTab = 'overview' | 'difficulties' | 'history'
 
 export type HistoryFilter = 'all' | `${number}x${number}`
 export type GalleryDifficultyFilter = 'all' | `${number}x${number}`
@@ -31,11 +30,6 @@ export type GallerySortOption =
   | 'fewest-actions'
   | 'fewest-detours'
 
-export interface DashboardTabDefinition {
-  id: StatsDashboardTab
-  label: string
-  description: string
-}
 
 export interface HistoryFilterDefinition {
   id: HistoryFilter
@@ -95,23 +89,6 @@ interface DifficultyAssistanceCounts {
   profiledSolveCount: number
 }
 
-export const STATS_DASHBOARD_TABS: DashboardTabDefinition[] = [
-  {
-    id: 'overview',
-    label: 'Ueberblick',
-    description: 'Kernwerte und Einordnung auf einen Blick',
-  },
-  {
-    id: 'difficulties',
-    label: 'Schwierigkeiten',
-    description: 'Vergleich aller Stufen mit Rekorden und Medianwerten',
-  },
-  {
-    id: 'history',
-    label: 'Verlauf',
-    description: 'Alle abgeschlossenen Siege als Historie',
-  },
-]
 
 const MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024
 
@@ -276,9 +253,6 @@ export function formatProfileSourceLabel(hasDetailedProfile: boolean): string {
   return hasDetailedProfile ? 'Laufprofil' : 'Legacy-Daten'
 }
 
-export function formatDayLabel(days: number): string {
-  return `${days} ${days === 1 ? 'Tag' : 'Tage'}`
-}
 
 function getDifficultyFilterId(config: PuzzleConfig): `${number}x${number}` {
   return `${config.rows}x${config.cols}`
@@ -437,14 +411,6 @@ export function buildDifficultyReportRows(
   })
 }
 
-export function findDifficultyStats(
-  stats: PuzzleStats | null,
-  rows: number,
-  cols: number
-): PuzzleDifficultyStats | null {
-  return stats?.byDifficulty.find((entry) => entry.config.rows === rows && entry.config.cols === cols) ?? null
-}
-
 export function getDifficultyHistoryFilterOptions(): HistoryFilterDefinition[] {
   return [
     { id: 'all', label: 'Alle Siege' },
@@ -507,48 +473,6 @@ export function matchesGalleryAssistanceFilter(
   return entry.assistanceMode === 'auto-assisted'
 }
 
-function compareNumbersAscending(a: number, b: number, fallback: number): number {
-  if (a !== b) return a - b
-  return fallback
-}
-
-function compareGalleryEntriesByLatest(a: SolvedGalleryEntry, b: SolvedGalleryEntry): number {
-  const timestampA = parseTimestamp(a.completedAt)
-  const timestampB = parseTimestamp(b.completedAt)
-
-  if (timestampA === timestampB) return 0
-  return timestampB > timestampA ? 1 : -1
-}
-
-export function sortGalleryEntries(
-  entries: SolvedGalleryEntry[],
-  sortOption: GallerySortOption
-): SolvedGalleryEntry[] {
-  const sortedEntries = [...entries]
-
-  sortedEntries.sort((a, b) => {
-    const latestFallback = compareGalleryEntriesByLatest(a, b)
-
-    switch (sortOption) {
-      case 'oldest':
-        return -latestFallback
-      case 'fastest':
-        return compareNumbersAscending(a.time, b.time, latestFallback)
-      case 'fewest-moves':
-        return compareNumbersAscending(a.moves, b.moves, latestFallback)
-      case 'fewest-actions':
-        return compareNumbersAscending(a.actionMoves, b.actionMoves, latestFallback)
-      case 'fewest-detours':
-        return compareNumbersAscending(getCompletionExtraMoves(a), getCompletionExtraMoves(b), latestFallback)
-      case 'latest':
-      default:
-        return latestFallback
-    }
-  })
-
-  return sortedEntries
-}
-
 function compareDifficultyStats(a: PuzzleDifficultyStats, b: PuzzleDifficultyStats): number {
   if (b.solveCount !== a.solveCount) return b.solveCount - a.solveCount
 
@@ -580,32 +504,3 @@ export function findFastestDifficulty(stats: PuzzleStats | null): PuzzleDifficul
     return compareDifficultyStats(a, b)
   })[0] ?? null
 }
-
-export function getCompletionBadges(entry: PuzzleCompletionRecord, stats: PuzzleStats | null): string[] {
-  const difficultyStats = findDifficultyStats(stats, entry.config.rows, entry.config.cols)
-  const badges: string[] = []
-  const bestTime = difficultyStats?.bestTime ?? null
-  const bestCleanMoves = difficultyStats?.bestCleanMoves ?? null
-
-  if (entry.hasDetailedProfile) {
-    badges.push(formatAssistanceModeLabel(entry.assistanceMode))
-  } else {
-    badges.push(formatProfileSourceLabel(false))
-  }
-
-  if (bestTime !== null && entry.time === bestTime) {
-    badges.push('Bestzeit')
-  }
-
-  if (
-    entry.hasDetailedProfile
-    && bestCleanMoves !== null
-    && entry.assistanceMode === 'clean'
-    && entry.moves === bestCleanMoves
-  ) {
-    badges.push('Clean-Rekord')
-  }
-
-  return badges
-}
-

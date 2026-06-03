@@ -15,7 +15,7 @@ export type MusicStyleId =
   | 'hard-rock-charge'
   | 'heavy-metal-storm'
 
-export interface JamendoDiscoveryProfile {
+interface JamendoDiscoveryProfile {
   order: string
   fuzzytags: string
   speed?: string
@@ -26,7 +26,7 @@ export interface JamendoDiscoveryProfile {
   limit?: number
 }
 
-export interface MusicStyleDefinition {
+interface MusicStyleDefinition {
   id: MusicStyleId
   label: string
   shortLabel: string

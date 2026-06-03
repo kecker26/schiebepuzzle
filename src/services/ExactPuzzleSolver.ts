@@ -1,7 +1,7 @@
 import type { PuzzleConfig } from '../types/index'
 import type { ExactStartMoveCountResult } from './ExactPuzzleSolverProtocol.ts'
 
-export const EXACT_START_MOVE_COUNT_SOLVER_VERSION = 'exact-start-v2'
+const EXACT_START_MOVE_COUNT_SOLVER_VERSION = 'exact-start-v2'
 
 const IDA_FOUND = Number.MIN_SAFE_INTEGER
 const IDA_ABORTED = Number.MIN_SAFE_INTEGER + 1
@@ -311,7 +311,7 @@ function findExactMoveCountWithIdaStar(
   return null
 }
 
-export function createExactStartMoveCountResult(moveCount: number): ExactStartMoveCountResult {
+function createExactStartMoveCountResult(moveCount: number): ExactStartMoveCountResult {
   return {
     status: 'exact',
     moveCount: normalizeMoveCount(moveCount),

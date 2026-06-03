@@ -13,6 +13,7 @@ import {
   formatOptionalMoves,
   formatPercent,
 } from './uploadUtils.ts'
+import { buildDifficultyColorMap, getDifficultyColorStyle } from './uploadStatsDifficultyColors.ts'
 
 type SortDirection = 'asc' | 'desc'
 
@@ -169,6 +170,10 @@ export default function UploadStatsDifficultyTable({
     () => sortDifficultyRows(difficultyRows, sortKey, sortDirection),
     [difficultyRows, sortDirection, sortKey]
   )
+  const difficultyColorMap = useMemo(
+    () => buildDifficultyColorMap(difficultyRows),
+    [difficultyRows]
+  )
 
   const solvedDifficultyCount = difficultyRows.filter((row) => row.solveCount > 0).length
 
@@ -242,6 +247,7 @@ export default function UploadStatsDifficultyTable({
   return (
     <UploadStatsSection
       id="stats-report-difficulties"
+      className="stats-report-section-table"
       kicker="Detailtabelle"
       title="Sortierbarer Vergleich je Schwierigkeit"
       copy="Jede Spalte laesst sich sortieren. Die Tabelle konzentriert sich auf Siege, typische Werte, Rekorde und den letzten Abschluss je Stufe."
@@ -339,9 +345,13 @@ export default function UploadStatsDifficultyTable({
           </thead>
           <tbody>
             {sortedRows.map((row) => (
-              <tr key={row.option.key} className={row.solveCount === 0 ? 'is-muted' : ''}>
+              <tr
+                key={row.option.key}
+                className={`has-difficulty-accent${row.solveCount === 0 ? ' is-muted' : ''}`}
+                style={getDifficultyColorStyle(difficultyColorMap, row.option)}
+              >
                 <th scope="row" className="stats-data-row-title">
-                  <span className="stats-data-cell-main">{row.option.label}</span>
+                  <span className="stats-data-cell-main stats-difficulty-label-chip">{row.option.label}</span>
                   <span className="stats-data-cell-copy">{formatPuzzleSize({ rows: row.option.rows, cols: row.option.cols })}</span>
                 </th>
                 <td>
