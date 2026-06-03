@@ -4,6 +4,7 @@ import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import AnimatedCardButton from '../../motion/AnimatedCardButton.tsx'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
+import SpringNumber from '../../motion/SpringNumber.tsx'
 import { formatDate } from './uploadUtils.ts'
 
 interface UploadWorkspaceLauncherProps {
@@ -100,7 +101,8 @@ export default function UploadWorkspaceLauncher({
           </span>
           <span className="menu-card-title">Spielstaende</span>
           <strong className="workspace-launcher-value">
-            {isLoadingSavedGames ? 'Lade ...' : `${savedGamesCount} aktiv`}
+            <SpringNumber value={isLoadingSavedGames ? null : savedGamesCount} from={0} durationMs={1700} fallback="Lade ..." />
+            {!isLoadingSavedGames ? ' aktiv' : null}
           </strong>
           <span className="menu-card-desc">Offene Partien durchsuchen und direkt an der letzten Stelle weiterspielen.</span>
           <div className="workspace-launcher-meta">
@@ -134,7 +136,8 @@ export default function UploadWorkspaceLauncher({
           </span>
           <span className="menu-card-title">Statistik</span>
           <strong className="workspace-launcher-value">
-            {isLoadingStats ? 'Lade ...' : `${totalSolved} Siege`}
+            <SpringNumber value={isLoadingStats ? null : totalSolved} from={0} durationMs={1700} fallback="Lade ..." />
+            {!isLoadingStats ? ' Siege' : null}
           </strong>
           <span className="menu-card-desc">Rekorde, Stufenvergleich und Verlauf in einer klaren Gesamtansicht ansehen.</span>
           <div className="workspace-launcher-meta">
@@ -168,7 +171,8 @@ export default function UploadWorkspaceLauncher({
           </span>
           <span className="menu-card-title">Sammlungen</span>
           <strong className="workspace-launcher-value">
-            {isLoadingCollections ? 'Lade ...' : `${collectionsCount} aktiv`}
+            <SpringNumber value={isLoadingCollections ? null : collectionsCount} from={0} durationMs={1700} fallback="Lade ..." />
+            {!isLoadingCollections ? ' aktiv' : null}
           </strong>
           <span className="menu-card-desc">Lieblingsmotive gruppieren, wiederfinden und direkt neu starten.</span>
           <div className="workspace-launcher-meta">
@@ -202,7 +206,8 @@ export default function UploadWorkspaceLauncher({
           </span>
           <span className="menu-card-title">Galerie</span>
           <strong className="workspace-launcher-value">
-            {isLoadingGallery ? 'Lade ...' : `${galleryEntriesCount} Motive`}
+            <SpringNumber value={isLoadingGallery ? null : galleryEntriesCount} from={0} durationMs={1700} fallback="Lade ..." />
+            {!isLoadingGallery ? ' Motive' : null}
           </strong>
           <span className="menu-card-desc">Alle geloesten Motive als durchsuchbare Bildwand mit Schwierigkeit und Laufdaten.</span>
           <div className="workspace-launcher-meta">

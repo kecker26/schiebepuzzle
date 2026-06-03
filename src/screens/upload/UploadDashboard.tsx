@@ -22,6 +22,7 @@ import UploadScreenIcon, { type UploadScreenIconName } from '../../components/Up
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedSwapPane from '../../motion/AnimatedSwapPane.tsx'
 import AnimatedWorkspaceWindow from '../../motion/AnimatedWorkspaceWindow.tsx'
+import SpringNumber from '../../motion/SpringNumber.tsx'
 import { getStaggerContainerVariants, getStaggerItemVariants } from '../../motion/variants.ts'
 import { useReducedMotionPreference } from '../../motion/useReducedMotionPreference.ts'
 import { DIFFICULTY_OPTIONS, formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
@@ -681,7 +682,15 @@ export default function UploadDashboard({
                         </span>
                         <span className="stats-compact-kpi-copy">
                           <span className="stats-compact-kpi-label">{item.label}</span>
-                          <strong className="stats-compact-kpi-value">{item.value}</strong>
+                          <strong className="stats-compact-kpi-value">
+                            <SpringNumber
+                              value={item.springValue}
+                              from={0}
+                              durationMs={1700}
+                              fallback={item.value}
+                              formatter={item.springFormatter}
+                            />
+                          </strong>
                         </span>
                       </motion.div>
                     ))}

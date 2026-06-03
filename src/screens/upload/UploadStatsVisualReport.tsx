@@ -27,6 +27,7 @@ import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavi
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedChipButton from '../../motion/AnimatedChipButton.tsx'
 import AnimatedSwapPane from '../../motion/AnimatedSwapPane.tsx'
+import SpringNumber from '../../motion/SpringNumber.tsx'
 import { savePuzzleStatsExportFile } from '../../services/StatsService.ts'
 import { PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats } from '../../types/index'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
@@ -94,6 +95,8 @@ interface KpiCard {
   value: string
   detail: string
   title?: string
+  springValue?: number | null
+  springFormatter?: (value: number) => string
 }
 
 interface ScoreBreakdown {
@@ -942,35 +945,45 @@ function buildKpiCards(
       label: 'Spiele',
       value: `${stats?.totalSolved ?? 0}`,
       detail: `${stats?.activeDays ?? 0} aktive Tage`,
+      springValue: stats?.totalSolved ?? 0,
     },
     {
       label: 'Erfolgsrate',
       value: (stats?.totalSolved ?? 0) > 0 ? '100%' : '--',
       detail: 'Statistik erfasst abgeschlossene Siege.',
       title: 'Aktuell werden nur geloeste Laeufe in den Stats gespeichert; deshalb ist die Erfolgsrate auf abgeschlossene Spiele bezogen.',
+      springValue: (stats?.totalSolved ?? 0) > 0 ? 100 : null,
+      springFormatter: (value) => `${Math.round(value)}%`,
     },
     {
       label: 'Beste Zeit',
       value: formatOptionalDuration(stats?.bestTime ?? null),
       detail: latestCompletion ? `Zuletzt ${formatDifficultyLabel(latestCompletion.config)}` : 'Noch kein Lauf',
+      springValue: stats?.bestTime ?? null,
+      springFormatter: (value) => formatOptionalDuration(Math.round(value)),
     },
     {
       label: 'Durchschn. Aktionen',
       value: averageActionMoves === null ? '--' : `${averageActionMoves}`,
       detail: `${formatPercent(assistanceSummary.profileCoverage)} Datenqualitaet`,
       title: 'Durchschnitt der gespeicherten Gesamtaktionen in Laeufen mit vollem Laufprofil.',
+      springValue: averageActionMoves,
     },
     {
       label: 'Durchschn. Korrekturen (Undos)',
       value: formatAverageCount(averageCorrections),
       detail: 'Aktionen minus Netto-Zuege.',
       title: 'Korrekturen (Undos) sind die Differenz aus Gesamtaktionen und Netto-Zuegen. Das Tracking bleibt intern kompatibel.',
+      springValue: averageCorrections,
+      springFormatter: formatAverageCount,
     },
     {
       label: 'Clean-Quote',
       value: formatPercent(assistanceSummary.cleanRate),
       detail: `${assistanceSummary.cleanSolvedCount} clean geloest`,
       title: 'Anteil der abgeschlossenen Laeufe ohne Hinweise oder Auto-Zuege.',
+      springValue: assistanceSummary.cleanRate,
+      springFormatter: (value) => formatPercent(Math.round(value)),
     },
   ]
 }
@@ -990,7 +1003,15 @@ function renderKpiCards(cards: KpiCard[]) {
       {cards.map((card) => (
         <article key={card.label} className="stats-report-card stats-visual-kpi-card" title={card.title}>
           <span className="saved-games-kicker">{card.label}</span>
-          <strong className="stats-report-card-value">{card.value}</strong>
+          <strong className="stats-report-card-value">
+            <SpringNumber
+              value={card.springValue}
+              from={0}
+              durationMs={1700}
+              fallback={card.value}
+              formatter={card.springFormatter}
+            />
+          </strong>
           <p className="stats-report-card-copy">{card.detail}</p>
         </article>
       ))}
@@ -1468,7 +1489,15 @@ export default function UploadStatsVisualReport({
                 <article className="stats-report-card stats-visual-donut-card">
                   <div className="stats-visual-card-head">
                     <span className="saved-games-kicker">Laufarten</span>
-                    <strong className="stats-report-card-value">{formatPercent(selectedAssistanceSummary.cleanRate)}</strong>
+                    <strong className="stats-report-card-value">
+                      <SpringNumber
+                        value={selectedAssistanceSummary.cleanRate}
+                        from={0}
+                        durationMs={1700}
+                        fallback={formatPercent(selectedAssistanceSummary.cleanRate)}
+                        formatter={(value) => formatPercent(Math.round(value))}
+                      />
+                    </strong>
                     <p className="stats-report-card-copy">
                       Clean-Quote nach Laufprofilen und sichtbaren Schwierigkeitsstufen. Legacy-Laeufe bleiben sichtbar, werden aber nicht umgerechnet.
                     </p>
@@ -1508,7 +1537,12 @@ export default function UploadStatsVisualReport({
                   <div className="stats-visual-card-head">
                     <span className="saved-games-kicker">Letzter Lauf</span>
                     <strong className="stats-report-card-value">
-                      {latestScoreBreakdown ? `${latestScoreBreakdown.score}/100` : '--'}
+                      <SpringNumber
+                        value={latestScoreBreakdown?.score ?? null}
+                        from={0}
+                        durationMs={1700}
+                        formatter={(value) => `${Math.round(value)}/100`}
+                      />
                     </strong>
                     <p className="stats-report-card-copy">
                       {latestCompletion
@@ -1544,7 +1578,12 @@ export default function UploadStatsVisualReport({
                   <div className="stats-visual-card-head">
                     <span className="saved-games-kicker">Durchschn. Laufanalyse</span>
                     <strong className="stats-report-card-value">
-                      {averageQuality === null ? '--' : `${averageQuality}/100`}
+                      <SpringNumber
+                        value={averageQuality}
+                        from={0}
+                        durationMs={1700}
+                        formatter={(value) => `${Math.round(value)}/100`}
+                      />
                     </strong>
                     <p className="stats-report-card-copy">
                       Durchschnittlicher Score mit sichtbaren Abzuegen. Niedrige Abzuege bedeuten sauberere Laeufe.

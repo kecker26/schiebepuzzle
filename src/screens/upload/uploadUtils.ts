@@ -51,6 +51,8 @@ export interface DashboardMetric {
   label: string
   value: string
   detail: string
+  springValue?: number | null
+  springFormatter?: (value: number) => string
 }
 
 export interface StandardDifficultyStatsEntry {
