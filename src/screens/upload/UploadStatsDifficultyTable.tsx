@@ -358,8 +358,10 @@ export default function UploadStatsDifficultyTable({
               return (
                 <tr key={row.option.key} className={rowClassName} style={rowStyle}>
                   <th scope="row" className="stats-data-row-title">
-                    <span className="stats-data-cell-main">{row.option.label}</span>
-                    <span className="stats-data-cell-copy">{formatPuzzleSize({ rows: row.option.rows, cols: row.option.cols })}</span>
+                    <span className="stats-difficulty-label-chip">
+                      <span className="stats-difficulty-label-text">{row.option.label}</span>
+                      <span className="stats-difficulty-label-size">{formatPuzzleSize({ rows: row.option.rows, cols: row.option.cols })}</span>
+                    </span>
                   </th>
                   <td>
                     <span className="stats-data-cell-main">{row.solveCount}</span>

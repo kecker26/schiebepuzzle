@@ -1,6 +1,4 @@
 import type { CSSProperties, RefObject } from 'react'
-import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
-import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import { PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats } from '../../types/index'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import UploadStatsSection from './UploadStatsSection.tsx'
@@ -25,7 +23,6 @@ interface UploadStatsComparisonMatrixProps {
   standardDifficultyStats: StandardDifficultyStatsEntry[]
   onReloadView: () => void
   onBackToStart: () => void
-  onRawViewChange?: (view: 'difficulties' | 'history') => void
   defaultOpen?: boolean
   summaryButtonRef?: RefObject<HTMLButtonElement>
 }
@@ -64,7 +61,6 @@ export default function UploadStatsComparisonMatrix({
   standardDifficultyStats,
   onReloadView,
   onBackToStart,
-  onRawViewChange,
   defaultOpen = true,
   summaryButtonRef,
 }: UploadStatsComparisonMatrixProps) {
@@ -235,24 +231,6 @@ export default function UploadStatsComparisonMatrix({
       onReloadView={onReloadView}
       onBackToStart={onBackToStart}
       summaryButtonRef={summaryButtonRef}
-      actions={
-        <div className="stats-report-jump-row" onKeyDown={handleDirectionalFocusNavigation}>
-          <AnimatedButton
-            className="secondary"
-            interaction="chip"
-            onClick={() => onRawViewChange?.('difficulties')}
-          >
-            Detailtabelle
-          </AnimatedButton>
-          <AnimatedButton
-            className="secondary"
-            interaction="chip"
-            onClick={() => onRawViewChange?.('history')}
-          >
-            Verlaufstabelle
-          </AnimatedButton>
-        </div>
-      }
     >
       {completionHistory.length === 0 ? (
         <div className="stats-empty-state dashboard-empty-state">
@@ -282,8 +260,17 @@ export default function UploadStatsComparisonMatrix({
                       className={`stats-matrix-header-cell${column.difficultyColor ? ' has-difficulty-color' : ''}`}
                       style={columnStyle}
                     >
-                      <span className="stats-matrix-column-title">{column.label}</span>
-                      <span className="stats-matrix-column-copy">{column.description}</span>
+                      {column.difficultyColor ? (
+                        <span className="stats-difficulty-label-chip">
+                          <span className="stats-difficulty-label-text">{column.label}</span>
+                          <span className="stats-difficulty-label-size">{column.description}</span>
+                        </span>
+                      ) : (
+                        <>
+                          <span className="stats-matrix-column-title">{column.label}</span>
+                          <span className="stats-matrix-column-copy">{column.description}</span>
+                        </>
+                      )}
                     </th>
                   )
                 })}

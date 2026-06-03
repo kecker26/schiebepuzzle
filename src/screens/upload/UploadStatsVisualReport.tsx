@@ -1779,7 +1779,6 @@ export default function UploadStatsVisualReport({
                       standardDifficultyStats={standardDifficultyStats}
                       onReloadView={onReloadView}
                       onBackToStart={onBackToStart}
-                      onRawViewChange={setRawStatsView}
                     />
                   ) : null}
                 </div>

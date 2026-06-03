@@ -4,7 +4,7 @@ import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedChipButton from '../../motion/AnimatedChipButton.tsx'
 import AnimatedSwapPane from '../../motion/AnimatedSwapPane.tsx'
 import { PuzzleCompletionRecord } from '../../types/index'
-import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
+import { formatDifficultyLabel, formatPuzzleSize, getDifficultyOption } from '../../utils/puzzleDifficulty.ts'
 import {
   HistoryFilter,
   HistoryFilterDefinition,
@@ -741,8 +741,26 @@ export default function UploadStatsHistorySection({
                         {pagedHistory.map((historyEntry) => {
                           const assistanceBadge = getAssistanceBadgeMeta(historyEntry.entry)
                           const difficultyColor = difficultyColorMap.get(getStatsDifficultyKey(historyEntry.entry.config))
+                          const difficultyOption = getDifficultyOption(historyEntry.entry.config)
+                          const difficultyLabel = difficultyOption?.label ?? formatDifficultyLabel(historyEntry.entry.config)
+                          const difficultySize = difficultyOption
+                            ? formatPuzzleSize({ rows: difficultyOption.rows, cols: difficultyOption.cols })
+                            : null
+                          const rowClassName = difficultyColor ? 'has-difficulty-accent' : ''
+                          const rowStyle = difficultyColor
+                            ? ({ '--stats-difficulty-color': difficultyColor } as CSSProperties)
+                            : undefined
                           const difficultyCellClassName = [
                             'stats-history-difficulty-cell',
+                            difficultyColor ? 'has-difficulty-color' : '',
+                          ].filter(Boolean).join(' ')
+                          const assistanceBadgeClassName = [
+                            'stats-assistance-badge',
+                            `is-${assistanceBadge.tone}`,
+                            difficultyColor ? 'has-difficulty-color' : '',
+                          ].filter(Boolean).join(' ')
+                          const extraMovesBadgeClassName = [
+                            'stats-extra-moves-badge',
                             difficultyColor ? 'has-difficulty-color' : '',
                           ].filter(Boolean).join(' ')
                           const difficultyCellStyle = difficultyColor
@@ -750,7 +768,7 @@ export default function UploadStatsHistorySection({
                             : undefined
 
                           return (
-                          <tr key={historyEntry.entry.id}>
+                          <tr key={historyEntry.entry.id} className={rowClassName} style={rowStyle}>
                           <td>
                             <span className="stats-data-cell-main" title={formatHistoryDateTitle(historyEntry.entry.completedAt)}>
                               {formatHistoryDate(historyEntry.entry.completedAt)}
@@ -760,7 +778,12 @@ export default function UploadStatsHistorySection({
                             </span>
                           </td>
                           <td className={difficultyCellClassName} style={difficultyCellStyle}>
-                            <span className="stats-data-cell-main">{formatDifficultyLabel(historyEntry.entry.config)}</span>
+                            <span className="stats-difficulty-label-chip">
+                              <span className="stats-difficulty-label-text">{difficultyLabel}</span>
+                              {difficultySize ? (
+                                <span className="stats-difficulty-label-size">{difficultySize}</span>
+                              ) : null}
+                            </span>
                           </td>
                           <td className={getHistoryCellTone(historyEntry.isBestTime, historyEntry.isWorstTime).trim()}>
                             <span className="stats-data-cell-main">{formatTime(historyEntry.entry.time)}</span>
@@ -799,7 +822,7 @@ export default function UploadStatsHistorySection({
                             </span>
                             {historyEntry.extraMovesValue !== null && historyEntry.extraMovesValue > 0 ? (
                               <div className="stats-data-badges">
-                                <span className="stats-extra-moves-badge" title="Korrekturen (Undos)">
+                                <span className={extraMovesBadgeClassName} style={difficultyCellStyle} title="Korrekturen (Undos)">
                                   +{historyEntry.extraMovesValue} Korr.
                                 </span>
                               </div>
@@ -810,7 +833,7 @@ export default function UploadStatsHistorySection({
                             )}
                           </td>
                           <td>
-                            <span className={`stats-assistance-badge is-${assistanceBadge.tone}`} title={assistanceBadge.title}>
+                            <span className={assistanceBadgeClassName} style={difficultyCellStyle} title={assistanceBadge.title}>
                               <span className="stats-assistance-badge-icon" aria-hidden="true">
                                 {assistanceBadge.icon}
                               </span>
