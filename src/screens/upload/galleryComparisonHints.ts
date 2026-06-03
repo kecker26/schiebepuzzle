@@ -1,10 +1,10 @@
 import type { SolvedGalleryEntry } from '../../types/index.ts'
-import type { GalleryDisplayEntry, GalleryMotifReplaySummary } from './UploadGalleryDisplayUtils.ts'
+import type { GalleryMotifReplaySummary } from './UploadGalleryDisplayUtils.ts'
 import { formatTime } from './uploadUtils.ts'
 
-export type GalleryComparisonHintTone = 'positive' | 'negative' | 'neutral' | 'info'
+type GalleryComparisonHintTone = 'positive' | 'negative' | 'neutral' | 'info'
 
-export interface GalleryComparisonHint {
+interface GalleryComparisonHint {
   label: string
   tone: GalleryComparisonHintTone
 }
@@ -110,15 +110,3 @@ export function getGalleryTimelineComparisonHints(
   ].filter((hint): hint is GalleryComparisonHint => Boolean(hint))
 }
 
-export function getGalleryCardComparisonHints(entry: GalleryDisplayEntry): GalleryComparisonHint[] {
-  const representativeEntry = entry.representativeEntry
-  const timelineEntries = entry.motifReplaySummary.allEntries.length > 0
-    ? entry.motifReplaySummary.allEntries
-    : entry.allEntries
-  const previousEntry = findPreviousMotifEntry(representativeEntry, timelineEntries)
-
-  return [
-    getBestTimeHint(representativeEntry, entry.motifReplaySummary),
-    getPreviousTimeHint(representativeEntry, previousEntry),
-  ].filter((hint): hint is GalleryComparisonHint => Boolean(hint))
-}

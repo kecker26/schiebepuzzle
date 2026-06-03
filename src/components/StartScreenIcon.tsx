@@ -50,8 +50,6 @@ interface StartScreenIconProps {
   className?: string
 }
 
-export type { StartScreenIconName }
-
 export default function StartScreenIcon({ name, className }: StartScreenIconProps) {
   const Icon = startScreenIconAssets[name]
 

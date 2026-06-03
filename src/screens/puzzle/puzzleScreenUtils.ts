@@ -24,7 +24,7 @@ export const GHOST_PREVIEW_WEIGHT_DEFAULT = 56
 
 export type HintResolutionSource = 'exact' | 'tracked' | 'greedy'
 export type HintDirection = PuzzleMoveDirection
-export type HintConfidenceTone = 'high' | 'medium'
+type HintConfidenceTone = 'high' | 'medium'
 
 export interface SuggestedHintPreview {
   tileId: string
@@ -37,13 +37,6 @@ export interface SuggestedHintPreview {
   description: string
 }
 
-const MOVE_DIRECTION_LABELS: Record<PuzzleMoveDirection, string> = {
-  up: 'oben',
-  down: 'unten',
-  left: 'links',
-  right: 'rechts',
-}
-
 const HINT_DIRECTION_LABELS: Record<PuzzleMoveDirection, string> = {
   up: 'nach oben',
   down: 'nach unten',
@@ -51,9 +44,6 @@ const HINT_DIRECTION_LABELS: Record<PuzzleMoveDirection, string> = {
   right: 'nach rechts',
 }
 
-export function isMoveDirection(value: unknown): value is PuzzleMoveDirection {
-  return value === 'up' || value === 'down' || value === 'left' || value === 'right'
-}
 
 export function normalizeGhostPreviewWeight(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return GHOST_PREVIEW_WEIGHT_DEFAULT
@@ -66,9 +56,6 @@ export function normalizeGhostPreviewMode(value: unknown): GhostPreviewMode {
     : GHOST_PREVIEW_MODE_DEFAULT
 }
 
-export function getMoveDirectionLabel(direction: PuzzleMoveDirection): string {
-  return MOVE_DIRECTION_LABELS[direction]
-}
 
 function getDirectionFromDelta(deltaRow: number, deltaCol: number): PuzzleMoveDirection | null {
   if (deltaRow < 0) return 'up'
@@ -237,8 +224,3 @@ export function formatElapsedTime(seconds: number): string {
   const secs = seconds % 60
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
-
-
-
-
-

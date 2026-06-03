@@ -644,7 +644,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
   },
 ]
 
-export function normalizeGermanTagBaseKey(label: string): string {
+function normalizeGermanTagBaseKey(label: string): string {
   return label
     .trim()
     .toLocaleLowerCase('de-DE')
@@ -696,7 +696,7 @@ export function getGalleryTagCategoryId(label: string): GalleryTagCategoryId {
   return category?.id ?? 'themes'
 }
 
-export function getCanonicalTagOption(options: GalleryTagFilterOption[]): GalleryTagFilterOption {
+function getCanonicalTagOption(options: GalleryTagFilterOption[]): GalleryTagFilterOption {
   return [...options].sort((a, b) => {
     const lengthDelta = normalizeGermanTagBaseKey(a.label).length - normalizeGermanTagBaseKey(b.label).length
     if (lengthDelta !== 0) return lengthDelta

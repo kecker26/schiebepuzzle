@@ -22,24 +22,6 @@ export function firstString(source: Record<string, unknown>, keys: string[]): st
   return null
 }
 
-export function firstNumber(source: Record<string, unknown>, keys: string[]): number | null {
-  for (const key of keys) {
-    const value = source[key]
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return value
-    }
-
-    if (typeof value === 'string') {
-      const parsed = Number(value)
-      if (Number.isFinite(parsed)) {
-        return parsed
-      }
-    }
-  }
-
-  return null
-}
-
 export function normalizeAbsoluteUrl(value: string | null | undefined, baseUrl?: string): string | null {
   if (!value) return null
 

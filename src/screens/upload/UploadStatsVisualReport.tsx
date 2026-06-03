@@ -35,6 +35,11 @@ import UploadStatsDifficultyTable from './UploadStatsDifficultyTable.tsx'
 import UploadStatsHistorySection from './UploadStatsHistorySection.tsx'
 import UploadStatsRunComparison from './UploadStatsRunComparison.tsx'
 import {
+  DIFFICULTY_TREND_COLORS,
+  buildDifficultyColorMap,
+  getDifficultyKey,
+} from './uploadStatsDifficultyColors.ts'
+import {
   DifficultyReportRow,
   HistoryFilter,
   HistoryFilterDefinition,
@@ -794,7 +799,7 @@ function buildFavoriteDifficultyData(
       medianTime: row.medianTime,
       medianMoves: row.medianMoves,
       isFavorite,
-      color: difficultyColorMap.get(key) ?? STATS_DIFFICULTY_COLORS[index % STATS_DIFFICULTY_COLORS.length],
+      color: difficultyColorMap.get(key) ?? DIFFICULTY_TREND_COLORS[index % DIFFICULTY_TREND_COLORS.length],
     }
   })
 
@@ -839,7 +844,7 @@ function buildTrendPoints(entries: PuzzleCompletionRecord[]): TrendPoint[] {
 }
 
 function getCompletionDifficultyKey(entry: Pick<PuzzleCompletionRecord, 'config'>): string {
-  return `${entry.config.rows}x${entry.config.cols}`
+  return getDifficultyKey(entry.config)
 }
 
 function getTrendMetricValue(point: TrendPoint, metric: TrendMetric): number | null {
@@ -1244,11 +1249,19 @@ export default function UploadStatsVisualReport({
     [completionHistory, stats]
   )
   const trendSeriesOptions = useMemo<TrendDifficultySeries[]>(
-    () => solvedDifficultyRows.map((row, index) => ({
-      key: `${row.option.rows}x${row.option.cols}`,
-      label: row.option.label,
-      color: STATS_DIFFICULTY_COLORS[index % STATS_DIFFICULTY_COLORS.length],
-    })),
+    () => {
+      const difficultyColorMap = buildDifficultyColorMap(solvedDifficultyRows)
+
+      return solvedDifficultyRows.map((row, index) => {
+        const key = `${row.option.rows}x${row.option.cols}`
+
+        return {
+          key,
+          label: row.option.label,
+          color: difficultyColorMap.get(key) ?? DIFFICULTY_TREND_COLORS[index % DIFFICULTY_TREND_COLORS.length],
+        }
+      })
+    },
     [solvedDifficultyRows]
   )
   const trendSeriesColorMap = useMemo(

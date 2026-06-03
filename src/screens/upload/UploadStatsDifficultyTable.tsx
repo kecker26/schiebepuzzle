@@ -15,6 +15,7 @@ import {
   formatPercent,
   getStatsDifficultyKey,
 } from './uploadUtils.ts'
+import { buildDifficultyColorMap, getDifficultyColorStyle } from './uploadStatsDifficultyColors.ts'
 
 type SortDirection = 'asc' | 'desc'
 
@@ -172,7 +173,7 @@ export default function UploadStatsDifficultyTable({
     [difficultyRows, sortDirection, sortKey]
   )
   const difficultyColorMap = useMemo(
-    () => buildStatsDifficultyColorMap(difficultyRows),
+    () => buildDifficultyColorMap(difficultyRows),
     [difficultyRows]
   )
 
@@ -248,6 +249,7 @@ export default function UploadStatsDifficultyTable({
   return (
     <UploadStatsSection
       id="stats-report-difficulties"
+      className="stats-report-section-table"
       kicker="Detailtabelle"
       title="Sortierbarer Vergleich je Schwierigkeit"
       copy="Jede Spalte laesst sich sortieren. Die Tabelle konzentriert sich auf Siege, typische Werte, Rekorde und den letzten Abschluss je Stufe."
@@ -344,57 +346,50 @@ export default function UploadStatsDifficultyTable({
             </tr>
           </thead>
           <tbody>
-            {sortedRows.map((row) => {
-              const difficultyColor = difficultyColorMap.get(getStatsDifficultyKey(row.option))
-              const rowClassName = [
-                row.solveCount === 0 ? 'is-muted' : '',
-                difficultyColor ? 'has-difficulty-color' : '',
-              ].filter(Boolean).join(' ')
-              const rowStyle = difficultyColor
-                ? ({ '--stats-difficulty-color': difficultyColor } as CSSProperties)
-                : undefined
-
-              return (
-                <tr key={row.option.key} className={rowClassName} style={rowStyle}>
-                  <th scope="row" className="stats-data-row-title">
-                    <span className="stats-data-cell-main">{row.option.label}</span>
-                    <span className="stats-data-cell-copy">{formatPuzzleSize({ rows: row.option.rows, cols: row.option.cols })}</span>
-                  </th>
-                  <td>
-                    <span className="stats-data-cell-main">{row.solveCount}</span>
-                    <span className="stats-data-cell-copy">
-                      {row.solveCount > 0 ? `${row.cleanSolveCount} ohne Hilfe` : 'noch keine Siege'}
-                    </span>
-                  </td>
-                  <td className="is-positive">
-                    <span className="stats-data-cell-main">{formatOptionalDuration(row.bestTime)}</span>
-                  </td>
-                  <td className="is-positive">
-                    <span className="stats-data-cell-main">{formatOptionalMoves(row.bestMoves)}</span>
-                  </td>
-                  <td>
-                    <span className="stats-data-cell-main">{formatOptionalDuration(row.medianTime)}</span>
-                  </td>
-                  <td>
-                    <span className="stats-data-cell-main">{formatOptionalMoves(row.medianMoves)}</span>
-                  </td>
-                  <td>
-                    <span className="stats-data-cell-main">{formatExtraMoves(row.averageExtraMoves)}</span>
-                    <span className="stats-data-cell-copy">
-                      {row.profiledSolveCount > 0 ? `${formatPercent(row.profileCoverage)} Datenqualitaet` : 'kein Laufprofil'}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="stats-data-cell-main">{row.lastCompletedAt ? formatDate(row.lastCompletedAt) : '--'}</span>
-                    <span className="stats-data-cell-copy">
-                      {row.lastCompletedAt
-                        ? `${formatOptionalDuration(row.lastTime)} / ${formatOptionalMoves(row.lastMoves)}`
-                        : 'noch kein Abschluss'}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
+            {sortedRows.map((row) => (
+              <tr
+                key={row.option.key}
+                className={`has-difficulty-accent${row.solveCount === 0 ? ' is-muted' : ''}`}
+                style={getDifficultyColorStyle(difficultyColorMap, row.option)}
+              >
+                <th scope="row" className="stats-data-row-title">
+                  <span className="stats-data-cell-main stats-difficulty-label-chip">{row.option.label}</span>
+                  <span className="stats-data-cell-copy">{formatPuzzleSize({ rows: row.option.rows, cols: row.option.cols })}</span>
+                </th>
+                <td>
+                  <span className="stats-data-cell-main">{row.solveCount}</span>
+                  <span className="stats-data-cell-copy">
+                    {row.solveCount > 0 ? `${row.cleanSolveCount} ohne Hilfe` : 'noch keine Siege'}
+                  </span>
+                </td>
+                <td className="is-positive">
+                  <span className="stats-data-cell-main">{formatOptionalDuration(row.bestTime)}</span>
+                </td>
+                <td className="is-positive">
+                  <span className="stats-data-cell-main">{formatOptionalMoves(row.bestMoves)}</span>
+                </td>
+                <td>
+                  <span className="stats-data-cell-main">{formatOptionalDuration(row.medianTime)}</span>
+                </td>
+                <td>
+                  <span className="stats-data-cell-main">{formatOptionalMoves(row.medianMoves)}</span>
+                </td>
+                <td>
+                  <span className="stats-data-cell-main">{formatExtraMoves(row.averageExtraMoves)}</span>
+                  <span className="stats-data-cell-copy">
+                    {row.profiledSolveCount > 0 ? `${formatPercent(row.profileCoverage)} Datenqualitaet` : 'kein Laufprofil'}
+                  </span>
+                </td>
+                <td>
+                  <span className="stats-data-cell-main">{row.lastCompletedAt ? formatDate(row.lastCompletedAt) : '--'}</span>
+                  <span className="stats-data-cell-copy">
+                    {row.lastCompletedAt
+                      ? `${formatOptionalDuration(row.lastTime)} / ${formatOptionalMoves(row.lastMoves)}`
+                      : 'noch kein Abschluss'}
+                  </span>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

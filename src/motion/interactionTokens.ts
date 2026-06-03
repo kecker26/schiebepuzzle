@@ -63,6 +63,3 @@ export function getInteractionMotion(
   }
 }
 
-export function getTapTransition(): Transition {
-  return interactionTransitions.tap
-}
