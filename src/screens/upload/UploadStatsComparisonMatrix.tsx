@@ -4,12 +4,14 @@ import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDiffi
 import UploadStatsSection from './UploadStatsSection.tsx'
 import {
   StandardDifficultyStatsEntry,
+  buildStatsDifficultyColorMap,
   buildDifficultyReportRows,
   formatDate,
   formatExtraMoves,
   formatOptionalDuration,
   formatOptionalMoves,
   formatPercent,
+  getStatsDifficultyKey,
 } from './uploadUtils.ts'
 import { buildDifficultyColorMap, getDifficultyColorStyle } from './uploadStatsDifficultyColors.ts'
 
@@ -22,6 +24,7 @@ interface UploadStatsComparisonMatrixProps {
   standardDifficultyStats: StandardDifficultyStatsEntry[]
   onReloadView: () => void
   onBackToStart: () => void
+  onRawViewChange?: (view: 'difficulties' | 'history') => void
   defaultOpen?: boolean
   summaryButtonRef?: RefObject<HTMLButtonElement>
 }
@@ -64,6 +67,7 @@ export default function UploadStatsComparisonMatrix({
   standardDifficultyStats,
   onReloadView,
   onBackToStart,
+  onRawViewChange,
   defaultOpen = true,
   summaryButtonRef,
 }: UploadStatsComparisonMatrixProps) {

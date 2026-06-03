@@ -1,4 +1,4 @@
-import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useMemo, useState } from 'react'
+import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, useCallback, useMemo, useState } from 'react'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import { PuzzleCompletionRecord, PuzzleStats } from '../../types/index'
 import { formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
@@ -6,12 +6,14 @@ import UploadStatsSection from './UploadStatsSection.tsx'
 import {
   DifficultyReportRow,
   StandardDifficultyStatsEntry,
+  buildStatsDifficultyColorMap,
   buildDifficultyReportRows,
   formatDate,
   formatExtraMoves,
   formatOptionalDuration,
   formatOptionalMoves,
   formatPercent,
+  getStatsDifficultyKey,
 } from './uploadUtils.ts'
 import { buildDifficultyColorMap, getDifficultyColorStyle } from './uploadStatsDifficultyColors.ts'
 

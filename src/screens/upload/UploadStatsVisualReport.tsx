@@ -44,6 +44,7 @@ import {
   HistoryFilter,
   HistoryFilterDefinition,
   StandardDifficultyStatsEntry,
+  STATS_DIFFICULTY_COLORS,
   buildDifficultyReportRows,
   formatAssistanceModeLabel,
   formatDate,
@@ -1781,6 +1782,7 @@ export default function UploadStatsVisualReport({
                       standardDifficultyStats={standardDifficultyStats}
                       onReloadView={onReloadView}
                       onBackToStart={onBackToStart}
+                      onRawViewChange={setRawStatsView}
                     />
                   ) : null}
                 </div>

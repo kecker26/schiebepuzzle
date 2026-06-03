@@ -255,7 +255,7 @@ export function formatProfileSourceLabel(hasDetailedProfile: boolean): string {
 
 
 function getDifficultyFilterId(config: PuzzleConfig): `${number}x${number}` {
-  return `${config.rows}x${config.cols}`
+  return getStatsDifficultyKey(config)
 }
 
 function parseTimestamp(timestamp: string | null | undefined): number {

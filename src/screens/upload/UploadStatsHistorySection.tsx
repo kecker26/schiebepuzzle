@@ -1,4 +1,4 @@
-import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAccessibilityAnnouncer } from '../../app/accessibilityAnnouncer.tsx'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedChipButton from '../../motion/AnimatedChipButton.tsx'
@@ -9,11 +9,13 @@ import {
   HistoryFilter,
   HistoryFilterDefinition,
   StandardDifficultyStatsEntry,
+  buildStatsDifficultyColorMap,
   buildDifficultyReportRows,
   formatAssistanceModeLabel,
   formatDate,
   formatTime,
   getCompletionExtraMoves,
+  getStatsDifficultyKey,
 } from './uploadUtils.ts'
 import { buildDifficultyColorMap, getDifficultyColorStyle } from './uploadStatsDifficultyColors.ts'
 import UploadPageNavigation from './UploadPageNavigation.tsx'
@@ -741,6 +743,14 @@ export default function UploadStatsHistorySection({
                       <tbody>
                         {pagedHistory.map((historyEntry) => {
                           const assistanceBadge = getAssistanceBadgeMeta(historyEntry.entry)
+                          const difficultyColor = difficultyColorMap.get(getStatsDifficultyKey(historyEntry.entry.config))
+                          const difficultyCellClassName = [
+                            'stats-history-difficulty-cell',
+                            difficultyColor ? 'has-difficulty-color' : '',
+                          ].filter(Boolean).join(' ')
+                          const difficultyCellStyle = difficultyColor
+                            ? ({ '--stats-difficulty-color': difficultyColor } as CSSProperties)
+                            : undefined
 
                           return (
                           <tr
