@@ -1,5 +1,7 @@
 import type { PuzzleConfig } from '../types/index'
 
+export type ExactStartMoveCountStatus = 'exact' | 'lower-bound' | 'unavailable'
+
 export type ExactStartMoveCountResult =
   | {
       status: 'exact'

@@ -29,7 +29,7 @@ export interface Tile {
 }
 
 // Bild-Daten fuer Canvas
-interface CanvasImageData {
+export interface CanvasImageData {
   sourceX: number
   sourceY: number
   sourceWidth: number
@@ -51,7 +51,7 @@ export interface PuzzleState {
 }
 
 // Drag-Zustand
-interface DragState {
+export interface DragState {
   tileId: string
   startX: number
   startY: number
@@ -163,11 +163,11 @@ export interface ImageThemePalette {
   analyzedAt: string
 }
 
-type SavedGameTitleSource = 'gemini' | 'reused' | 'fallback'
-type SavedGameAiTitleStatus = 'generated' | 'reused' | 'failed' | 'unavailable' | 'pending'
+export type SavedGameTitleSource = 'gemini' | 'reused' | 'fallback'
+export type SavedGameAiTitleStatus = 'generated' | 'reused' | 'failed' | 'unavailable' | 'pending'
 export type AiMetadataProvider = 'gemini' | 'openrouter' | 'openai-compatible' | 'groq'
 
-interface SavedGameAiTitle {
+export interface SavedGameAiTitle {
   status: SavedGameAiTitleStatus
   provider: AiMetadataProvider
   model: string | null
@@ -253,17 +253,17 @@ export interface GalleryChallengeTarget {
   optimalStartMoveCountKind?: OptimalStartMoveCountKind
 }
 
-type GalleryTagSource = 'gemini' | 'imported'
+export type GalleryTagSource = 'gemini' | 'imported'
 
-interface GalleryImageTag {
+export interface GalleryImageTag {
   label: string
   confidence: number
   source: GalleryTagSource
 }
 
-type GalleryAiTaggingStatus = 'tagged' | 'failed' | 'unavailable' | 'pending'
+export type GalleryAiTaggingStatus = 'tagged' | 'failed' | 'unavailable' | 'pending'
 
-interface GalleryCollectionSuggestion {
+export interface GalleryCollectionSuggestion {
   collectionId: string
   collectionName: string
   reason: string
@@ -271,7 +271,7 @@ interface GalleryCollectionSuggestion {
   source: 'gemini'
 }
 
-interface GalleryAiTagging {
+export interface GalleryAiTagging {
   status: GalleryAiTaggingStatus
   provider: AiMetadataProvider
   model: string | null
@@ -379,7 +379,48 @@ export interface UpdateImageCollectionImagesPayload {
   imageIds: string[]
 }
 
+export interface BackupImageAssetRef {
+  assetId: string
+}
 
+export type BackupImageValue = string | BackupImageAssetRef | null
+
+export type BackupImageAssets = Record<string, string>
+
+export interface PuzzleDataBackupSavedGame extends Omit<SavedGameData, 'previewImage' | 'image' | 'croppedImage'> {
+  previewImage: BackupImageValue
+  image: BackupImageValue
+  croppedImage: BackupImageValue
+}
+
+export interface PuzzleDataBackupCompletionRecord extends Omit<PuzzleCompletionRecord, 'previewImage'> {
+  previewImage: BackupImageValue
+}
+
+export interface PuzzleDataBackupStats extends Omit<PuzzleStats, 'recentCompletions' | 'completionHistory'> {
+  recentCompletions: PuzzleDataBackupCompletionRecord[]
+  completionHistory: PuzzleDataBackupCompletionRecord[]
+}
+
+export interface PuzzleDataBackupGalleryEntry extends Omit<SolvedGalleryEntry, 'previewImage' | 'sourceImage'> {
+  previewImage: BackupImageValue
+  sourceImage: BackupImageValue
+}
+
+export interface PuzzleDataBackupGallery extends Omit<SolvedGallery, 'entries'> {
+  entries: PuzzleDataBackupGalleryEntry[]
+}
+
+export interface PuzzleDataBackup {
+  app: 'schiebepuzzle'
+  version: 1 | 2 | 3
+  exportedAt: string
+  savedGames: PuzzleDataBackupSavedGame[]
+  stats: PuzzleDataBackupStats | null
+  gallery: PuzzleDataBackupGallery | null
+  collections?: ImageCollections | null
+  assets?: BackupImageAssets
+}
 
 export interface PuzzleDataImportResult {
   importedAt: string
@@ -440,7 +481,7 @@ export interface AnalyzeSolvedGalleryEntryResult {
   entry: SolvedGalleryEntry
 }
 
-type UpdateSolvedGalleryTagsAction = 'rename' | 'remove'
+export type UpdateSolvedGalleryTagsAction = 'rename' | 'remove'
 
 export interface UpdateSolvedGalleryTagsPayload {
   action: UpdateSolvedGalleryTagsAction
@@ -460,3 +501,9 @@ export interface RecordPuzzleCompletionResult {
   isNewBestCleanMoves: boolean
   isNewBestCleanTime: boolean
 }
+
+
+
+
+
+

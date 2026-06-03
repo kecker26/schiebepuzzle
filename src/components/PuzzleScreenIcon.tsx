@@ -52,6 +52,8 @@ interface PuzzleScreenIconProps {
   className?: string
 }
 
+export type { PuzzleScreenIconName }
+
 export default function PuzzleScreenIcon({ name, className }: PuzzleScreenIconProps) {
   const Icon = puzzleScreenIconAssets[name]
 

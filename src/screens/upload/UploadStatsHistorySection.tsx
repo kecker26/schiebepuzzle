@@ -17,7 +17,6 @@ import {
   getCompletionExtraMoves,
   getStatsDifficultyKey,
 } from './uploadUtils.ts'
-import { buildDifficultyColorMap, getDifficultyColorStyle } from './uploadStatsDifficultyColors.ts'
 import UploadPageNavigation from './UploadPageNavigation.tsx'
 import UploadStatsSection from './UploadStatsSection.tsx'
 
@@ -93,10 +92,6 @@ const HISTORY_COLUMN_HELP: Partial<Record<HistorySortKey, string>> = {
 }
 
 const HISTORY_ENTRIES_PER_PAGE = 25
-
-function getDifficultyKey(entry: Pick<PuzzleCompletionRecord, 'config'>): `${number}x${number}` {
-  return `${entry.config.rows}x${entry.config.cols}`
-}
 
 function getHistoryCellTone(isBest: boolean, isWorst: boolean): string {
   if (isBest && isWorst) return ' is-extreme-dual'
@@ -274,7 +269,7 @@ function buildHistoryDisplayEntries(
   difficultyReportMap: Map<string, HistoryDifficultyReportSummary>
 ): HistoryDisplayEntry[] {
   return entries.map((entry) => {
-    const difficultyReport = difficultyReportMap.get(getDifficultyKey(entry))
+    const difficultyReport = difficultyReportMap.get(getStatsDifficultyKey(entry.config))
     const isBestTime = difficultyReport?.bestTime === entry.time
     const isWorstTime = difficultyReport?.worstTime === entry.time
     const isBestMoves = difficultyReport?.bestMoves === entry.moves
@@ -358,11 +353,13 @@ export default function UploadStatsHistorySection({
     [completionHistory, standardDifficultyStats]
   )
   const difficultyReportMap = useMemo(
-    () => new Map(difficultyRows.map((row) => [`${row.option.rows}x${row.option.cols}`, row])),
+    () => new Map<string, HistoryDifficultyReportSummary>(
+      difficultyRows.map((row) => [getStatsDifficultyKey(row.option), row])
+    ),
     [difficultyRows]
   )
   const difficultyColorMap = useMemo(
-    () => buildDifficultyColorMap(difficultyRows),
+    () => buildStatsDifficultyColorMap(difficultyRows),
     [difficultyRows]
   )
 
@@ -753,11 +750,7 @@ export default function UploadStatsHistorySection({
                             : undefined
 
                           return (
-                          <tr
-                            key={historyEntry.entry.id}
-                            className="has-difficulty-accent"
-                            style={getDifficultyColorStyle(difficultyColorMap, historyEntry.entry.config)}
-                          >
+                          <tr key={historyEntry.entry.id}>
                           <td>
                             <span className="stats-data-cell-main" title={formatHistoryDateTitle(historyEntry.entry.completedAt)}>
                               {formatHistoryDate(historyEntry.entry.completedAt)}
@@ -766,10 +759,8 @@ export default function UploadStatsHistorySection({
                               {formatHistoryTime(historyEntry.entry.completedAt)}
                             </span>
                           </td>
-                          <td>
-                            <span className="stats-data-cell-main stats-difficulty-label-chip">
-                              {formatDifficultyLabel(historyEntry.entry.config)}
-                            </span>
+                          <td className={difficultyCellClassName} style={difficultyCellStyle}>
+                            <span className="stats-data-cell-main">{formatDifficultyLabel(historyEntry.entry.config)}</span>
                           </td>
                           <td className={getHistoryCellTone(historyEntry.isBestTime, historyEntry.isWorstTime).trim()}>
                             <span className="stats-data-cell-main">{formatTime(historyEntry.entry.time)}</span>

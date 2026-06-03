@@ -705,7 +705,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
   },
 }
 
-export type { HelpContext, HelpSection }
+export type { HelpContext, HelpItem, HelpSection, HelpView }
 
 export { ALL_HELP_CONTEXTS }
 

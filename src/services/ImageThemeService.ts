@@ -307,7 +307,7 @@ function inferLocalMood(stats: ImageColorStats): ImageThemeMoodId {
   return 'calm'
 }
 
-function buildImageThemePalette(
+export function buildImageThemePalette(
   baseColor: RgbColor,
   mood: ImageThemeMoodId,
   source: ImageThemePaletteSource,
@@ -393,3 +393,6 @@ export async function extractLocalImageThemePalette(src: string): Promise<ImageT
   })
 }
 
+export async function extractImageThemePalette(src: string): Promise<ImageThemePalette | null> {
+  return extractLocalImageThemePalette(src)
+}

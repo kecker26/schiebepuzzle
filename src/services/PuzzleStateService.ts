@@ -26,7 +26,7 @@ function cloneRunMetrics(runMetrics: PuzzleRunMetrics): PuzzleRunMetrics {
   }
 }
 
-function rebuildBoardFromTiles(tiles: Tile[], config: PuzzleConfig): number[] {
+export function rebuildBoardFromTiles(tiles: Tile[], config: PuzzleConfig): number[] {
   const board = new Array<number>(config.rows * config.cols).fill(-1)
 
   for (const tile of tiles) {

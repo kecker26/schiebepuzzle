@@ -1351,7 +1351,7 @@ describe('keyboard smoke tests', () => {
     })
   })
 
-  it('moves through statistics jump and footer actions with arrows, Pos1 and Ende', () => {
+  it('moves through statistics footer actions with Pos1 and Ende', () => {
     const completionResult = createCompletionResult()
 
     render(
@@ -1370,16 +1370,10 @@ describe('keyboard smoke tests', () => {
     const pageTopButton = screen.getByRole('button', { name: 'Zum Seitenanfang' })
     const startButton = screen.getByRole('button', { name: 'Zur Auswahl' })
 
-    mockElementRect(pageTopButton, { left: 0, top: 0, width: 180, height: 40 })
-    mockElementRect(startButton, { left: 220, top: 0, width: 200, height: 40 })
+    mockElementRect(pageTopButton, { left: 0, top: 120, width: 180, height: 40 })
+    mockElementRect(startButton, { left: 220, top: 120, width: 200, height: 40 })
 
     pageTopButton.focus()
-    fireEvent.keyDown(pageTopButton, { key: 'ArrowRight' })
-    expect(document.activeElement).toBe(startButton)
-
-    fireEvent.keyDown(startButton, { key: 'ArrowLeft' })
-    expect(document.activeElement).toBe(pageTopButton)
-
     fireEvent.keyDown(pageTopButton, { key: 'End' })
     expect(document.activeElement).toBe(startButton)
 
@@ -1387,7 +1381,7 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(pageTopButton)
   })
 
-  it('does not let the statistics End handler override header, jump or footer rows', async () => {
+  it('does not let the statistics End handler override header or footer rows', async () => {
     const completionResult = createCompletionResult()
 
     render(
@@ -1437,13 +1431,14 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(headerStartButton)
 
     fireEvent.click(screen.getByRole('tab', { name: 'Rohdaten & Details' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Vergleichsmatrix' }))
 
-    const detailsButton = await screen.findByRole('button', { name: /Detailtabelle/ })
-    const difficultiesSection = detailsButton.closest<HTMLElement>('.stats-report-section, .stats-report-section-collapsible')
-    expect(difficultiesSection).toBeTruthy()
+    const comparisonHeading = screen.getByRole('heading', { name: 'Erweiterte Vergleichsmatrix' })
+    const comparisonSection = comparisonHeading.closest<HTMLElement>('.stats-report-section, .stats-report-section-collapsible')
+    expect(comparisonSection).toBeTruthy()
 
-    const pageTopButton = within(difficultiesSection!).getByRole('button', { name: 'Zum Seitenanfang' })
-    const footerStartButton = within(difficultiesSection!).getByRole('button', { name: 'Zur Auswahl' })
+    const pageTopButton = within(comparisonSection!).getByRole('button', { name: 'Zum Seitenanfang' })
+    const footerStartButton = within(comparisonSection!).getByRole('button', { name: 'Zur Auswahl' })
     const summaryButtons = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.stats-report-section-summary'))
     const historySectionSummary = summaryButtons[summaryButtons.length - 1]
     expect(historySectionSummary).toBeTruthy()

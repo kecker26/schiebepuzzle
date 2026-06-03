@@ -14,7 +14,7 @@ function parseTimestamp(timestamp: string | null | undefined): number {
   return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed
 }
 
-function buildGalleryEntryMap(entries: SolvedGalleryEntry[]): Map<string, SolvedGalleryEntry> {
+export function buildGalleryEntryMap(entries: SolvedGalleryEntry[]): Map<string, SolvedGalleryEntry> {
   return new Map(entries.map((entry) => [entry.id, entry]))
 }
 

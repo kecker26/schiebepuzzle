@@ -130,6 +130,10 @@ export function getMusicStyleKeywordVariants(styleId: MusicStyleId, maxTermsPerV
   return variants
 }
 
+export function getMusicStyleKeywords(styleId: MusicStyleId, maxTerms: number = 6): string[] {
+  return Array.from(new Set(getMusicStyleKeywordVariants(styleId, maxTerms).flat())).slice(0, maxTerms)
+}
+
 export function getMusicStyleTempoHint(styleId: MusicStyleId): 'slow' | 'medium' | 'fast' {
   const definition = getMusicStyleDefinition(styleId)
   const speeds = definition.discoveryProfiles
@@ -151,6 +155,11 @@ export function getMusicStyleTempoHint(styleId: MusicStyleId): 'slow' | 'medium'
 export function stylePrefersInstrumental(styleId: MusicStyleId): boolean {
   const definition = getMusicStyleDefinition(styleId)
   return definition.discoveryProfiles.some((profile) => profile.vocalinstrumental === 'instrumental')
+}
+
+export function stylePrefersElectric(styleId: MusicStyleId): boolean {
+  const definition = getMusicStyleDefinition(styleId)
+  return definition.discoveryProfiles.some((profile) => profile.acousticelectric === 'electric')
 }
 
 export function buildMusicStyleMatchText(...parts: Array<string | null | undefined>): string {

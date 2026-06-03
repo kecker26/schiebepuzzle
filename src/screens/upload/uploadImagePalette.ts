@@ -5,7 +5,7 @@ import type { ImageThemePalette } from '../../types/index'
 
 export type UploadImagePaletteStyle = CSSProperties & Record<`--${string}`, string>
 
-function createUploadImagePaletteStyle(
+export function createUploadImagePaletteStyle(
   palette: ImageThemePalette | null
 ): UploadImagePaletteStyle | undefined {
   if (!palette) return undefined

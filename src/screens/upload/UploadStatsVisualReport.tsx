@@ -35,16 +35,12 @@ import UploadStatsDifficultyTable from './UploadStatsDifficultyTable.tsx'
 import UploadStatsHistorySection from './UploadStatsHistorySection.tsx'
 import UploadStatsRunComparison from './UploadStatsRunComparison.tsx'
 import {
-  DIFFICULTY_TREND_COLORS,
-  buildDifficultyColorMap,
-  getDifficultyKey,
-} from './uploadStatsDifficultyColors.ts'
-import {
   DifficultyReportRow,
   HistoryFilter,
   HistoryFilterDefinition,
   StandardDifficultyStatsEntry,
   STATS_DIFFICULTY_COLORS,
+  buildStatsDifficultyColorMap,
   buildDifficultyReportRows,
   formatAssistanceModeLabel,
   formatDate,
@@ -54,6 +50,7 @@ import {
   formatPercent,
   formatTime,
   getCompletionExtraMoves,
+  getStatsDifficultyKey,
 } from './uploadUtils.ts'
 
 export type VisualStatsView = 'overview' | 'history' | 'raw'
@@ -787,8 +784,8 @@ function buildFavoriteDifficultyData(
   const featuredKeys = new Set(featuredRows.map((row) => `${row.option.rows}x${row.option.cols}`))
   const remainingRows = solvedRows.filter((row) => !featuredKeys.has(`${row.option.rows}x${row.option.cols}`))
 
-  const data = featuredRows.map((row, index) => {
-    const key = `${row.option.rows}x${row.option.cols}`
+  const data: FavoriteDifficultyDatum[] = featuredRows.map((row, index) => {
+    const key = getStatsDifficultyKey(row.option)
     const isFavorite = key === favoriteDifficultyKey
 
     return {
@@ -799,7 +796,7 @@ function buildFavoriteDifficultyData(
       medianTime: row.medianTime,
       medianMoves: row.medianMoves,
       isFavorite,
-      color: difficultyColorMap.get(key) ?? DIFFICULTY_TREND_COLORS[index % DIFFICULTY_TREND_COLORS.length],
+      color: difficultyColorMap.get(key) ?? STATS_DIFFICULTY_COLORS[index % STATS_DIFFICULTY_COLORS.length],
     }
   })
 
@@ -844,7 +841,7 @@ function buildTrendPoints(entries: PuzzleCompletionRecord[]): TrendPoint[] {
 }
 
 function getCompletionDifficultyKey(entry: Pick<PuzzleCompletionRecord, 'config'>): string {
-  return getDifficultyKey(entry.config)
+  return getStatsDifficultyKey(entry.config)
 }
 
 function getTrendMetricValue(point: TrendPoint, metric: TrendMetric): number | null {
@@ -1250,15 +1247,15 @@ export default function UploadStatsVisualReport({
   )
   const trendSeriesOptions = useMemo<TrendDifficultySeries[]>(
     () => {
-      const difficultyColorMap = buildDifficultyColorMap(solvedDifficultyRows)
+      const difficultyColorMap = buildStatsDifficultyColorMap(solvedDifficultyRows)
 
       return solvedDifficultyRows.map((row, index) => {
-        const key = `${row.option.rows}x${row.option.cols}`
+        const key = getStatsDifficultyKey(row.option)
 
         return {
           key,
           label: row.option.label,
-          color: difficultyColorMap.get(key) ?? DIFFICULTY_TREND_COLORS[index % DIFFICULTY_TREND_COLORS.length],
+          color: difficultyColorMap.get(key) ?? STATS_DIFFICULTY_COLORS[index % STATS_DIFFICULTY_COLORS.length],
         }
       })
     },
