@@ -8117,6 +8117,20 @@
   margin-top: 4px;
 }
 
+.stats-visual-focus-controls {
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--secondary-border) 58%, transparent);
+}
+
+.stats-visual-focus-label {
+  margin-right: 2px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .stats-recharts-donut-frame + .stats-visual-series-legend,
 .stats-recharts-line-frame + .stats-visual-series-legend {
   margin-top: 2px;
