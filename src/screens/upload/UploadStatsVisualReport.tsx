@@ -167,12 +167,17 @@ interface TrendSeriesChartPoint {
   id: string
   index: number
   value: number
+  movingAverage: number | null
   source: TrendPoint
 }
 
 interface TrendReferenceStats {
   best: number | null
   median: number | null
+}
+
+interface TrendReferenceDisplay {
+  shouldMerge: boolean
 }
 
 interface ChartTooltipPayload {
@@ -230,6 +235,10 @@ const HISTORY_RANGES: Array<{
   { id: 'recent30', label: 'Letzte 30' },
   { id: 'all', label: 'Alle' },
 ]
+
+const TREND_MOVING_AVERAGE_WINDOW = 5
+const TREND_CHART_HEIGHT = 340
+const TREND_REFERENCE_LABEL_COLLISION_DISTANCE = 24
 
 const RAW_STATS_VIEWS: Array<{
   id: RawStatsView
@@ -864,24 +873,39 @@ function getTrendMetricValue(point: TrendPoint, metric: TrendMetric): number | n
 }
 
 function buildTrendSeriesChartPoints(points: TrendPoint[], metric: TrendMetric): Record<string, TrendSeriesChartPoint[]> {
-  return points.reduce<Record<string, TrendSeriesChartPoint[]>>((seriesPoints, point) => {
+  const seriesPoints = points.reduce<Record<string, TrendSeriesChartPoint[]>>((result, point) => {
     const metricValue = getTrendMetricValue(point, metric)
 
-    if (metricValue === null) return seriesPoints
+    if (metricValue === null) return result
 
-    const existingPoints = seriesPoints[point.difficultyKey] ?? []
-    seriesPoints[point.difficultyKey] = [
+    const existingPoints = result[point.difficultyKey] ?? []
+    result[point.difficultyKey] = [
       ...existingPoints,
       {
         id: point.id,
         index: point.index,
         value: metricValue,
+        movingAverage: null,
         source: point,
       },
     ]
 
-    return seriesPoints
+    return result
   }, {})
+
+  return Object.fromEntries(
+    Object.entries(seriesPoints).map(([seriesKey, series]) => [
+      seriesKey,
+      series.map((point, index) => {
+        if (index + 1 < TREND_MOVING_AVERAGE_WINDOW) return point
+
+        const window = series.slice(index + 1 - TREND_MOVING_AVERAGE_WINDOW, index + 1)
+        const movingAverage = window.reduce((sum, windowPoint) => sum + windowPoint.value, 0) / window.length
+
+        return { ...point, movingAverage }
+      }),
+    ])
+  )
 }
 
 function getTrendTicks(points: TrendPoint[]): number[] {
@@ -920,6 +944,26 @@ function getTrendReferenceStats(
   }
 }
 
+function getTrendReferenceDisplay(
+  stats: TrendReferenceStats,
+  visibleValues: number[],
+  metric: TrendMetric
+): TrendReferenceDisplay {
+  if (stats.best === null || stats.median === null) {
+    return { shouldMerge: false }
+  }
+
+  const domainMinimum = metric === 'quality' ? 0 : Math.min(...visibleValues, stats.best, stats.median)
+  const domainMaximum = metric === 'quality' ? 100 : Math.max(...visibleValues, stats.best, stats.median)
+  const domainRange = domainMaximum - domainMinimum
+  const renderedDistance = domainRange === 0
+    ? 0
+    : Math.abs(stats.best - stats.median) / domainRange * TREND_CHART_HEIGHT
+  const shouldMerge = renderedDistance <= TREND_REFERENCE_LABEL_COLLISION_DISTANCE
+
+  return { shouldMerge }
+}
+
 function getTrendValueFormatter(metric: TrendMetric): (value: unknown) => string {
   return (value) => {
     if (typeof value !== 'number') return '--'
@@ -927,6 +971,14 @@ function getTrendValueFormatter(metric: TrendMetric): (value: unknown) => string
     if (metric === 'quality') return `${value}/100`
     return `${value}`
   }
+}
+
+function formatTrendMovingAverage(value: number | null, metric: TrendMetric): string {
+  if (value === null) return '--'
+  if (metric === 'time') return formatOptionalDuration(Math.round(value))
+
+  const roundedValue = Math.round(value * 10) / 10
+  return metric === 'quality' ? `${roundedValue}/100` : `${roundedValue}`
 }
 
 function getTrendDomain(metric: TrendMetric): [number | string, number | string] {
@@ -1183,6 +1235,7 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
 
   const formatter = getTrendValueFormatter(metric)
   const metricValue = getTrendMetricValue(point, metric)
+  const movingAverage = chartPoint?.movingAverage ?? null
 
   return (
     <CursorTooltipPortal active>
@@ -1195,6 +1248,9 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
             <i aria-hidden="true" style={{ backgroundColor: visiblePayload[0]?.color ?? 'currentColor' }} />
             {metric === 'time' ? 'Zeit' : metric === 'quality' ? 'Lauf-Score' : 'Netto-Zuege'}: {formatter(metricValue)}
           </span>
+          {movingAverage !== null ? (
+            <span>5er-Trend: {formatTrendMovingAverage(movingAverage, metric)}</span>
+          ) : null}
           <span>Aktionen: {formatOptionalMoves(point.actions)}</span>
           <span>Korrekturen: {formatExtraMoves(point.corrections)}</span>
         </div>
@@ -1243,6 +1299,8 @@ export default function UploadStatsVisualReport({
 }: UploadStatsVisualReportProps) {
   const [trendMetric, setTrendMetric] = useState<TrendMetric>('actions')
   const [historyRange, setHistoryRange] = useState<HistoryRange>('recent12')
+  const [showMovingAverage, setShowMovingAverage] = useState(false)
+  const [focusedTrendDifficultyKey, setFocusedTrendDifficultyKey] = useState<string | null | undefined>(undefined)
   const [hiddenTrendDifficultyKeys, setHiddenTrendDifficultyKeys] = useState<string[]>([])
   const [rawStatsView, setRawStatsView] = useState<RawStatsView>('difficulties')
   const [isSavingRawExport, setIsSavingRawExport] = useState(false)
@@ -1295,7 +1353,21 @@ export default function UploadStatsVisualReport({
     [trendSeriesOptions]
   )
   const visibleTrendSeries = trendSeriesOptions.filter((series) => !hiddenTrendDifficultyKeys.includes(series.key))
-  const focusedTrendSeries = visibleTrendSeries.length === 1 ? visibleTrendSeries[0] : null
+  const automaticFocusedTrendKey = [...trendPoints]
+    .reverse()
+    .find((point) => visibleTrendSeries.some((series) => series.key === point.difficultyKey))
+    ?.difficultyKey
+  const effectiveFocusedTrendKey = focusedTrendDifficultyKey === undefined
+    ? automaticFocusedTrendKey ?? null
+    : visibleTrendSeries.some((series) => series.key === focusedTrendDifficultyKey)
+      ? focusedTrendDifficultyKey
+      : null
+  const focusedTrendSeries = visibleTrendSeries.find((series) => series.key === effectiveFocusedTrendKey) ?? null
+  const movingAverageCandidateSeries = focusedTrendSeries ? [focusedTrendSeries] : visibleTrendSeries
+  const canShowMovingAverage = movingAverageCandidateSeries.some((series) =>
+    (trendSeriesChartPoints[series.key] ?? []).some((point) => point.movingAverage !== null)
+  )
+  const isMovingAverageVisible = showMovingAverage && canShowMovingAverage
   const selectedDifficultyEntries = useMemo(() => {
     if (trendSeriesOptions.length === 0 || visibleTrendSeries.length === trendSeriesOptions.length) {
       return completionHistory
@@ -1335,6 +1407,10 @@ export default function UploadStatsVisualReport({
     [favoriteDifficultyKey, solvedDifficultyRows, trendSeriesColorMap]
   )
   const focusedTrendStats = getTrendReferenceStats(trendPoints, trendMetric, focusedTrendSeries?.key ?? null)
+  const visibleTrendValues = visibleTrendSeries.flatMap((series) =>
+    (trendSeriesChartPoints[series.key] ?? []).map((point) => point.value)
+  )
+  const focusedTrendReferenceDisplay = getTrendReferenceDisplay(focusedTrendStats, visibleTrendValues, trendMetric)
   const trendFormatter = getTrendValueFormatter(trendMetric)
   const selectedTrend = TREND_METRICS.find((metric) => metric.id === trendMetric) ?? TREND_METRICS[0]
   const averageQuality = averageScoreBreakdown?.score ?? null
@@ -1381,6 +1457,43 @@ export default function UploadStatsVisualReport({
               disabled={isLastVisible}
               aria-pressed={isVisible}
               data-app-tooltip={`${series.label} ${isVisible ? 'ausblenden' : 'anzeigen'}.`}
+              data-app-tooltip-position="top"
+            >
+              <i aria-hidden="true" />
+              {series.label}
+            </AnimatedChipButton>
+          )
+        })}
+      </div>
+    )
+  }
+
+  const renderTrendFocusControls = () => {
+    if (visibleTrendSeries.length === 0) return null
+
+    return (
+      <div className="stats-visual-series-legend stats-visual-focus-controls" aria-label="Schwierigkeitsstufe fokussieren" onKeyDown={handleDirectionalFocusNavigation}>
+        <span className="stats-visual-focus-label">Fokus</span>
+        <AnimatedChipButton
+          className={`dashboard-filter-chip stats-visual-series-chip${focusedTrendSeries === null ? ' is-active' : ''}`}
+          onClick={() => setFocusedTrendDifficultyKey(null)}
+          aria-pressed={focusedTrendSeries === null}
+          data-app-tooltip="Alle sichtbaren Schwierigkeitsstufen gleichwertig vergleichen."
+          data-app-tooltip-position="top"
+        >
+          Alle vergleichen
+        </AnimatedChipButton>
+        {visibleTrendSeries.map((series) => {
+          const isFocused = focusedTrendSeries?.key === series.key
+
+          return (
+            <AnimatedChipButton
+              key={series.key}
+              className={`dashboard-filter-chip stats-visual-series-chip${isFocused ? ' is-active' : ''}`}
+              style={{ '--series-color': series.color } as CSSProperties}
+              onClick={() => setFocusedTrendDifficultyKey(series.key)}
+              aria-pressed={isFocused}
+              data-app-tooltip={`${series.label} hervorheben und die anderen sichtbaren Stufen abblenden.`}
               data-app-tooltip-position="top"
             >
               <i aria-hidden="true" />
@@ -1643,6 +1756,21 @@ export default function UploadStatsVisualReport({
                     </AnimatedChipButton>
                   ))}
                 </div>
+
+                <div className="dashboard-filter-row" aria-label="Trendglaettung waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                  <AnimatedChipButton
+                    className={`dashboard-filter-chip${isMovingAverageVisible ? ' is-active' : ''}`}
+                    onClick={() => setShowMovingAverage((current) => !current)}
+                    disabled={!canShowMovingAverage}
+                    aria-pressed={isMovingAverageVisible}
+                    data-app-tooltip={canShowMovingAverage
+                      ? 'Gleitenden Durchschnitt aus jeweils 5 Laeufen derselben Stufe anzeigen.'
+                      : 'Der 5er-Trend braucht mindestens 5 Laeufe derselben Stufe im Ausschnitt.'}
+                    data-app-tooltip-position="top"
+                  >
+                    5er-Trend
+                  </AnimatedChipButton>
+                </div>
               </div>
 
               <article className="stats-report-card stats-visual-line-card">
@@ -1689,8 +1817,33 @@ export default function UploadStatsVisualReport({
                           content={(props) => renderRechartsTooltip(props, trendMetric)}
                           shared={false}
                         />
-                        <Legend />
-                        {focusedTrendStats.best !== null ? (
+                        {focusedTrendReferenceDisplay.shouldMerge && focusedTrendStats.best !== null && focusedTrendStats.median !== null ? (
+                          <>
+                            <ReferenceLine
+                              y={focusedTrendStats.best}
+                              stroke="var(--success-color, #34d399)"
+                              strokeDasharray="6 6"
+                            />
+                            {focusedTrendStats.best !== focusedTrendStats.median ? (
+                              <ReferenceLine
+                                y={focusedTrendStats.median}
+                                stroke="var(--text-muted)"
+                                strokeDasharray="4 8"
+                              />
+                            ) : null}
+                            <ReferenceLine
+                              y={focusedTrendStats.median}
+                              stroke="transparent"
+                              label={{
+                                value: focusedTrendStats.best === focusedTrendStats.median
+                                  ? `Bestwert & Median ${trendFormatter(focusedTrendStats.best)}`
+                                  : `Bestwert ${trendFormatter(focusedTrendStats.best)} · Median ${trendFormatter(focusedTrendStats.median)}`,
+                                fill: 'var(--text-secondary)',
+                                fontSize: 12,
+                              }}
+                            />
+                          </>
+                        ) : focusedTrendStats.best !== null ? (
                           <ReferenceLine
                             y={focusedTrendStats.best}
                             stroke="var(--success-color, #34d399)"
@@ -1702,7 +1855,7 @@ export default function UploadStatsVisualReport({
                             }}
                           />
                         ) : null}
-                        {focusedTrendStats.median !== null ? (
+                        {!focusedTrendReferenceDisplay.shouldMerge && focusedTrendStats.median !== null ? (
                           <ReferenceLine
                             y={focusedTrendStats.median}
                             stroke="var(--text-muted)"
@@ -1714,30 +1867,62 @@ export default function UploadStatsVisualReport({
                             }}
                           />
                         ) : null}
-                        {visibleTrendSeries.map((line) => (
-                          <Line
-                            key={line.key}
-                            type="monotone"
-                            data={trendSeriesChartPoints[line.key] ?? []}
-                            dataKey="value"
-                            name={line.label}
-                            stroke={line.color}
-                            strokeWidth={3}
-                            dot={{ r: 4, strokeWidth: 2 }}
-                            activeDot={{ r: 6, strokeWidth: 2 }}
-                          />
-                        ))}
+                        {visibleTrendSeries.map((line) => {
+                          const isFocused = focusedTrendSeries === null || focusedTrendSeries.key === line.key
+                          const rawOpacity = focusedTrendSeries === null ? 0.72 : isFocused ? 0.82 : 0.14
+
+                          return (
+                            <Line
+                              key={`${line.key}-raw`}
+                              type="linear"
+                              data={trendSeriesChartPoints[line.key] ?? []}
+                              dataKey="value"
+                              name={line.label}
+                              stroke={line.color}
+                              strokeWidth={isMovingAverageVisible ? 0 : isFocused ? 3 : 2}
+                              opacity={rawOpacity}
+                              dot={{
+                                r: isFocused ? 4 : 3,
+                                fill: line.color,
+                                stroke: line.color,
+                                strokeWidth: isFocused ? 2 : 1,
+                              }}
+                              activeDot={{ r: 6, strokeWidth: 2 }}
+                            />
+                          )
+                        })}
+                        {isMovingAverageVisible ? visibleTrendSeries.map((line) => {
+                          const isFocused = focusedTrendSeries === null || focusedTrendSeries.key === line.key
+
+                          return (
+                            <Line
+                              key={`${line.key}-moving-average`}
+                              type="monotone"
+                              data={trendSeriesChartPoints[line.key] ?? []}
+                              dataKey="movingAverage"
+                              name={`${line.label} 5er-Trend`}
+                              stroke={line.color}
+                              strokeWidth={isFocused ? 4 : 2.5}
+                              opacity={focusedTrendSeries === null ? 0.9 : isFocused ? 1 : 0.16}
+                              dot={false}
+                              activeDot={{ r: 5, strokeWidth: 2 }}
+                              connectNulls={false}
+                              legendType="none"
+                            />
+                          )
+                        }) : null}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 )}
 
-                {renderDifficultyFilterControls()}
+                {renderTrendFocusControls()}
 
                 <div className="stats-visual-line-legend">
                   <span>{completionHistory.length} Laeufe gesamt</span>
                   <span>{visibleTrendSeries.length} von {trendSeriesOptions.length} Stufen sichtbar</span>
-                  <span>{focusedTrendSeries ? `Fokus: ${focusedTrendSeries.label}` : 'Alle sichtbaren Stufen im Vergleich'}</span>
+                  <span>{isMovingAverageVisible ? 'Rohlaeufe als Punkte, 5er-Trend als Linie' : 'Rohlaeufe mit geraden Verbindungen'}</span>
+                  <span>{focusedTrendSeries ? `Fokus: ${focusedTrendSeries.label}` : 'Alle sichtbaren Stufen gleichwertig'}</span>
                 </div>
               </article>
             </>
