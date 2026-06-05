@@ -272,7 +272,7 @@ export default function UploadStatsDifficultyTable({
           <thead>
             <tr>
               <th scope="col" aria-sort={sortKey === 'difficulty' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('difficulty')} onKeyDown={handleSortButtonKeyDown}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach Schwierigkeitsstufe sortieren." data-app-tooltip-position="top" onClick={() => handleSort('difficulty')} onKeyDown={handleSortButtonKeyDown}>
                   {renderHeaderLabel('Stufe')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('difficulty', sortKey, sortDirection)}
@@ -280,7 +280,7 @@ export default function UploadStatsDifficultyTable({
                 </AnimatedButton>
               </th>
               <th scope="col" aria-sort={sortKey === 'solveCount' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('solveCount')}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('solveCount')} onKeyDown={handleSortButtonKeyDown}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach Anzahl der Siege sortieren." data-app-tooltip-position="top" onClick={() => handleSort('solveCount')} onKeyDown={handleSortButtonKeyDown}>
                   {renderHeaderLabel('Siege')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('solveCount', sortKey, sortDirection)}
@@ -289,7 +289,7 @@ export default function UploadStatsDifficultyTable({
                 {renderColumnHelpBadge('solveCount')}
               </th>
               <th scope="col" aria-sort={sortKey === 'bestTime' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('bestTime')}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" title="Schnellster Sieg dieser Stufe" onClick={() => handleSort('bestTime')} onKeyDown={handleSortButtonKeyDown}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach schnellstem Sieg dieser Stufe sortieren." data-app-tooltip-position="top" onClick={() => handleSort('bestTime')} onKeyDown={handleSortButtonKeyDown}>
                   {renderHeaderLabel('Bestzeit')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('bestTime', sortKey, sortDirection)}
@@ -298,7 +298,7 @@ export default function UploadStatsDifficultyTable({
                 {renderColumnHelpBadge('bestTime')}
               </th>
               <th scope="col" aria-sort={sortKey === 'bestMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('bestMoves')}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" title="Wenigste Netto-Zuege dieser Stufe" onClick={() => handleSort('bestMoves')} onKeyDown={handleSortButtonKeyDown}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach wenigsten Netto-Zuegen sortieren." data-app-tooltip-position="top" onClick={() => handleSort('bestMoves')} onKeyDown={handleSortButtonKeyDown}>
                   {renderHeaderLabel('Wenigste Zuege')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('bestMoves', sortKey, sortDirection)}
@@ -307,7 +307,7 @@ export default function UploadStatsDifficultyTable({
                 {renderColumnHelpBadge('bestMoves')}
               </th>
               <th scope="col" aria-sort={sortKey === 'medianTime' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('medianTime')}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" title="Typische Zeit dieser Stufe" onClick={() => handleSort('medianTime')} onKeyDown={handleSortButtonKeyDown}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach Median-Zeit je Schwierigkeit sortieren." data-app-tooltip-position="top" onClick={() => handleSort('medianTime')} onKeyDown={handleSortButtonKeyDown}>
                   {renderHeaderLabel('Medianzeit')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('medianTime', sortKey, sortDirection)}
@@ -316,7 +316,7 @@ export default function UploadStatsDifficultyTable({
                 {renderColumnHelpBadge('medianTime')}
               </th>
               <th scope="col" aria-sort={sortKey === 'medianMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('medianMoves')}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" title="Typische Netto-Zuege dieser Stufe" onClick={() => handleSort('medianMoves')} onKeyDown={handleSortButtonKeyDown}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach Median der Netto-Zuege sortieren." data-app-tooltip-position="top" onClick={() => handleSort('medianMoves')} onKeyDown={handleSortButtonKeyDown}>
                   {renderHeaderLabel('Median-Zuege')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('medianMoves', sortKey, sortDirection)}
@@ -325,7 +325,7 @@ export default function UploadStatsDifficultyTable({
                 {renderColumnHelpBadge('medianMoves')}
               </th>
               <th scope="col" aria-sort={sortKey === 'averageExtraMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('averageExtraMoves')}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" title="Korrekturen (Undos): durchschnittliche Differenz zwischen Gesamtaktionen und Netto-Zuegen" onClick={() => handleSort('averageExtraMoves')} onKeyDown={handleSortButtonKeyDown}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach durchschnittlichen Korrekturen sortieren." data-app-tooltip-position="top" onClick={() => handleSort('averageExtraMoves')} onKeyDown={handleSortButtonKeyDown}>
                   {renderHeaderLabel('Korrekturen')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('averageExtraMoves', sortKey, sortDirection)}
@@ -334,7 +334,7 @@ export default function UploadStatsDifficultyTable({
                 {renderColumnHelpBadge('averageExtraMoves')}
               </th>
               <th scope="col" aria-sort={sortKey === 'lastCompletedAt' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('lastCompletedAt')}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" onClick={() => handleSort('lastCompletedAt')} onKeyDown={handleSortButtonKeyDown}>
+                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach letztem Sieg sortieren." data-app-tooltip-position="top" onClick={() => handleSort('lastCompletedAt')} onKeyDown={handleSortButtonKeyDown}>
                   {renderHeaderLabel('Letzter Sieg')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('lastCompletedAt', sortKey, sortDirection)}

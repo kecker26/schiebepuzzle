@@ -54,7 +54,12 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
           className="saved-game-preview"
         />
         {activePalette ? (
-          <span className="image-card-palette saved-game-palette" aria-hidden="true">
+          <span
+            className="image-card-palette saved-game-palette"
+            aria-hidden="true"
+            data-app-tooltip={`Lokale Bildstimmung: ${activePalette.mood}.`}
+            data-app-tooltip-position="top"
+          >
             <span className="image-card-palette-swatch image-card-palette-swatch-primary" />
             <span className="image-card-palette-swatch image-card-palette-swatch-accent" />
             <span className="image-card-palette-swatch image-card-palette-swatch-glow" />
@@ -89,6 +94,8 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
           onClick={handleLoadClick}
           onKeyDown={onActionKeyDown}
           disabled={isBusy}
+          data-app-tooltip="Diesen gespeicherten Zwischenstand laden und weiterspielen."
+          data-app-tooltip-position="top"
         >
           <UploadScreenIcon name="playCircle" className="saved-game-action-icon" />
           <span>{isLoading ? 'Lade ...' : 'Weiterspielen'}</span>
@@ -101,6 +108,8 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
           onClick={handleDeleteClick}
           onKeyDown={onActionKeyDown}
           disabled={isBusy}
+          data-app-tooltip="Spielstand dauerhaft aus der lokalen Liste loeschen."
+          data-app-tooltip-position="top"
         >
           <UploadScreenIcon name="trash" className="saved-game-action-icon" />
           <span>{isDeleting ? 'Loesche ...' : 'Loeschen'}</span>

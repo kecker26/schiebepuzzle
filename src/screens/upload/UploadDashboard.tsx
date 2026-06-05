@@ -16,6 +16,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { Info } from 'lucide-react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import { isEditableTarget } from '../../app/keyboardShortcutUtils.ts'
 import UploadScreenIcon, { type UploadScreenIconName } from '../../components/UploadScreenIcon.tsx'
@@ -639,6 +640,8 @@ export default function UploadDashboard({
                     className="secondary workspace-window-reset"
                     onClick={onRequestStatsReset}
                     disabled={!hasRecordedStats || isLoadingStats || isResettingStats}
+                    data-app-tooltip="Gespeicherte Statistikdaten loeschen. Galerie und Spielstaende bleiben separat."
+                    data-app-tooltip-position="top"
                   >
                     {isResettingStats ? 'Loesche ...' : 'Statistik loeschen'}
                   </AnimatedButton>
@@ -648,6 +651,8 @@ export default function UploadDashboard({
                     className="secondary workspace-window-reset"
                     onClick={onRequestGalleryReset}
                     disabled={!hasGalleryEntries || isLoadingGallery || isResettingGallery}
+                    data-app-tooltip="Galerie geloester Motive loeschen. Spielstaende bleiben separat."
+                    data-app-tooltip-position="top"
                   >
                     {isResettingGallery ? 'Loesche ...' : 'Galerie loeschen'}
                   </AnimatedButton>
@@ -656,6 +661,8 @@ export default function UploadDashboard({
                   ref={closeButtonRef}
                   className="secondary workspace-window-close"
                   onClick={handleReturnToStart}
+                  data-app-tooltip="Zum Auswahl-Dashboard zurueckkehren."
+                  data-app-tooltip-position="top"
                 >
                   Auswahl
                 </AnimatedButton>
@@ -673,7 +680,13 @@ export default function UploadDashboard({
                 <motion.div className="workspace-window-main" variants={staggerItemVariants}>
                   <motion.div className="stats-compact-kpis" variants={staggerContainerVariants}>
                     {topStats.map((item) => (
-                      <motion.div key={item.label} className="stats-compact-kpi" variants={staggerItemVariants}>
+                      <motion.div
+                        key={item.id}
+                        className="stats-compact-kpi"
+                        variants={staggerItemVariants}
+                        tabIndex={0}
+                        data-app-tooltip={item.helpText}
+                      >
                         <span className="stats-compact-kpi-icon-shell" aria-hidden="true">
                           <UploadScreenIcon
                             name={getDashboardMetricIconName(item.label)}
@@ -681,7 +694,10 @@ export default function UploadDashboard({
                           />
                         </span>
                         <span className="stats-compact-kpi-copy">
-                          <span className="stats-compact-kpi-label">{item.label}</span>
+                          <span className="stats-compact-kpi-label-row">
+                            <span className="stats-compact-kpi-label">{item.label}</span>
+                            <Info className="stats-kpi-help-icon" aria-hidden="true" />
+                          </span>
                           <strong className="stats-compact-kpi-value">
                             <SpringNumber
                               value={item.springValue}

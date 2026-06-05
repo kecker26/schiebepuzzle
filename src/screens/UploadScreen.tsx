@@ -1111,27 +1111,35 @@ export default function UploadScreen({
 
   const topStats: DashboardMetric[] = [
     {
+      id: 'solved',
       label: 'Siege',
       value: isLoadingStats ? '...' : `${stats?.totalSolved ?? 0}`,
       detail: 'Abgeschlossene Runden',
+      helpText: 'Anzahl aller abgeschlossenen und gespeicherten Puzzle-Siege.',
       springValue: isLoadingStats ? null : stats?.totalSolved ?? 0,
     },
     {
+      id: 'clean',
       label: 'Sauber',
       value: isLoadingStats ? '...' : `${stats?.cleanSolvedCount ?? 0}`,
       detail: 'Ohne Hinweise oder Auto-Zuege, soweit erfasst',
+      helpText: 'Siege ohne Hinweise, Auto-Zuege oder Solver-Unterstuetzung. Aeltere Laeufe ohne Profil koennen nicht sauber eingeordnet werden.',
       springValue: isLoadingStats ? null : stats?.cleanSolvedCount ?? 0,
     },
     {
+      id: 'assisted',
       label: 'Unterstuetzt',
       value: isLoadingStats ? '...' : `${stats?.assistedSolvedCount ?? 0}`,
       detail: 'Mit Hinweisen oder Auto-Zuegen, soweit erfasst',
+      helpText: 'Siege mit mindestens einem Hinweis, Auto-Zug oder Solver-Schritt. Gezahlt werden nur Laeufe mit auswertbarem Profil.',
       springValue: isLoadingStats ? null : stats?.assistedSolvedCount ?? 0,
     },
     {
+      id: 'best-time',
       label: 'Bestzeit',
       value: isLoadingStats ? '...' : formatOptionalTime(stats?.bestTime ?? null),
       detail: 'Ueber alle Stufen',
+      helpText: 'Schnellste gespeicherte Loesungszeit ueber alle Puzzle-Stufen hinweg.',
       springValue: isLoadingStats ? null : stats?.bestTime ?? null,
       springFormatter: (value) => formatOptionalTime(Math.round(value)),
     },

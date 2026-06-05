@@ -181,6 +181,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
         onKeyDown={handleActionKeyDown}
         disabled={isDeleting}
         aria-label={`Details zu ${difficultyLabel} vom ${completedAtLabel} anzeigen`}
+        data-app-tooltip="Galerie-Details, Laufverlauf und Replay-Optionen oeffnen."
+        data-app-tooltip-align="start"
       >
         {representativeEntry.previewImage ? (
           <img
@@ -194,7 +196,12 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
           </div>
         )}
         {activePalette ? (
-          <span className="gallery-card-palette" aria-hidden="true">
+          <span
+            className="gallery-card-palette"
+            aria-hidden="true"
+            data-app-tooltip={`Lokale Bildstimmung: ${activePalette.mood}.`}
+            data-app-tooltip-position="top"
+          >
             <span className="gallery-card-palette-swatch gallery-card-palette-swatch-primary" />
             <span className="gallery-card-palette-swatch gallery-card-palette-swatch-accent" />
             <span className="gallery-card-palette-swatch gallery-card-palette-swatch-glow" />
@@ -222,7 +229,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                     onClick={() => onTagFilter?.(tag.label)}
                     onKeyDown={handleActionKeyDown}
                     disabled={isDeleting || !onTagFilter}
-                    title={`Galerie nach #${tag.label} filtern`}
+                    data-app-tooltip={`Galerie nach #${tag.label} filtern.`}
+                    data-app-tooltip-position="top"
                   >
                     #{tag.label}
                   </button>
@@ -249,7 +257,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                       onClick={() => onAddSuggestedCollection?.(collection.id, entry)}
                       onKeyDown={handleActionKeyDown}
                       disabled={isDeleting || isBusy || !onAddSuggestedCollection}
-                      title={suggestion.reason || `Vorschlag fuer ${collection.name}`}
+                      data-app-tooltip={suggestion.reason || `Dieses Motiv zur Sammlung ${collection.name} hinzufuegen.`}
+                      data-app-tooltip-position="top"
                     >
                       <UploadScreenIcon name="sparkles" className="gallery-card-action-icon" />
                       <span>{isBusy ? 'Sortiere ...' : collection.name}</span>
@@ -278,6 +287,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             onKeyDown={handleActionKeyDown}
             disabled={isDeleting}
             aria-label={`Spielen und Details zu ${difficultyLabel} vom ${completedAtLabel} oeffnen`}
+            data-app-tooltip="Details oeffnen, Lauf vergleichen oder Motiv erneut spielen."
+            data-app-tooltip-position="top"
           >
             <UploadScreenIcon name="playCircle" className="gallery-card-action-icon" />
             <span>Details</span>
@@ -292,6 +303,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             onKeyDown={handleActionKeyDown}
             disabled={isDeleting || !onCollectEntry}
             aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} zu einer Sammlung hinzufuegen`}
+            data-app-tooltip="Motiv zu einer bestehenden oder neuen Sammlung hinzufuegen."
+            data-app-tooltip-position="top"
           >
             <UploadScreenIcon name="folderHeart" className="gallery-card-action-icon" />
             <span>Sammeln</span>
@@ -306,6 +319,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             onKeyDown={handleActionKeyDown}
             disabled={isDeleting}
             aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} loeschen`}
+            data-app-tooltip="Galerie-Eintrag aus der lokalen Galerie loeschen."
+            data-app-tooltip-position="top"
           >
             <UploadScreenIcon name="trash" className="gallery-card-action-icon" />
             <span>{isDeleting ? 'Loesche ...' : 'Loeschen'}</span>

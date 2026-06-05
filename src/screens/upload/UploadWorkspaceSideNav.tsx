@@ -93,7 +93,12 @@ export default function UploadWorkspaceSideNav({
     >
       <div className="workspace-window-side-nav-header">
         <span className="saved-games-kicker">Navigation</span>
-        <span className="workspace-window-side-nav-shortcut" aria-label={`Shortcut ${focusShortcutLabel}`}>
+        <span
+          className="workspace-window-side-nav-shortcut"
+          aria-label={`Shortcut ${focusShortcutLabel}`}
+          data-app-tooltip="Fokus auf die Workspace-Navigation setzen."
+          data-app-tooltip-align="start"
+        >
           {focusShortcutLabel}
         </span>
       </div>
@@ -107,6 +112,8 @@ export default function UploadWorkspaceSideNav({
           data-workspace-window-nav={item.window}
           aria-current={activeWindow === item.window ? 'page' : undefined}
           onClick={() => onWindowChange(item.window)}
+          data-app-tooltip={item.isReturn ? 'Zum Auswahl-Dashboard zurueckkehren.' : `${item.label} oeffnen: ${item.copy}.`}
+          data-app-tooltip-position="right"
           reveal
           revealLevel="subtle"
         >

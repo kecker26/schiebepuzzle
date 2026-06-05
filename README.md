@@ -26,6 +26,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Vite 5 als Dev-Server und Build-Tool
 - HTML5 Canvas fuer Puzzle-Rendering
 - `motion` / `motion/react` fuer Animationen
+- `@react-spring/web` fuer federnde Zahlen- und Karten-Mikrointeraktionen
 - `recharts` fuer responsive Statistikdiagramme
 - `lucide-react` fuer konsistente React-SVG-Icons
 - Vitest, Testing Library und jsdom fuer Tests
@@ -157,7 +158,7 @@ Wichtige Einstiegspunkte:
 4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
 5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
 6. Neue Galerie-Motive optional automatisch mit KI taggen, fehlgeschlagene Taggings erneut versuchen, Tags bereinigen, einzelne Tags direkt oder mehrere Tags ueber kontextuell eingeblendete Chip-Filter und Tagverwaltung als UND-Filter anwenden, per Tag ein neues Online-Motiv suchen und direkt zuschneiden, aehnliche Galerie-Motive oeffnen und Tag-Treffer als Sammlung uebernehmen.
-7. Die aktive Bildstimmung faerbt die UI automatisch ein; im Darstellungsbereich kann die Bildpalette zentral fuer UI und bildspezifische Karten auf Standard zurueckgeschaltet werden.
+7. Die aktive Bildstimmung faerbt die UI automatisch ein; die lokale Farbanalyse nutzt eine dominante fast-average-color-Basis und kann im Darstellungsbereich zentral fuer UI und bildspezifische Karten auf Standard zurueckgeschaltet werden.
 8. Neue Spielstaende erhalten im Hintergrund einen KI-Titel; taucht dasselbe Motiv mehrfach auf, wird der vorhandene Motivtitel wiederverwendet.
 9. Spielstaende, Galerie, Sammlungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
 

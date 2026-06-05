@@ -35,7 +35,8 @@ export default function MusicStylePicker({ variant = 'grid', onSelect }: MusicSt
               audioService.setSelectedMusicStyle(style.id)
               onSelect?.()
             }}
-            title={`${style.label}: ${style.description}`}
+            data-app-tooltip={`${style.label}: ${style.description}`}
+            data-app-tooltip-align="start"
           >
             <span className="music-style-picker-label">{style.label}</span>
             {showDescriptions && <span className="music-style-picker-copy">{style.description}</span>}

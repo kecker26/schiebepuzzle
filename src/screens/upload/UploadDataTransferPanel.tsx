@@ -85,7 +85,14 @@ export default function UploadDataTransferPanel({
           level="subtle"
           onKeyDown={handleDirectionalFocusNavigation}
         >
-          <AnimatedButton onClick={onExportBackup} disabled={isExportingBackup || isImportingBackup} reveal revealLevel="subtle">
+          <AnimatedButton
+            onClick={onExportBackup}
+            disabled={isExportingBackup || isImportingBackup}
+            data-app-tooltip="Speichert Spielstaende, Statistik, Galerie und Sammlungen als lokale Backup-Datei."
+            data-app-tooltip-position="top"
+            reveal
+            revealLevel="subtle"
+          >
             {isExportingBackup ? 'Exportiere ...' : 'Backup exportieren'}
           </AnimatedButton>
           <AnimatedButton
@@ -93,6 +100,8 @@ export default function UploadDataTransferPanel({
             className="secondary"
             onClick={onOpenBackupImport}
             disabled={isImportingBackup || isExportingBackup || isLoadingBackupFiles}
+            data-app-tooltip="Lokales Backup auswaehlen. Import ersetzt den aktuellen Datenstand komplett."
+            data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"
           >

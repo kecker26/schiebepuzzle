@@ -2,6 +2,7 @@ import { type CSSProperties, type RefObject, useMemo, useState } from 'react'
 import {
   Activity,
   Download,
+  Info,
   LayoutDashboard,
   LineChart as LineChartIcon,
   Table2,
@@ -23,6 +24,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import CursorTooltipPortal from '../../components/CursorTooltipPortal.tsx'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedChipButton from '../../motion/AnimatedChipButton.tsx'
@@ -91,10 +93,11 @@ interface UploadStatsVisualReportProps {
 }
 
 interface KpiCard {
+  id: string
   label: string
   value: string
   detail: string
-  title?: string
+  helpText: string
   springValue?: number | null
   springFormatter?: (value: number) => string
 }
@@ -189,11 +192,12 @@ interface ChartTooltipProps {
 const VISUAL_STATS_VIEWS: Array<{
   id: VisualStatsView
   label: string
+  description: string
   icon: typeof LayoutDashboard
 }> = [
-  { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'history', label: 'Verlauf & Trends', icon: LineChartIcon },
-  { id: 'raw', label: 'Rohdaten & Details', icon: Table2 },
+  { id: 'overview', label: 'Dashboard', description: 'KPI-Karten, Laufarten und aktuelle Bestwerte anzeigen.', icon: LayoutDashboard },
+  { id: 'history', label: 'Verlauf & Trends', description: 'Zeit, Aktionen und Lauf-Score als Verlauf vergleichen.', icon: LineChartIcon },
+  { id: 'raw', label: 'Rohdaten & Details', description: 'Tabellen, Rohdatenansichten und Exporte oeffnen.', icon: Table2 },
 ]
 
 const TREND_METRICS: Array<{
@@ -942,46 +946,54 @@ function buildKpiCards(
 
   return [
     {
+      id: 'games',
       label: 'Spiele',
       value: `${stats?.totalSolved ?? 0}`,
       detail: `${stats?.activeDays ?? 0} aktive Tage`,
+      helpText: 'Anzahl aller abgeschlossenen und gespeicherten Puzzle-Siege. Aktive Tage zaehlen Kalendertage mit mindestens einem Sieg.',
       springValue: stats?.totalSolved ?? 0,
     },
     {
+      id: 'success-rate',
       label: 'Erfolgsrate',
       value: (stats?.totalSolved ?? 0) > 0 ? '100%' : '--',
       detail: 'Statistik erfasst abgeschlossene Siege.',
-      title: 'Aktuell werden nur geloeste Laeufe in den Stats gespeichert; deshalb ist die Erfolgsrate auf abgeschlossene Spiele bezogen.',
+      helpText: 'Aktuell werden nur geloeste Laeufe in den Stats gespeichert. Abgebrochene oder nicht gespeicherte Versuche zaehlen deshalb nicht in diese Quote.',
       springValue: (stats?.totalSolved ?? 0) > 0 ? 100 : null,
       springFormatter: (value) => `${Math.round(value)}%`,
     },
     {
+      id: 'best-time',
       label: 'Beste Zeit',
       value: formatOptionalDuration(stats?.bestTime ?? null),
       detail: latestCompletion ? `Zuletzt ${formatDifficultyLabel(latestCompletion.config)}` : 'Noch kein Lauf',
+      helpText: 'Schnellste gespeicherte Loesungszeit ueber alle Puzzle-Stufen hinweg. Der Zusatz zeigt die Stufe des letzten Siegs.',
       springValue: stats?.bestTime ?? null,
       springFormatter: (value) => formatOptionalDuration(Math.round(value)),
     },
     {
+      id: 'average-actions',
       label: 'Durchschn. Aktionen',
       value: averageActionMoves === null ? '--' : `${averageActionMoves}`,
       detail: `${formatPercent(assistanceSummary.profileCoverage)} Datenqualitaet`,
-      title: 'Durchschnitt der gespeicherten Gesamtaktionen in Laeufen mit vollem Laufprofil.',
+      helpText: 'Durchschnitt der gespeicherten Gesamtaktionen in Laeufen mit vollem Laufprofil. Aktionen enthalten auch Korrekturen und wiederholte Schritte.',
       springValue: averageActionMoves,
     },
     {
+      id: 'average-corrections',
       label: 'Durchschn. Korrekturen (Undos)',
       value: formatAverageCount(averageCorrections),
       detail: 'Aktionen minus Netto-Zuege.',
-      title: 'Korrekturen (Undos) sind die Differenz aus Gesamtaktionen und Netto-Zuegen. Das Tracking bleibt intern kompatibel.',
+      helpText: 'Durchschnittliche Differenz aus Gesamtaktionen und Netto-Zuegen. Sie zeigt, wie viele zusaetzliche Korrekturschritte ein Lauf typischerweise enthaelt.',
       springValue: averageCorrections,
       springFormatter: formatAverageCount,
     },
     {
+      id: 'clean-rate',
       label: 'Clean-Quote',
       value: formatPercent(assistanceSummary.cleanRate),
       detail: `${assistanceSummary.cleanSolvedCount} clean geloest`,
-      title: 'Anteil der abgeschlossenen Laeufe ohne Hinweise oder Auto-Zuege.',
+      helpText: 'Anteil der abgeschlossenen Laeufe ohne Hinweise, Auto-Zuege oder Solver-Unterstuetzung. Aeltere Laeufe ohne Detailprofil koennen als Legacy erscheinen.',
       springValue: assistanceSummary.cleanRate,
       springFormatter: (value) => formatPercent(Math.round(value)),
     },
@@ -1001,8 +1013,16 @@ function renderKpiCards(cards: KpiCard[]) {
   return (
     <div className="stats-visual-kpi-grid">
       {cards.map((card) => (
-        <article key={card.label} className="stats-report-card stats-visual-kpi-card" title={card.title}>
-          <span className="saved-games-kicker">{card.label}</span>
+        <article
+          key={card.id}
+          className="stats-report-card stats-visual-kpi-card"
+          tabIndex={0}
+          data-app-tooltip={card.helpText}
+        >
+          <span className="stats-kpi-label-row">
+            <span className="saved-games-kicker">{card.label}</span>
+            <Info className="stats-kpi-help-icon" aria-hidden="true" />
+          </span>
           <strong className="stats-report-card-value">
             <SpringNumber
               value={card.springValue}
@@ -1019,22 +1039,7 @@ function renderKpiCards(cards: KpiCard[]) {
   )
 }
 
-function renderScoreBreakdownHelpTooltip(datum: ScoreBreakdownDatum, tooltipId: string) {
-  return (
-    <span id={tooltipId} className="stats-recharts-tooltip stats-score-breakdown-help-tooltip" role="tooltip">
-      <strong>{datum.label}</strong>
-      <span>{datum.detail}</span>
-      <span className="stats-recharts-tooltip-list">
-        <span>
-          <i aria-hidden="true" style={{ backgroundColor: datum.color, color: datum.color }} />
-          Wert: {datum.displayValue}
-        </span>
-      </span>
-    </span>
-  )
-}
-
-function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string, tooltipIdPrefix: string) {
+function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string) {
   if (data.length === 0) {
     return (
       <div className="stats-empty-state dashboard-empty-state">
@@ -1049,8 +1054,6 @@ function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string, t
       <div className="stats-score-breakdown-layout">
         <div className="stats-score-breakdown-categories" aria-label="Score-Kategorien">
           {data.map((datum) => {
-            const tooltipId = `${tooltipIdPrefix}-${datum.key}-tooltip`
-
             return (
               <div key={datum.key} className="stats-score-breakdown-category">
                 <span>{datum.label}</span>
@@ -1058,10 +1061,9 @@ function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string, t
                   type="button"
                   className="stats-score-breakdown-help-badge"
                   aria-label={`${datum.label}: ${datum.detail}`}
-                  aria-describedby={tooltipId}
+                  data-app-tooltip={`${datum.label}: ${datum.detail} Wert: ${datum.displayValue}.`}
                 >
                   ?
-                  {renderScoreBreakdownHelpTooltip(datum, tooltipId)}
                 </button>
               </div>
             )
@@ -1113,16 +1115,18 @@ function renderFavoriteDifficultyTooltip({ active, payload }: ChartTooltipProps)
   if (!datum) return null
 
   return (
-    <div className="stats-recharts-tooltip">
-      <strong>{datum.label}</strong>
-      <span>{datum.solveCount} Siege</span>
-      <span>{datum.share}% Anteil an allen sichtbaren Siegen</span>
-      <div className="stats-recharts-tooltip-list">
-        <span>Medianzeit: {formatOptionalDuration(datum.medianTime)}</span>
-        <span>Median-Zuege: {formatOptionalMoves(datum.medianMoves)}</span>
+    <CursorTooltipPortal active>
+      <div className="stats-recharts-tooltip">
+        <strong>{datum.label}</strong>
+        <span>{datum.solveCount} Siege</span>
+        <span>{datum.share}% Anteil an allen sichtbaren Siegen</span>
+        <div className="stats-recharts-tooltip-list">
+          <span>Medianzeit: {formatOptionalDuration(datum.medianTime)}</span>
+          <span>Median-Zuege: {formatOptionalMoves(datum.medianMoves)}</span>
+        </div>
+        {datum.isFavorite ? <small>Aktuelle Lieblingsstufe nach Siegzahl.</small> : null}
       </div>
-      {datum.isFavorite ? <small>Aktuelle Lieblingsstufe nach Siegzahl.</small> : null}
-    </div>
+    </CursorTooltipPortal>
   )
 }
 
@@ -1181,22 +1185,24 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
   const metricValue = getTrendMetricValue(point, metric)
 
   return (
-    <div className="stats-recharts-tooltip">
-      <strong>{point.difficulty}</strong>
-      <span>{formatChartTooltipDate(point.date)}</span>
-      <span>{point.runType}</span>
-      <div className="stats-recharts-tooltip-list">
-        <span>
-          <i aria-hidden="true" style={{ backgroundColor: visiblePayload[0]?.color ?? 'currentColor' }} />
-          {metric === 'time' ? 'Zeit' : metric === 'quality' ? 'Lauf-Score' : 'Netto-Zuege'}: {formatter(metricValue)}
-        </span>
-        <span>Aktionen: {formatOptionalMoves(point.actions)}</span>
-        <span>Korrekturen: {formatExtraMoves(point.corrections)}</span>
+    <CursorTooltipPortal active>
+      <div className="stats-recharts-tooltip">
+        <strong>{point.difficulty}</strong>
+        <span>{formatChartTooltipDate(point.date)}</span>
+        <span>{point.runType}</span>
+        <div className="stats-recharts-tooltip-list">
+          <span>
+            <i aria-hidden="true" style={{ backgroundColor: visiblePayload[0]?.color ?? 'currentColor' }} />
+            {metric === 'time' ? 'Zeit' : metric === 'quality' ? 'Lauf-Score' : 'Netto-Zuege'}: {formatter(metricValue)}
+          </span>
+          <span>Aktionen: {formatOptionalMoves(point.actions)}</span>
+          <span>Korrekturen: {formatExtraMoves(point.corrections)}</span>
+        </div>
+        <small>
+          {point.hints ?? 0} Hinweise, {point.autoMoves ?? 0} Auto-Zuege
+        </small>
       </div>
-      <small>
-        {point.hints ?? 0} Hinweise, {point.autoMoves ?? 0} Auto-Zuege
-      </small>
-    </div>
+    </CursorTooltipPortal>
   )
 }
 
@@ -1208,11 +1214,13 @@ function renderDonutTooltip({ active, payload }: ChartTooltipProps, total: numbe
   const percentage = total > 0 ? Math.round((segment.value / total) * 100) : 0
 
   return (
-    <div className="stats-recharts-tooltip">
-      <strong>{segment.label}</strong>
-      <span>{segment.value} Laeufe</span>
-      <span>{percentage}% der erfassten Siege</span>
-    </div>
+    <CursorTooltipPortal active>
+      <div className="stats-recharts-tooltip">
+        <strong>{segment.label}</strong>
+        <span>{segment.value} Laeufe</span>
+        <span>{percentage}% der erfassten Siege</span>
+      </div>
+    </CursorTooltipPortal>
   )
 }
 
@@ -1356,6 +1364,8 @@ export default function UploadStatsVisualReport({
           onClick={() => setHiddenTrendDifficultyKeys([])}
           disabled={visibleTrendSeries.length === trendSeriesOptions.length}
           aria-pressed={visibleTrendSeries.length === trendSeriesOptions.length}
+          data-app-tooltip="Alle Schwierigkeitsreihen wieder anzeigen."
+          data-app-tooltip-position="top"
         >
           Alle
         </AnimatedChipButton>
@@ -1370,6 +1380,8 @@ export default function UploadStatsVisualReport({
               onClick={() => handleToggleTrendSeries(series.key)}
               disabled={isLastVisible}
               aria-pressed={isVisible}
+              data-app-tooltip={`${series.label} ${isVisible ? 'ausblenden' : 'anzeigen'}.`}
+              data-app-tooltip-position="top"
             >
               <i aria-hidden="true" />
               {series.label}
@@ -1466,6 +1478,8 @@ export default function UploadStatsVisualReport({
               aria-selected={isActive}
               aria-controls={`stats-visual-panel-${view.id}`}
               onClick={() => onActiveViewChange(view.id)}
+              data-app-tooltip={view.description}
+              data-app-tooltip-position="top"
             >
               <Icon className="stats-visual-tab-icon" aria-hidden="true" />
               <span>{view.label}</span>
@@ -1553,8 +1567,7 @@ export default function UploadStatsVisualReport({
                   <div className="stats-visual-card-visual">
                     {renderScoreBreakdownChart(
                       latestScoreBreakdownData,
-                      'Score-Aufschluesselung fuer den letzten Lauf',
-                      'latest-score-breakdown'
+                      'Score-Aufschluesselung fuer den letzten Lauf'
                     )}
                   </div>
                 </article>
@@ -1592,8 +1605,7 @@ export default function UploadStatsVisualReport({
                   <div className="stats-visual-card-visual">
                     {renderScoreBreakdownChart(
                       averageScoreBreakdownData,
-                      'Durchschnittliche Score-Aufschluesselung',
-                      'average-score-breakdown'
+                      'Durchschnittliche Score-Aufschluesselung'
                     )}
                   </div>
                 </article>
@@ -1610,7 +1622,8 @@ export default function UploadStatsVisualReport({
                       key={metric.id}
                       className={`dashboard-filter-chip${trendMetric === metric.id ? ' is-active' : ''}`}
                       onClick={() => setTrendMetric(metric.id)}
-                      title={metric.description}
+                      data-app-tooltip={metric.description}
+                      data-app-tooltip-position="top"
                     >
                       {metric.label}
                     </AnimatedChipButton>
@@ -1623,6 +1636,8 @@ export default function UploadStatsVisualReport({
                       key={range.id}
                       className={`dashboard-filter-chip${historyRange === range.id ? ' is-active' : ''}`}
                       onClick={() => setHistoryRange(range.id)}
+                      data-app-tooltip={`Trendzeitraum: ${range.label}.`}
+                      data-app-tooltip-position="top"
                     >
                       {range.label}
                     </AnimatedChipButton>
@@ -1738,6 +1753,8 @@ export default function UploadStatsVisualReport({
                         key={view.id}
                         className={`dashboard-filter-chip${rawStatsView === view.id ? ' is-active' : ''}`}
                         onClick={() => setRawStatsView(view.id)}
+                        data-app-tooltip={view.description}
+                        data-app-tooltip-position="top"
                       >
                         {view.label}
                       </AnimatedChipButton>
@@ -1757,7 +1774,8 @@ export default function UploadStatsVisualReport({
                       void handleExportActiveRawCsv()
                     }}
                     disabled={isSavingRawExport || (rawStatsView === 'history' ? filteredHistory.length === 0 : completionHistory.length === 0)}
-                    title="Speichert die aktuell gewaehlte Rohdatenansicht als CSV im Projektordner statistik-exporte"
+                    data-app-tooltip="Aktuelle Rohdatenansicht als CSV in statistik-exporte speichern."
+                    data-app-tooltip-position="top"
                   >
                     <Download size={16} aria-hidden="true" />
                     CSV speichern
@@ -1769,7 +1787,8 @@ export default function UploadStatsVisualReport({
                       void handleExportRawJson()
                     }}
                     disabled={isSavingRawExport || (!stats && completionHistory.length === 0)}
-                    title="Speichert alle Statistik-Rohdaten als JSON im Projektordner statistik-exporte"
+                    data-app-tooltip="Alle Statistik-Rohdaten als JSON in statistik-exporte speichern."
+                    data-app-tooltip-position="top"
                   >
                     JSON speichern
                   </AnimatedButton>

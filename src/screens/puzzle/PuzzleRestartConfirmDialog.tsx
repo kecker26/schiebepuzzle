@@ -99,6 +99,8 @@ export default function PuzzleRestartConfirmDialog({
             data-page-primary-focus="true"
             onClick={onCancel}
             onKeyDown={handleActionKeyDown}
+            data-app-tooltip="Neustart abbrechen und aktuelle Runde behalten."
+            data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"
           >
@@ -108,6 +110,8 @@ export default function PuzzleRestartConfirmDialog({
             onClick={onConfirm}
             onKeyDown={handleActionKeyDown}
             ref={confirmButtonRef}
+            data-app-tooltip="Aktuellen Fortschritt verwerfen und dasselbe Bild neu mischen."
+            data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"
           >

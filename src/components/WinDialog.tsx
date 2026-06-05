@@ -533,6 +533,8 @@ export default function WinDialog({
               onClick={onRetryStats}
               onKeyDown={handleActionKeyDown}
               data-win-dialog-action="true"
+              data-app-tooltip="Speichern der Siegstatistik erneut anstossen."
+              data-app-tooltip-position="top"
               reveal
               revealLevel="subtle"
             >
@@ -549,6 +551,8 @@ export default function WinDialog({
             data-page-primary-focus="true"
             data-win-dialog-action="true"
             className="win-primary-btn"
+            data-app-tooltip="Gleiches Motiv erneut spielen und im Zuschnitt anpassen."
+            data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"
           >
@@ -561,6 +565,8 @@ export default function WinDialog({
               className="win-secondary-btn"
               data-win-dialog-action="true"
               disabled={!nextDifficultyLabel}
+              data-app-tooltip={nextDifficultyLabel ? `Naechste Schwierigkeit starten: ${nextDifficultyLabel}.` : 'Keine hoehere Schwierigkeit verfuegbar.'}
+              data-app-tooltip-position="top"
               reveal
               revealLevel="subtle"
             >
@@ -571,6 +577,8 @@ export default function WinDialog({
               onKeyDown={handleActionKeyDown}
               className="win-secondary-btn"
               data-win-dialog-action="true"
+              data-app-tooltip="Zur Bildauswahl und den Datenbereichen wechseln."
+              data-app-tooltip-position="top"
               reveal
               revealLevel="subtle"
             >
@@ -581,6 +589,8 @@ export default function WinDialog({
               onKeyDown={handleActionKeyDown}
               className="win-secondary-btn"
               data-win-dialog-action="true"
+              data-app-tooltip="Zur Startseite der App wechseln."
+              data-app-tooltip-position="top"
               reveal
               revealLevel="subtle"
             >

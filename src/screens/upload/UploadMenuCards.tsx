@@ -118,7 +118,11 @@ export default function UploadMenuCards({
           Suchbegriffe
         </label>
         <span className="random-image-query-row">
-          <span className="random-image-query-field">
+          <span
+            className="random-image-query-field"
+            data-app-tooltip="Optionales Thema, Motiv oder Stil fuer die Online-Bildsuche."
+            data-app-tooltip-align="start"
+          >
             <input
               id="random-image-query-input"
               className="random-image-query-input"
@@ -134,6 +138,8 @@ export default function UploadMenuCards({
               aria-label="Suchbegriffe loeschen"
               onClick={handleRandomClear}
               disabled={!randomQuery.trim() || isFetchingRandom}
+              data-app-tooltip="Suchbegriffe leeren und wieder echten Zufall nutzen."
+              data-app-tooltip-align="end"
             >
               <UploadScreenIcon name="x" className="random-image-query-clear-icon" />
             </button>
@@ -145,13 +151,18 @@ export default function UploadMenuCards({
           type="submit"
           aria-label={isFetchingRandom ? 'Zufaelliges Bild wird geladen' : 'Zufaelliges Bild starten'}
           disabled={isFetchingRandom}
+          data-app-tooltip="Online-Motiv laden und direkt zum Zuschnitt wechseln."
+          data-app-tooltip-align="end"
         >
           <UploadScreenIcon name="sparkles" className="menu-card-arrow-icon" />
           Direkt starten
         </button>
       </form>
 
-      <form className="menu-card menu-card-prompt" onSubmit={handlePromptSubmit}>
+      <form
+        className="menu-card menu-card-prompt"
+        onSubmit={handlePromptSubmit}
+      >
         <span className="menu-card-glow" aria-hidden="true" />
         <span className="menu-card-eyebrow">KI-generiert</span>
         <span className="menu-card-icon" aria-hidden="true">
@@ -175,8 +186,16 @@ export default function UploadMenuCards({
           maxLength={1000}
           placeholder="z. B. leuchtende Berglandschaft bei Sonnenaufgang"
           disabled={isGeneratingPromptImage}
+          data-app-tooltip="Beschreibe Motiv, Stil, Licht und Stimmung. Enter erstellt das Bild."
+          data-app-tooltip-align="start"
         />
-        <button className="menu-card-arrow prompt-image-submit" type="submit" disabled={isGeneratingPromptImage}>
+        <button
+          className="menu-card-arrow prompt-image-submit"
+          type="submit"
+          disabled={isGeneratingPromptImage}
+          data-app-tooltip="Prompt-Bild erzeugen und danach im Zuschnitt weiterarbeiten."
+          data-app-tooltip-align="end"
+        >
           <UploadScreenIcon name="sparkles" className="menu-card-arrow-icon" />
           {isGeneratingPromptImage ? 'Erstelle...' : 'Bild erstellen'}
         </button>
