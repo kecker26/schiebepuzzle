@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { AnimatePresence } from 'motion/react'
 import CommandPalette, { type CommandPaletteCommand } from './components/CommandPalette.tsx'
+import AppTooltipLayer from './components/AppTooltipLayer.tsx'
 import GlobalHelpOverlay from './components/GlobalHelpOverlay.tsx'
 import RecoveryResumeDialog from './components/RecoveryResumeDialog.tsx'
 import StatusToast, { type StatusToastPayload } from './components/StatusToast.tsx'
@@ -2914,6 +2915,7 @@ export default function App() {
 
       <StatusToast toast={statusToast} onDismiss={handleDismissStatusToast} paletteStyle={globalOverlayPaletteStyle} />
 
+      <AppTooltipLayer />
       <AccessibilityAnnouncerHost />
     </div>
   )

@@ -48,9 +48,11 @@ export interface GallerySelectOption<T extends string> {
 }
 
 export interface DashboardMetric {
+  id: string
   label: string
   value: string
   detail: string
+  helpText: string
   springValue?: number | null
   springFormatter?: (value: number) => string
 }

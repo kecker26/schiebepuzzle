@@ -292,6 +292,8 @@ export default function UploadSavedGamesPanel({
               className="secondary saved-games-delete-all-button"
               onClick={onDeleteAllRequest}
               disabled={isBulkActionDisabled}
+              data-app-tooltip="Alle gespeicherten Zwischenstaende loeschen. Statistik und Galerie bleiben erhalten."
+              data-app-tooltip-position="top"
             >
               {isDeletingAllSavedGames ? 'Loesche alle ...' : 'Alle loeschen'}
             </button>

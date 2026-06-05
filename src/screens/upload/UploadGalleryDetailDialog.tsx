@@ -226,6 +226,8 @@ export default function UploadGalleryDetailDialog({
                 : 'Motiv neu spielen derzeit nicht verfuegbar'
             }
             data-page-primary-focus={canReplayMotif ? 'true' : undefined}
+            data-app-tooltip="Motiv neu in den Zuschnitt laden. Schwierigkeit und Ausschnitt koennen angepasst werden."
+            data-app-tooltip-align="start"
           >
             <span className="gallery-detail-motif-replay-kicker">Motiv</span>
             <strong>Neu spielen</strong>
@@ -287,7 +289,8 @@ export default function UploadGalleryDetailDialog({
                       void onRetryTagging?.(representativeEntry)
                     }}
                     disabled={isRetryingTagging || !onRetryTagging}
-                    title={aiTagging.error ?? undefined}
+                    data-app-tooltip={aiTagging.error || 'KI-Tagging fuer dieses Motiv erneut anfragen.'}
+                    data-app-tooltip-position="top"
                   >
                     {isRetryingTagging ? 'Prueft ...' : 'KI-Tagging erneut versuchen'}
                   </button>
@@ -304,7 +307,8 @@ export default function UploadGalleryDetailDialog({
                         {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-detail-ai' }}
                         onClick={() => onTagFilter?.(tag.label)}
                         disabled={!canUseInteractiveTags}
-                        title={`Galerie nach ${tag.label} filtern`}
+                        data-app-tooltip={`Galerie nach #${tag.label} filtern.`}
+                        data-app-tooltip-position="top"
                       >
                         #{tag.label}
                       </button>
@@ -314,8 +318,9 @@ export default function UploadGalleryDetailDialog({
                         {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-detail-ai' }}
                         onClick={() => onFetchRandomImage?.(tag.label)}
                         disabled={!canSearchTags}
-                        title={`Neues Online-Motiv zu ${tag.label} suchen`}
                         aria-label={`Neues Online-Motiv zu ${tag.label} suchen`}
+                        data-app-tooltip={`Online nach einem neuen Motiv zu #${tag.label} suchen.`}
+                        data-app-tooltip-position="top"
                       >
                         <Search aria-hidden="true" size={13} strokeWidth={2.4} />
                         <span className="gallery-detail-ai-tag-search-label">Online</span>
@@ -350,6 +355,8 @@ export default function UploadGalleryDetailDialog({
                       className="gallery-detail-similar-motif"
                       onClick={() => onOpenSimilarEntry?.(similarEntry)}
                       aria-label={`Aehnliches Motiv ${formatDifficultyLabel(similarRepresentativeEntry.config)} vom ${formatDate(similarRepresentativeEntry.completedAt)} anzeigen`}
+                      data-app-tooltip="Aehnliches Motiv aus der Galerie anzeigen."
+                      data-app-tooltip-position="top"
                     >
                       {similarImage ? (
                         <img
@@ -463,7 +470,27 @@ export default function UploadGalleryDetailDialog({
                         {timelineMarkers.length > 0 ? (
                           <div className="gallery-detail-timeline-markers" aria-label="Laufmarkierungen">
                             {timelineMarkers.map((marker) => (
-                              <span key={marker}>{marker}</span>
+                              <span
+                                key={marker}
+                                data-app-tooltip={
+                                  marker === 'Aktuell'
+                                    ? 'Dieser Lauf ist gerade im Detaildialog ausgewaehlt.'
+                                    : marker === 'Challenge-Start'
+                                      ? 'Der Lauf kann mit urspruenglichem Startzustand wiederholt werden.'
+                                      : marker === 'Bestzeit'
+                                        ? 'Schnellster gespeicherter Lauf fuer dieses Motiv.'
+                                        : marker === 'Bestweg'
+                                          ? 'Wenigste Netto-Zuege fuer dieses Motiv.'
+                                          : marker === 'Clean'
+                                            ? 'Bester Lauf ohne Hinweise, Auto-Zuege oder Solver.'
+                                            : marker === 'Archiv'
+                                              ? 'Bilddaten sind nicht mehr fuer Replay verfuegbar.'
+                                              : 'Dieser Lauf liegt auf einer anderen Schwierigkeit.'
+                                }
+                                data-app-tooltip-position="top"
+                              >
+                                {marker}
+                              </span>
                             ))}
                           </div>
                         ) : null}
@@ -471,7 +498,12 @@ export default function UploadGalleryDetailDialog({
                         {comparisonHints.length > 0 ? (
                           <div className="gallery-detail-timeline-insights" aria-label="Laufvergleich">
                             {comparisonHints.map((hint) => (
-                              <span key={hint.label} className={`is-${hint.tone}`}>
+                              <span
+                                key={hint.label}
+                                className={`is-${hint.tone}`}
+                                data-app-tooltip={hint.label}
+                                data-app-tooltip-position="top"
+                              >
                                 {hint.label}
                               </span>
                             ))}
@@ -501,6 +533,14 @@ export default function UploadGalleryDetailDialog({
                             onClick={() => onReplayEntry(timelineEntry, 'run')}
                             onKeyDown={handleActionKeyDown}
                             aria-label={`Lauf ${formatDifficultyLabel(timelineEntry.config)} vom ${formatDate(timelineEntry.completedAt)} spielen`}
+                            data-app-tooltip={
+                              canReplayTimelineEntry
+                                ? hasChallengeSetup
+                                  ? 'Diesen Lauf mit seinem gespeicherten Startzustand wiederholen.'
+                                  : (timelineEntry.cropTransform ? 'Gespeicherten Ausschnitt erneut spielen.' : 'Motiv neu laden und spielen.')
+                                : 'Archivierter Lauf ohne verfuegbare Bilddaten.'
+                            }
+                            data-app-tooltip-position="top"
                           >
                             {canReplayTimelineEntry
                               ? hasChallengeSetup
@@ -527,6 +567,8 @@ export default function UploadGalleryDetailDialog({
                 onClick={() => onCollectEntry(entry)}
                 onKeyDown={handleActionKeyDown}
                 aria-label={`Galerie-Bild ${formatDifficultyLabel(representativeEntry.config)} vom ${formatDate(representativeEntry.completedAt)} zu einer Sammlung hinzufuegen`}
+                data-app-tooltip="Dieses Motiv zu einer Sammlung hinzufuegen."
+                data-app-tooltip-position="top"
               >
                 Sammeln
               </button>
@@ -538,6 +580,8 @@ export default function UploadGalleryDetailDialog({
               data-page-primary-focus={canReplayMotif || onCollectEntry ? undefined : 'true'}
               onClick={onClose}
               onKeyDown={handleActionKeyDown}
+              data-app-tooltip="Galerie-Detaildialog schliessen."
+              data-app-tooltip-position="top"
             >
               Schliessen
             </button>

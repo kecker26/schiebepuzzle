@@ -52,12 +52,24 @@ export default function UploadStatsSection({
         onKeyDown={handleDirectionalFocusNavigation}
       >
         {onReloadView ? (
-          <AnimatedButton className="secondary" interaction="chip" onClick={onReloadView}>
+          <AnimatedButton
+            className="secondary"
+            interaction="chip"
+            onClick={onReloadView}
+            data-app-tooltip="Zum Anfang dieses Statistikbereichs springen."
+            data-app-tooltip-position="top"
+          >
             Zum Seitenanfang
           </AnimatedButton>
         ) : null}
         {onBackToStart ? (
-          <AnimatedButton className="secondary" interaction="chip" onClick={onBackToStart}>
+          <AnimatedButton
+            className="secondary"
+            interaction="chip"
+            onClick={onBackToStart}
+            data-app-tooltip="Zur Auswahluebersicht zurueckkehren."
+            data-app-tooltip-position="top"
+          >
             Zur Auswahl
           </AnimatedButton>
         ) : null}
@@ -283,6 +295,8 @@ export default function UploadStatsSection({
             aria-controls={bodyId}
             onClick={handleSummaryToggle}
             onKeyDown={handleSummaryKeyDown}
+            data-app-tooltip={`${title} ${isOpen ? 'einklappen' : 'aufklappen'}.`}
+            data-app-tooltip-align="start"
           >
             <span className="stats-report-section-summary-main">
               <span className="stats-report-section-heading">

@@ -132,6 +132,8 @@ export default function PuzzleRightPanel({
               className="puzzle-preview-image-shell"
               style={previewRatioStyle}
               onMouseLeave={() => onReferenceTileHover(null)}
+              data-app-tooltip="Mit der Maus ueber Bildbereiche fahren, um die passende Kachel auf dem Brett hervorzuheben."
+              data-app-tooltip-align="end"
             >
               <img src={image} alt="Zielbild Vorschau" className="puzzle-preview-image" />
               <div
@@ -200,7 +202,13 @@ export default function PuzzleRightPanel({
                   <strong>{contextHint.title}</strong>
                 </div>
                 <p>{contextHint.body}</p>
-                <div className="puzzle-preview-insight-reason" role="note" aria-label={`Warum diese Strategie? ${contextHint.reason}`}>
+                <div
+                  className="puzzle-preview-insight-reason"
+                  role="note"
+                  aria-label={`Warum diese Strategie? ${contextHint.reason}`}
+                  data-app-tooltip="Begruendet, warum dieser Fokus gerade nuetzlich ist."
+                  data-app-tooltip-align="end"
+                >
                   <span className="puzzle-preview-insight-reason-chip">Warum?</span>
                   <span className="puzzle-preview-insight-reason-copy">{contextHint.reason}</span>
                 </div>
@@ -225,6 +233,8 @@ export default function PuzzleRightPanel({
                 className={`puzzle-music-toggle${isMusicMuted ? '' : ' is-active'}`}
                 onClick={handleToggleMusic}
                 aria-label={isMusicMuted ? 'Musik einschalten' : 'Musik ausschalten'}
+                data-app-tooltip={isMusicMuted ? 'Musik fuer die Runde einschalten.' : 'Musik fuer die Runde ausschalten.'}
+                data-app-tooltip-align="end"
                 reveal
                 revealLevel="subtle"
               >
@@ -247,12 +257,14 @@ export default function PuzzleRightPanel({
                 </span>
                 {(musicAttribution.trackUrl ?? musicAttribution.providerUrl) && (
                   <a
-                    className="puzzle-music-track-provider"
-                    href={musicAttribution.trackUrl ?? musicAttribution.providerUrl ?? undefined}
-                    tabIndex={-1}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
+                  className="puzzle-music-track-provider"
+                  href={musicAttribution.trackUrl ?? musicAttribution.providerUrl ?? undefined}
+                  tabIndex={-1}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-app-tooltip="Quelle und Lizenzinformationen zum aktuell abgespielten Track oeffnen."
+                  data-app-tooltip-align="end"
+                >
                     via {musicAttribution.providerLabel ?? 'Quelle'}
                   </a>
                 )}

@@ -179,6 +179,8 @@ export default function RecoveryResumeDialog({
           className="secondary"
           onClick={onDismiss}
           onKeyDown={handleActionKeyDown}
+          data-app-tooltip="Dialog schliessen und spaeter erneut entscheiden."
+          data-app-tooltip-position="top"
         >
           Spaeter
         </AnimatedButton>
@@ -186,6 +188,8 @@ export default function RecoveryResumeDialog({
           className="secondary"
           onClick={onDecline}
           onKeyDown={handleActionKeyDown}
+          data-app-tooltip="Automatische Wiederherstellung verwerfen."
+          data-app-tooltip-position="top"
         >
           Nicht fortsetzen
         </AnimatedButton>
@@ -193,6 +197,8 @@ export default function RecoveryResumeDialog({
           onClick={onResume}
           onKeyDown={handleActionKeyDown}
           data-page-primary-focus="true"
+          data-app-tooltip="Gesicherten Spielstand laden und weiterspielen."
+          data-app-tooltip-position="top"
         >
           Spielstand fortsetzen
         </AnimatedButton>

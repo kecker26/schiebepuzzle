@@ -390,7 +390,11 @@ export default function UploadCollectionsPanel({
           title="Sammlung bearbeiten"
           description={
             <div className="collection-edit-form">
-              <label className="collection-dialog-field">
+              <label
+                className="collection-dialog-field"
+                data-app-tooltip="Anzeigename der Sammlung."
+                data-app-tooltip-align="start"
+              >
                 <span>Name</span>
                 <input
                   value={renamingCollection.name}
@@ -401,7 +405,11 @@ export default function UploadCollectionsPanel({
                   disabled={busyCollectionId === renamingCollection.collection.id}
                 />
               </label>
-              <label className="collection-dialog-field">
+              <label
+                className="collection-dialog-field"
+                data-app-tooltip="Optionale Notiz fuer diese Sammlung."
+                data-app-tooltip-align="start"
+              >
                 <span>Notiz</span>
                 <textarea
                   value={renamingCollection.description}
@@ -483,6 +491,8 @@ function CollectionListButton({
       data-image-palette-source={activePalette?.source}
       onClick={onSelect}
       aria-current={isSelected ? 'true' : undefined}
+      data-app-tooltip={`Sammlung ${entry.collection.name} oeffnen.`}
+      data-app-tooltip-align="start"
     >
       <span className="collection-list-preview" aria-hidden="true">
         {entry.previewEntry?.previewImage ? (
@@ -613,10 +623,22 @@ function CollectionDetail({
           {entry.collection.description ? <p>{entry.collection.description}</p> : null}
         </div>
         <div className="collection-detail-actions">
-          <AnimatedButton className="secondary" onClick={onRename} disabled={isBusy}>
+          <AnimatedButton
+            className="secondary"
+            onClick={onRename}
+            disabled={isBusy}
+            data-app-tooltip="Name und Beschreibung der Sammlung bearbeiten."
+            data-app-tooltip-position="top"
+          >
             Bearbeiten
           </AnimatedButton>
-          <AnimatedButton className="secondary" onClick={onDelete} disabled={isBusy}>
+          <AnimatedButton
+            className="secondary"
+            onClick={onDelete}
+            disabled={isBusy}
+            data-app-tooltip="Sammlung loeschen. Die Galerie-Motive bleiben erhalten."
+            data-app-tooltip-position="top"
+          >
             Loeschen
           </AnimatedButton>
         </div>
@@ -701,10 +723,12 @@ function CollectionImageCard({
         data-collection-image-id={galleryEntry.id}
         {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.collection-image-card' }}
         onClick={() => onOpenDetails(galleryEntry)}
-        onKeyDown={onActionKeyDown}
-        disabled={isBusy}
-        aria-label={`Details zu ${difficultyLabel} aus Sammlung anzeigen`}
-      >
+          onKeyDown={onActionKeyDown}
+          disabled={isBusy}
+          aria-label={`Details zu ${difficultyLabel} aus Sammlung anzeigen`}
+          data-app-tooltip="Galerie-Details zu diesem Motiv oeffnen."
+          data-app-tooltip-align="start"
+        >
         {galleryEntry.previewImage ? (
           <img
             src={galleryEntry.previewImage}
@@ -734,6 +758,8 @@ function CollectionImageCard({
           onClick={() => onOpenDetails(galleryEntry)}
           onKeyDown={onActionKeyDown}
           disabled={isBusy}
+          data-app-tooltip="Galerie-Details zu diesem Motiv oeffnen."
+          data-app-tooltip-position="top"
         >
           Details
         </AnimatedButton>
@@ -745,6 +771,8 @@ function CollectionImageCard({
           onClick={() => void onRemoveImage(collectionId, galleryEntry.id)}
           onKeyDown={onActionKeyDown}
           disabled={isBusy}
+          data-app-tooltip="Motiv aus dieser Sammlung entfernen. Der Galerie-Eintrag bleibt erhalten."
+          data-app-tooltip-position="top"
         >
           Entfernen
         </AnimatedButton>

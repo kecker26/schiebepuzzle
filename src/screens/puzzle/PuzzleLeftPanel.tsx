@@ -166,10 +166,11 @@ export default function PuzzleLeftPanel({
               className="puzzle-help-trigger"
               ref={actionButtonRefs.helpTrigger}
               onClick={onOpenHelp}
-              title="Hilfe und Tastenkuerzel anzeigen (F1 oder ?)"
               aria-label="Hilfe und Tastenkuerzel anzeigen"
               aria-keyshortcuts="F1"
               data-puzzle-allow-hotkeys="true"
+              data-app-tooltip="Kontextbezogene Hilfe und alle Puzzle-Shortcuts anzeigen."
+              data-app-tooltip-align="start"
             >
               ?
             </button>
@@ -202,7 +203,7 @@ export default function PuzzleLeftPanel({
         </div>
 
         <div className="puzzle-stats" aria-label="Aktuelle Spielstatistik">
-          <div className="puzzle-stat-card">
+            <div className="puzzle-stat-card">
             <div className="puzzle-stat-head">
               <span className="puzzle-stat-icon-shell" aria-hidden="true">
                 <PuzzleScreenIcon name="route" className="puzzle-stat-icon" />
@@ -212,9 +213,9 @@ export default function PuzzleLeftPanel({
             <strong className="puzzle-stat-value">
               <SpringNumber value={moveCount} />
             </strong>
-            <span className="puzzle-stat-detail">{optimalMoveSummary}</span>
+            <span className="puzzle-stat-detail" data-app-tooltip="Deine gespielten Aktionen im Vergleich zum berechneten Optimalweg." data-app-tooltip-align="start">{optimalMoveSummary}</span>
           </div>
-          <div className="puzzle-stat-card">
+          <div className="puzzle-stat-card" data-app-tooltip="Laufzeit dieser Runde. Sie wird beim Sieg in Statistik und Galerie gespeichert." data-app-tooltip-align="start">
             <div className="puzzle-stat-head">
               <span className="puzzle-stat-icon-shell" aria-hidden="true">
                 <PuzzleScreenIcon name="timer" className="puzzle-stat-icon" />
@@ -333,6 +334,8 @@ export default function PuzzleLeftPanel({
               aria-busy={isComputingSuggestion}
               aria-keyshortcuts="H"
               data-puzzle-allow-hotkeys="true"
+              data-app-tooltip="Berechnet und markiert eine hilfreiche naechste Kachel. Zaehlt als Hilfe im Laufprofil."
+              data-app-tooltip-align="start"
               reveal
               revealLevel="subtle"
             >
@@ -351,9 +354,10 @@ export default function PuzzleLeftPanel({
               onClick={onSuggestedMove}
               disabled={!canTriggerSuggestion}
               aria-busy={isComputingSuggestion}
-              title="Spielt den empfohlenen Zug oder berechnet ihn neu (Enter)"
               aria-keyshortcuts="Enter"
               data-puzzle-allow-hotkeys="true"
+              data-app-tooltip="Fuehrt den empfohlenen Zug aus. Wird als Auto-Zug in der Statistik erfasst."
+              data-app-tooltip-align="end"
               reveal
               revealLevel="subtle"
             >
@@ -380,13 +384,10 @@ export default function PuzzleLeftPanel({
             ref={actionButtonRefs.preview}
             className="secondary puzzle-tool-toggle"
             onClick={onTogglePreview}
-            title={
-              isPreviewVisible
-                ? 'Blendet die Bildvorschau aus (Leertaste)'
-                : 'Zeigt die Bildvorschau an (Leertaste)'
-            }
             aria-keyshortcuts="Space"
             data-puzzle-allow-hotkeys="true"
+            data-app-tooltip={isPreviewVisible ? 'Referenzbild rechts ausblenden.' : 'Referenzbild rechts anzeigen.'}
+            data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
           >
@@ -398,14 +399,11 @@ export default function PuzzleLeftPanel({
             className={'secondary puzzle-tool-overlay-toggle' + (isGhostPreviewVisible ? ' is-active' : '')}
             onClick={onToggleGhostPreview}
             disabled={!canUseBoardTools}
-            title={
-              isGhostPreviewVisible
-                ? 'Blendet die Geistervorschau auf dem Brett aus (G)'
-                : 'Zeigt die Geistervorschau auf dem Brett an (G)'
-            }
             aria-pressed={isGhostPreviewVisible}
             aria-keyshortcuts="G"
             data-puzzle-allow-hotkeys="true"
+            data-app-tooltip={isGhostPreviewVisible ? 'Geisterbild vom Brett ausblenden.' : 'Zielbild transparent ueber das Brett legen.'}
+            data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
           >
@@ -417,14 +415,11 @@ export default function PuzzleLeftPanel({
             className={'secondary puzzle-tool-overlay-toggle' + (isHeatmapOverlayVisible ? ' is-active' : '')}
             onClick={onToggleHeatmapOverlay}
             disabled={!canUseBoardTools}
-            title={
-              isHeatmapOverlayVisible
-                ? 'Blendet die Heatmap fuer falsch platzierte Kacheln aus (M)'
-                : 'Zeigt die Heatmap fuer falsch platzierte Kacheln an (M)'
-            }
             aria-pressed={isHeatmapOverlayVisible}
             aria-keyshortcuts="M"
             data-puzzle-allow-hotkeys="true"
+            data-app-tooltip={isHeatmapOverlayVisible ? 'Heatmap fuer falsch platzierte Kacheln ausblenden.' : 'Falsch platzierte Kacheln farblich hervorheben.'}
+            data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
           >
@@ -436,10 +431,11 @@ export default function PuzzleLeftPanel({
             className={'secondary puzzle-tool-overlay-toggle' + (areTileNumbersVisible ? ' is-active' : '')}
             onClick={onShowTileNumbers}
             disabled={!canUseBoardTools}
-            title="Zeigt 5 Sekunden lang die Kachelnummern (N)"
             aria-pressed={areTileNumbersVisible}
             aria-keyshortcuts="N"
             data-puzzle-allow-hotkeys="true"
+            data-app-tooltip="Kachelnummern kurz einblenden, um Positionen schneller abzugleichen."
+            data-app-tooltip-align="end"
             reveal
             revealLevel="subtle"
           >
@@ -451,9 +447,10 @@ export default function PuzzleLeftPanel({
             className="secondary puzzle-tool-secondary"
             onClick={onUndo}
             disabled={moveHistoryLength === 0 || isInteractionLocked}
-            title="Strg+Z"
             aria-keyshortcuts="Control+Z"
             data-puzzle-allow-hotkeys="true"
+            data-app-tooltip="Letzten Zug rueckgaengig machen."
+            data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
           >
@@ -465,9 +462,10 @@ export default function PuzzleLeftPanel({
             className="secondary puzzle-tool-secondary"
             onClick={onRedo}
             disabled={redoHistoryLength === 0 || isInteractionLocked}
-            title="Strg+Y"
             aria-keyshortcuts="Control+Y"
             data-puzzle-allow-hotkeys="true"
+            data-app-tooltip="Rueckgaengig gemachten Zug wiederholen."
+            data-app-tooltip-align="end"
             reveal
             revealLevel="subtle"
           >
@@ -485,6 +483,8 @@ export default function PuzzleLeftPanel({
             interaction="surface"
             level="medium"
             aria-live="polite"
+            data-app-tooltip={`${activeGhostPreviewMode.sliderLabel}: ${ghostPreviewWeight}% gegenueber Puzzle ${100 - ghostPreviewWeight}%.`}
+            data-app-tooltip-align="start"
           >
             <div className="puzzle-ghost-slider-header">
               <span className="puzzle-panel-kicker">
@@ -503,6 +503,8 @@ export default function PuzzleLeftPanel({
                   className={`puzzle-ghost-mode-button${ghostPreviewMode === option.value ? ' is-active' : ''}`}
                   onClick={() => onGhostPreviewModeChange(option.value)}
                   aria-pressed={ghostPreviewMode === option.value}
+                  data-app-tooltip={option.description}
+                  data-app-tooltip-position="top"
                 >
                   {option.label}
                 </button>
@@ -516,7 +518,6 @@ export default function PuzzleLeftPanel({
               value={ghostPreviewWeight}
               onChange={onGhostPreviewWeightChange}
               className="puzzle-ghost-slider-input"
-              title={`Regelt die Sichtbarkeit von ${activeGhostPreviewMode.sliderLabel.toLowerCase()} gegenueber dem Puzzle darunter`}
               aria-label={`Gewichtung von ${activeGhostPreviewMode.sliderLabel} in der Geisteransicht`}
             />
             <div className="puzzle-ghost-slider-scale" aria-hidden="true">
@@ -533,9 +534,10 @@ export default function PuzzleLeftPanel({
           ref={actionButtonRefs.quit}
           onClick={onQuit}
           className="puzzle-tool-primary quit-btn"
-          title="Bricht die Runde ab und kehrt zur Auswahl zurueck (Esc)"
           aria-keyshortcuts="Escape"
           data-puzzle-allow-hotkeys="true"
+          data-app-tooltip="Runde abbrechen und zur Auswahl zurueckkehren."
+          data-app-tooltip-position="top"
           reveal
           revealLevel="subtle"
         >

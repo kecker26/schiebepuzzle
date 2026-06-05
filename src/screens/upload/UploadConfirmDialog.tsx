@@ -114,6 +114,8 @@ export default function UploadConfirmDialog({
           onClick={onCancel}
           onKeyDown={handleActionKeyDown}
           disabled={isBusy}
+          data-app-tooltip="Aktion abbrechen und nichts aendern."
+          data-app-tooltip-position="top"
         >
           Abbrechen
         </AnimatedButton>
@@ -123,6 +125,8 @@ export default function UploadConfirmDialog({
           onKeyDown={handleActionKeyDown}
           disabled={isBusy}
           ref={confirmButtonRef}
+          data-app-tooltip={isBusy ? busyLabel : `${confirmLabel} bestaetigen.`}
+          data-app-tooltip-position="top"
         >
           {isBusy ? busyLabel : confirmLabel}
         </AnimatedButton>

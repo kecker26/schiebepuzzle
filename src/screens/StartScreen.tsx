@@ -301,6 +301,8 @@ export default function StartScreen({
                 aria-label={resumeActionLabel ?? undefined}
                 aria-describedby={resumeActionDetail ? resumeDetailId : undefined}
                 onClick={onResumeSession}
+                data-app-tooltip="Stellt die zuletzt automatisch gesicherte Runde wieder her."
+                data-app-tooltip-align="start"
                 reveal
                 revealLevel="medium"
               >
@@ -334,6 +336,8 @@ export default function StartScreen({
                   className="start-screen-button start-screen-button-primary"
                   data-page-primary-focus={hasResumeAction ? undefined : 'true'}
                   onClick={onStart}
+                  data-app-tooltip="Zur Bildauswahl wechseln und ein neues Puzzle vorbereiten."
+                  data-app-tooltip-align="start"
                   reveal
                   revealLevel="subtle"
                 >
@@ -343,6 +347,8 @@ export default function StartScreen({
                 <AnimatedButton
                   className="start-screen-button start-screen-button-secondary"
                   onClick={onQuit}
+                  data-app-tooltip="App schliessen oder zurueck zur Umgebung wechseln."
+                  data-app-tooltip-align="start"
                   reveal
                   revealLevel="subtle"
                 >
@@ -378,11 +384,11 @@ export default function StartScreen({
             <div className="start-screen-shortcuts" aria-label="Shortcuts">
               <div className="start-screen-shortcut">
                 <StartScreenIcon name="helpCircle" className="start-screen-shortcut-icon" />
-                <span><kbd>F1</kbd> Hilfe & Shortcuts</span>
+                <span data-app-tooltip="Oeffnet die kontextbezogene Hilfe." data-app-tooltip-align="start"><kbd>F1</kbd> Hilfe & Shortcuts</span>
               </div>
               <div className="start-screen-shortcut">
                 <StartScreenIcon name="keyboard" className="start-screen-shortcut-icon" />
-                <span><kbd>{COMMAND_PALETTE_SHORTCUT_LABEL}</kbd> Schnellaktionen</span>
+                <span data-app-tooltip="Oeffnet Direktaktionen fuer Navigation, Hilfe und Musik." data-app-tooltip-align="start"><kbd>{COMMAND_PALETTE_SHORTCUT_LABEL}</kbd> Schnellaktionen</span>
               </div>
             </div>
 

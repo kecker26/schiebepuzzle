@@ -340,6 +340,8 @@ export default function CompactContextMenu({ position, items, onClose, paletteSt
               }
             }}
             onClick={() => handleItemClick(item.onClick)}
+            data-app-tooltip={item.meta ? `${item.label} (${item.meta}).` : item.label}
+            data-app-tooltip-align="start"
           >
             <span className="puzzle-context-menu-content">
               <ContextMenuIcon name={item.icon} />

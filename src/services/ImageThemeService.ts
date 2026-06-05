@@ -1,3 +1,4 @@
+import { FastAverageColor, type FastAverageColorResult } from 'fast-average-color'
 import type { ImageThemeMoodId, ImageThemePalette, ImageThemePaletteSource } from '../types/index.ts'
 
 interface RgbColor {
@@ -34,6 +35,7 @@ interface MoodThemeDefinition {
 }
 
 const IMAGE_THEME_SAMPLE_SIZE = 56
+const fastAverageColor = new FastAverageColor()
 const MOOD_DEFINITIONS: Record<ImageThemeMoodId, MoodThemeDefinition> = {
   joyful: {
     label: 'Froehlich',
@@ -171,6 +173,27 @@ function rgbToCss({ r, g, b }: RgbColor): string {
 
 function rgbaToCss({ r, g, b }: RgbColor, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function mixRgbColors(baseColor: RgbColor, overlayColor: RgbColor, overlayWeight: number): RgbColor {
+  const weight = clamp(overlayWeight, 0, 1)
+  const baseWeight = 1 - weight
+
+  return {
+    r: Math.round(baseColor.r * baseWeight + overlayColor.r * weight),
+    g: Math.round(baseColor.g * baseWeight + overlayColor.g * weight),
+    b: Math.round(baseColor.b * baseWeight + overlayColor.b * weight),
+  }
+}
+
+function readFastAverageColorResult(result: FastAverageColorResult): RgbColor | null {
+  if (result.error || result.value[3] < 12) return null
+
+  return {
+    r: clamp(Math.round(result.value[0]), 0, 255),
+    g: clamp(Math.round(result.value[1]), 0, 255),
+    b: clamp(Math.round(result.value[2]), 0, 255),
+  }
 }
 
 function rgbToHsl({ r, g, b }: RgbColor): HslColor {
@@ -376,7 +399,40 @@ async function readImageColorStats(src: string): Promise<ImageColorStats | null>
     context.drawImage(image, 0, 0, IMAGE_THEME_SAMPLE_SIZE, IMAGE_THEME_SAMPLE_SIZE)
 
     const { data } = context.getImageData(0, 0, IMAGE_THEME_SAMPLE_SIZE, IMAGE_THEME_SAMPLE_SIZE)
-    return calculateImageColorStats(data)
+    const stats = calculateImageColorStats(data)
+    if (!stats) return null
+
+    const averageColor = readFastAverageColorResult(fastAverageColor.getColor(canvas, {
+      algorithm: 'sqrt',
+      defaultColor: [stats.average.r, stats.average.g, stats.average.b, 255],
+      mode: 'precision',
+      silent: true,
+    }))
+    const dominantColor = readFastAverageColorResult(fastAverageColor.getColor(canvas, {
+      algorithm: 'dominant',
+      defaultColor: [stats.average.r, stats.average.g, stats.average.b, 255],
+      dominantDivider: 24,
+      mode: 'precision',
+      silent: true,
+    }))
+
+    if (!averageColor && !dominantColor) return stats
+
+    const dominantSaturation = dominantColor ? rgbToHsl(dominantColor).s : 0
+    const dominantWeight = dominantColor
+      ? clamp(0.42 + dominantSaturation * 0.22 + stats.contrast * 0.32, 0.42, 0.68)
+      : 0
+    const refinedAverage = averageColor
+      ? mixRgbColors(stats.average, averageColor, 0.62)
+      : stats.average
+    const refinedBase = dominantColor
+      ? mixRgbColors(refinedAverage, dominantColor, dominantWeight)
+      : refinedAverage
+
+    return {
+      ...stats,
+      average: refinedBase,
+    }
   } catch {
     return null
   }
@@ -388,8 +444,8 @@ export async function extractLocalImageThemePalette(src: string): Promise<ImageT
 
   const mood = inferLocalMood(stats)
   return buildImageThemePalette(stats.average, mood, 'local-color', {
-    confidence: 0.7,
-    reason: 'Lokale Farbanalyse aus Helligkeit, Saettigung, Kontrast und Waermeanteil.',
+    confidence: 0.76,
+    reason: 'Lokale Farbanalyse mit dominanter fast-average-color-Basis, Helligkeit, Saettigung, Kontrast und Waermeanteil.',
   })
 }
 

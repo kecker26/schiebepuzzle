@@ -255,6 +255,8 @@ export default function CommandPalette({ commands, contextLabel, onClose, palett
               type="button"
               className="secondary command-palette-close"
               onClick={onClose}
+              data-app-tooltip="Command Palette schliessen."
+              data-app-tooltip-align="end"
               reveal
               revealLevel="subtle"
             >
@@ -263,7 +265,11 @@ export default function CommandPalette({ commands, contextLabel, onClose, palett
           </div>
         </div>
 
-        <div className="command-palette-search">
+        <div
+          className="command-palette-search"
+          data-app-tooltip="Aktionen filtern. Enter fuehrt den aktiven Treffer aus."
+          data-app-tooltip-align="start"
+        >
           <label className="visually-hidden" htmlFor={searchInputId}>
             Schnellaktionen durchsuchen
           </label>
@@ -338,6 +344,8 @@ export default function CommandPalette({ commands, contextLabel, onClose, palett
                           void command.onSelect()
                         }}
                         onKeyDown={(event) => handleCommandKeyDown(event, commandIndex)}
+                        data-app-tooltip={command.detail}
+                        data-app-tooltip-align="start"
                       >
                         <span className="command-palette-item-icon-shell" aria-hidden="true">
                           <GlobalUiIcon name={command.icon} className="command-palette-item-icon" />

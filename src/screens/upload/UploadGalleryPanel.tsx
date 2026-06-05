@@ -69,6 +69,13 @@ export function getGalleryTagKey(label: string): string {
   return label.trim().toLocaleLowerCase('de-DE')
 }
 
+function getRequestedGalleryTagFilters(label: string | null): string[] {
+  if (!label) return []
+
+  const tagKey = getGalleryTagKey(label)
+  return tagKey ? [tagKey] : []
+}
+
 function entryMatchesGalleryTag(entry: SolvedGalleryEntry, tagKey: string): boolean {
   return (entry.tags ?? []).some((tag) => getGalleryTagKey(tag.label) === tagKey)
 }
@@ -134,7 +141,7 @@ export default function UploadGalleryPanel({
 
   const [difficultyFilter, setDifficultyFilter] = useState<GalleryDifficultyFilter>('all')
   const [assistanceFilter, setAssistanceFilter] = useState<GalleryAssistanceFilter>('all')
-  const [tagFilters, setTagFilters] = useState<string[]>([])
+  const [tagFilters, setTagFilters] = useState<string[]>(() => getRequestedGalleryTagFilters(requestedTagFilterLabel))
   const [sortOption, setSortOption] = useState<GallerySortOption>('latest')
   const [selectedEntry, setSelectedEntry] = useState<GalleryDisplayEntry | null>(null)
   const [collectingEntry, setCollectingEntry] = useState<GalleryDisplayEntry | null>(null)
@@ -320,12 +327,12 @@ export default function UploadGalleryPanel({
   useEffect(() => {
     if (!requestedTagFilterLabel) return
 
-    const requestedTagFilterKey = getGalleryTagKey(requestedTagFilterLabel)
-    if (!requestedTagFilterKey) return
+    const requestedTagFilters = getRequestedGalleryTagFilters(requestedTagFilterLabel)
+    if (requestedTagFilters.length === 0) return
 
     pendingToolbarFocusRef.current = 'difficulty'
     setCurrentPage(1)
-    setTagFilters([requestedTagFilterKey])
+    setTagFilters(requestedTagFilters)
   }, [requestedTagFilterLabel])
 
   useEffect(() => {

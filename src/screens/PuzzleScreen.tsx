@@ -2239,6 +2239,8 @@ export default function PuzzleScreen({
                   <div
                     className={`puzzle-board-canvas-stack${isBoardIntroActive ? ' is-intro' : ''}${isCelebratingWin ? ' is-celebrating' : ''}`}
                     style={canvasDisplaySize ? { width: `${canvasDisplaySize.width}px`, height: `${canvasDisplaySize.height}px` } : undefined}
+                    data-app-tooltip="Brett fokussieren: Pfeile/WASD bewegen, H Hinweis, Enter Auto-Zug, Leertaste Vorschau."
+                    data-app-tooltip-align="start"
                   >
                     <canvas
                       ref={canvasRef}
@@ -2253,7 +2255,6 @@ export default function PuzzleScreen({
                       onMouseLeave={handleCanvasMouseLeave}
                       onKeyDown={handleCanvasKeyDown}
                       tabIndex={0}
-                      title="Pfeile oder WASD bewegen auf dem Brett. H zeigt einen Hinweis, Enter spielt den empfohlenen Zug, Leertaste schaltet die Vorschau um, G schaltet die Geistervorschau um, M schaltet die Heatmap um, N zeigt Nummern, B bringt den Fokus zurueck aufs Brett, R startet neu, Esc bricht ab"
                       aria-label="Puzzlebrett. Wenn das Brett fokussiert ist, bewegen Pfeiltasten oder WASD benachbarte Kacheln in das Leerfeld."
                       aria-describedby={`${boardDescriptionId} ${boardCaptionId}`}
                       aria-roledescription="Schiebepuzzle-Brett"

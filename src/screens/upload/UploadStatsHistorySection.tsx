@@ -632,6 +632,8 @@ export default function UploadStatsHistorySection({
                             className="stats-table-sort"
                             data-history-sort-key="completedAt"
                             interaction="chip"
+                            data-app-tooltip="Nach Abschlussdatum sortieren."
+                            data-app-tooltip-position="top"
                             onClick={() => handleSort('completedAt')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
@@ -649,6 +651,8 @@ export default function UploadStatsHistorySection({
                             className="stats-table-sort"
                             data-history-sort-key="difficulty"
                             interaction="chip"
+                            data-app-tooltip="Nach Schwierigkeitsstufe sortieren."
+                            data-app-tooltip-position="top"
                             onClick={() => handleSort('difficulty')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
@@ -667,6 +671,8 @@ export default function UploadStatsHistorySection({
                             className="stats-table-sort"
                             data-history-sort-key="time"
                             interaction="chip"
+                            data-app-tooltip="Nach Abschlusszeit sortieren."
+                            data-app-tooltip-position="top"
                             onClick={() => handleSort('time')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
@@ -686,6 +692,8 @@ export default function UploadStatsHistorySection({
                             className="stats-table-sort"
                             data-history-sort-key="moves"
                             interaction="chip"
+                            data-app-tooltip="Nach Netto-Zuegen sortieren."
+                            data-app-tooltip-position="top"
                             onClick={() => handleSort('moves')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
@@ -705,7 +713,8 @@ export default function UploadStatsHistorySection({
                             className="stats-table-sort"
                             data-history-sort-key="extraMoves"
                             interaction="chip"
-                            title="Korrekturen (Undos): Aktionen minus Netto-Zuege"
+                            data-app-tooltip="Nach Korrekturen sortieren: Aktionen minus Netto-Zuege."
+                            data-app-tooltip-position="top"
                             onClick={() => handleSort('extraMoves')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
@@ -725,6 +734,8 @@ export default function UploadStatsHistorySection({
                             className="stats-table-sort"
                             data-history-sort-key="assistanceMode"
                             interaction="chip"
+                            data-app-tooltip="Nach Laufart sortieren."
+                            data-app-tooltip-position="top"
                             onClick={() => handleSort('assistanceMode')}
                             onKeyDown={handleSortButtonKeyDown}
                           >

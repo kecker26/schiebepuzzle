@@ -722,6 +722,8 @@ export default function CropScreen({
                 className={`crop-replay-banner-button${isUsingOriginalCrop ? ' is-active' : ''}`}
                 onClick={handleUseReplayCrop}
                 disabled={!sourceImage}
+                data-app-tooltip="Originalen Zuschnitt dieses Galerie-Laufs wiederverwenden."
+                data-app-tooltip-align="start"
               >
                 Original
               </button>
@@ -730,6 +732,8 @@ export default function CropScreen({
                 className={`crop-replay-banner-button${!isUsingOriginalCrop ? ' is-active' : ''}`}
                 onClick={handleRecropReplayImage}
                 disabled={!sourceImage}
+                data-app-tooltip="Motiv neu zuschneiden und Schwierigkeit frei anpassen."
+                data-app-tooltip-align="end"
               >
                 Neu
               </button>
@@ -765,6 +769,8 @@ export default function CropScreen({
                   aria-checked={option.rows === config.rows && option.cols === config.cols}
                   data-page-primary-focus={option.rows === config.rows && option.cols === config.cols ? 'true' : undefined}
                   onClick={() => onConfigChange(option.rows, option.cols)}
+                  data-app-tooltip={`${option.label}: ${option.description}, ${option.tileCount} spielbare Kacheln.`}
+                  data-app-tooltip-align="start"
                 >
                   <span className="crop-difficulty-card-top">
                     <span className="crop-difficulty-card-label">{option.label}</span>
@@ -805,6 +811,8 @@ export default function CropScreen({
                 setCropMode(event.target.value === 'full')
               }}
               disabled={!sourceImage}
+              data-app-tooltip="Ausschnitt frei positionieren oder das komplette Bild als Puzzle verwenden."
+              data-app-tooltip-align="start"
             >
               <option value="crop">Ausschnitt (frei positionieren)</option>
               <option value="full">Komplettes Bild verwenden</option>
@@ -845,6 +853,10 @@ export default function CropScreen({
                   : 'Bildzuschnitt. B fokussiert diese Vorschau, Pfeiltasten verschieben den Ausschnitt, Plus und Minus zoomen, Q und E drehen, R setzt zurueck, Enter startet das Spiel.'
               }
               onKeyDown={handlePreviewKeyDown}
+              data-app-tooltip={useFullImage
+                ? 'Fokussieren mit B. Q/E drehen, R setzt zurueck, Enter startet.'
+                : 'Fokussieren mit B. Ziehen, Pfeile, Shift+Pfeile, Plus/Minus, Q/E und R steuern den Zuschnitt.'}
+              data-app-tooltip-align="start"
             >
               {useFullImage ? (
                 <div className="crop-full-image-stage">
@@ -909,7 +921,14 @@ export default function CropScreen({
               <span className="crop-load-error-icon" aria-hidden="true">⚠️</span>
               <strong>Das Bild konnte nicht geladen werden.</strong>
               <p>Bitte gehe zurueck und waehle ein anderes Bild.</p>
-              <AnimatedButton onClick={onBack} className="secondary" reveal revealLevel="subtle">
+              <AnimatedButton
+                onClick={onBack}
+                className="secondary"
+                data-app-tooltip="Zur Bildauswahl zurueckkehren."
+                data-app-tooltip-position="top"
+                reveal
+                revealLevel="subtle"
+              >
                 Zurueck
               </AnimatedButton>
             </div>
@@ -921,7 +940,12 @@ export default function CropScreen({
         {sourceImage && (
           <AnimatedReveal className="crop-image-toolbar" level="medium">
             {!useFullImage && (
-              <label htmlFor="crop-zoom" className="crop-toolbar-zoom">
+              <label
+                htmlFor="crop-zoom"
+                className="crop-toolbar-zoom"
+                data-app-tooltip={`Zoom im Zuschnitt: ${zoomPercent > 0 ? `+${zoomPercent}` : zoomPercent}%.`}
+                data-app-tooltip-position="top"
+              >
                 <span className="crop-toolbar-label">
                   <CropScreenIcon name="zoomIn" className="crop-toolbar-icon" />
                   <span>{zoomPercent > 0 ? `+${zoomPercent}%` : `${zoomPercent}%`}</span>
@@ -943,6 +967,8 @@ export default function CropScreen({
                 className="secondary crop-toolbar-btn"
                 onClick={() => handleRotateCrop(-90)}
                 disabled={!sourceImage}
+                data-app-tooltip="Bild oder Ausschnitt um 90 Grad gegen den Uhrzeigersinn drehen."
+                data-app-tooltip-position="top"
                 reveal
                 revealLevel="subtle"
               >
@@ -953,6 +979,8 @@ export default function CropScreen({
                 className="secondary crop-toolbar-btn"
                 onClick={() => handleRotateCrop(90)}
                 disabled={!sourceImage}
+                data-app-tooltip="Bild oder Ausschnitt um 90 Grad im Uhrzeigersinn drehen."
+                data-app-tooltip-position="top"
                 reveal
                 revealLevel="subtle"
               >
@@ -963,6 +991,8 @@ export default function CropScreen({
                 className="secondary crop-toolbar-btn"
                 onClick={handleResetCrop}
                 disabled={!sourceImage}
+                data-app-tooltip="Zoom, Position und Rotation auf den Ausgangszustand setzen."
+                data-app-tooltip-position="top"
                 reveal
                 revealLevel="subtle"
               >
@@ -980,6 +1010,8 @@ export default function CropScreen({
                 onClick={handleFetchRandomWithCurrentQuery}
                 className="secondary random-refresh-btn"
                 disabled={isFetchingRandom}
+                data-app-tooltip="Neues Online-Motiv mit den aktuellen Suchbegriffen laden."
+                data-app-tooltip-align="start"
                 reveal
                 revealLevel="subtle"
               >
@@ -989,7 +1021,12 @@ export default function CropScreen({
                 </span>
               </AnimatedButton>
               <form className="crop-random-search" onSubmit={handleRandomSearchSubmit}>
-                <label className="crop-random-search-label" htmlFor="crop-random-query-input">
+                <label
+                  className="crop-random-search-label"
+                  htmlFor="crop-random-query-input"
+                  data-app-tooltip="Suchbegriffe fuer das naechste Online-Motiv."
+                  data-app-tooltip-position="top"
+                >
                   Suchbegriffe
                 </label>
                 <span className="crop-random-search-row">
@@ -1002,6 +1039,8 @@ export default function CropScreen({
                       onChange={(event) => onRandomImageQueryChange?.(event.target.value)}
                       placeholder="Leer = echter Zufall"
                       disabled={Boolean(isFetchingRandom)}
+                      data-app-tooltip="Suchbegriffe fuer das naechste Online-Motiv."
+                      data-app-tooltip-position="top"
                     />
                     <button
                       type="button"
@@ -1009,6 +1048,8 @@ export default function CropScreen({
                       aria-label="Suchbegriffe loeschen"
                       onClick={() => onRandomImageQueryChange?.('')}
                       disabled={!trimmedRandomImageQuery || Boolean(isFetchingRandom)}
+                      data-app-tooltip="Suchbegriffe loeschen."
+                      data-app-tooltip-position="top"
                     >
                       <CropScreenIcon name="x" className="crop-random-search-icon" />
                     </button>
@@ -1018,6 +1059,8 @@ export default function CropScreen({
                     className="crop-random-search-submit"
                     aria-label="Anderes Bild mit diesen Suchbegriffen laden"
                     disabled={Boolean(isFetchingRandom)}
+                    data-app-tooltip="Neues Bild zu diesen Suchbegriffen suchen."
+                    data-app-tooltip-position="top"
                   >
                     <CropScreenIcon name="search" className="crop-random-search-icon" />
                   </button>
@@ -1025,10 +1068,24 @@ export default function CropScreen({
               </form>
             </div>
           )}
-          <AnimatedButton onClick={onBack} className="secondary" reveal revealLevel="subtle">
+          <AnimatedButton
+            onClick={onBack}
+            className="secondary"
+            data-app-tooltip="Zur Bildauswahl zurueckkehren."
+            data-app-tooltip-position="top"
+            reveal
+            revealLevel="subtle"
+          >
             Zurueck
           </AnimatedButton>
-          <AnimatedButton onClick={handleConfirm} disabled={!sourceImage || imageLoadError || isFetchingRandom} reveal revealLevel="subtle">
+          <AnimatedButton
+            onClick={handleConfirm}
+            disabled={!sourceImage || imageLoadError || isFetchingRandom}
+            data-app-tooltip="Aktuellen Zuschnitt uebernehmen und Puzzle starten."
+            data-app-tooltip-position="top"
+            reveal
+            revealLevel="subtle"
+          >
             <span className="crop-inline-button-content">
               <CropScreenIcon name="play" className="crop-inline-button-icon" />
               <span>Spiel starten</span>

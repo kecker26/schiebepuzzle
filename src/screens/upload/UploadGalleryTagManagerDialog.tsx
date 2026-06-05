@@ -1026,7 +1026,11 @@ export default function UploadGalleryTagManagerDialog({
       </div>
 
       <div className="gallery-tag-manager-search">
-        <label className="gallery-tag-manager-search-field">
+        <label
+          className="gallery-tag-manager-search-field"
+          data-app-tooltip="KI-Tags nach Name oder Kategorie durchsuchen."
+          data-app-tooltip-align="start"
+        >
           <input
             aria-label="Tags durchsuchen"
             value={searchQuery}
@@ -1041,6 +1045,8 @@ export default function UploadGalleryTagManagerDialog({
           onClick={() => setSortMode((current) => getNextSortMode(current))}
           disabled={isBusy || tagOptions.length === 0}
           aria-label={`Sortierung wechseln, aktuell ${SORT_MODE_LABELS[sortMode]}`}
+          data-app-tooltip={`Sortierung wechseln. Aktuell: ${SORT_MODE_LABELS[sortMode]}.`}
+          data-app-tooltip-position="top"
         >
           Sort: {SORT_MODE_LABELS[sortMode]}
         </button>
@@ -1065,6 +1071,8 @@ export default function UploadGalleryTagManagerDialog({
                     onClick={() => toggleCategory(group.category.id)}
                     aria-expanded={!isCollapsed}
                     disabled={isBusy}
+                    data-app-tooltip={`${group.category.label} ${isCollapsed ? 'aufklappen' : 'einklappen'}.`}
+                    data-app-tooltip-align="start"
                   >
                     <span className="gallery-tag-manager-category-title">
                       <CategoryIcon aria-hidden="true" size={17} strokeWidth={2.4} absoluteStrokeWidth />
@@ -1073,6 +1081,8 @@ export default function UploadGalleryTagManagerDialog({
                         <span
                           className="gallery-tag-manager-category-selected-count"
                           aria-label={`${selectedCount} ausgewaehlte Tags in ${group.category.label}`}
+                          data-app-tooltip={`${selectedCount} Tags in dieser Kategorie sind als Filter ausgewaehlt.`}
+                          data-app-tooltip-position="top"
                         >
                           {selectedCount}
                         </span>
@@ -1112,6 +1122,8 @@ export default function UploadGalleryTagManagerDialog({
                                 onChange={(event) => toggleTagFilter(option, event.target.checked)}
                                 disabled={isBusy}
                                 aria-label={`#${option.label} fuer Galerie-Filter auswaehlen`}
+                                data-app-tooltip={`#${option.label} ${isChecked ? 'aus Filter entfernen' : 'als Filter auswaehlen'}.`}
+                                data-app-tooltip-position="right"
                               />
                             </label>
                             <button
@@ -1120,6 +1132,8 @@ export default function UploadGalleryTagManagerDialog({
                               onClick={() => selectTag(option)}
                               disabled={isBusy}
                               aria-current={isActive ? 'true' : undefined}
+                              data-app-tooltip={`Details zu #${option.label} anzeigen.`}
+                              data-app-tooltip-align="start"
                             >
                               <span className="gallery-tag-manager-list-item-main">
                                 <strong>#{option.label}</strong>
@@ -1150,6 +1164,8 @@ export default function UploadGalleryTagManagerDialog({
             className="secondary gallery-tag-manager-back-button"
             onClick={() => setIsMobileDetailOpen(false)}
             disabled={isBusy}
+            data-app-tooltip="Auf kleinen Bildschirmen zur Tag-Liste zurueckkehren."
+            data-app-tooltip-position="top"
           >
             Zur Tag-Liste
           </button>
@@ -1172,7 +1188,11 @@ export default function UploadGalleryTagManagerDialog({
                 </span>
               </div>
 
-              <label className="gallery-tag-manager-detail-field">
+              <label
+                className="gallery-tag-manager-detail-field"
+                data-app-tooltip="Tag umbenennen oder mehrere Varianten auf denselben Namen setzen."
+                data-app-tooltip-align="start"
+              >
                 <span>Neuer Name</span>
                 <input
                   value={targetLabel}
@@ -1208,6 +1228,8 @@ export default function UploadGalleryTagManagerDialog({
                       void handleMergeSimilar()
                     }}
                     disabled={isBusy}
+                    data-app-tooltip="Aehnliche Tag-Varianten zu einem Tag zusammenfuehren."
+                    data-app-tooltip-position="top"
                   >
                     Zusammenfuehren
                   </button>
@@ -1226,6 +1248,8 @@ export default function UploadGalleryTagManagerDialog({
                         void handleRemove()
                       }}
                       disabled={isBusy}
+                      data-app-tooltip="Tag aus allen betroffenen Galerie-Eintraegen entfernen."
+                      data-app-tooltip-position="top"
                     >
                       Ja, entfernen
                     </button>
@@ -1234,6 +1258,8 @@ export default function UploadGalleryTagManagerDialog({
                       className="secondary"
                       onClick={() => setConfirmingRemove(false)}
                       disabled={isBusy}
+                      data-app-tooltip="Entfernen abbrechen."
+                      data-app-tooltip-position="top"
                     >
                       Abbrechen
                     </button>
@@ -1247,6 +1273,8 @@ export default function UploadGalleryTagManagerDialog({
                     void handleRename()
                   }}
                   disabled={isBusy || !canRename}
+                  data-app-tooltip="Ausgewaehlten Tag auf den neuen Namen umbenennen."
+                  data-app-tooltip-position="top"
                 >
                   {isBusy ? 'Speichert ...' : 'Umbenennen'}
                 </AnimatedButton>
@@ -1254,6 +1282,8 @@ export default function UploadGalleryTagManagerDialog({
                   className="secondary"
                   onClick={() => setConfirmingRemove(true)}
                   disabled={isBusy}
+                  data-app-tooltip="Entfernen bestaetigen lassen."
+                  data-app-tooltip-position="top"
                 >
                   Entfernen
                 </AnimatedButton>
@@ -1279,6 +1309,8 @@ export default function UploadGalleryTagManagerDialog({
             className="secondary"
             onClick={handleResetTagFilters}
             disabled={isBusy || checkedTagKeys.size === 0}
+            data-app-tooltip="Alle im Tag-Manager ausgewaehlten Tag-Filter entfernen."
+            data-app-tooltip-position="top"
           >
             Auswahl zuruecksetzen
           </AnimatedButton>
@@ -1286,11 +1318,19 @@ export default function UploadGalleryTagManagerDialog({
             className="gallery-tag-manager-apply-filter"
             onClick={handleApplyTagFilters}
             disabled={isBusy}
+            data-app-tooltip="Ausgewaehlte Tags als UND-Filter auf die Galerie anwenden."
+            data-app-tooltip-position="top"
           >
             Filter anwenden ({checkedTagKeys.size})
           </AnimatedButton>
         </div>
-        <AnimatedButton className="secondary" onClick={onClose} disabled={isBusy}>
+        <AnimatedButton
+          className="secondary"
+          onClick={onClose}
+          disabled={isBusy}
+          data-app-tooltip="Tag-Manager schliessen."
+          data-app-tooltip-position="top"
+        >
           Schliessen
         </AnimatedButton>
       </div>

@@ -1299,6 +1299,55 @@ describe('keyboard smoke tests', () => {
     })
   })
 
+  it('applies a requested gallery tag filter before the first gallery render', () => {
+    const galleryEntries: SolvedGalleryEntry[] = [
+      {
+        ...createSolvedGalleryEntry('1', '2026-04-11T12:00:00.000Z'),
+        previewImage: 'data:image/png;base64,preview-1',
+        sourceImage: 'data:image/png;base64,source-1',
+        tags: [{ label: 'Stadt', confidence: 0.91, source: 'gemini' }],
+      },
+      {
+        ...createSolvedGalleryEntry('2', '2026-04-11T11:00:00.000Z'),
+        previewImage: 'data:image/png;base64,preview-2',
+        sourceImage: 'data:image/png;base64,source-2',
+        tags: [{ label: 'Wald', confidence: 0.88, source: 'gemini' }],
+      },
+      {
+        ...createSolvedGalleryEntry('3', '2026-04-11T10:00:00.000Z'),
+        previewImage: 'data:image/png;base64,preview-3',
+        sourceImage: 'data:image/png;base64,source-3',
+        tags: [{ label: 'Wasser', confidence: 0.82, source: 'gemini' }],
+      },
+    ]
+
+    render(
+      <div className="workspace-window-shell is-gallery">
+        <button type="button" className="workspace-window-nav-button" aria-current="page">
+          Galerie
+        </button>
+        <UploadGalleryPanel
+          gallery={{
+            entries: galleryEntries,
+            totalEntries: galleryEntries.length,
+            lastCompletedAt: galleryEntries[0].completedAt,
+            lastUpdatedAt: galleryEntries[0].completedAt,
+          }}
+          isLoadingGallery={false}
+          requestedTagFilterLabel="Wald"
+          onReplayEntry={vi.fn()}
+          onDeleteEntries={vi.fn(() => Promise.resolve())}
+          titleId="gallery-panel-title"
+          panelRole="region"
+        />
+      </div>
+    )
+
+    expect(screen.getByText('1 von 3 Motiven sichtbar')).not.toBeNull()
+    expect(screen.queryByText('3 von 3 Motiven sichtbar')).toBeNull()
+    expect(screen.getByRole('button', { name: /Tag #Wald/ }).getAttribute('aria-pressed')).toBe('true')
+  })
+
   it('starts a tagged online motif from gallery details without filtering back to the gallery', async () => {
     const onFetchRandomImage = vi.fn()
     const galleryEntries = [

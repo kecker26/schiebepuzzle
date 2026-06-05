@@ -217,6 +217,8 @@ export default function UploadBackupBrowserDialog({
                   }}
                   onKeyDown={handleBackupActionKeyDown}
                   disabled={isLoading || deletingFileName !== null}
+                  data-app-tooltip="Backup-Datei aus dem lokalen Backup-Ordner loeschen."
+                  data-app-tooltip-position="top"
                 >
                   {deletingFileName === backup.fileName ? 'Loesche ...' : 'Loeschen'}
                 </button>
@@ -230,6 +232,8 @@ export default function UploadBackupBrowserDialog({
                   }}
                   onKeyDown={handleBackupActionKeyDown}
                   disabled={isLoading || deletingFileName !== null}
+                  data-app-tooltip="Dieses Backup fuer den Import auswaehlen."
+                  data-app-tooltip-position="top"
                 >
                   Auswaehlen
                 </button>
@@ -247,6 +251,8 @@ export default function UploadBackupBrowserDialog({
           data-page-primary-focus={!isLoading && backups.length === 0 ? 'true' : undefined}
           onClick={onClose}
           disabled={!canClose}
+          data-app-tooltip="Backup-Auswahl schliessen."
+          data-app-tooltip-position="top"
         >
           Schliessen
         </button>

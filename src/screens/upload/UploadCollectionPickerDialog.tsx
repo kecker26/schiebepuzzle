@@ -90,7 +90,11 @@ export default function UploadCollectionPickerDialog({
       </p>
 
       <form className="collection-dialog-form" onSubmit={handleCreateSubmit}>
-        <label className="collection-dialog-field">
+        <label
+          className="collection-dialog-field"
+          data-app-tooltip="Neue Sammlung anlegen und das Motiv direkt dort speichern."
+          data-app-tooltip-align="start"
+        >
           <span>Neue Sammlung</span>
           <input
             ref={initialFocusRef}
@@ -101,14 +105,23 @@ export default function UploadCollectionPickerDialog({
             disabled={isBusy}
           />
         </label>
-        <AnimatedButton type="submit" disabled={isBusy || !trimmedName}>
+        <AnimatedButton
+          type="submit"
+          disabled={isBusy || !trimmedName}
+          data-app-tooltip="Sammlung erstellen und ausgewaehltes Motiv hinzufuegen."
+          data-app-tooltip-position="top"
+        >
           {isBusy ? 'Speichere ...' : 'Neu anlegen'}
         </AnimatedButton>
       </form>
 
       {collections.length > 0 ? (
         <div className="collection-dialog-existing">
-          <label className="collection-dialog-field">
+          <label
+            className="collection-dialog-field"
+            data-app-tooltip="Bestehende Sammlung auswaehlen."
+            data-app-tooltip-align="start"
+          >
             <span>Bestehende Sammlung</span>
             <select
               value={selectedCollectionId}
@@ -122,7 +135,13 @@ export default function UploadCollectionPickerDialog({
               ))}
             </select>
           </label>
-          <AnimatedButton className="secondary" onClick={() => void handleAddToCollection()} disabled={isBusy}>
+          <AnimatedButton
+            className="secondary"
+            onClick={() => void handleAddToCollection()}
+            disabled={isBusy}
+            data-app-tooltip="Motiv zur ausgewaehlten bestehenden Sammlung hinzufuegen."
+            data-app-tooltip-position="top"
+          >
             {isBusy ? 'Fuege hinzu ...' : 'Auswahl hinzufuegen'}
           </AnimatedButton>
         </div>
@@ -131,7 +150,13 @@ export default function UploadCollectionPickerDialog({
       {localError ? <p className="collection-dialog-error" role="alert">{localError}</p> : null}
 
       <div className="delete-confirm-actions">
-        <AnimatedButton className="secondary" onClick={onClose} disabled={isBusy}>
+        <AnimatedButton
+          className="secondary"
+          onClick={onClose}
+          disabled={isBusy}
+          data-app-tooltip="Sammlungsdialog schliessen."
+          data-app-tooltip-position="top"
+        >
           Schliessen
         </AnimatedButton>
       </div>

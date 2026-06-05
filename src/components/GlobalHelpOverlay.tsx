@@ -191,7 +191,11 @@ export default function GlobalHelpOverlay({ helpContext, onClose, paletteStyle }
           Mit Pfeiltasten, Bild hoch, Bild runter, Pos1, Ende und Leertaste kannst du den Hilfeinhalt scrollen.
         </p>
         <div className="global-help-toolbar">
-          <div className="global-help-search-shell">
+          <div
+            className="global-help-search-shell"
+            data-app-tooltip="Hilfeeintraege nach Shortcut, Bereich oder Funktion filtern."
+            data-app-tooltip-align="start"
+          >
             <GlobalUiIcon name="helpCircle" className="global-help-search-icon" />
             <input
               ref={searchInputRef}
@@ -211,6 +215,8 @@ export default function GlobalHelpOverlay({ helpContext, onClose, paletteStyle }
             onChange={handleContextChange}
             aria-label="Hilfekontext wechseln"
             aria-describedby="global-help-context-hint"
+            data-app-tooltip="Hilfethema manuell wechseln."
+            data-app-tooltip-align="end"
           >
             {contextOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -246,6 +252,8 @@ export default function GlobalHelpOverlay({ helpContext, onClose, paletteStyle }
                   className="secondary global-help-close"
                   data-page-primary-focus="true"
                   onClick={onClose}
+                  data-app-tooltip="Hilfe schliessen."
+                  data-app-tooltip-align="end"
                   reveal
                   revealLevel="subtle"
                 >
@@ -265,6 +273,8 @@ export default function GlobalHelpOverlay({ helpContext, onClose, paletteStyle }
                       className="global-help-toc-link"
                       onClick={() => scrollToSection(section.title)}
                       aria-label={`${section.title} im Hilfeinhalt anzeigen`}
+                      data-app-tooltip={`${section.title} im Hilfeinhalt anzeigen.`}
+                      data-app-tooltip-position="top"
                     >
                       <GlobalUiIcon name={section.icon} className="global-help-toc-icon" />
                       {section.title}

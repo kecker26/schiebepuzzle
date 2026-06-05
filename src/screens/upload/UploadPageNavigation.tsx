@@ -64,6 +64,8 @@ export default function UploadPageNavigation({
               aria-current={page === activePage ? 'page' : undefined}
               onClick={(event) => handlePageClick(event, page)}
               disabled={isDisabled}
+              data-app-tooltip={`Zu Seite ${page} wechseln.`}
+              data-app-tooltip-position="top"
             >
               {page}
             </button>

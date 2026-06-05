@@ -544,8 +544,9 @@ export default function ThemeSwitcher({
                   setActivePopover(null)
                   onGoToStartScreen()
                 }}
-                title="Zur Startseite wechseln"
                 aria-label="Zur Startseite wechseln"
+                data-app-tooltip="Zur Startseite wechseln und aktuelle Ansicht verlassen."
+                data-app-tooltip-position="right"
               >
                 <Home className="theme-toggle-icon" />
                 <span className="theme-toggle-btn-label">Start</span>
@@ -556,9 +557,10 @@ export default function ThemeSwitcher({
                 type="button"
                 className="theme-toggle-btn theme-toggle-btn-style"
                 onClick={handleOpenCommandPalette}
-                title={`Command Palette oeffnen (${COMMAND_PALETTE_SHORTCUT_LABEL})`}
                 aria-label="Command Palette oeffnen"
                 aria-keyshortcuts={COMMAND_PALETTE_SHORTCUT_ACCESSIBLE_LABEL}
+                data-app-tooltip={`Schnellaktionen oeffnen (${COMMAND_PALETTE_SHORTCUT_LABEL}).`}
+                data-app-tooltip-position="right"
               >
                 <Command className="theme-toggle-icon" />
                 <span className="theme-toggle-btn-label">Palette</span>
@@ -570,9 +572,10 @@ export default function ThemeSwitcher({
                 type="button"
                 className="theme-toggle-btn theme-toggle-btn-style"
                 onClick={handleOpenHelp}
-                title="Hilfe und Tastaturbefehle anzeigen (F1 oder ?)"
                 aria-label="Hilfe und Tastaturbefehle anzeigen"
                 aria-keyshortcuts="F1"
+                data-app-tooltip="Kontextbezogene Hilfe und Tastaturbefehle anzeigen."
+                data-app-tooltip-position="right"
               >
                 <CircleHelp className="theme-toggle-icon" />
                 <span className="theme-toggle-btn-label">Hilfe</span>
@@ -590,7 +593,8 @@ export default function ThemeSwitcher({
                 role={saveStatus.kind === 'error' ? 'alert' : 'status'}
                 aria-live={saveStatus.kind === 'error' ? 'assertive' : 'polite'}
                 aria-atomic="true"
-                title={`${saveStatus.label}: ${saveStatus.detail}`}
+                data-app-tooltip={`${saveStatus.label}: ${saveStatus.detail}`}
+                data-app-tooltip-position="right"
               >
                 <span className="theme-switcher-save-status-indicator" aria-hidden="true" />
                 <span className="theme-switcher-save-status-copy">
@@ -606,11 +610,12 @@ export default function ThemeSwitcher({
             className={`theme-toggle-btn${isMusicPopoverOpen ? ' is-active' : ''}`}
             ref={musicTriggerRef}
             onClick={() => togglePopover('music')}
-            title={isMusicMuted ? 'Musik einschalten oder anpassen' : 'Musik ausschalten oder anpassen'}
             aria-label={isMusicMuted ? 'Musikeinstellungen oeffnen. Musik ist ausgeschaltet.' : 'Musikeinstellungen oeffnen. Musik ist eingeschaltet.'}
             aria-expanded={isMusicPopoverOpen}
             aria-haspopup="dialog"
             aria-controls={musicPopoverId}
+            data-app-tooltip={isMusicMuted ? 'Musik einschalten, Lautstaerke einstellen oder Quelle pruefen.' : 'Musik ausschalten, Lautstaerke einstellen oder Quelle pruefen.'}
+            data-app-tooltip-position="right"
           >
             {isMusicMuted ? <VolumeX className="theme-toggle-icon" /> : <Volume2 className="theme-toggle-icon" />}
             <span className="theme-toggle-btn-label">Musik</span>
@@ -621,11 +626,12 @@ export default function ThemeSwitcher({
             className={`theme-toggle-btn theme-toggle-btn-style${isStylePickerOpen ? ' is-active' : ''}`}
             ref={styleTriggerRef}
             onClick={() => togglePopover('style')}
-            title={`Musikstil waehlen (${selectedMusicStyleDefinition.label})`}
             aria-label={`Musikstil waehlen. Aktuell: ${selectedMusicStyleDefinition.label}`}
             aria-expanded={isStylePickerOpen}
             aria-haspopup="dialog"
             aria-controls={stylePopoverId}
+            data-app-tooltip={`Aktueller Musikstil: ${selectedMusicStyleDefinition.label}.`}
+            data-app-tooltip-position="right"
           >
             <Music2 className="theme-toggle-icon" />
             <span className="theme-toggle-btn-label">{selectedMusicStyleDefinition.shortLabel}</span>
@@ -635,13 +641,14 @@ export default function ThemeSwitcher({
             type="button"
             className={`theme-toggle-btn theme-toggle-btn-style theme-toggle-btn-emotion${emotionThemeEnabled ? ' is-active' : ''}`}
             onClick={toggleEmotionTheme}
-            title={emotionThemeEnabled
-              ? `Emotion-Theme deaktivieren. Aktuell: ${moodLabel} (${moodSourceLabel}).`
-              : 'Emotion-Theme aktivieren'}
             aria-label={emotionThemeEnabled
               ? `Emotion-Theme deaktivieren. Aktuelle Bildstimmung: ${moodLabel}. Quelle: ${moodSourceLabel}.`
               : 'Emotion-Theme aktivieren. Standard-Farbgebung ist aktiv.'}
             aria-pressed={emotionThemeEnabled}
+            data-app-tooltip={emotionThemeEnabled
+              ? `Bildstimmungs-Theme aktiv: ${moodLabel} (${moodSourceLabel}).`
+              : 'Bildstimmungs-Theme aktivieren, sobald ein Motiv analysiert wurde.'}
+            data-app-tooltip-position="right"
           >
             <Palette className="theme-toggle-icon" />
             <span className="theme-toggle-btn-label">{emotionThemeEnabled ? moodLabel : 'Standard'}</span>
@@ -650,8 +657,9 @@ export default function ThemeSwitcher({
             type="button"
             className="theme-toggle-btn"
             onClick={toggleMode}
-            title={mode === 'light' ? 'Dunkelmodus aktivieren' : 'Hellmodus aktivieren'}
             aria-label={mode === 'light' ? 'Dunkelmodus aktivieren' : 'Hellmodus aktivieren'}
+            data-app-tooltip={mode === 'light' ? 'Zur dunklen Darstellung wechseln.' : 'Zur hellen Darstellung wechseln.'}
+            data-app-tooltip-position="right"
           >
             {mode === 'light' ? <Moon className="theme-toggle-icon" /> : <Sun className="theme-toggle-icon" />}
             <span className="theme-toggle-btn-label">{mode === 'light' ? 'Dunkel' : 'Hell'}</span>
@@ -697,6 +705,8 @@ export default function ThemeSwitcher({
                       type="button"
                       className={`theme-switcher-settings-toggle${isMusicMuted ? '' : ' is-active'}`}
                       onClick={handleToggleMusic}
+                      data-app-tooltip={isMusicMuted ? 'Wiedergabe einschalten.' : 'Wiedergabe pausieren.'}
+                      data-app-tooltip-align="end"
                     >
                       <span aria-hidden="true">{isMusicMuted ? '\u{1F507}' : '\u{1F50A}'}</span>
                       <span>{isMusicMuted ? 'Aus' : 'An'}</span>
