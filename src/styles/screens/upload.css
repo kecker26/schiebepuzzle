@@ -1684,6 +1684,7 @@
   content: '';
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.05), transparent 34%),
     radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--primary-shadow-hover) 76%, var(--image-glow)) 0%, transparent 34%);
@@ -2810,6 +2811,7 @@
   content: '';
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.06), transparent 36%),
     radial-gradient(circle at 28% 0%, color-mix(in srgb, var(--image-radiance) 20%, transparent) 0%, transparent 32%);
@@ -6444,6 +6446,7 @@
   content: '';
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 18%),
     radial-gradient(circle at top right, color-mix(in srgb, var(--image-radiance) 18%, transparent), transparent 32%),
@@ -6932,8 +6935,46 @@
 }
 
 .stats-visual-kpi-card {
-  min-height: 132px;
+  min-height: 170px;
+  display: grid;
+  grid-template-rows: 40px 34px 44px;
+  align-content: center;
+  align-items: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 14px 16px;
+  text-align: center;
   overflow: visible;
+}
+
+.stats-visual-kpi-card > * {
+  align-self: center;
+  justify-self: stretch;
+  width: 100%;
+}
+
+.stats-visual-kpi-card .stats-kpi-label-row {
+  align-self: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.stats-visual-kpi-card .saved-games-kicker,
+.stats-visual-kpi-card .stats-report-card-value,
+.stats-visual-kpi-card .stats-report-card-copy {
+  align-self: center;
+  text-align: center;
+}
+
+.stats-visual-kpi-card .saved-games-kicker {
+  line-height: 1.25;
+}
+
+.stats-visual-kpi-card .stats-report-card-copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.45;
 }
 
 .stats-visual-dashboard-grid {
