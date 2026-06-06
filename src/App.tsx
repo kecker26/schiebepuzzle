@@ -41,6 +41,7 @@ import { useImageCollections } from './app/useImageCollections.ts'
 import { type AppContextMenuHandler } from './app/appContextMenu.ts'
 import { useButtonOnlyTabNavigation } from './app/useButtonOnlyTabNavigation.ts'
 import AnimatedScreen from './motion/AnimatedScreen.tsx'
+import BusyIndicator from './motion/BusyIndicator.tsx'
 import { useGlobalGlowTracking } from './motion/useGlowTracking.ts'
 import {
   createCompletionPreviewImage,
@@ -76,6 +77,7 @@ import {
   addSolvedGalleryEntry,
   analyzeSolvedGalleryEntry,
   deleteSolvedGalleryEntries,
+  editSolvedGalleryEntryTags,
   updateSolvedGalleryTags,
 } from './services/GalleryService.ts'
 import {
@@ -317,8 +319,9 @@ type StartResumeCandidate =
 
 function AppScreenFallback({ title, copy, className }: AppScreenFallbackProps & { className?: string }) {
   return (
-    <div className={`app-screen-fallback${className ? ` ${className}` : ''}`} role="status" aria-live="polite">
+    <div className={`app-screen-fallback${className ? ` ${className}` : ''}`} role="status" aria-live="polite" aria-busy="true">
       <div className="app-screen-fallback-card">
+        <BusyIndicator size="large" />
         <span className="app-screen-fallback-kicker">Ansicht wird geladen</span>
         <strong className="app-screen-fallback-title">{title}</strong>
         <p className="app-screen-fallback-copy">{copy}</p>
@@ -356,6 +359,7 @@ export default function App() {
   const [activeGlobalOverlay, setActiveGlobalOverlay] = useState<GlobalOverlayKind | null>(null)
   const [helpContext, setHelpContext] = useState<HelpContext>(() => getDefaultHelpContext('welcome'))
   const [statusToast, setStatusToast] = useState<StatusToastPayload | null>(null)
+  const [backgroundActivity, setBackgroundActivity] = useState({ galleryAi: 0, saveTitleAi: 0 })
   const [hasPendingSaveChanges, setHasPendingSaveChanges] = useState(false)
   const [isSavePersisting, setIsSavePersisting] = useState(false)
   const [lastSuccessfulSaveAt, setLastSuccessfulSaveAt] = useState<number | null>(null)
@@ -376,6 +380,13 @@ export default function App() {
   const wasHelpOpenRef = useRef(false)
   const uploadCommandRequestIdRef = useRef(0)
   const statusToastIdRef = useRef(0)
+
+  const changeBackgroundActivity = useCallback((kind: keyof typeof backgroundActivity, delta: number) => {
+    setBackgroundActivity((current) => ({
+      ...current,
+      [kind]: Math.max(0, current[kind] + delta),
+    }))
+  }, [])
 
   const {
     savedGames,
@@ -1053,6 +1064,7 @@ export default function App() {
 
         setSavedGames((prev) => upsertSummary(prev, created).slice(0, MAX_DISPLAYED_SAVED_GAMES))
         if (created.titleSource !== 'reused') {
+          changeBackgroundActivity('saveTitleAi', 1)
           void generateSavedGameTitleWithRetry(created.id)
             .then((titledSave) => {
               setSavedGames((prev) => (
@@ -1063,6 +1075,9 @@ export default function App() {
             })
             .catch(() => {
               // KI-Titel sind Komfort-Metadaten; Speichern und Spielen bleiben davon unabhaengig.
+            })
+            .finally(() => {
+              changeBackgroundActivity('saveTitleAi', -1)
             })
         }
 
@@ -1083,7 +1098,7 @@ export default function App() {
         }
       }
     },
-    [activeImageThemePalette, config, croppedImage, image, setSavedGames]
+    [activeImageThemePalette, changeBackgroundActivity, config, croppedImage, image, setSavedGames]
   )
 
   const persistSaveProgress = useCallback(
@@ -1465,6 +1480,21 @@ export default function App() {
     }
   }, [setGallery, setGalleryError])
 
+  const handleEditGalleryEntryTags = useCallback(async (
+    entryIds: string[],
+    add: string[] = [],
+    remove: string[] = []
+  ): Promise<void> => {
+    try {
+      const nextGallery = await editSolvedGalleryEntryTags({ entryIds, add, remove })
+      setGallery(nextGallery)
+      setGalleryError(null)
+    } catch (error) {
+      setGalleryError(`Manuelle Galerie-Tags konnten nicht aktualisiert werden: ${getErrorMessage(error)}`)
+      throw error
+    }
+  }, [setGallery, setGalleryError])
+
   const handleRetryGalleryTagging = useCallback(async (entryId: string): Promise<void> => {
     try {
       const result = await analyzeSolvedGalleryEntry(entryId)
@@ -1748,6 +1778,7 @@ export default function App() {
   )
 
   const scheduleGalleryAiAnalysis = useCallback((entryId: string, sessionId: number) => {
+    changeBackgroundActivity('galleryAi', 1)
     void analyzeSolvedGalleryEntry(entryId)
       .then((result) => {
         if (activeSessionRef.current !== sessionId) {
@@ -1766,7 +1797,10 @@ export default function App() {
 
         setGalleryError(`KI-Tags konnten nicht erstellt werden: ${getErrorMessage(error)}`)
       })
-  }, [refreshGallery, setGallery, setGalleryError])
+      .finally(() => {
+        changeBackgroundActivity('galleryAi', -1)
+      })
+  }, [changeBackgroundActivity, refreshGallery, setGallery, setGalleryError])
 
   const handleWin = useCallback(
     (stats: WinStats) => {
@@ -2748,6 +2782,7 @@ export default function App() {
                 onReplayGalleryEntry={handleReplayGalleryEntry}
                 onDeleteGalleryEntries={handleDeleteGalleryEntries}
                 onUpdateGalleryTags={handleUpdateGalleryTags}
+                onEditGalleryEntryTags={handleEditGalleryEntryTags}
                 onRetryGalleryTagging={handleRetryGalleryTagging}
                 onCreateImageCollection={handleCreateImageCollection}
                 onUpdateImageCollection={handleUpdateImageCollection}
@@ -2914,6 +2949,19 @@ export default function App() {
       </AnimatePresence>
 
       <StatusToast toast={statusToast} onDismiss={handleDismissStatusToast} paletteStyle={globalOverlayPaletteStyle} />
+
+      {(backgroundActivity.galleryAi > 0 || backgroundActivity.saveTitleAi > 0) ? (
+        <div className="app-background-activity" role="status" aria-live="polite" aria-busy="true">
+          <BusyIndicator />
+          <span>
+            {backgroundActivity.galleryAi > 0 && backgroundActivity.saveTitleAi > 0
+              ? 'KI-Tags und Spielstandstitel werden im Hintergrund erstellt.'
+              : backgroundActivity.galleryAi > 0
+                ? 'KI-Tags werden im Hintergrund erstellt.'
+                : 'Ein Spielstandstitel wird im Hintergrund erstellt.'}
+          </span>
+        </div>
+      ) : null}
 
       <AppTooltipLayer />
       <AccessibilityAnnouncerHost />

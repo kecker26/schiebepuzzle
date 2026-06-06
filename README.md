@@ -14,11 +14,12 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Autosave, kreative KI-Titel fuer neue Spielstaende, motivbasierte Titel-Wiederverwendung, maximal 30 aktive Spielstaende mit 5er-Seitennavigation, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
 - Sentiment-basiertes Bild-Theme: hochgeladene, generierte oder wiederverwendete Motive praegen standardmaessig die komplette UI-Farbwelt; Stimmung und Palette werden rein lokal aus Farbe, Helligkeit, Kontrast und Waerme berechnet und zentral im Menue ein- oder ausgeschaltet.
 - Statistik mit drei visuellen Hauptansichten fuer Dashboard, Verlauf & Trends sowie Rohdaten & Details, Einzellauf-Tabelle mit 25er-Seitennavigation; Recharts visualisiert Laufarten als Donut-Chart und interaktive Trends fuer Aktionen, Zeit und Qualitaet inklusive optionalem gleitendem 5er-Durchschnitt je Schwierigkeitsstufe, ruhiger Punktdarstellung der Rohlaeufe, fokussierbaren Schwierigkeitsreihen und kollisionsfrei zusammengefuehrten Bestwert-/Median-Referenzen, Rohdaten-Tabellen greifen dieselben Schwierigkeitsfarben auf, waehrend CSV-/JSON-Exporte direkt im Projektordner landen.
-- Galerie geloester Motive inklusive bildspezifischer Paletten fuer Galerie-, Spielstand-, Sammlungs- und Detailkarten, die dem zentralen Palette-Schalter folgen, Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, 9er-Seitennavigation, optionalem KI-Tagging, Retry fuer fehlgeschlagene Tags, klickbaren Tag-Filtern und kontextuellen Multi-Tag-Chips mit UND-Verknuepfung, Tag-Bildersuche fuer Online-Provider mit direktem Crop-Flow, aehnlichen Motiven nach Tag-Ueberschneidung und kategorisierter Tag-Verwaltung mit Mehrfachauswahl.
+- Galerie geloester Motive inklusive bildspezifischer Paletten fuer Galerie-, Spielstand-, Sammlungs- und Detailkarten, die dem zentralen Palette-Schalter folgen, Wiedereinstieg mit gespeicherter Stufe, gespeichertem Originalzuschnitt, Challenge-Startzustand fuer neue Loesungen und separatem Motiv-Neustart, 9er-Seitennavigation, optionalem KI-Tagging, Retry fuer fehlgeschlagene Tags, manuellen Tags im Detaildialog und als Tag-Manager-Batch, dauerhaft ausgeblendeten abgelehnten KI-Tags, gemeinsamer lokaler Tag-Taxonomie, ungeordneten unbekannten Tags, persistierten manuellen und KI-gelernten Kategoriezuordnungen sowie bestaetigungspflichtigen KI-Vorschlaegen fuer eigene Kategorien, klickbaren Tag-Filtern und kontextuellen Multi-Tag-Chips mit UND-Verknuepfung, Tag-Bildersuche fuer Online-Provider mit direktem Crop-Flow, aehnlichen Motiven nach Tag-Ueberschneidung und kategorisierter Tag-Verwaltung mit Mehrfachauswahl.
 - Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit 9er-Seitennavigation, KI-Sammlungsvorschlaegen und motivweit deduplizierten Sammlungen aus Tag-Treffern.
 - Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
 - Musik- und Sound-Unterstuetzung mit lokalen Fallback-Tracks.
 - Command Palette, globale Hilfe, Kontextmenues, Theme-Umschaltung und Motion-Animationen.
+- Konsistente animierte Wartezustaende fuer KI-, Netzwerk-, Speicher-, Import-, Export-, Solver- und Hintergrundaufgaben mit reduzierter Bewegung fuer entsprechende Systemeinstellungen.
 
 ## Technologie
 
@@ -113,6 +114,8 @@ Die Frontend-Services greifen ueber lokale API-Routen auf die Middleware zu:
 - `/api/stats`: Statistik laden, zuruecksetzen, Abschluesse aufzeichnen und Rohdaten-Exporte speichern.
 - `/api/gallery`: Galerie geloester Motive laden, erweitern und bereinigen.
 - `/api/gallery/:entryId/analyze`: Galerie-Motiv mit Gemini oder einem OpenAI-kompatiblen LLM taggen und Sammlungsvorschlaege speichern.
+- `/api/gallery/tags` und `/api/gallery/:entryId/tags`: Tags global bereinigen oder manuell fuer einzelne beziehungsweise mehrere Galerie-Eintraege hinzufuegen und entfernen.
+- `/api/gallery/tag-categories`, `/api/gallery/tag-categories/assignments` und `/api/gallery/tag-categories/classify`: Statische und eigene Tag-Kategorien laden, verwalten, manuelle Zuordnungen speichern und unbekannte Tags gebuendelt ueber den bestehenden LLM-Provider klassifizieren.
 - `/api/collections`: Bild-Sammlungen laden, erstellen, bearbeiten und mit Galerie-Motiven verknuepfen.
 - `/api/backup`: Daten exportieren, importieren und lokale Backup-Dateien verwalten.
 - `/api/clipboard`: Clipboard-Hilfen fuer lokale Bild- und Textablage.
@@ -157,10 +160,10 @@ Wichtige Einstiegspunkte:
 3. Motiv zuschneiden und Puzzle-Groesse waehlen; bei neuen Galerie-Wiedereinstiegen laesst sich der gespeicherte Startzustand direkt erneut herausfordern oder dasselbe Motiv komplett neu ueber den Crop-Flow starten, alte Eintraege fallen auf gespeicherten Ausschnitt mit neu gemischten Kacheln zurueck.
 4. Puzzle spielen, Hinweise nutzen oder Solver-Unterstuetzung anfordern.
 5. Nach dem Loesen Statistik, Bestwerte und Galerie aktualisieren lassen.
-6. Neue Galerie-Motive optional automatisch mit KI taggen, fehlgeschlagene Taggings erneut versuchen, Tags bereinigen, einzelne Tags direkt oder mehrere Tags ueber kontextuell eingeblendete Chip-Filter und Tagverwaltung als UND-Filter anwenden, per Tag ein neues Online-Motiv suchen und direkt zuschneiden, aehnliche Galerie-Motive oeffnen und Tag-Treffer als Sammlung uebernehmen.
+6. Neue Galerie-Motive optional automatisch mit KI taggen, fehlgeschlagene Taggings erneut versuchen, eigene Tags im Detail oder gesammelt im Tag-Manager ergaenzen, unpassende KI-Tags dauerhaft entfernen, Tags bereinigen, einzelne Tags direkt oder mehrere Tags ueber kontextuell eingeblendete Chip-Filter und Tagverwaltung als UND-Filter anwenden, per Tag ein neues Online-Motiv suchen und direkt zuschneiden, aehnliche Galerie-Motive oeffnen und Tag-Treffer als Sammlung uebernehmen.
 7. Die aktive Bildstimmung faerbt die UI automatisch ein; die lokale Farbanalyse nutzt eine dominante fast-average-color-Basis und kann im Darstellungsbereich zentral fuer UI und bildspezifische Karten auf Standard zurueckgeschaltet werden.
 8. Neue Spielstaende erhalten im Hintergrund einen KI-Titel; taucht dasselbe Motiv mehrfach auf, wird der vorhandene Motivtitel wiederverwendet.
-9. Spielstaende, Galerie, Sammlungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
+9. Spielstaende, Galerie, Sammlungen, Tag-Kategoriezuordnungen und Statistik bei Bedarf als Backup sichern oder wiederherstellen.
 
 ## Entwicklungshinweise
 

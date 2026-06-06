@@ -1267,13 +1267,13 @@ describe('keyboard smoke tests', () => {
     )
 
     expect(screen.getByText('3 von 3 Motiven sichtbar')).not.toBeNull()
-    expect(screen.queryByLabelText('KI-Tags als UND-Filter')).toBeNull()
+    expect(screen.queryByLabelText('Tags als UND-Filter')).toBeNull()
 
     fireEvent.click(screen.getAllByRole('button', { name: '#Stadt' })[0]!)
     const stadtChip = () => screen.getByRole('button', { name: /Tag #Stadt/ })
     const nachtChip = () => screen.getByRole('button', { name: /Tag #Nacht/ })
     await waitFor(() => {
-      expect(screen.getByLabelText('KI-Tags als UND-Filter')).not.toBeNull()
+      expect(screen.getByLabelText('Tags als UND-Filter')).not.toBeNull()
       expect(stadtChip().getAttribute('aria-pressed')).toBe('true')
       expect(screen.getByText('2 von 3 Motiven sichtbar')).not.toBeNull()
     })
@@ -1294,7 +1294,7 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Tags zuruecksetzen' }))
     await waitFor(() => {
-      expect(screen.queryByLabelText('KI-Tags als UND-Filter')).toBeNull()
+      expect(screen.queryByLabelText('Tags als UND-Filter')).toBeNull()
       expect(screen.getByText('3 von 3 Motiven sichtbar')).not.toBeNull()
     })
   })
@@ -2938,6 +2938,42 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.keyDown(nachtSearchButton, { key: 'Home' })
     expect(document.activeElement).toBe(stadtFilterButton)
+  })
+
+  it('adds and removes manual tags in gallery details', async () => {
+    const detailEntry = createGalleryDisplayEntry('manual-tags', '2026-04-11T12:00:00.000Z')
+    detailEntry.representativeEntry.tags = [
+      { label: 'Stadt', confidence: 0.94, source: 'gemini' },
+      { label: 'Favorit', confidence: 1, source: 'manual' },
+    ]
+    const onEditTags = vi.fn(() => Promise.resolve())
+
+    render(
+      <UploadGalleryDetailDialog
+        entry={detailEntry}
+        onReplayEntry={vi.fn()}
+        onEditTags={onEditTags}
+        allTagLabels={['Nacht', 'Urlaub']}
+        onClose={vi.fn()}
+      />
+    )
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Eigenen Tag hinzufuegen' }), { target: { value: 'Urlaub' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Eigenen Tag hinzufuegen' }))
+    await waitFor(() => {
+      expect(onEditTags).toHaveBeenCalledWith(
+        detailEntry.allEntries.map((entry) => entry.id),
+        ['Urlaub'],
+        []
+      )
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tag Stadt entfernen' }))
+    expect(onEditTags).toHaveBeenCalledWith(
+      detailEntry.allEntries.map((entry) => entry.id),
+      [],
+      ['Stadt']
+    )
   })
 
   it('enables gallery detail tag actions when opened from collections', () => {

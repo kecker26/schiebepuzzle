@@ -6,6 +6,152 @@
   font-display: swap;
 }
 
+.busy-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.48rem;
+  min-width: 0;
+}
+
+.busy-indicator-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  animation: busy-indicator-spin 0.85s linear infinite;
+}
+
+.busy-indicator--medium .busy-indicator-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.busy-indicator--large .busy-indicator-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.busy-indicator-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.async-status-panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  overflow: hidden;
+  padding: 0.85rem 0.95rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 42%, var(--card-border));
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-soft));
+  color: var(--text-main);
+}
+
+.async-status-panel--compact {
+  padding: 0.6rem 0.75rem 0.75rem;
+  border-radius: 0.75rem;
+}
+
+.async-status-panel--floating {
+  position: fixed;
+  right: 1rem;
+  bottom: 4.5rem;
+  z-index: 1600;
+  width: min(25rem, calc(100vw - 2rem));
+  max-height: min(18rem, calc(100vh - 6rem));
+  overflow-y: auto;
+  box-shadow: var(--glass-menu-shadow);
+  backdrop-filter: blur(var(--glass-menu-blur));
+  -webkit-backdrop-filter: blur(var(--glass-menu-blur));
+  pointer-events: none;
+  animation: async-status-panel-enter 0.24s ease-out;
+}
+
+.async-status-panel-copy {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.async-status-panel-copy span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.async-status-panel-phase {
+  font-weight: 700;
+}
+
+.async-status-panel-track {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+}
+
+.async-status-panel-track span {
+  display: block;
+  width: 38%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+  animation: busy-indicator-track 1.45s ease-in-out infinite;
+}
+
+@keyframes busy-indicator-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes busy-indicator-track {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(365%); }
+}
+
+@keyframes async-status-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.65rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[data-motion="reduced"] .busy-indicator-icon,
+[data-motion="reduced"] .async-status-panel-track span,
+[data-motion="reduced"] .async-status-panel--floating {
+  animation: none;
+}
+
+.app-background-activity {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: min(24rem, calc(100vw - 2rem));
+  padding: 0.72rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 42%, var(--card-border));
+  border-radius: 999px;
+  background: var(--glass-menu-bg);
+  box-shadow: var(--glass-menu-shadow);
+  backdrop-filter: blur(var(--glass-menu-blur));
+  color: var(--text-main);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 @font-face {
   font-family: 'Puzzle Display';
   src: url('/fonts/Outfit-Variable-latin-wght-normal.woff2') format('woff2');

@@ -10,6 +10,7 @@ import {
 } from '../../app/focusVisibility.ts'
 import { getDirectionalFocusTarget } from '../../app/directionalFocusNavigation.ts'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
+import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { ImageCollection, ImageThemePalette, SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
@@ -261,7 +262,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                       data-app-tooltip-position="top"
                     >
                       <UploadScreenIcon name="sparkles" className="gallery-card-action-icon" />
-                      <span>{isBusy ? 'Sortiere ...' : collection.name}</span>
+                      <span>{isBusy ? <BusyIndicator label="Sortiere ..." /> : collection.name}</span>
                     </button>
                   )
                 })}
@@ -323,7 +324,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             data-app-tooltip-position="top"
           >
             <UploadScreenIcon name="trash" className="gallery-card-action-icon" />
-            <span>{isDeleting ? 'Loesche ...' : 'Loeschen'}</span>
+            <span>{isDeleting ? <BusyIndicator label="Loesche ..." /> : 'Loeschen'}</span>
           </button>
         </div>
       </div>

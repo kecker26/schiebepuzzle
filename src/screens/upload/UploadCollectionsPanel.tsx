@@ -339,6 +339,7 @@ export default function UploadCollectionsPanel({
               detail="Favoriten und Motivgruppen werden aus dem lokalen Speicher vorbereitet."
               role="status"
               ariaLive="polite"
+              busy
             />
           ) : displayEntries.length === 0 ? (
             <UploadStateNotice

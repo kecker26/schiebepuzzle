@@ -2192,6 +2192,7 @@ export default function PuzzleScreen({
               config={config}
               moveCount={moveCount}
             optimalMoveSummary={optimalMoveSummary}
+            isImprovingStartSolution={isImprovingStartSolution}
             challengeSummary={challengeSummary}
             elapsedTime={elapsedTime}
             progressMetrics={progressMetrics}

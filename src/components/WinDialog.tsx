@@ -1,6 +1,7 @@
 import { useCallback, useId, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Medal, MousePointer2, Route, Sparkles, Timer, Trophy } from 'lucide-react'
 import AnimatedButton from '../motion/AnimatedButton.tsx'
+import BusyIndicator from '../motion/BusyIndicator.tsx'
 import AnimatedDialog from '../motion/AnimatedDialog.tsx'
 import AnimatedReveal from '../motion/AnimatedReveal.tsx'
 import AnimatedStaggerGroup from '../motion/AnimatedStaggerGroup.tsx'
@@ -526,7 +527,10 @@ export default function WinDialog({
           interaction="surface"
           level="medium"
         >
-          <p className="win-status-copy">{statusMessage}</p>
+          <p className="win-status-copy">
+            {isStatusPending ? <BusyIndicator /> : null}
+            {statusMessage}
+          </p>
           {isStatusError && (
             <AnimatedButton
               className="win-retry-btn"

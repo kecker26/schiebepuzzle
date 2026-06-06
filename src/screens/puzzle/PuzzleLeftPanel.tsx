@@ -4,6 +4,7 @@ import PuzzleScreenIcon from '../../components/PuzzleScreenIcon.tsx'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
+import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import SpringNumber from '../../motion/SpringNumber.tsx'
 import { type PuzzleProgressMetrics } from '../../services/PuzzleSolver.ts'
 import { type GhostPreviewMode } from '../../types/index'
@@ -19,6 +20,7 @@ interface PuzzleLeftPanelProps {
   config: { rows: number; cols: number }
   moveCount: number
   optimalMoveSummary: string
+  isImprovingStartSolution?: boolean
   challengeSummary?: string | null
   elapsedTime: number
   progressMetrics: PuzzleProgressMetrics | null
@@ -109,6 +111,7 @@ export default function PuzzleLeftPanel({
   config,
   moveCount,
   optimalMoveSummary,
+  isImprovingStartSolution = false,
   challengeSummary,
   elapsedTime,
   progressMetrics,
@@ -213,7 +216,10 @@ export default function PuzzleLeftPanel({
             <strong className="puzzle-stat-value">
               <SpringNumber value={moveCount} />
             </strong>
-            <span className="puzzle-stat-detail" data-app-tooltip="Deine gespielten Aktionen im Vergleich zum berechneten Optimalweg." data-app-tooltip-align="start">{optimalMoveSummary}</span>
+            <span className="puzzle-stat-detail" data-app-tooltip="Deine gespielten Aktionen im Vergleich zum berechneten Optimalweg." data-app-tooltip-align="start">
+              {isImprovingStartSolution ? <BusyIndicator /> : null}
+              {optimalMoveSummary}
+            </span>
           </div>
           <div className="puzzle-stat-card" data-app-tooltip="Laufzeit dieser Runde. Sie wird beim Sieg in Statistik und Galerie gespeichert." data-app-tooltip-align="start">
             <div className="puzzle-stat-head">

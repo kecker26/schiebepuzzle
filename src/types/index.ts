@@ -225,6 +225,7 @@ export interface SolvedGalleryEntry {
   assistanceMode: PuzzleAssistanceMode
   hasDetailedProfile: boolean
   tags?: GalleryImageTag[]
+  rejectedAiTags?: string[]
   aiTagging?: GalleryAiTagging
   cropTransform?: CropTransform | null
   useFullImage?: boolean
@@ -253,7 +254,7 @@ export interface GalleryChallengeTarget {
   optimalStartMoveCountKind?: OptimalStartMoveCountKind
 }
 
-export type GalleryTagSource = 'gemini' | 'imported'
+export type GalleryTagSource = 'gemini' | 'imported' | 'manual'
 
 export interface GalleryImageTag {
   label: string
@@ -413,12 +414,22 @@ export interface PuzzleDataBackupGallery extends Omit<SolvedGallery, 'entries'> 
 
 export interface PuzzleDataBackup {
   app: 'schiebepuzzle'
-  version: 1 | 2 | 3
+  version: 1 | 2 | 3 | 4
   exportedAt: string
   savedGames: PuzzleDataBackupSavedGame[]
   stats: PuzzleDataBackupStats | null
   gallery: PuzzleDataBackupGallery | null
   collections?: ImageCollections | null
+  tagCategoryCache?: {
+    version: 1
+    assignments: import('../services/tagCategories/tagCategoryTypes.ts').TagCategoryAssignment[]
+    lastUpdatedAt: string | null
+  } | null
+  customTagCategories?: {
+    version: 1
+    categories: import('../services/tagCategories/tagCategoryTypes.ts').TagCategoryDefinition[]
+    lastUpdatedAt: string | null
+  } | null
   assets?: BackupImageAssets
 }
 
@@ -428,6 +439,7 @@ export interface PuzzleDataImportResult {
   stats: PuzzleStats
   gallery: SolvedGallery
   collections: ImageCollections
+  tagCategoryCatalog: import('../services/tagCategories/tagCategoryTypes.ts').TagCategoryCatalog
 }
 
 export interface PuzzleDataBackupFile {
@@ -488,6 +500,29 @@ export interface UpdateSolvedGalleryTagsPayload {
   sourceLabel: string
   targetLabel?: string
 }
+
+export interface EditSolvedGalleryEntryTagsPayload {
+  entryIds: string[]
+  add?: string[]
+  remove?: string[]
+}
+
+export type {
+  StaticTagCategoryId,
+  TagCategoryId,
+  TagCategoryIconId,
+  TagCategoryAssignment,
+  TagCategoryAssignmentSource,
+  TagCategoryCatalog,
+  TagCategoryDefinition,
+  TagCategoryResolution,
+  UpdateTagCategoryAssignmentsPayload,
+  CreateTagCategoryPayload,
+  UpdateTagCategoryPayload,
+  TagCategorySuggestion,
+  ClassifyTagCategoriesPayload,
+  ClassifyTagCategoriesResult,
+} from '../services/tagCategories/tagCategoryTypes.ts'
 
 export interface RecordPuzzleCompletionResult {
   stats: PuzzleStats

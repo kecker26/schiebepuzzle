@@ -66,6 +66,7 @@ export default function UploadStatsReport({
           detail="Vergleichswerte, Rekorde und Verlauf werden gerade vorbereitet."
           role="status"
           ariaLive="polite"
+          busy
         />
       ) : completionHistory.length === 0 ? (
         <UploadStateNotice

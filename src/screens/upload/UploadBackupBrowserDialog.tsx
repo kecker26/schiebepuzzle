@@ -6,6 +6,8 @@ import {
   useRef,
 } from 'react'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
+import AsyncStatusPanel from '../../motion/AsyncStatusPanel.tsx'
+import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { PuzzleDataBackupFile } from '../../types/index'
 
 interface UploadBackupBrowserDialogProps {
@@ -180,9 +182,12 @@ export default function UploadBackupBrowserDialog({
 
       <div className="backup-browser-list" role="list" aria-busy={isLoading}>
         {isLoading ? (
-          <div className="backup-browser-empty" role="status" aria-live="polite">
-            Verfuegbare Backups werden geladen ...
-          </div>
+          <AsyncStatusPanel
+            compact
+            className="backup-browser-empty"
+            title="Verfuegbare Backups werden geladen"
+            detail="Der lokale Backup-Ordner wird eingelesen."
+          />
         ) : backups.length === 0 ? (
           <div className="backup-browser-empty">
             Im Backup-Ordner wurden noch keine importierbaren Backup-Dateien gefunden.
@@ -220,7 +225,7 @@ export default function UploadBackupBrowserDialog({
                   data-app-tooltip="Backup-Datei aus dem lokalen Backup-Ordner loeschen."
                   data-app-tooltip-position="top"
                 >
-                  {deletingFileName === backup.fileName ? 'Loesche ...' : 'Loeschen'}
+                  {deletingFileName === backup.fileName ? <BusyIndicator label="Loesche ..." /> : 'Loeschen'}
                 </button>
                 <button
                   type="button"

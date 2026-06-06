@@ -107,11 +107,13 @@ export default function UploadCollectionPickerDialog({
         </label>
         <AnimatedButton
           type="submit"
-          disabled={isBusy || !trimmedName}
+          disabled={!trimmedName}
+          busy={isBusy}
+          busyLabel="Speichere Sammlung ..."
           data-app-tooltip="Sammlung erstellen und ausgewaehltes Motiv hinzufuegen."
           data-app-tooltip-position="top"
         >
-          {isBusy ? 'Speichere ...' : 'Neu anlegen'}
+          Neu anlegen
         </AnimatedButton>
       </form>
 
@@ -138,11 +140,12 @@ export default function UploadCollectionPickerDialog({
           <AnimatedButton
             className="secondary"
             onClick={() => void handleAddToCollection()}
-            disabled={isBusy}
+            busy={isBusy}
+            busyLabel="Fuege zur Sammlung hinzu ..."
             data-app-tooltip="Motiv zur ausgewaehlten bestehenden Sammlung hinzufuegen."
             data-app-tooltip-position="top"
           >
-            {isBusy ? 'Fuege hinzu ...' : 'Auswahl hinzufuegen'}
+            Auswahl hinzufuegen
           </AnimatedButton>
         </div>
       ) : null}

@@ -9,6 +9,7 @@ import CompactContextMenu, { type ContextMenuItem, type ContextMenuPosition } fr
 import AnimatedButton from '../motion/AnimatedButton.tsx'
 import AnimatedReveal from '../motion/AnimatedReveal.tsx'
 import AnimatedStaggerGroup from '../motion/AnimatedStaggerGroup.tsx'
+import AsyncStatusPanel from '../motion/AsyncStatusPanel.tsx'
 import {
   clampCropTransform,
   createDefaultCropTransform,
@@ -933,7 +934,11 @@ export default function CropScreen({
               </AnimatedButton>
             </div>
           ) : (
-            <div className="crop-loading">Bild wird geladen ...</div>
+            <AsyncStatusPanel
+              className="crop-loading"
+              title="Bild wird geladen"
+              detail="Das Motiv wird dekodiert und fuer den Zuschnitt vorbereitet."
+            />
           )}
         </AnimatedReveal>
 
@@ -1009,7 +1014,8 @@ export default function CropScreen({
               <AnimatedButton
                 onClick={handleFetchRandomWithCurrentQuery}
                 className="secondary random-refresh-btn"
-                disabled={isFetchingRandom}
+                busy={Boolean(isFetchingRandom)}
+                busyLabel="Suche anderes Bild ..."
                 data-app-tooltip="Neues Online-Motiv mit den aktuellen Suchbegriffen laden."
                 data-app-tooltip-align="start"
                 reveal
@@ -1017,7 +1023,7 @@ export default function CropScreen({
               >
                 <span className="crop-inline-button-content">
                   <CropScreenIcon name="refreshCw" className="crop-inline-button-icon" />
-                  <span>{isFetchingRandom ? 'Lade...' : 'Anderes Bild laden'}</span>
+                  <span>Anderes Bild laden</span>
                 </span>
               </AnimatedButton>
               <form className="crop-random-search" onSubmit={handleRandomSearchSubmit}>

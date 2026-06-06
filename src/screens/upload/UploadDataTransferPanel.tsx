@@ -5,6 +5,7 @@ import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
+import BusyIndicator from '../../motion/BusyIndicator.tsx'
 
 interface UploadDataTransferPanelProps {
   savedGamesCount: number
@@ -87,29 +88,29 @@ export default function UploadDataTransferPanel({
         >
           <AnimatedButton
             onClick={onExportBackup}
-            disabled={isExportingBackup || isImportingBackup}
+            disabled={isImportingBackup}
+            busy={isExportingBackup}
+            busyLabel="Exportiere Backup ..."
             data-app-tooltip="Speichert Spielstaende, Statistik, Galerie und Sammlungen als lokale Backup-Datei."
             data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"
           >
-            {isExportingBackup ? 'Exportiere ...' : 'Backup exportieren'}
+            Backup exportieren
           </AnimatedButton>
           <AnimatedButton
             ref={importActionRef}
             className="secondary"
             onClick={onOpenBackupImport}
-            disabled={isImportingBackup || isExportingBackup || isLoadingBackupFiles}
+            disabled={isExportingBackup}
+            busy={isImportingBackup || isLoadingBackupFiles}
+            busyLabel={isLoadingBackupFiles ? 'Lade Backups ...' : 'Importiere Backup ...'}
             data-app-tooltip="Lokales Backup auswaehlen. Import ersetzt den aktuellen Datenstand komplett."
             data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"
           >
-            {isLoadingBackupFiles
-              ? 'Lade Backups ...'
-              : isImportingBackup
-                ? 'Importiere ...'
-                : 'Backup importieren'}
+            Backup importieren
           </AnimatedButton>
         </AnimatedStaggerGroup>
 
@@ -128,6 +129,7 @@ export default function UploadDataTransferPanel({
             aria-live="polite"
             level="subtle"
           >
+            <BusyIndicator />
             Backup wird exportiert ...
           </AnimatedReveal>
         ) : isLoadingBackupFiles ? (
@@ -138,6 +140,7 @@ export default function UploadDataTransferPanel({
             aria-live="polite"
             level="subtle"
           >
+            <BusyIndicator />
             Vorhandene Backups werden geladen ...
           </AnimatedReveal>
         ) : isImportingBackup ? (
@@ -148,6 +151,7 @@ export default function UploadDataTransferPanel({
             aria-live="polite"
             level="subtle"
           >
+            <BusyIndicator />
             Backup wird importiert ...
           </AnimatedReveal>
         ) : statusMessage ? (

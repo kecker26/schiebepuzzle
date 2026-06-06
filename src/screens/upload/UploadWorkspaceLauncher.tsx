@@ -5,6 +5,7 @@ import AnimatedCardButton from '../../motion/AnimatedCardButton.tsx'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
 import SpringNumber from '../../motion/SpringNumber.tsx'
+import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { formatDate } from './uploadUtils.ts'
 
 interface UploadWorkspaceLauncherProps {
@@ -108,7 +109,7 @@ export default function UploadWorkspaceLauncher({
           <div className="workspace-launcher-meta">
             <span className="saved-game-chip">
               <UploadScreenIcon name="listRestart" className="saved-game-chip-icon" />
-              {isLoadingSavedGames ? 'Wird geladen ...' : `${savedGamesCount} offen`}
+              {isLoadingSavedGames ? <BusyIndicator label="Wird geladen ..." /> : `${savedGamesCount} offen`}
             </span>
             <span className="saved-game-chip">
               <UploadScreenIcon name="clock" className="saved-game-chip-icon" />
@@ -143,7 +144,7 @@ export default function UploadWorkspaceLauncher({
           <div className="workspace-launcher-meta">
             <span className="saved-game-chip">
               <UploadScreenIcon name="trophy" className="saved-game-chip-icon" />
-              {isLoadingStats ? 'Wird geladen ...' : statsMeta}
+              {isLoadingStats ? <BusyIndicator label="Wird geladen ..." /> : statsMeta}
             </span>
             <span className="saved-game-chip">
               <UploadScreenIcon name="clock" className="saved-game-chip-icon" />
@@ -178,7 +179,7 @@ export default function UploadWorkspaceLauncher({
           <div className="workspace-launcher-meta">
             <span className="saved-game-chip">
               <UploadScreenIcon name="folderHeart" className="saved-game-chip-icon" />
-              {isLoadingCollections ? 'Wird geladen ...' : collectionsMeta}
+              {isLoadingCollections ? <BusyIndicator label="Wird geladen ..." /> : collectionsMeta}
             </span>
             <span className="saved-game-chip">
               <UploadScreenIcon name="image" className="saved-game-chip-icon" />
@@ -213,7 +214,7 @@ export default function UploadWorkspaceLauncher({
           <div className="workspace-launcher-meta">
             <span className="saved-game-chip">
               <UploadScreenIcon name="image" className="saved-game-chip-icon" />
-              {isLoadingGallery ? 'Wird geladen ...' : `${gallerySolveCount} Loesungen`}
+              {isLoadingGallery ? <BusyIndicator label="Wird geladen ..." /> : `${gallerySolveCount} Loesungen`}
             </span>
             <span className="saved-game-chip">
               <UploadScreenIcon name="clock" className="saved-game-chip-icon" />

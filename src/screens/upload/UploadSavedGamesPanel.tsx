@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { ensureElementVisible } from '../../app/focusVisibility.ts'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
+import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { SavedGameSummary } from '../../types/index'
 import UploadPageNavigation from './UploadPageNavigation.tsx'
 import UploadSavedGameItem from './UploadSavedGameItem.tsx'
@@ -295,7 +296,7 @@ export default function UploadSavedGamesPanel({
               data-app-tooltip="Alle gespeicherten Zwischenstaende loeschen. Statistik und Galerie bleiben erhalten."
               data-app-tooltip-position="top"
             >
-              {isDeletingAllSavedGames ? 'Loesche alle ...' : 'Alle loeschen'}
+              {isDeletingAllSavedGames ? <BusyIndicator label="Loesche alle ..." /> : 'Alle loeschen'}
             </button>
           </div>
         )}
@@ -310,6 +311,7 @@ export default function UploadSavedGamesPanel({
             detail="Die zuletzt gesicherten Partien werden gerade eingelesen."
             role="status"
             ariaLive="polite"
+            busy
           />
         ) : savedGames.length === 0 ? (
           <UploadStateNotice
