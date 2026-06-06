@@ -81,6 +81,7 @@ interface UploadDashboardProps {
   onFetchRandomImage?: (query?: string) => Promise<void> | void
   onDeleteGalleryEntries: (entryIds: string[]) => Promise<void>
   onUpdateGalleryTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
+  onEditGalleryEntryTags?: (entryIds: string[], add?: string[], remove?: string[]) => Promise<void>
   onRetryGalleryTagging?: (entryId: string) => Promise<void>
   onCreateImageCollection?: (name: string, imageIds: string[], description?: string) => Promise<void>
   onUpdateImageCollection?: (
@@ -149,6 +150,7 @@ export default function UploadDashboard({
   onFetchRandomImage = async () => undefined,
   onDeleteGalleryEntries,
   onUpdateGalleryTags = async () => undefined,
+  onEditGalleryEntryTags = async () => undefined,
   onRetryGalleryTagging = async () => undefined,
   onCreateImageCollection = async () => undefined,
   onUpdateImageCollection = async () => undefined,
@@ -639,22 +641,26 @@ export default function UploadDashboard({
                   <AnimatedButton
                     className="secondary workspace-window-reset"
                     onClick={onRequestStatsReset}
-                    disabled={!hasRecordedStats || isLoadingStats || isResettingStats}
+                    disabled={!hasRecordedStats || isLoadingStats}
+                    busy={isResettingStats}
+                    busyLabel="Loesche Statistik ..."
                     data-app-tooltip="Gespeicherte Statistikdaten loeschen. Galerie und Spielstaende bleiben separat."
                     data-app-tooltip-position="top"
                   >
-                    {isResettingStats ? 'Loesche ...' : 'Statistik loeschen'}
+                    Statistik loeschen
                   </AnimatedButton>
                 )}
                 {isGalleryWindow && (
                   <AnimatedButton
                     className="secondary workspace-window-reset"
                     onClick={onRequestGalleryReset}
-                    disabled={!hasGalleryEntries || isLoadingGallery || isResettingGallery}
+                    disabled={!hasGalleryEntries || isLoadingGallery}
+                    busy={isResettingGallery}
+                    busyLabel="Loesche Galerie ..."
                     data-app-tooltip="Galerie geloester Motive loeschen. Spielstaende bleiben separat."
                     data-app-tooltip-position="top"
                   >
-                    {isResettingGallery ? 'Loesche ...' : 'Galerie loeschen'}
+                    Galerie loeschen
                   </AnimatedButton>
                 )}
                 <AnimatedButton
@@ -794,6 +800,7 @@ export default function UploadDashboard({
                       requestedTagFilterLabel={requestedGalleryTagFilterLabel}
                       onDeleteEntries={onDeleteGalleryEntries}
                       onUpdateTags={onUpdateGalleryTags}
+                      onEditEntryTags={onEditGalleryEntryTags}
                       onRetryTagging={onRetryGalleryTagging}
                       onCreateCollection={onCreateImageCollection}
                       onAddCollectionImages={onAddImageCollectionImages}

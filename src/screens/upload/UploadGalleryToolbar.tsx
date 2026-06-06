@@ -10,6 +10,7 @@ import {
   GallerySortOption,
 } from './uploadUtils.ts'
 import { handleSelectEnterKeyDown } from '../../app/formControlUtils.ts'
+import AnimatedButton from '../../motion/AnimatedButton.tsx'
 
 export interface GalleryTagFilterOption {
   id: string
@@ -162,29 +163,30 @@ export default function UploadGalleryToolbar({
           </select>
         </label>
 
-        <button
-          type="button"
+        <AnimatedButton
           className="secondary gallery-toolbar-tag-collection"
           onClick={onCreateCollectionFromTag}
-          disabled={!hasActiveTagCollection || isCreatingTagCollection}
+          disabled={!hasActiveTagCollection}
+          busy={isCreatingTagCollection}
+          busyLabel="Sortiere Motive ..."
           data-app-tooltip={
             activeTagFilterLabel
               ? `Sammlung aus #${activeTagFilterLabel} erstellen.`
               : activeTagFilterCount > 1
-                ? 'Nur fuer einen einzelnen KI-Tag verfuegbar.'
-                : 'Waehle zuerst einen KI-Tag.'
+                ? 'Nur fuer einen einzelnen Tag verfuegbar.'
+                : 'Waehle zuerst einen Tag.'
           }
           data-app-tooltip-position="top"
         >
-          {isCreatingTagCollection ? 'Sortiere ...' : tagCollectionActionLabel}
-        </button>
+          {tagCollectionActionLabel}
+        </AnimatedButton>
 
         <button
           type="button"
           className="secondary gallery-toolbar-tag-manager"
           onClick={onManageTags}
           disabled={!canManageTags}
-          data-app-tooltip="KI-Tags durchsuchen, kombinieren und als Galerie-Filter anwenden."
+          data-app-tooltip="Tags durchsuchen, kombinieren und als Galerie-Filter anwenden."
           data-app-tooltip-position="top"
         >
           Tags verwalten
@@ -204,7 +206,7 @@ export default function UploadGalleryToolbar({
       </div>
 
       {activeTagFilterCount > 0 ? (
-        <div className="gallery-toolbar-tag-chips" aria-label="KI-Tags als UND-Filter">
+        <div className="gallery-toolbar-tag-chips" aria-label="Tags als UND-Filter">
           <div className="gallery-toolbar-tag-chips-header">
             <span>Tags</span>
             <small>{`${activeTagFilterCount} aktiv`}</small>
@@ -236,7 +238,7 @@ export default function UploadGalleryToolbar({
                 className="gallery-toolbar-tag-chip gallery-toolbar-tag-chip-clear"
                 {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-toolbar-tag-chips' }}
                 onClick={onClearTagFilters}
-                data-app-tooltip="Alle aktiven KI-Tag-Filter entfernen."
+                data-app-tooltip="Alle aktiven Tag-Filter entfernen."
                 data-app-tooltip-position="top"
               >
                 Tags zuruecksetzen

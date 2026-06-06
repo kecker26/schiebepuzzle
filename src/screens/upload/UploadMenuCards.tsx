@@ -3,6 +3,8 @@ import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavi
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import AnimatedCardButton from '../../motion/AnimatedCardButton.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
+import AsyncStatusPanel from '../../motion/AsyncStatusPanel.tsx'
+import BusyIndicator from '../../motion/BusyIndicator.tsx'
 
 interface UploadMenuCardsProps {
   fileInputRef: RefObject<HTMLInputElement>
@@ -114,6 +116,15 @@ export default function UploadMenuCards({
           {isFetchingRandom ? 'Wird geladen...' : 'Zufaelliges Bild'}
         </span>
         <span className="menu-card-desc">Ein ueberraschendes Motiv fuer eine spontane Runde ohne Auswahlstress.</span>
+        {isFetchingRandom ? (
+          <AsyncStatusPanel
+            compact
+            floating
+            title={randomQuery.trim() ? `Suche Motiv zu "${randomQuery.trim()}"` : 'Suche ein zufaelliges Motiv'}
+            detail="Bildquellen werden nacheinander abgefragt und geprueft."
+            longWaitDetail="Die Bildsuche laeuft noch. Langsame oder nicht erreichbare Quellen werden automatisch uebersprungen."
+          />
+        ) : null}
         <label className="random-image-query-label" htmlFor="random-image-query-input">
           Suchbegriffe
         </label>
@@ -155,7 +166,7 @@ export default function UploadMenuCards({
           data-app-tooltip-align="end"
         >
           <UploadScreenIcon name="sparkles" className="menu-card-arrow-icon" />
-          Direkt starten
+          {isFetchingRandom ? <BusyIndicator label="Suche Motiv ..." /> : 'Direkt starten'}
         </button>
       </form>
 
@@ -174,6 +185,15 @@ export default function UploadMenuCards({
         <span className="menu-card-desc">
           Beschreibe dein Wunschmotiv. Nano Banana erstellt daraus ein Puzzle-Bild.
         </span>
+        {isGeneratingPromptImage ? (
+          <AsyncStatusPanel
+            compact
+            floating
+            title="KI erstellt dein Puzzle-Bild"
+            phase="Prompt wird verarbeitet und das Motiv gerendert."
+            longWaitDetail="Die Bildgenerierung laeuft noch. Aufwendige Motive benoetigen gelegentlich etwas mehr Zeit."
+          />
+        ) : null}
         <textarea
           ref={promptInputRef}
           id="prompt-image-input"
@@ -197,7 +217,7 @@ export default function UploadMenuCards({
           data-app-tooltip-align="end"
         >
           <UploadScreenIcon name="sparkles" className="menu-card-arrow-icon" />
-          {isGeneratingPromptImage ? 'Erstelle...' : 'Bild erstellen'}
+          {isGeneratingPromptImage ? <BusyIndicator label="Erstelle Bild ..." /> : 'Bild erstellen'}
         </button>
       </form>
     </AnimatedStaggerGroup>

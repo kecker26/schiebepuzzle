@@ -5,6 +5,7 @@ import PuzzleScreenIcon from '../../components/PuzzleScreenIcon.tsx'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
+import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import audioService, {
   type MusicAttributionSnapshot,
   type MusicPlaybackStatusSnapshot,
@@ -83,6 +84,7 @@ export default function PuzzleRightPanel({
   const isMusicMuted = useMusicMuted()
   const musicAttribution = useMusicAttribution()
   const musicPlaybackStatus = useMusicPlaybackStatus()
+  const isMusicBusy = musicPlaybackStatus.state === 'loading' || musicPlaybackStatus.state === 'recovering'
   const selectedMusicStyle = useSelectedMusicStyle()
   const selectedMusicStyleDefinition = getMusicStyleDefinition(selectedMusicStyle)
   const totalTileCount = config.rows * config.cols
@@ -250,7 +252,8 @@ export default function PuzzleRightPanel({
                 <span className="puzzle-music-track-style">{selectedMusicStyleDefinition.label}</span>
                 <span className="puzzle-music-track-title">{musicAttribution.title}</span>
                 <span className="puzzle-music-track-artist">{musicAttribution.artist}</span>
-                <span className="puzzle-music-track-status">
+                <span className="puzzle-music-track-status" aria-busy={isMusicBusy || undefined}>
+                  {isMusicBusy ? <BusyIndicator /> : null}
                   {musicPlaybackStatus.message}
                   {musicPlaybackStatus.providerLabel ? ` · ${musicPlaybackStatus.providerLabel}` : ''}
                   {musicAttribution.licenseLabel ? ` · ${musicAttribution.licenseLabel}` : ''}
@@ -273,7 +276,10 @@ export default function PuzzleRightPanel({
             {!hasTrackInfo && (
               <div className="puzzle-music-track-info">
                 <span className="puzzle-music-track-style">{selectedMusicStyleDefinition.label}</span>
-                <span className="puzzle-music-track-artist">{musicPlaybackStatus.message}</span>
+                <span className="puzzle-music-track-artist">
+                  {isMusicBusy ? <BusyIndicator /> : null}
+                  {musicPlaybackStatus.message}
+                </span>
                 {musicPlaybackStatus.detail && (
                   <span className="puzzle-music-track-status">{musicPlaybackStatus.detail}</span>
                 )}

@@ -1,5 +1,6 @@
 import { memo, type KeyboardEvent as ReactKeyboardEvent, type RefObject, useCallback } from 'react'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
+import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { SavedGameSummary } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import { useUploadImagePalette } from './uploadImagePalette.ts'
@@ -98,7 +99,7 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
           data-app-tooltip-position="top"
         >
           <UploadScreenIcon name="playCircle" className="saved-game-action-icon" />
-          <span>{isLoading ? 'Lade ...' : 'Weiterspielen'}</span>
+          <span>{isLoading ? <BusyIndicator label="Lade Spielstand ..." /> : 'Weiterspielen'}</span>
         </button>
         <button
           type="button"
@@ -112,7 +113,7 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
           data-app-tooltip-position="top"
         >
           <UploadScreenIcon name="trash" className="saved-game-action-icon" />
-          <span>{isDeleting ? 'Loesche ...' : 'Loeschen'}</span>
+          <span>{isDeleting ? <BusyIndicator label="Loesche ..." /> : 'Loeschen'}</span>
         </button>
       </div>
     </li>

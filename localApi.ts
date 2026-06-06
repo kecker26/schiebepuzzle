@@ -10,6 +10,18 @@ import type { Plugin } from 'vite'
 import MusicProviderCoordinator from './src/services/music/MusicProviderCoordinator.ts'
 import { isMusicStyleId } from './src/services/musicStyles.ts'
 import type { MusicProviderId } from './src/services/music/types.ts'
+import { normalizeTagCategoryKey } from './src/services/tagCategories/tagCategoryResolver.ts'
+import { STATIC_TAG_CATEGORIES } from './src/services/tagCategories/staticTagTaxonomy.ts'
+import type {
+  ClassifyTagCategoriesResult,
+  TagCategoryId,
+  TagCategoryIconId,
+  TagCategorySuggestion,
+  StaticTagCategoryId,
+  TagCategoryAssignment,
+  TagCategoryCatalog,
+  TagCategoryDefinition,
+} from './src/services/tagCategories/tagCategoryTypes.ts'
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const SAVES_DIR = path.join(ROOT_DIR, 'spielstaende')
@@ -18,6 +30,8 @@ const STATS_EXPORTS_DIR = path.join(ROOT_DIR, 'statistik-exporte')
 const STATS_FILE = path.join(SAVES_DIR, '__stats.json')
 const GALLERY_FILE = path.join(SAVES_DIR, '__gallery.json')
 const COLLECTIONS_FILE = path.join(SAVES_DIR, '__collections.json')
+const TAG_CATEGORY_CACHE_FILE = path.join(SAVES_DIR, '__tag_category_cache.json')
+const CUSTOM_TAG_CATEGORIES_FILE = path.join(SAVES_DIR, '__custom_tag_categories.json')
 const LEGACY_BACKUP_FILE_EXTENSION = '.spbkp'
 const COMPRESSED_BACKUP_FILE_EXTENSION = '.spbkp.gz'
 const BACKUP_FILE_EXTENSION = COMPRESSED_BACKUP_FILE_EXTENSION
@@ -27,7 +41,7 @@ const STATS_EXPORT_FILE_NAME_PATTERN = /^schiebepuzzle-statistik-[a-zA-Z0-9._-]+
 const MAX_BODY_SIZE = 40 * 1024 * 1024
 const MAX_SAVED_GAMES = 30
 const MAX_BACKUP_FILES = 3
-const BACKUP_FORMAT_VERSION = 3
+const BACKUP_FORMAT_VERSION = 4
 const RECENT_COMPLETION_PREVIEW_LIMIT = 8
 const RECENT_MEDIAN_SAMPLE_SIZE = 5
 const GZIP_MAGIC_BYTE_1 = 0x1f
@@ -58,10 +72,14 @@ const GROQ_MAX_BASE64_IMAGE_BYTES = 4 * 1024 * 1024
 const GEMINI_GALLERY_TIMEOUT_MS = 75000
 const GEMINI_GALLERY_MAX_INLINE_IMAGE_BYTES = 18 * 1024 * 1024
 const GEMINI_SAVE_TITLE_TIMEOUT_MS = 30000
+const TAG_CATEGORY_AI_TIMEOUT_MS = 45000
+const TAG_CATEGORY_AI_BATCH_LIMIT = 30
+const TAG_CATEGORY_SUGGESTION_LIMIT = 4
 const GEMINI_SAVE_TITLE_MAX_INLINE_IMAGE_BYTES = 18 * 1024 * 1024
 const LLM_CONTENT_RETRY_ATTEMPTS = 1
 const GALLERY_AI_MIN_TAG_LIMIT = 4
 const GALLERY_AI_TAG_LIMIT = 8
+const GALLERY_TOTAL_TAG_LIMIT = 30
 const GALLERY_AI_COLLECTION_SUGGESTION_LIMIT = 4
 const SAVE_AI_TITLE_MAX_LENGTH = 64
 const MAX_GENERATED_IMAGE_PROMPT_LENGTH = 1000
@@ -325,6 +343,7 @@ interface StoredGalleryEntry {
   assistanceMode: StoredAssistanceMode
   hasDetailedProfile: boolean
   tags?: StoredGalleryImageTag[]
+  rejectedAiTags?: string[]
   aiTagging?: StoredGalleryAiTagging
   cropTransform?: StoredCropTransform | null
   useFullImage?: boolean
@@ -332,7 +351,7 @@ interface StoredGalleryEntry {
   imageTheme?: StoredImageThemePalette
 }
 
-type StoredGalleryTagSource = 'gemini' | 'imported'
+type StoredGalleryTagSource = 'gemini' | 'imported' | 'manual'
 
 interface StoredCropTransform {
   zoom: number
@@ -392,6 +411,18 @@ interface StoredImageCollection {
 
 interface StoredImageCollectionsFile {
   collections: StoredImageCollection[]
+  lastUpdatedAt: string | null
+}
+
+interface StoredTagCategoryCacheFile {
+  version: 1
+  assignments: TagCategoryAssignment[]
+  lastUpdatedAt: string | null
+}
+
+interface StoredCustomTagCategoriesFile {
+  version: 1
+  categories: TagCategoryDefinition[]
   lastUpdatedAt: string | null
 }
 
@@ -491,12 +522,14 @@ interface BackupSaveResponse extends Omit<SaveSummary, 'previewImage'> {
 
 interface BackupResponse {
   app: 'schiebepuzzle'
-  version: 1 | 2 | 3
+  version: 1 | 2 | 3 | 4
   exportedAt: string
   savedGames: BackupSaveResponse[]
   stats: BackupStatsResponse
   gallery: BackupGalleryResponse
   collections?: ImageCollectionsResponse | null
+  tagCategoryCache?: StoredTagCategoryCacheFile | null
+  customTagCategories?: StoredCustomTagCategoriesFile | null
   assets?: BackupAssetMap
 }
 
@@ -506,6 +539,7 @@ interface BackupImportResponse {
   stats: StatsResponse
   gallery: GalleryResponse
   collections: ImageCollectionsResponse
+  tagCategoryCatalog: TagCategoryCatalog
 }
 
 interface BackupFileResponse {
@@ -595,6 +629,24 @@ interface GeminiGalleryAnalysisPayload {
 
 interface GeminiSaveTitlePayload {
   title?: unknown
+}
+
+interface TagCategoryClassificationPayload {
+  assignments?: unknown
+  suggestions?: unknown
+}
+
+interface RawTagCategoryClassification {
+  label?: unknown
+  categoryId?: unknown
+  confidence?: unknown
+}
+
+interface RawTagCategorySuggestion {
+  label?: unknown
+  iconId?: unknown
+  matchingTags?: unknown
+  reason?: unknown
 }
 
 interface AnalyzeGalleryEntryResponse {
@@ -781,6 +833,8 @@ function isReservedDataFilename(filename: string): boolean {
     filename === path.basename(STATS_FILE)
     || filename === path.basename(GALLERY_FILE)
     || filename === path.basename(COLLECTIONS_FILE)
+    || filename === path.basename(TAG_CATEGORY_CACHE_FILE)
+    || filename === path.basename(CUSTOM_TAG_CATEGORIES_FILE)
   )
 }
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -1061,6 +1115,182 @@ function parseGeminiJson<T>(text: string): T {
   }
 }
 
+function createTagCategoryClassificationPrompt(
+  labels: string[],
+  catalog: TagCategoryCatalog,
+  allowCategorySuggestions: boolean
+): string {
+  const categoryLines = catalog.categories
+    .map((category) => `- ${category.id}: ${category.label}`)
+    .join('\n')
+  return [
+    'Ordne kurze deutsche oder englische Galerie-Tags passenden Kategorien zu.',
+    'Nutze bevorzugt exakt eine der vorhandenen categoryId-Werte.',
+    'Wenn keine Kategorie sinnvoll passt, verwende categoryId "unresolved".',
+    allowCategorySuggestions
+      ? `Schlage nur bei einer klaren thematischen Luecke hoechstens ${TAG_CATEGORY_SUGGESTION_LIMIT} neue Kategorien vor.`
+      : 'Schlage keine neuen Kategorien vor.',
+    'Neue Kategorien muessen kurz, auf Deutsch und fuer mehrere Tags wiederverwendbar sein.',
+    'Antworte ausschliesslich als JSON ohne Markdown.',
+    '',
+    'Vorhandene Kategorien:',
+    categoryLines,
+    '',
+    'Tags:',
+    ...labels.map((label) => `- ${label}`),
+    '',
+    'Schema: {"assignments":[{"label":"Tag","categoryId":"bestehende-id-oder-unresolved","confidence":0.0}],"suggestions":[{"label":"Neue Kategorie","iconId":"tags","matchingTags":["Tag"],"reason":"Grund"}]}',
+  ].join('\n')
+}
+
+function createTagCategoryClassificationSchema(): object {
+  return {
+    type: 'object',
+    properties: {
+      assignments: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            label: { type: 'string' },
+            categoryId: { type: 'string' },
+            confidence: { type: 'number' },
+          },
+          required: ['label', 'categoryId', 'confidence'],
+        },
+      },
+      suggestions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            label: { type: 'string' },
+            iconId: { type: 'string' },
+            matchingTags: { type: 'array', items: { type: 'string' } },
+            reason: { type: 'string' },
+          },
+          required: ['label', 'iconId', 'matchingTags', 'reason'],
+        },
+      },
+    },
+    required: ['assignments', 'suggestions'],
+  }
+}
+
+function normalizeTagCategorySuggestions(
+  value: unknown,
+  requestedLabels: string[]
+): TagCategorySuggestion[] {
+  if (!Array.isArray(value)) return []
+  const requestedByKey = new Map(requestedLabels.map((label) => [normalizeTagCategoryKey(label), label]))
+  return value.flatMap((raw, index) => {
+    if (!raw || typeof raw !== 'object') return []
+    const suggestion = raw as RawTagCategorySuggestion
+    const label = sanitizeTagCategoryLabel(suggestion.label)
+    const reason = typeof suggestion.reason === 'string' ? suggestion.reason.trim().slice(0, 180) : ''
+    const matchingTags = normalizeRejectedAiTags(suggestion.matchingTags)
+      .map((tag) => requestedByKey.get(normalizeTagCategoryKey(tag)))
+      .filter((tag): tag is string => Boolean(tag))
+    if (!label || matchingTags.length === 0) return []
+    return [{
+      temporaryId: `suggestion-${index + 1}`,
+      label,
+      iconId: isTagCategoryIconId(suggestion.iconId) ? suggestion.iconId : 'tags',
+      matchingTags,
+      reason,
+    }]
+  }).slice(0, TAG_CATEGORY_SUGGESTION_LIMIT)
+}
+
+async function classifyTagCategories(
+  labels: string[],
+  allowCategorySuggestions: boolean,
+  config: GeminiGalleryConfig
+): Promise<ClassifyTagCategoriesResult> {
+  if (!config.apiKey) throw new Error('Kein API-Key fuer die KI-Kategoriezuordnung konfiguriert')
+  const requestedLabels = normalizeRejectedAiTags(labels).slice(0, TAG_CATEGORY_AI_BATCH_LIMIT)
+  const catalog = await readTagCategoryCatalog()
+  const validCategoryIds = new Set(catalog.categories.map((category) => category.id))
+  const requestedByKey = new Map(requestedLabels.map((label) => [normalizeTagCategoryKey(label), label]))
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), TAG_CATEGORY_AI_TIMEOUT_MS)
+
+  try {
+    const response = await callLlmService(
+      null,
+      createTagCategoryClassificationPrompt(requestedLabels, catalog, allowCategorySuggestions),
+      createTagCategoryClassificationSchema(),
+      config,
+      controller.signal
+    )
+    const payload = parseGeminiJson<TagCategoryClassificationPayload>(response.text)
+    const classifications = new Map<string, { label: string; categoryId: string; confidence: number }>()
+    if (Array.isArray(payload.assignments)) {
+      for (const raw of payload.assignments) {
+        if (!raw || typeof raw !== 'object') continue
+        const assignment = raw as RawTagCategoryClassification
+        const key = typeof assignment.label === 'string' ? normalizeTagCategoryKey(assignment.label) : ''
+        const originalLabel = requestedByKey.get(key)
+        if (!originalLabel || typeof assignment.categoryId !== 'string') continue
+        if (assignment.categoryId !== 'unresolved' && !validCategoryIds.has(assignment.categoryId)) continue
+        classifications.set(key, {
+          label: originalLabel,
+          categoryId: assignment.categoryId,
+          confidence: clampConfidence(assignment.confidence),
+        })
+      }
+    }
+
+    const cache = await readTagCategoryCacheFile()
+    const assignmentMap = new Map(cache.assignments.map((assignment) => [assignment.tagKey, assignment]))
+    const nowIso = new Date().toISOString()
+    let classifiedCount = 0
+    for (const classification of classifications.values()) {
+      if (classification.categoryId === 'unresolved') continue
+      const tagKey = normalizeTagCategoryKey(classification.label)
+      const existing = assignmentMap.get(tagKey)
+      if (existing?.source === 'manual') continue
+      assignmentMap.set(tagKey, {
+        tagKey,
+        categoryId: classification.categoryId,
+        source: 'ai',
+        confirmed: false,
+        confidence: classification.confidence,
+        originalLabels: normalizeRejectedAiTags([...(existing?.originalLabels ?? []), classification.label]),
+        updatedAt: nowIso,
+      })
+      classifiedCount += 1
+    }
+    const nextCache: StoredTagCategoryCacheFile = {
+      version: 1,
+      assignments: Array.from(assignmentMap.values()).sort((a, b) => a.tagKey.localeCompare(b.tagKey, 'de')),
+      lastUpdatedAt: classifiedCount > 0 ? nowIso : cache.lastUpdatedAt,
+    }
+    if (classifiedCount > 0) await writeTagCategoryCacheFile(nextCache)
+    const customCategories = await readCustomTagCategoriesFile()
+    const unresolvedLabels = requestedLabels.filter((label) => {
+      const classification = classifications.get(normalizeTagCategoryKey(label))
+      return !classification || classification.categoryId === 'unresolved'
+    })
+
+    return {
+      catalog: toTagCategoryCatalog(nextCache, customCategories),
+      classifiedCount,
+      unresolvedLabels,
+      suggestions: allowCategorySuggestions
+        ? normalizeTagCategorySuggestions(payload.suggestions, unresolvedLabels)
+        : [],
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('KI-Kategoriezuordnung hat zu lange gebraucht')
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 function createGalleryAnalysisPrompt(
   entry: StoredGalleryEntry,
   collections: StoredImageCollection[]
@@ -1245,7 +1475,7 @@ function getCustomLlmErrorMessage(payload: CustomLlmErrorPayload, fallback: stri
 }
 
 async function callOpenAiCompatibleLlm(
-  image: ParsedDataUrlImage,
+  image: ParsedDataUrlImage | null,
   promptText: string,
   config: GeminiGalleryConfig,
   signal: AbortSignal,
@@ -1269,18 +1499,15 @@ async function callOpenAiCompatibleLlm(
       messages: [
         {
           role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: promptText,
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${image.mimeType};base64,${image.base64Data}`,
-              },
-            },
-          ],
+          content: image
+            ? [
+                { type: 'text', text: promptText },
+                {
+                  type: 'image_url',
+                  image_url: { url: `data:${image.mimeType};base64,${image.base64Data}` },
+                },
+              ]
+            : promptText,
         },
       ],
       ...(config.provider === 'openrouter' && model === OPENROUTER_DEFAULT_MODEL
@@ -1317,12 +1544,12 @@ function extractCustomLlmMessageText(content: CustomLlmMessageContent): string {
 }
 
 async function callGroqFallback(
-  image: ParsedDataUrlImage,
+  image: ParsedDataUrlImage | null,
   promptText: string,
   fallback: GroqFallbackConfig,
   signal: AbortSignal
 ): Promise<LlmResponse> {
-  if (image.byteLength > GROQ_MAX_BASE64_IMAGE_BYTES) {
+  if (image && image.byteLength > GROQ_MAX_BASE64_IMAGE_BYTES) {
     throw new Error(`Bild ist zu gross fuer Groq-Fallback (max ${Math.round(GROQ_MAX_BASE64_IMAGE_BYTES / 1024 / 1024)} MB base64)`)
   }
   const groqConfig: GeminiGalleryConfig = {
@@ -1335,7 +1562,7 @@ async function callGroqFallback(
 }
 
 async function callLlmService(
-  image: ParsedDataUrlImage,
+  image: ParsedDataUrlImage | null,
   promptText: string,
   schema: object,
   config: GeminiGalleryConfig,
@@ -1400,15 +1627,17 @@ async function callLlmService(
       },
       body: JSON.stringify({
         contents: [{
-          parts: [
-            {
-              inline_data: {
-                mime_type: image.mimeType,
-                data: image.base64Data,
-              },
-            },
-            { text: promptText },
-          ],
+          parts: image
+            ? [
+                {
+                  inline_data: {
+                    mime_type: image.mimeType,
+                    data: image.base64Data,
+                  },
+                },
+                { text: promptText },
+              ]
+            : [{ text: promptText }],
         }],
         generationConfig: {
           responseMimeType: 'application/json',
@@ -1497,10 +1726,15 @@ async function analyzeGalleryImageWithGemini(
         }
 
         const analysis = parseGeminiJson<GeminiGalleryAnalysisPayload>(response.text)
-        const tags = normalizeGalleryTags(analysis.tags)
-        if (tags.length < GALLERY_AI_MIN_TAG_LIMIT) {
-          throw new Error(`LLM hat nur ${tags.length} nutzbare Tags erzeugt`)
+        const generatedTags = normalizeGalleryTags(analysis.tags).slice(0, GALLERY_AI_TAG_LIMIT)
+        if (generatedTags.length < GALLERY_AI_MIN_TAG_LIMIT) {
+          throw new Error(`LLM hat nur ${generatedTags.length} nutzbare Tags erzeugt`)
         }
+        const rejectedAiTagKeys = new Set((entry.rejectedAiTags ?? []).map(getGalleryTagMatchKey))
+        const tags = normalizeGalleryTags([
+          ...(entry.tags ?? []).filter((tag) => tag.source !== 'gemini'),
+          ...generatedTags.filter((tag) => !rejectedAiTagKeys.has(getGalleryTagMatchKey(tag.label))),
+        ])
         const collectionSuggestions = normalizeGalleryCollectionSuggestions(analysis.collectionSuggestions, collections)
 
         return {
@@ -2137,6 +2371,8 @@ function validateBackupPayload(payload: unknown): payload is {
   stats?: unknown
   gallery?: unknown
   collections?: unknown
+  tagCategoryCache?: unknown
+  customTagCategories?: unknown
   assets?: unknown
 } {
   if (!payload || typeof payload !== 'object') return false
@@ -2144,16 +2380,24 @@ function validateBackupPayload(payload: unknown): payload is {
   const input = payload as Record<string, unknown>
   return (
     (input.app === undefined || input.app === 'schiebepuzzle')
-    && (input.version === undefined || input.version === 1 || input.version === 2 || input.version === 3)
+    && (
+      input.version === undefined
+      || input.version === 1
+      || input.version === 2
+      || input.version === 3
+      || input.version === 4
+    )
     && (input.savedGames === undefined || Array.isArray(input.savedGames))
   )
 }
 
 async function buildBackupResponse(): Promise<BackupResponse> {
-  const [saves, stats, gallery] = await Promise.all([
+  const [saves, stats, gallery, tagCategoryCache, customTagCategories] = await Promise.all([
     listAllSaveData(),
     readStatsFile(),
     readGalleryFile(),
+    readTagCategoryCacheFile(),
+    readCustomTagCategoriesFile(),
   ])
   const retainedSaves = limitSavesToRetention(saves, MAX_SAVED_GAMES)
   const collections = await readCollectionsFile(gallery)
@@ -2176,6 +2420,8 @@ async function buildBackupResponse(): Promise<BackupResponse> {
     stats: statsResponse,
     gallery: galleryResponse,
     collections: toCollectionsResponse(collections),
+    tagCategoryCache,
+    customTagCategories,
     ...(Object.keys(assets).length > 0 ? { assets } : {}),
   }
 }
@@ -2185,6 +2431,8 @@ async function importBackupPayload(payload: {
   stats?: unknown
   gallery?: unknown
   collections?: unknown
+  tagCategoryCache?: unknown
+  customTagCategories?: unknown
   assets?: unknown
 }): Promise<BackupImportResponse> {
   const importedAt = new Date().toISOString()
@@ -2201,6 +2449,14 @@ async function importBackupPayload(payload: {
     ? createGalleryFileFromCompletionHistory(importedStats.completionHistory, importedStats.lastUpdatedAt)
     : normalizeGalleryFile(payload.gallery, assets)
   const importedCollections = normalizeCollectionsFile(payload.collections, importedGallery)
+  const importedCustomTagCategories = normalizeCustomTagCategoriesFile(payload.customTagCategories)
+  const importedTagCategoryCache = normalizeTagCategoryCacheFile(
+    payload.tagCategoryCache,
+    new Set([
+      ...STATIC_TAG_CATEGORY_IDS,
+      ...importedCustomTagCategories.categories.map((category) => category.id),
+    ])
+  )
 
   await deleteAllSaves()
   await Promise.all(retainedImportedSaves.map((save) => writeStructuredSave(save)))
@@ -2208,6 +2464,8 @@ async function importBackupPayload(payload: {
     writeStatsFile(importedStats),
     writeGalleryFile(importedGallery),
     writeCollectionsFile(importedCollections),
+    writeTagCategoryCacheFile(importedTagCategoryCache),
+    writeCustomTagCategoriesFile(importedCustomTagCategories),
   ])
 
   return {
@@ -2216,6 +2474,7 @@ async function importBackupPayload(payload: {
     stats: toStatsResponse(importedStats),
     gallery: toGalleryResponse(importedGallery),
     collections: toCollectionsResponse(importedCollections),
+    tagCategoryCatalog: toTagCategoryCatalog(importedTagCategoryCache, importedCustomTagCategories),
   }
 }
 
@@ -2503,6 +2762,22 @@ function createEmptyCollectionsFile(): StoredImageCollectionsFile {
     lastUpdatedAt: null,
   }
 }
+
+function createEmptyTagCategoryCacheFile(): StoredTagCategoryCacheFile {
+  return {
+    version: 1,
+    assignments: [],
+    lastUpdatedAt: null,
+  }
+}
+
+function createEmptyCustomTagCategoriesFile(): StoredCustomTagCategoriesFile {
+  return {
+    version: 1,
+    categories: [],
+    lastUpdatedAt: null,
+  }
+}
 function deriveAssistanceMode(runMetrics: Pick<StoredRunMetrics, 'hintCount' | 'suggestedMoveCount'>): StoredAssistanceMode {
   if (runMetrics.suggestedMoveCount > 0) return 'auto-assisted'
   if (runMetrics.hintCount > 0) return 'hinted'
@@ -2643,18 +2918,35 @@ function normalizeGalleryTags(value: unknown): StoredGalleryImageTag[] {
     const tag: StoredGalleryImageTag = {
       label,
       confidence: clampConfidence(input.confidence),
-      source: input.source === 'imported' ? 'imported' : 'gemini',
+      source: input.source === 'manual' ? 'manual' : input.source === 'imported' ? 'imported' : 'gemini',
     }
 
     const existing = tags.get(key)
-    if (!existing || tag.confidence > existing.confidence) {
+    const sourcePriority = tag.source === 'manual' ? 3 : tag.source === 'imported' ? 2 : 1
+    const existingPriority = existing?.source === 'manual' ? 3 : existing?.source === 'imported' ? 2 : 1
+    if (!existing || sourcePriority > existingPriority || sourcePriority === existingPriority && tag.confidence > existing.confidence) {
       tags.set(key, tag)
     }
   }
 
   return Array.from(tags.values())
-    .sort((a, b) => b.confidence - a.confidence || a.label.localeCompare(b.label, 'de'))
-    .slice(0, GALLERY_AI_TAG_LIMIT)
+    .sort((a, b) => {
+      const priority = (tag: StoredGalleryImageTag) => tag.source === 'manual' ? 3 : tag.source === 'imported' ? 2 : 1
+      return priority(b) - priority(a) || b.confidence - a.confidence || a.label.localeCompare(b.label, 'de')
+    })
+    .slice(0, GALLERY_TOTAL_TAG_LIMIT)
+}
+
+function normalizeRejectedAiTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+
+  const labels = new Map<string, string>()
+  for (const item of value) {
+    const label = sanitizeGalleryTagLabel(item)
+    if (label) labels.set(getGalleryTagMatchKey(label), label)
+  }
+
+  return Array.from(labels.values()).slice(0, GALLERY_TOTAL_TAG_LIMIT)
 }
 
 function sanitizeGallerySuggestionReason(value: unknown): string {
@@ -3332,6 +3624,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     assistanceMode?: unknown
     hasDetailedProfile?: unknown
     tags?: unknown
+    rejectedAiTags?: unknown
     aiTagging?: unknown
     cropTransform?: unknown
     useFullImage?: unknown
@@ -3347,6 +3640,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
   const previewImage = resolveBackupImageValue(input.previewImage, assets)
   const sourceImage = resolveBackupImageValue(input.sourceImage, assets) ?? previewImage
   const tags = normalizeGalleryTags(input.tags)
+  const rejectedAiTags = normalizeRejectedAiTags(input.rejectedAiTags)
   const aiTagging = normalizeGalleryAiTagging(input.aiTagging)
   const cropTransform = sanitizeCropTransform(input.cropTransform)
   const replaySetup = sanitizeGalleryReplaySetup(input.replaySetup, input.config)
@@ -3364,6 +3658,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     assistanceMode: sanitizeAssistanceMode(input.assistanceMode, { hintCount: 0, suggestedMoveCount: 0 }),
     hasDetailedProfile: input.hasDetailedProfile === false ? false : true,
     ...(tags.length > 0 ? { tags } : {}),
+    ...(rejectedAiTags.length > 0 ? { rejectedAiTags } : {}),
     ...(aiTagging ? { aiTagging } : {}),
     ...(cropTransform ? { cropTransform } : {}),
     ...(typeof input.useFullImage === 'boolean' ? { useFullImage: input.useFullImage } : {}),
@@ -3531,6 +3826,132 @@ function normalizeCollectionsFile(
       : collections[0]?.updatedAt ?? null,
   }
 }
+
+const STATIC_TAG_CATEGORY_IDS = new Set<StaticTagCategoryId>(
+  STATIC_TAG_CATEGORIES.map((category) => category.id)
+)
+const TAG_CATEGORY_ICON_IDS = new Set<TagCategoryIconId>([
+  'activity', 'brush', 'building', 'camera', 'car', 'cpu', 'palette', 'paw', 'rocket',
+  'shapes', 'shirt', 'smile', 'sprout', 'sun', 'tags', 'tree', 'type', 'utensils',
+])
+
+function isTagCategoryIconId(value: unknown): value is TagCategoryIconId {
+  return typeof value === 'string' && TAG_CATEGORY_ICON_IDS.has(value as TagCategoryIconId)
+}
+
+function sanitizeTagCategoryLabel(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const label = value.replace(/\s+/g, ' ').trim()
+  return label.length > 0 ? label.slice(0, 60) : null
+}
+
+function createTagCategoryId(label: string, existingIds: Set<string>): string {
+  const baseId = normalizeTagCategoryKey(label).slice(0, 48) || 'category'
+  let id = baseId
+  let suffix = 2
+  while (existingIds.has(id)) {
+    id = `${baseId}-${suffix}`
+    suffix += 1
+  }
+  return id
+}
+
+function normalizeCustomTagCategoriesFile(payload: unknown): StoredCustomTagCategoriesFile {
+  if (!payload || typeof payload !== 'object') return createEmptyCustomTagCategoriesFile()
+  const input = payload as { categories?: unknown; lastUpdatedAt?: unknown }
+  const categories: TagCategoryDefinition[] = []
+  const usedIds = new Set<string>(STATIC_TAG_CATEGORY_IDS)
+
+  if (Array.isArray(input.categories)) {
+    for (const value of input.categories) {
+      if (!value || typeof value !== 'object') continue
+      const category = value as Partial<TagCategoryDefinition>
+      const label = sanitizeTagCategoryLabel(category.label)
+      const id = typeof category.id === 'string' && isValidSaveId(category.id) ? category.id : null
+      if (!label || !id || usedIds.has(id) || !isTagCategoryIconId(category.iconId)) continue
+      usedIds.add(id)
+      categories.push({
+        id,
+        label,
+        iconId: category.iconId,
+        keywords: normalizeRejectedAiTags(category.keywords),
+        source: 'manual',
+        createdAt: typeof category.createdAt === 'string' ? category.createdAt : new Date(0).toISOString(),
+        updatedAt: typeof category.updatedAt === 'string' ? category.updatedAt : new Date(0).toISOString(),
+      })
+    }
+  }
+
+  return {
+    version: 1,
+    categories,
+    lastUpdatedAt: typeof input.lastUpdatedAt === 'string' ? input.lastUpdatedAt : null,
+  }
+}
+
+function normalizeTagCategoryCacheFile(
+  payload: unknown,
+  validCategoryIds: Set<string> = new Set(STATIC_TAG_CATEGORY_IDS)
+): StoredTagCategoryCacheFile {
+  if (!payload || typeof payload !== 'object') {
+    return createEmptyTagCategoryCacheFile()
+  }
+
+  const input = payload as {
+    assignments?: unknown
+    lastUpdatedAt?: unknown
+  }
+  const assignments = new Map<string, TagCategoryAssignment>()
+
+  if (Array.isArray(input.assignments)) {
+    for (const value of input.assignments) {
+      if (!value || typeof value !== 'object') continue
+      const assignment = value as Partial<TagCategoryAssignment>
+      const originalLabels = normalizeRejectedAiTags(assignment.originalLabels)
+      const tagKey = typeof assignment.tagKey === 'string'
+        ? normalizeTagCategoryKey(assignment.tagKey)
+        : normalizeTagCategoryKey(originalLabels[0] ?? '')
+      if (!tagKey || typeof assignment.categoryId !== 'string' || !validCategoryIds.has(assignment.categoryId)) continue
+
+      assignments.set(tagKey, {
+        tagKey,
+        categoryId: assignment.categoryId,
+        source: assignment.source === 'ai' ? 'ai' : 'manual',
+        confirmed: assignment.confirmed === true,
+        confidence: clampConfidence(assignment.confidence),
+        originalLabels,
+        updatedAt: typeof assignment.updatedAt === 'string'
+          ? assignment.updatedAt
+          : new Date(0).toISOString(),
+      })
+    }
+  }
+
+  return {
+    version: 1,
+    assignments: Array.from(assignments.values())
+      .sort((a, b) => a.tagKey.localeCompare(b.tagKey, 'de')),
+    lastUpdatedAt: typeof input.lastUpdatedAt === 'string' ? input.lastUpdatedAt : null,
+  }
+}
+
+function toTagCategoryCatalog(
+  cache: StoredTagCategoryCacheFile,
+  customCategories: StoredCustomTagCategoriesFile
+): TagCategoryCatalog {
+  return {
+    categories: [
+      ...STATIC_TAG_CATEGORIES.map((category) => ({ ...category, source: 'static' as const })),
+      ...customCategories.categories,
+    ],
+    assignments: cache.assignments,
+    lastUpdatedAt: [cache.lastUpdatedAt, customCategories.lastUpdatedAt]
+      .filter((value): value is string => Boolean(value))
+      .sort()
+      .at(-1) ?? null,
+  }
+}
+
 async function readStatsFile(): Promise<StoredStatsFile> {
   try {
     await ensureSavesDir()
@@ -3591,6 +4012,193 @@ async function readCollectionsFile(gallery?: StoredGalleryFile): Promise<StoredI
 async function writeCollectionsFile(collections: StoredImageCollectionsFile): Promise<void> {
   await ensureSavesDir()
   await writeFile(COLLECTIONS_FILE, JSON.stringify(collections, null, 2), 'utf-8')
+}
+
+async function readTagCategoryCacheFile(): Promise<StoredTagCategoryCacheFile> {
+  await ensureSavesDir()
+  const customCategories = await readCustomTagCategoriesFile()
+  const rawCache = await readJsonFile<StoredTagCategoryCacheFile>(TAG_CATEGORY_CACHE_FILE)
+  return normalizeTagCategoryCacheFile(
+    rawCache,
+    new Set([...STATIC_TAG_CATEGORY_IDS, ...customCategories.categories.map((category) => category.id)])
+  )
+}
+
+async function writeTagCategoryCacheFile(cache: StoredTagCategoryCacheFile): Promise<void> {
+  await ensureSavesDir()
+  await writeFile(TAG_CATEGORY_CACHE_FILE, JSON.stringify(cache, null, 2), 'utf-8')
+}
+
+async function readCustomTagCategoriesFile(): Promise<StoredCustomTagCategoriesFile> {
+  await ensureSavesDir()
+  const rawCategories = await readJsonFile<StoredCustomTagCategoriesFile>(CUSTOM_TAG_CATEGORIES_FILE)
+  return normalizeCustomTagCategoriesFile(rawCategories)
+}
+
+async function writeCustomTagCategoriesFile(categories: StoredCustomTagCategoriesFile): Promise<void> {
+  await ensureSavesDir()
+  await writeFile(CUSTOM_TAG_CATEGORIES_FILE, JSON.stringify(categories, null, 2), 'utf-8')
+}
+
+async function readTagCategoryCatalog(): Promise<TagCategoryCatalog> {
+  const [cache, customCategories] = await Promise.all([
+    readTagCategoryCacheFile(),
+    readCustomTagCategoriesFile(),
+  ])
+  return toTagCategoryCatalog(cache, customCategories)
+}
+
+async function updateTagCategoryAssignments(input: {
+  labels: string[]
+  categoryId: TagCategoryId | null
+}): Promise<TagCategoryCatalog> {
+  const labels = normalizeRejectedAiTags(input.labels)
+  const [cache, customCategories] = await Promise.all([
+    readTagCategoryCacheFile(),
+    readCustomTagCategoriesFile(),
+  ])
+  const validCategoryIds = new Set([
+    ...STATIC_TAG_CATEGORY_IDS,
+    ...customCategories.categories.map((category) => category.id),
+  ])
+  if (input.categoryId !== null && !validCategoryIds.has(input.categoryId)) {
+    throw new Error('Tag-Kategorie existiert nicht')
+  }
+  const assignments = new Map(cache.assignments.map((assignment) => [assignment.tagKey, assignment]))
+  const nowIso = new Date().toISOString()
+
+  for (const label of labels) {
+    const tagKey = normalizeTagCategoryKey(label)
+    if (!tagKey) continue
+    if (input.categoryId === null) {
+      assignments.delete(tagKey)
+      continue
+    }
+
+    const existing = assignments.get(tagKey)
+    assignments.set(tagKey, {
+      tagKey,
+      categoryId: input.categoryId,
+      source: 'manual',
+      confirmed: true,
+      confidence: 1,
+      originalLabels: normalizeRejectedAiTags([...(existing?.originalLabels ?? []), label]),
+      updatedAt: nowIso,
+    })
+  }
+
+  const nextCache: StoredTagCategoryCacheFile = {
+    version: 1,
+    assignments: Array.from(assignments.values())
+      .sort((a, b) => a.tagKey.localeCompare(b.tagKey, 'de')),
+    lastUpdatedAt: nowIso,
+  }
+  await writeTagCategoryCacheFile(nextCache)
+  return toTagCategoryCatalog(nextCache, customCategories)
+}
+
+async function createCustomTagCategory(input: {
+  label: string
+  iconId: TagCategoryIconId
+}): Promise<TagCategoryCatalog> {
+  const [cache, customCategories] = await Promise.all([
+    readTagCategoryCacheFile(),
+    readCustomTagCategoriesFile(),
+  ])
+  const nowIso = new Date().toISOString()
+  const existingIds = new Set([
+    ...STATIC_TAG_CATEGORY_IDS,
+    ...customCategories.categories.map((category) => category.id),
+  ])
+  const category: TagCategoryDefinition = {
+    id: createTagCategoryId(input.label, existingIds),
+    label: input.label,
+    iconId: input.iconId,
+    keywords: [],
+    source: 'manual',
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  }
+  const nextCategories: StoredCustomTagCategoriesFile = {
+    version: 1,
+    categories: [...customCategories.categories, category],
+    lastUpdatedAt: nowIso,
+  }
+  await writeCustomTagCategoriesFile(nextCategories)
+  return toTagCategoryCatalog(cache, nextCategories)
+}
+
+async function updateCustomTagCategory(
+  categoryId: string,
+  input: { label?: string; iconId?: TagCategoryIconId }
+): Promise<TagCategoryCatalog> {
+  if (STATIC_TAG_CATEGORY_IDS.has(categoryId as StaticTagCategoryId)) {
+    throw new Error('Statische Kategorien koennen nicht bearbeitet werden')
+  }
+  const [cache, customCategories] = await Promise.all([
+    readTagCategoryCacheFile(),
+    readCustomTagCategoriesFile(),
+  ])
+  const nowIso = new Date().toISOString()
+  let didChange = false
+  const categories = customCategories.categories.map((category) => {
+    if (category.id !== categoryId) return category
+    didChange = true
+    return {
+      ...category,
+      ...(input.label ? { label: input.label } : {}),
+      ...(input.iconId ? { iconId: input.iconId } : {}),
+      updatedAt: nowIso,
+    }
+  })
+  if (!didChange) throw new Error('Tag-Kategorie nicht gefunden')
+  const nextCategories = { version: 1 as const, categories, lastUpdatedAt: nowIso }
+  await writeCustomTagCategoriesFile(nextCategories)
+  return toTagCategoryCatalog(cache, nextCategories)
+}
+
+async function deleteCustomTagCategory(
+  categoryId: string,
+  replacementCategoryId: string | null
+): Promise<TagCategoryCatalog> {
+  if (STATIC_TAG_CATEGORY_IDS.has(categoryId as StaticTagCategoryId)) {
+    throw new Error('Statische Kategorien koennen nicht geloescht werden')
+  }
+  const [cache, customCategories] = await Promise.all([
+    readTagCategoryCacheFile(),
+    readCustomTagCategoriesFile(),
+  ])
+  if (!customCategories.categories.some((category) => category.id === categoryId)) {
+    throw new Error('Tag-Kategorie nicht gefunden')
+  }
+  const validReplacementIds = new Set([
+    ...STATIC_TAG_CATEGORY_IDS,
+    ...customCategories.categories.filter((category) => category.id !== categoryId).map((category) => category.id),
+  ])
+  if (replacementCategoryId !== null && !validReplacementIds.has(replacementCategoryId)) {
+    throw new Error('Ersatzkategorie existiert nicht')
+  }
+  const nowIso = new Date().toISOString()
+  const nextCategories: StoredCustomTagCategoriesFile = {
+    version: 1,
+    categories: customCategories.categories.filter((category) => category.id !== categoryId),
+    lastUpdatedAt: nowIso,
+  }
+  const nextCache: StoredTagCategoryCacheFile = {
+    version: 1,
+    assignments: cache.assignments.flatMap((assignment) => {
+      if (assignment.categoryId !== categoryId) return [assignment]
+      return replacementCategoryId
+        ? [{ ...assignment, categoryId: replacementCategoryId, source: 'manual' as const, confirmed: true, updatedAt: nowIso }]
+        : []
+    }),
+    lastUpdatedAt: nowIso,
+  }
+  await Promise.all([
+    writeCustomTagCategoriesFile(nextCategories),
+    writeTagCategoryCacheFile(nextCache),
+  ])
+  return toTagCategoryCatalog(nextCache, nextCategories)
 }
 
 function toGalleryResponse(gallery: StoredGalleryFile): GalleryResponse {
@@ -3666,6 +4274,9 @@ async function updateGalleryTags(input: {
     if (!entry.tags || entry.tags.length === 0) return entry
 
     let didEntryChange = false
+    const rejectedAiTags = new Map(
+      (entry.rejectedAiTags ?? []).map((label) => [getGalleryTagMatchKey(label), label])
+    )
     const nextTags = entry.tags.flatMap((tag) => {
       if (getGalleryTagMatchKey(tag.label) !== sourceKey) {
         return [tag]
@@ -3673,6 +4284,9 @@ async function updateGalleryTags(input: {
 
       didChange = true
       didEntryChange = true
+      if (tag.source === 'gemini') {
+        rejectedAiTags.set(sourceKey, tag.label)
+      }
       if (input.action === 'remove') {
         return []
       }
@@ -3680,6 +4294,8 @@ async function updateGalleryTags(input: {
       return [{
         ...tag,
         label: targetLabel ?? tag.label,
+        confidence: 1,
+        source: 'manual' as const,
       }]
     })
 
@@ -3694,6 +4310,12 @@ async function updateGalleryTags(input: {
     } else {
       delete nextEntry.tags
     }
+    const normalizedRejectedAiTags = normalizeRejectedAiTags(Array.from(rejectedAiTags.values()))
+    if (normalizedRejectedAiTags.length > 0) {
+      nextEntry.rejectedAiTags = normalizedRejectedAiTags
+    } else {
+      delete nextEntry.rejectedAiTags
+    }
 
     return nextEntry
   })
@@ -3705,6 +4327,60 @@ async function updateGalleryTags(input: {
     lastUpdatedAt: new Date().toISOString(),
   }
 
+  await writeGalleryFile(nextGallery)
+  return nextGallery
+}
+
+async function editGalleryEntryTags(input: {
+  entryIds: string[]
+  add?: string[]
+  remove?: string[]
+}): Promise<StoredGalleryFile> {
+  const entryIds = new Set(input.entryIds)
+  const addLabels = normalizeRejectedAiTags(input.add)
+  const removeLabels = normalizeRejectedAiTags(input.remove)
+  const removeKeys = new Set(removeLabels.map(getGalleryTagMatchKey))
+  if (entryIds.size === 0 || addLabels.length === 0 && removeLabels.length === 0) {
+    return readGalleryFile()
+  }
+
+  const gallery = await readGalleryFile()
+  let didChange = false
+  const entries = gallery.entries.map((entry) => {
+    if (!entryIds.has(entry.id)) return entry
+
+    const rejectedAiTags = new Map(
+      (entry.rejectedAiTags ?? []).map((label) => [getGalleryTagMatchKey(label), label])
+    )
+    const keptTags = (entry.tags ?? []).filter((tag) => {
+      const key = getGalleryTagMatchKey(tag.label)
+      if (!removeKeys.has(key)) return true
+      if (tag.source === 'gemini') rejectedAiTags.set(key, tag.label)
+      return false
+    })
+    for (const label of addLabels) {
+      rejectedAiTags.delete(getGalleryTagMatchKey(label))
+      keptTags.push({ label, confidence: 1, source: 'manual' })
+    }
+
+    const tags = normalizeGalleryTags(keptTags)
+    const nextRejectedAiTags = normalizeRejectedAiTags(Array.from(rejectedAiTags.values()))
+    const previousTags = JSON.stringify(entry.tags ?? [])
+    if (previousTags === JSON.stringify(tags) && JSON.stringify(entry.rejectedAiTags ?? []) === JSON.stringify(nextRejectedAiTags)) {
+      return entry
+    }
+
+    didChange = true
+    const nextEntry: StoredGalleryEntry = { ...entry }
+    if (tags.length > 0) nextEntry.tags = tags
+    else delete nextEntry.tags
+    if (nextRejectedAiTags.length > 0) nextEntry.rejectedAiTags = nextRejectedAiTags
+    else delete nextEntry.rejectedAiTags
+    return nextEntry
+  })
+
+  if (!didChange) return gallery
+  const nextGallery = { entries, lastUpdatedAt: new Date().toISOString() }
   await writeGalleryFile(nextGallery)
   return nextGallery
 }
@@ -4081,6 +4757,85 @@ function validateGalleryTagsUpdatePayload(payload: unknown): payload is {
     (
       input.action === 'remove' ||
       (typeof input.targetLabel === 'string' && sanitizeGalleryTagLabel(input.targetLabel) !== null)
+    )
+  )
+}
+
+function validateGalleryEntryTagsEditPayload(payload: unknown): payload is {
+  entryIds: string[]
+  add?: string[]
+  remove?: string[]
+} {
+  if (!payload || typeof payload !== 'object') return false
+  const input = payload as { entryIds?: unknown; add?: unknown; remove?: unknown }
+  const isLabelList = (value: unknown) => value === undefined || (
+    Array.isArray(value) &&
+    value.length <= GALLERY_TOTAL_TAG_LIMIT &&
+    value.every((label) => typeof label === 'string' && sanitizeGalleryTagLabel(label) !== null)
+  )
+  return (
+    Array.isArray(input.entryIds) &&
+    input.entryIds.length > 0 &&
+    input.entryIds.every((id) => typeof id === 'string' && isValidSaveId(id)) &&
+    isLabelList(input.add) &&
+    isLabelList(input.remove) &&
+    (Array.isArray(input.add) && input.add.length > 0 || Array.isArray(input.remove) && input.remove.length > 0)
+  )
+}
+
+function validateTagCategoryAssignmentsPayload(payload: unknown): payload is {
+  labels: string[]
+  categoryId: TagCategoryId | null
+} {
+  if (!payload || typeof payload !== 'object') return false
+  const input = payload as { labels?: unknown; categoryId?: unknown }
+  return (
+    Array.isArray(input.labels)
+    && input.labels.length > 0
+    && input.labels.length <= GALLERY_TOTAL_TAG_LIMIT
+    && input.labels.every((label) => typeof label === 'string' && sanitizeGalleryTagLabel(label) !== null)
+    && (input.categoryId === null || typeof input.categoryId === 'string' && isValidSaveId(input.categoryId))
+  )
+}
+
+function validateClassifyTagCategoriesPayload(payload: unknown): payload is {
+  labels: string[]
+  allowCategorySuggestions?: boolean
+} {
+  if (!payload || typeof payload !== 'object') return false
+  const input = payload as { labels?: unknown; allowCategorySuggestions?: unknown }
+  return (
+    Array.isArray(input.labels)
+    && input.labels.length > 0
+    && input.labels.length <= TAG_CATEGORY_AI_BATCH_LIMIT
+    && input.labels.every((label) => typeof label === 'string' && sanitizeGalleryTagLabel(label) !== null)
+    && (input.allowCategorySuggestions === undefined || typeof input.allowCategorySuggestions === 'boolean')
+  )
+}
+
+function validateCreateTagCategoryPayload(payload: unknown): payload is {
+  label: string
+  iconId: TagCategoryIconId
+} {
+  if (!payload || typeof payload !== 'object') return false
+  const input = payload as { label?: unknown; iconId?: unknown }
+  return sanitizeTagCategoryLabel(input.label) !== null && isTagCategoryIconId(input.iconId)
+}
+
+function validateUpdateTagCategoryPayload(payload: unknown): payload is {
+  label?: string
+  iconId?: TagCategoryIconId
+  replacementCategoryId?: string | null
+} {
+  if (!payload || typeof payload !== 'object') return false
+  const input = payload as { label?: unknown; iconId?: unknown; replacementCategoryId?: unknown }
+  return (
+    (input.label === undefined || sanitizeTagCategoryLabel(input.label) !== null)
+    && (input.iconId === undefined || isTagCategoryIconId(input.iconId))
+    && (
+      input.replacementCategoryId === undefined
+      || input.replacementCategoryId === null
+      || typeof input.replacementCategoryId === 'string' && isValidSaveId(input.replacementCategoryId)
     )
   )
 }
@@ -4676,6 +5431,84 @@ async function handleGalleryApi(
       return
     }
 
+    if (req.method === 'GET' && parts.length === 3 && parts[2] === 'tag-categories') {
+      sendJson(res, 200, await readTagCategoryCatalog())
+      return
+    }
+
+    if (
+      req.method === 'POST'
+      && parts.length === 4
+      && parts[2] === 'tag-categories'
+      && parts[3] === 'classify'
+    ) {
+      const body = await readJsonBody(req)
+      if (!validateClassifyTagCategoriesPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer KI-Tag-Klassifizierung' })
+        return
+      }
+      sendJson(res, 200, await classifyTagCategories(
+        body.labels,
+        body.allowCategorySuggestions !== false,
+        geminiGalleryConfig
+      ))
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 3 && parts[2] === 'tag-categories') {
+      const body = await readJsonBody(req)
+      if (!validateCreateTagCategoryPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer neue Tag-Kategorie' })
+        return
+      }
+      sendJson(res, 201, await createCustomTagCategory({
+        label: sanitizeTagCategoryLabel(body.label) as string,
+        iconId: body.iconId,
+      }))
+      return
+    }
+
+    if (
+      req.method === 'PATCH'
+      && parts.length === 4
+      && parts[2] === 'tag-categories'
+      && parts[3] === 'assignments'
+    ) {
+      const body = await readJsonBody(req)
+      if (!validateTagCategoryAssignmentsPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Tag-Kategoriezuordnungen' })
+        return
+      }
+
+      sendJson(res, 200, await updateTagCategoryAssignments(body))
+      return
+    }
+
+    if (req.method === 'PATCH' && parts.length === 4 && parts[2] === 'tag-categories') {
+      const categoryId = decodeURIComponent(parts[3])
+      const body = await readJsonBody(req)
+      if (!isValidSaveId(categoryId) || !validateUpdateTagCategoryPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Tag-Kategorie' })
+        return
+      }
+      sendJson(res, 200, await updateCustomTagCategory(categoryId, {
+        ...(body.label !== undefined ? { label: sanitizeTagCategoryLabel(body.label) as string } : {}),
+        ...(body.iconId !== undefined ? { iconId: body.iconId } : {}),
+      }))
+      return
+    }
+
+    if (req.method === 'DELETE' && parts.length === 4 && parts[2] === 'tag-categories') {
+      const categoryId = decodeURIComponent(parts[3])
+      const body = await readJsonBody(req)
+      if (!isValidSaveId(categoryId) || !validateUpdateTagCategoryPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Tag-Kategorie-Loeschung' })
+        return
+      }
+      sendJson(res, 200, await deleteCustomTagCategory(categoryId, body.replacementCategoryId ?? null))
+      return
+    }
+
     if (req.method === 'POST' && parts.length === 4 && parts[3] === 'analyze') {
       const entryId = decodeURIComponent(parts[2])
       if (!isValidSaveId(entryId)) {
@@ -4701,6 +5534,32 @@ async function handleGalleryApi(
       }
 
       const nextGallery = await updateGalleryTags(body)
+      sendJson(res, 200, toGalleryResponse(nextGallery))
+      return
+    }
+
+    if (req.method === 'PATCH' && parts.length === 3 && parts[2] === 'tags') {
+      const body = await readJsonBody(req)
+      if (!validateGalleryEntryTagsEditPayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer manuelle Galerie-Tags' })
+        return
+      }
+
+      const nextGallery = await editGalleryEntryTags(body)
+      sendJson(res, 200, toGalleryResponse(nextGallery))
+      return
+    }
+
+    if (req.method === 'PATCH' && parts.length === 4 && parts[3] === 'tags') {
+      const entryId = decodeURIComponent(parts[2])
+      const body = await readJsonBody(req)
+      const payload = body && typeof body === 'object' ? { ...body as object, entryIds: [entryId] } : null
+      if (!isValidSaveId(entryId) || !validateGalleryEntryTagsEditPayload(payload)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer manuelle Galerie-Tags' })
+        return
+      }
+
+      const nextGallery = await editGalleryEntryTags(payload)
       sendJson(res, 200, toGalleryResponse(nextGallery))
       return
     }

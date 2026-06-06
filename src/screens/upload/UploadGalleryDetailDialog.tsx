@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Search } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Plus, Search, X } from 'lucide-react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import { FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE } from '../../app/focusVisibility.ts'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
+import AsyncStatusPanel from '../../motion/AsyncStatusPanel.tsx'
+import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { type AiMetadataProvider, type ImageThemePalette, type SolvedGalleryEntry } from '../../types/index'
 import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
@@ -27,6 +29,9 @@ interface UploadGalleryDetailDialogProps {
   similarEntries?: GalleryDisplayEntry[]
   onRetryTagging?: (entry: SolvedGalleryEntry) => Promise<void>
   isRetryingTagging?: boolean
+  allTagLabels?: string[]
+  onEditTags?: (entryIds: string[], add?: string[], remove?: string[]) => Promise<void>
+  isEditingTags?: boolean
   onClose: () => void
 }
 
@@ -60,11 +65,15 @@ export default function UploadGalleryDetailDialog({
   similarEntries = [],
   onRetryTagging,
   isRetryingTagging = false,
+  allTagLabels = [],
+  onEditTags,
+  isEditingTags = false,
   onClose,
 }: UploadGalleryDetailDialogProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const replayButtonRef = useRef<HTMLButtonElement>(null)
   const collectButtonRef = useRef<HTMLButtonElement>(null)
+  const [manualTagInput, setManualTagInput] = useState('')
   const representativeEntry = entry.representativeEntry
   const detailImage = representativeEntry.sourceImage ?? representativeEntry.previewImage
   const storedPalette = useMemo(() => findStoredDetailPalette(entry), [entry])
@@ -112,6 +121,20 @@ export default function UploadGalleryDetailDialog({
     : closeButtonRef
   const canUseInteractiveTags = Boolean(onTagFilter)
   const canSearchTags = Boolean(onFetchRandomImage)
+  const canEditTags = Boolean(onEditTags)
+  const motifEntryIds = useMemo(() => entry.allEntries.map((galleryEntry) => galleryEntry.id), [entry.allEntries])
+  const normalizedManualTagInput = manualTagInput.replace(/^#+/, '').replace(/\s+/g, ' ').trim()
+  const canAddManualTag = Boolean(
+    canEditTags &&
+    normalizedManualTagInput &&
+    !aiTags.some((tag) => tag.label.localeCompare(normalizedManualTagInput, 'de', { sensitivity: 'accent' }) === 0)
+  )
+
+  const handleAddManualTag = useCallback(async () => {
+    if (!canAddManualTag || !onEditTags) return
+    await onEditTags(motifEntryIds, [normalizedManualTagInput], [])
+    setManualTagInput('')
+  }, [canAddManualTag, motifEntryIds, normalizedManualTagInput, onEditTags])
 
   const handleActionKeyDown = useCallback((event: ReactKeyboardEvent<HTMLButtonElement>) => {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
@@ -265,10 +288,10 @@ export default function UploadGalleryDetailDialog({
             {!representativeEntry.hasDetailedProfile ? <span className="saved-game-chip">Legacy-Profil</span> : null}
           </div>
 
-          {aiTags.length > 0 || aiTagging ? (
+          {aiTags.length > 0 || aiTagging || canEditTags ? (
             <section className="gallery-detail-ai" aria-labelledby="gallery-detail-ai-title">
               <div className="gallery-detail-replay-header">
-                <span id="gallery-detail-ai-title" className="saved-games-kicker">KI-Sortierung</span>
+                <span id="gallery-detail-ai-title" className="saved-games-kicker">Tags & Sortierung</span>
                 <p className="gallery-detail-replay-copy">
                   {aiTagging?.status === 'tagged'
                     ? `${aiProviderLabel} hat Tags und passende Sammlungsvorschlaege fuer dieses Motiv erstellt.`
@@ -292,15 +315,27 @@ export default function UploadGalleryDetailDialog({
                     data-app-tooltip={aiTagging.error || 'KI-Tagging fuer dieses Motiv erneut anfragen.'}
                     data-app-tooltip-position="top"
                   >
-                    {isRetryingTagging ? 'Prueft ...' : 'KI-Tagging erneut versuchen'}
+                    {isRetryingTagging ? <BusyIndicator label="Prueft ..." /> : 'KI-Tagging erneut versuchen'}
                   </button>
+                ) : null}
+                {isRetryingTagging ? (
+                  <AsyncStatusPanel
+                    compact
+                    title="KI analysiert das Galeriebild"
+                    phase="Bildinhalt, Tags und Sammlungsvorschlaege werden geprueft."
+                    longWaitDetail="Die Bildanalyse laeuft noch. Das Motiv bleibt waehrenddessen in der Galerie erhalten."
+                  />
                 ) : null}
               </div>
 
               {aiTags.length > 0 ? (
-                <div className="gallery-detail-ai-tags" aria-label="KI-Tags" onKeyDown={handleDirectionalFocusNavigation}>
+                <div className="gallery-detail-ai-tags" aria-label="Bild-Tags" onKeyDown={handleDirectionalFocusNavigation}>
                   {aiTags.map((tag) => (
-                    <span key={tag.label} className="gallery-detail-ai-tag-chip">
+                    <span
+                      key={tag.label}
+                      className={`gallery-detail-ai-tag-chip${tag.source === 'manual' ? ' is-manual' : ''}`}
+                      title={tag.source === 'manual' ? 'Manueller Tag' : tag.source === 'imported' ? 'Importierter Tag' : 'KI-Tag'}
+                    >
                       <button
                         type="button"
                         className="gallery-detail-ai-tag-filter"
@@ -325,11 +360,66 @@ export default function UploadGalleryDetailDialog({
                         <Search aria-hidden="true" size={13} strokeWidth={2.4} />
                         <span className="gallery-detail-ai-tag-search-label">Online</span>
                       </button>
+                      {canEditTags ? (
+                        <button
+                          type="button"
+                          className="gallery-detail-ai-tag-remove"
+                          {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-detail-ai' }}
+                          onClick={() => void onEditTags?.(motifEntryIds, [], [tag.label])}
+                          disabled={isEditingTags}
+                          aria-label={`Tag ${tag.label} entfernen`}
+                          data-app-tooltip={`#${tag.label} von diesem Motiv entfernen.`}
+                          data-app-tooltip-position="top"
+                        >
+                          <X aria-hidden="true" size={13} strokeWidth={2.5} />
+                        </button>
+                      ) : null}
                     </span>
                   ))}
                 </div>
               ) : null}
 
+              {canEditTags ? (
+                <form
+                  className="gallery-detail-manual-tag-form"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void handleAddManualTag()
+                  }}
+                >
+                  <label htmlFor="gallery-detail-manual-tag">Eigenen Tag hinzufuegen</label>
+                  <div>
+                    <input
+                      id="gallery-detail-manual-tag"
+                      list="gallery-detail-tag-suggestions"
+                      value={manualTagInput}
+                      onChange={(event) => setManualTagInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if ((event.key === ',' || event.key === ';') && canAddManualTag) {
+                          event.preventDefault()
+                          void handleAddManualTag()
+                        }
+                      }}
+                      placeholder="Zum Beispiel Lieblingsbild"
+                      maxLength={40}
+                      disabled={isEditingTags}
+                    />
+                    <datalist id="gallery-detail-tag-suggestions">
+                      {allTagLabels.map((label) => <option key={label} value={label} />)}
+                    </datalist>
+                    <button
+                      type="submit"
+                      className="secondary"
+                      disabled={isEditingTags || !canAddManualTag}
+                      aria-label="Eigenen Tag hinzufuegen"
+                    >
+                      <Plus aria-hidden="true" size={15} strokeWidth={2.5} />
+                      {isEditingTags ? <BusyIndicator label="Speichert ..." /> : 'Hinzufuegen'}
+                    </button>
+                  </div>
+                  <small>Manuelle Tags bleiben bei einer neuen KI-Analyse erhalten.</small>
+                </form>
+              ) : null}
             </section>
           ) : null}
 
@@ -338,7 +428,7 @@ export default function UploadGalleryDetailDialog({
               <div className="gallery-detail-replay-header">
                 <span id="gallery-detail-similar-title" className="saved-games-kicker">Aehnliche Motive</span>
                 <p className="gallery-detail-replay-copy">
-                  Motive mit ueberschneidenden KI-Tags aus deiner lokalen Galerie.
+                  Motive mit ueberschneidenden Tags aus deiner lokalen Galerie.
                 </p>
               </div>
 

@@ -2,6 +2,19 @@ import type { AriaRole, CSSProperties, RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ensureElementVisible } from '../../app/focusVisibility.ts'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
+import {
+  classifyTagCategories,
+  createTagCategory,
+  deleteTagCategory,
+  loadTagCategoryCatalog,
+  updateTagCategoryAssignments,
+} from '../../services/GalleryService.ts'
+import { STATIC_TAG_CATEGORIES } from '../../services/tagCategories/staticTagTaxonomy.ts'
+import type {
+  TagCategoryCatalog,
+  TagCategoryIconId,
+  TagCategorySuggestion,
+} from '../../services/tagCategories/tagCategoryTypes.ts'
 import { ImageCollection, SolvedGallery, SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import UploadConfirmDialog from './UploadConfirmDialog.tsx'
@@ -40,6 +53,7 @@ interface UploadGalleryPanelProps {
   requestedTagFilterLabel?: string | null
   onDeleteEntries: (entryIds: string[]) => Promise<void>
   onUpdateTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
+  onEditEntryTags?: (entryIds: string[], add?: string[], remove?: string[]) => Promise<void>
   onRetryTagging?: (entryId: string) => Promise<void>
   onCreateCollection?: (name: string, imageIds: string[], description?: string) => Promise<void>
   onAddCollectionImages?: (collectionId: string, imageIds: string[]) => Promise<void>
@@ -122,6 +136,7 @@ export default function UploadGalleryPanel({
   requestedTagFilterLabel = null,
   onDeleteEntries,
   onUpdateTags = async () => undefined,
+  onEditEntryTags = async () => undefined,
   onRetryTagging = async () => undefined,
   onCreateCollection = async () => undefined,
   onAddCollectionImages = async () => undefined,
@@ -146,7 +161,16 @@ export default function UploadGalleryPanel({
   const [selectedEntry, setSelectedEntry] = useState<GalleryDisplayEntry | null>(null)
   const [collectingEntry, setCollectingEntry] = useState<GalleryDisplayEntry | null>(null)
   const [isManagingTags, setIsManagingTags] = useState(false)
-  const [isUpdatingTags, setIsUpdatingTags] = useState(false)
+  const [tagCategoryCatalog, setTagCategoryCatalog] = useState<TagCategoryCatalog>({
+    categories: STATIC_TAG_CATEGORIES,
+    assignments: [],
+    lastUpdatedAt: null,
+  })
+  const [tagCategorySuggestions, setTagCategorySuggestions] = useState<TagCategorySuggestion[]>([])
+  const [tagManagerOperation, setTagManagerOperation] = useState<
+    'ai-classification' | 'rename-tag' | 'remove-tag' | 'edit-tags' | 'assign-category' | 'create-category' | 'delete-category' | null
+  >(null)
+  const isUpdatingTags = tagManagerOperation !== null
   const [retryingTagEntryId, setRetryingTagEntryId] = useState<string | null>(null)
   const [isSavingCollection, setIsSavingCollection] = useState(false)
   const [isCreatingTagCollection, setIsCreatingTagCollection] = useState(false)
@@ -161,6 +185,16 @@ export default function UploadGalleryPanel({
 
   const difficultyOptions = useMemo(() => getGalleryDifficultyFilterOptions(), [])
   const galleryGroups = useMemo(() => buildGalleryDisplayGroups(entries), [entries])
+  const motifEntryIdsByEntryId = useMemo(() => {
+    const idsByEntryId = new Map<string, string[]>()
+    for (const group of galleryGroups) {
+      const groupEntryIds = group.allEntries.map((entry) => entry.id)
+      for (const entryId of groupEntryIds) {
+        idsByEntryId.set(entryId, groupEntryIds)
+      }
+    }
+    return idsByEntryId
+  }, [galleryGroups])
   const motifIdByEntryId = useMemo(() => {
     const motifIds = new Map<string, string>()
     for (const entry of entries) {
@@ -313,6 +347,15 @@ export default function UploadGalleryPanel({
   useEffect(() => {
     deletingEntryIdRef.current = deletingEntryId
   }, [deletingEntryId])
+
+  useEffect(() => {
+    if (!isManagingTags) return
+    void loadTagCategoryCatalog()
+      .then(setTagCategoryCatalog)
+      .catch(() => {
+        // The static taxonomy remains available when the local API cache cannot be loaded.
+      })
+  }, [isManagingTags])
 
   useEffect(() => {
     if (tagFilters.length === 0) return
@@ -710,7 +753,7 @@ export default function UploadGalleryPanel({
         await onCreateCollection(
           activeTagOption.label,
           tagCollectionImageIds,
-          `Automatisch aus Galerie-KI-Tag #${activeTagOption.label} erstellt.`
+          `Automatisch aus Galerie-Tag #${activeTagOption.label} erstellt.`
         )
       }
     } finally {
@@ -719,22 +762,89 @@ export default function UploadGalleryPanel({
   }, [activeTagCollection, activeTagOption, onAddCollectionImages, onCreateCollection, tagCollectionImageIds])
 
   const handleRenameTag = useCallback(async (sourceLabel: string, targetLabel: string) => {
-    setIsUpdatingTags(true)
+    setTagManagerOperation('rename-tag')
     try {
       await onUpdateTags('rename', sourceLabel, targetLabel)
     } finally {
-      setIsUpdatingTags(false)
+      setTagManagerOperation(null)
     }
   }, [onUpdateTags])
 
   const handleRemoveTag = useCallback(async (sourceLabel: string) => {
-    setIsUpdatingTags(true)
+    setTagManagerOperation('remove-tag')
     try {
       await onUpdateTags('remove', sourceLabel)
     } finally {
-      setIsUpdatingTags(false)
+      setTagManagerOperation(null)
     }
   }, [onUpdateTags])
+
+  const handleEditEntryTags = useCallback(async (entryIds: string[], add: string[] = [], remove: string[] = []) => {
+    const motifEntryIds = Array.from(new Set(entryIds.flatMap((entryId) => motifEntryIdsByEntryId.get(entryId) ?? [entryId])))
+    setTagManagerOperation('edit-tags')
+    try {
+      await onEditEntryTags(motifEntryIds, add, remove)
+    } finally {
+      setTagManagerOperation(null)
+    }
+  }, [motifEntryIdsByEntryId, onEditEntryTags])
+
+  const handleUpdateTagCategory = useCallback(async (
+    labels: string[],
+    categoryId: string | null
+  ) => {
+    setTagManagerOperation('assign-category')
+    try {
+      setTagCategoryCatalog(await updateTagCategoryAssignments({ labels, categoryId }))
+    } finally {
+      setTagManagerOperation(null)
+    }
+  }, [])
+
+  const handleClassifyUnknownTags = useCallback(async (labels: string[]) => {
+    if (labels.length === 0) return
+    setTagManagerOperation('ai-classification')
+    try {
+      const result = await classifyTagCategories({ labels, allowCategorySuggestions: true })
+      setTagCategoryCatalog(result.catalog)
+      setTagCategorySuggestions(result.suggestions)
+    } finally {
+      setTagManagerOperation(null)
+    }
+  }, [])
+
+  const handleCreateTagCategory = useCallback(async (
+    label: string,
+    iconId: TagCategoryIconId,
+    assignedLabels: string[] = []
+  ) => {
+    setTagManagerOperation('create-category')
+    try {
+      let nextCatalog = await createTagCategory({ label, iconId })
+      const createdCategory = nextCatalog.categories
+        .filter((category) => category.source === 'manual')
+        .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))[0]
+      if (createdCategory && assignedLabels.length > 0) {
+        nextCatalog = await updateTagCategoryAssignments({
+          labels: assignedLabels,
+          categoryId: createdCategory.id,
+        })
+      }
+      setTagCategoryCatalog(nextCatalog)
+      setTagCategorySuggestions((current) => current.filter((suggestion) => suggestion.label !== label))
+    } finally {
+      setTagManagerOperation(null)
+    }
+  }, [])
+
+  const handleDeleteTagCategory = useCallback(async (categoryId: string) => {
+    setTagManagerOperation('delete-category')
+    try {
+      setTagCategoryCatalog(await deleteTagCategory(categoryId))
+    } finally {
+      setTagManagerOperation(null)
+    }
+  }, [])
 
   const handleRetryTagging = useCallback(async (entry: SolvedGalleryEntry) => {
     setRetryingTagEntryId(entry.id)
@@ -778,6 +888,7 @@ export default function UploadGalleryPanel({
               detail="Die zuletzt geloesten Motive und Laufdaten werden vorbereitet."
               role="status"
               ariaLive="polite"
+              busy
             />
           ) : entries.length === 0 ? (
             <UploadStateNotice
@@ -872,6 +983,9 @@ export default function UploadGalleryPanel({
           similarEntries={similarEntries}
           onRetryTagging={handleRetryTagging}
           isRetryingTagging={retryingTagEntryId === selectedEntry.representativeEntry.id}
+          allTagLabels={allTagOptions.map((option) => option.label)}
+          onEditTags={handleEditEntryTags}
+          isEditingTags={isUpdatingTags}
           onClose={() => setSelectedEntry(null)}
         />
       )}
@@ -920,8 +1034,16 @@ export default function UploadGalleryPanel({
           tagOptions={allTagOptions}
           activeTagFilterKeys={tagFilters}
           isBusy={isUpdatingTags}
+          busyOperation={tagManagerOperation}
           onRenameTag={handleRenameTag}
           onRemoveTag={handleRemoveTag}
+          onEditEntryTags={handleEditEntryTags}
+          tagCategoryCatalog={tagCategoryCatalog}
+          tagCategorySuggestions={tagCategorySuggestions}
+          onUpdateTagCategory={handleUpdateTagCategory}
+          onClassifyUnknownTags={handleClassifyUnknownTags}
+          onCreateTagCategory={handleCreateTagCategory}
+          onDeleteTagCategory={handleDeleteTagCategory}
           onApplyTagFilters={handleApplyTagFilters}
           onClose={() => {
             if (!isUpdatingTags) {

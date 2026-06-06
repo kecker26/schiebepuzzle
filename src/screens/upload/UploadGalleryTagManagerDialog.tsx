@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   Activity,
   Brush,
@@ -22,15 +22,31 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
+import AsyncStatusPanel from '../../motion/AsyncStatusPanel.tsx'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
+import { resolveTagCategory } from '../../services/tagCategories/tagCategoryResolver.ts'
+import type {
+  TagCategoryIconId,
+  TagCategoryCatalog,
+  TagCategoryResolution,
+  TagCategorySuggestion,
+} from '../../services/tagCategories/tagCategoryTypes.ts'
 import type { GalleryTagFilterOption } from './UploadGalleryToolbar.tsx'
 
 interface UploadGalleryTagManagerDialogProps {
   tagOptions: GalleryTagFilterOption[]
   activeTagFilterKeys: string[]
   isBusy: boolean
+  busyOperation?: 'ai-classification' | 'rename-tag' | 'remove-tag' | 'edit-tags' | 'assign-category' | 'create-category' | 'delete-category' | null
   onRenameTag: (sourceLabel: string, targetLabel: string) => Promise<void>
   onRemoveTag: (sourceLabel: string) => Promise<void>
+  onEditEntryTags: (entryIds: string[], add?: string[], remove?: string[]) => Promise<void>
+  tagCategoryCatalog: TagCategoryCatalog
+  tagCategorySuggestions: TagCategorySuggestion[]
+  onUpdateTagCategory: (labels: string[], categoryId: string | null) => Promise<void>
+  onClassifyUnknownTags: (labels: string[]) => Promise<void>
+  onCreateTagCategory: (label: string, iconId: TagCategoryIconId, assignedLabels?: string[]) => Promise<void>
+  onDeleteTagCategory: (categoryId: string) => Promise<void>
   onApplyTagFilters: (tagKeys: string[]) => void
   onClose: () => void
   paletteStyle?: CSSProperties
@@ -46,26 +62,7 @@ interface GalleryTagDuplicateGroup {
 }
 
 type TagManagerSortMode = 'frequency' | 'alpha-asc' | 'alpha-desc'
-type GalleryTagCategoryId =
-  | 'people'
-  | 'animals'
-  | 'plants'
-  | 'nature'
-  | 'weatherLight'
-  | 'places'
-  | 'art'
-  | 'composition'
-  | 'food'
-  | 'colorMood'
-  | 'technologyMedia'
-  | 'scienceSpace'
-  | 'transportTravel'
-  | 'activities'
-  | 'fashion'
-  | 'textSigns'
-  | 'materials'
-  | 'objects'
-  | 'themes'
+type GalleryTagCategoryId = string
 
 interface GalleryTagCategoryDefinition {
   id: GalleryTagCategoryId
@@ -87,6 +84,40 @@ interface GalleryTagMergeSuggestion extends GalleryTagDuplicateGroup {
 }
 
 const TAG_MANAGER_FEEDBACK_MS = 2500
+const UNRESOLVED_TAG_PREVIEW_LIMIT = 12
+const TAG_CATEGORY_AI_BATCH_LIMIT = 30
+const TAG_CATEGORY_ICON_OPTIONS: Array<{ id: TagCategoryIconId; label: string }> = [
+  { id: 'tags', label: 'Tags' },
+  { id: 'shapes', label: 'Formen' },
+  { id: 'palette', label: 'Palette' },
+  { id: 'activity', label: 'Aktivitaet' },
+  { id: 'brush', label: 'Pinsel' },
+  { id: 'building', label: 'Gebaeude' },
+  { id: 'camera', label: 'Kamera' },
+  { id: 'cpu', label: 'Technik' },
+  { id: 'paw', label: 'Tier' },
+  { id: 'tree', label: 'Natur' },
+]
+const TAG_CATEGORY_ICON_MAP: Record<TagCategoryIconId, LucideIcon> = {
+  activity: Activity,
+  brush: Brush,
+  building: Building2,
+  camera: Camera,
+  car: Car,
+  cpu: Cpu,
+  palette: Palette,
+  paw: PawPrint,
+  rocket: Rocket,
+  shapes: Shapes,
+  shirt: Shirt,
+  smile: Smile,
+  sprout: Sprout,
+  sun: Sun,
+  tags: Tags,
+  tree: TreePine,
+  type: Type,
+  utensils: Utensils,
+}
 const SORT_MODE_LABELS: Record<TagManagerSortMode, string> = {
   frequency: 'Haeufigkeit',
   'alpha-asc': 'A-Z',
@@ -642,6 +673,12 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
     icon: Tags,
     keywords: [],
   },
+  {
+    id: 'unresolved',
+    label: 'Ungeordnet',
+    icon: Tags,
+    keywords: [],
+  },
 ]
 
 export function normalizeGermanTagBaseKey(label: string): string {
@@ -672,28 +709,12 @@ export function normalizeGermanTagConceptKey(label: string): string {
   return conceptKey
 }
 
-export function getGalleryTagCategoryId(label: string): GalleryTagCategoryId {
-  const key = normalizeGermanTagBaseKey(label)
-  const category = TAG_CATEGORY_DEFINITIONS.reduce<GalleryTagCategoryDefinition | null>((bestMatch, definition) => {
-    if (definition.id === 'themes') return bestMatch
-
-    const bestScoreForDefinition = definition.keywords.reduce((score, keyword) => {
-      const keywordKey = normalizeGermanTagBaseKey(keyword)
-      return key.includes(keywordKey) ? Math.max(score, keywordKey.length) : score
-    }, 0)
-
-    if (bestScoreForDefinition <= 0) return bestMatch
-    if (bestMatch === null) return definition
-
-    const bestMatchScore = bestMatch.keywords.reduce((score, keyword) => {
-      const keywordKey = normalizeGermanTagBaseKey(keyword)
-      return key.includes(keywordKey) ? Math.max(score, keywordKey.length) : score
-    }, 0)
-
-    return bestScoreForDefinition > bestMatchScore ? definition : bestMatch
-  }, null)
-
-  return category?.id ?? 'themes'
+export function getGalleryTagCategoryId(
+  label: string,
+  catalog?: Pick<TagCategoryCatalog, 'assignments' | 'categories'>
+): GalleryTagCategoryId {
+  const resolution = resolveTagCategory(label, catalog)
+  return resolution.status === 'resolved' ? resolution.categoryId : 'unresolved'
 }
 
 export function getCanonicalTagOption(options: GalleryTagFilterOption[]): GalleryTagFilterOption {
@@ -787,15 +808,35 @@ function formatTagCount(count: number): string {
   return `${count} ${count === 1 ? 'Motiv' : 'Motive'}`
 }
 
-export function groupTagOptionsByCategory(options: GalleryTagFilterOption[]): GalleryTagCategoryGroup[] {
+function getTagManagerErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Aktion konnte nicht abgeschlossen werden.'
+}
+
+export function groupTagOptionsByCategory(
+  options: GalleryTagFilterOption[],
+  catalog?: Pick<TagCategoryCatalog, 'assignments' | 'categories'>
+): GalleryTagCategoryGroup[] {
   const groupedOptions = new Map<GalleryTagCategoryId, GalleryTagFilterOption[]>()
 
   for (const option of options) {
-    const categoryId = getGalleryTagCategoryId(option.label)
+    const categoryId = getGalleryTagCategoryId(option.label, catalog)
     groupedOptions.set(categoryId, [...(groupedOptions.get(categoryId) ?? []), option])
   }
 
-  return TAG_CATEGORY_DEFINITIONS.flatMap((category) => {
+  const catalogCategories = catalog?.categories ?? []
+  const definitions: GalleryTagCategoryDefinition[] = catalogCategories.length > 0
+    ? [
+        ...catalogCategories.map((category) => ({
+          id: category.id,
+          label: category.label,
+          icon: TAG_CATEGORY_ICON_MAP[category.iconId] ?? Tags,
+          keywords: category.keywords,
+        })),
+        { id: 'unresolved', label: 'Ungeordnet', icon: Tags, keywords: [] },
+      ]
+    : TAG_CATEGORY_DEFINITIONS
+
+  return definitions.flatMap((category) => {
     const categoryOptions = groupedOptions.get(category.id) ?? []
     if (categoryOptions.length === 0) return []
 
@@ -825,23 +866,55 @@ export default function UploadGalleryTagManagerDialog({
   tagOptions,
   activeTagFilterKeys,
   isBusy,
+  busyOperation = null,
   onRenameTag,
   onRemoveTag,
+  onEditEntryTags,
+  tagCategoryCatalog,
+  tagCategorySuggestions,
+  onUpdateTagCategory,
+  onClassifyUnknownTags,
+  onCreateTagCategory,
+  onDeleteTagCategory,
   onApplyTagFilters,
   onClose,
   paletteStyle,
 }: UploadGalleryTagManagerDialogProps) {
+  const [aiPhaseIndex, setAiPhaseIndex] = useState(0)
+  const isClassifyingUnknownTags = busyOperation === 'ai-classification'
+
+  useEffect(() => {
+    if (!isClassifyingUnknownTags) {
+      setAiPhaseIndex(0)
+      return
+    }
+
+    const phaseTimers = [
+      window.setTimeout(() => setAiPhaseIndex(1), 1200),
+      window.setTimeout(() => setAiPhaseIndex(2), 4200),
+    ]
+    return () => phaseTimers.forEach((timer) => window.clearTimeout(timer))
+  }, [isClassifyingUnknownTags])
   const [searchQuery, setSearchQuery] = useState('')
   const [sortMode, setSortMode] = useState<TagManagerSortMode>('alpha-asc')
   const [selectedTagKey, setSelectedTagKey] = useState<string | null>(tagOptions[0]?.id ?? null)
   const [targetLabel, setTargetLabel] = useState(tagOptions[0]?.label ?? '')
+  const [manualTagLabel, setManualTagLabel] = useState('')
+  const [newCategoryLabel, setNewCategoryLabel] = useState('')
+  const [newCategoryIconId, setNewCategoryIconId] = useState<TagCategoryIconId>('tags')
   const [confirmingRemove, setConfirmingRemove] = useState(false)
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null)
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
   const [checkedTagKeys, setCheckedTagKeys] = useState<Set<string>>(() => new Set(activeTagFilterKeys))
-  const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<Set<GalleryTagCategoryId>>(
-    () => new Set(TAG_CATEGORY_DEFINITIONS.map((definition) => definition.id))
+  const initialCategoryIds = useMemo(
+    () => [...tagCategoryCatalog.categories.map((category) => category.id), 'unresolved'],
+    [tagCategoryCatalog.categories]
   )
+  const knownCategoryIdsRef = useRef(new Set(initialCategoryIds))
+  const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<Set<GalleryTagCategoryId>>(
+    () => new Set(initialCategoryIds)
+  )
+  const [showAllUnresolvedTags, setShowAllUnresolvedTags] = useState(false)
 
   const totalTaggedEntries = useMemo(() => countUniqueTaggedEntries(tagOptions), [tagOptions])
   const maxTagCount = useMemo(
@@ -856,7 +929,10 @@ export default function UploadGalleryTagManagerDialog({
 
     return sortTagOptions(filteredOptions, sortMode)
   }, [queryKey, sortMode, tagOptions])
-  const visibleTagGroups = useMemo(() => groupTagOptionsByCategory(visibleTagOptions), [visibleTagOptions])
+  const visibleTagGroups = useMemo(
+    () => groupTagOptionsByCategory(visibleTagOptions, tagCategoryCatalog),
+    [tagCategoryCatalog, visibleTagOptions]
+  )
   const selectedOption =
     tagOptions.find((option) => option.id === selectedTagKey)
     ?? visibleTagOptions[0]
@@ -880,6 +956,25 @@ export default function UploadGalleryTagManagerDialog({
   }, [duplicateGroups, selectedOption])
   const normalizedTarget = targetLabel.replace(/\s+/g, ' ').trim()
   const canRename = Boolean(selectedOption && normalizedTarget && normalizedTarget !== selectedOption.label)
+  const selectedEntryIds = useMemo(() => Array.from(new Set(
+    tagOptions
+      .filter((option) => checkedTagKeys.has(option.id))
+      .flatMap((option) => option.entryIds ?? [])
+  )), [checkedTagKeys, tagOptions])
+  const normalizedManualTagLabel = manualTagLabel.replace(/^#+/, '').replace(/\s+/g, ' ').trim()
+  const normalizedNewCategoryLabel = newCategoryLabel.replace(/\s+/g, ' ').trim()
+  const unresolvedTagLabels = useMemo(
+    () => tagOptions
+      .filter((option) => resolveTagCategory(option.label, tagCategoryCatalog).status === 'unresolved')
+      .map((option) => option.label),
+    [tagCategoryCatalog, tagOptions]
+  )
+  const selectedCategoryResolution: TagCategoryResolution = selectedOption
+    ? resolveTagCategory(selectedOption.label, tagCategoryCatalog)
+    : { status: 'unresolved' }
+  const selectedCategoryId = selectedCategoryResolution.status === 'resolved'
+    ? selectedCategoryResolution.categoryId
+    : ''
 
   useEffect(() => {
     if (!feedbackMessage) return undefined
@@ -897,6 +992,14 @@ export default function UploadGalleryTagManagerDialog({
       return new Set(nextKeys)
     })
   }, [tagOptions])
+
+  useEffect(() => {
+    const newCategoryIds = initialCategoryIds.filter((categoryId) => !knownCategoryIdsRef.current.has(categoryId))
+    if (newCategoryIds.length === 0) return
+
+    newCategoryIds.forEach((categoryId) => knownCategoryIdsRef.current.add(categoryId))
+    setCollapsedCategoryIds((current) => new Set([...current, ...newCategoryIds]))
+  }, [initialCategoryIds])
 
   useEffect(() => {
     if (tagOptions.length === 0) {
@@ -1000,6 +1103,57 @@ export default function UploadGalleryTagManagerDialog({
     setConfirmingRemove(false)
   }
 
+  const handleAddManualTag = async () => {
+    if (!normalizedManualTagLabel || selectedEntryIds.length === 0) return
+    await onEditEntryTags(selectedEntryIds, [normalizedManualTagLabel], [])
+    setFeedbackMessage(`#${normalizedManualTagLabel} wurde ${formatTagCount(selectedEntryIds.length)} hinzugefuegt.`)
+    setManualTagLabel('')
+  }
+
+  const handleCategoryChange = async (categoryId: string) => {
+    if (!selectedOption) return
+    await onUpdateTagCategory(
+      [selectedOption.label],
+      categoryId || null
+    )
+    setFeedbackMessage(
+      categoryId
+        ? `#${selectedOption.label} wurde manuell eingeordnet.`
+        : `Manuelle Kategorie fuer #${selectedOption.label} wurde entfernt.`
+    )
+  }
+
+  const handleCreateCategory = async () => {
+    if (!normalizedNewCategoryLabel) return
+    try {
+      await onCreateTagCategory(normalizedNewCategoryLabel, newCategoryIconId)
+      setFeedbackMessage(`Kategorie ${normalizedNewCategoryLabel} wurde angelegt.`)
+      setNewCategoryLabel('')
+      setNewCategoryIconId('tags')
+    } catch (error) {
+      setFeedbackMessage(`Kategorie konnte nicht angelegt werden: ${getTagManagerErrorMessage(error)}`)
+    }
+  }
+
+  const handleClassifyUnknownTags = async () => {
+    try {
+      const batchLabels = unresolvedTagLabels.slice(0, TAG_CATEGORY_AI_BATCH_LIMIT)
+      await onClassifyUnknownTags(batchLabels)
+      setFeedbackMessage(`${batchLabels.length} unbekannte Tags wurden mit der KI-Kategorisierung abgeglichen.`)
+    } catch (error) {
+      setFeedbackMessage(`KI-Kategorisierung nicht verfuegbar: ${getTagManagerErrorMessage(error)}`)
+    }
+  }
+
+  const handleConfirmSuggestion = async (suggestion: TagCategorySuggestion) => {
+    try {
+      await onCreateTagCategory(suggestion.label, suggestion.iconId, suggestion.matchingTags)
+      setFeedbackMessage(`Kategorie ${suggestion.label} wurde bestaetigt.`)
+    } catch (error) {
+      setFeedbackMessage(`Vorschlag konnte nicht bestaetigt werden: ${getTagManagerErrorMessage(error)}`)
+    }
+  }
+
   return (
     <AnimatedDialog
       overlayClassName="gallery-tag-manager-overlay"
@@ -1016,7 +1170,7 @@ export default function UploadGalleryTagManagerDialog({
     >
       <div className="gallery-tag-manager-header">
         <div>
-          <span className="saved-games-kicker">KI-Tags</span>
+          <span className="saved-games-kicker">Bild-Tags</span>
           <h3 id="gallery-tag-manager-title">Tags verwalten</h3>
         </div>
         <p id="gallery-tag-manager-description">
@@ -1028,7 +1182,7 @@ export default function UploadGalleryTagManagerDialog({
       <div className="gallery-tag-manager-search">
         <label
           className="gallery-tag-manager-search-field"
-          data-app-tooltip="KI-Tags nach Name oder Kategorie durchsuchen."
+          data-app-tooltip="Tags nach Name oder Kategorie durchsuchen."
           data-app-tooltip-align="start"
         >
           <input
@@ -1036,14 +1190,14 @@ export default function UploadGalleryTagManagerDialog({
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Tags durchsuchen..."
-            disabled={isBusy || tagOptions.length === 0}
+            disabled={(isBusy && !isClassifyingUnknownTags) || tagOptions.length === 0}
           />
         </label>
         <button
           type="button"
           className="secondary gallery-tag-manager-sort-button"
           onClick={() => setSortMode((current) => getNextSortMode(current))}
-          disabled={isBusy || tagOptions.length === 0}
+          disabled={(isBusy && !isClassifyingUnknownTags) || tagOptions.length === 0}
           aria-label={`Sortierung wechseln, aktuell ${SORT_MODE_LABELS[sortMode]}`}
           data-app-tooltip={`Sortierung wechseln. Aktuell: ${SORT_MODE_LABELS[sortMode]}.`}
           data-app-tooltip-position="top"
@@ -1052,12 +1206,79 @@ export default function UploadGalleryTagManagerDialog({
         </button>
       </div>
 
+      <div className="gallery-tag-manager-ai-actions">
+        <div>
+          <strong>Hybrid-Kategorisierung</strong>
+          <span>
+            {unresolvedTagLabels.length} unbekannte Tags warten auf eine Zuordnung.
+            Die KI verarbeitet pro Durchlauf bis zu {TAG_CATEGORY_AI_BATCH_LIMIT}.
+          </span>
+        </div>
+        <AnimatedButton
+          className="secondary"
+          onClick={() => {
+            void handleClassifyUnknownTags()
+          }}
+          disabled={isBusy || unresolvedTagLabels.length === 0}
+          busy={isClassifyingUnknownTags}
+          busyLabel={`KI analysiert ${Math.min(unresolvedTagLabels.length, TAG_CATEGORY_AI_BATCH_LIMIT)} Tags ...`}
+        >
+          Unbekannte mit KI sortieren
+        </AnimatedButton>
+      </div>
+
+      {isClassifyingUnknownTags ? (
+        <AsyncStatusPanel
+          className="gallery-tag-manager-ai-status"
+          floating
+          title={`KI sortiert ${Math.min(unresolvedTagLabels.length, TAG_CATEGORY_AI_BATCH_LIMIT)} unbekannte Tags`}
+          phase={[
+            'Anfrage wird vorbereitet.',
+            'Die KI ordnet Begriffe passenden Kategorien zu.',
+            'Ergebnisse werden geprueft und lokal gespeichert.',
+          ][aiPhaseIndex]}
+          detail="Bereits geoeffnete Kategorien und die Suche bleiben nutzbar."
+          longWaitDetail="Die KI arbeitet noch. Bei vielen oder seltenen Begriffen kann die Zuordnung etwas laenger dauern."
+        />
+      ) : null}
+
+      {tagCategorySuggestions.length > 0 ? (
+        <div className="gallery-tag-manager-suggestions">
+          <span className="saved-games-kicker">Neue Kategorien vorgeschlagen</span>
+          {tagCategorySuggestions.map((suggestion) => (
+            <div key={suggestion.temporaryId}>
+              <span>
+                <strong>{suggestion.label}</strong>
+                <small>{suggestion.matchingTags.map((tag) => `#${tag}`).join(', ')}</small>
+              </span>
+              <p>{suggestion.reason}</p>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  void handleConfirmSuggestion(suggestion)
+                }}
+                disabled={isBusy}
+              >
+                Kategorie bestaetigen
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className={`gallery-tag-manager-body${isMobileDetailOpen ? ' is-detail-open' : ''}`}>
         <section className="gallery-tag-manager-list" aria-label="Tag-Liste">
           {visibleTagGroups.length > 0 ? (
             visibleTagGroups.map((group) => {
               const CategoryIcon = group.category.icon
               const isCollapsed = collapsedCategoryIds.has(group.category.id)
+              const isLimitedUnresolvedGroup = group.category.id === 'unresolved'
+                && !queryKey
+                && group.options.length > UNRESOLVED_TAG_PREVIEW_LIMIT
+              const displayedOptions = isLimitedUnresolvedGroup && !showAllUnresolvedTags
+                ? group.options.slice(0, UNRESOLVED_TAG_PREVIEW_LIMIT)
+                : group.options
               const selectedCount = group.options.reduce(
                 (sum, option) => sum + (checkedTagKeys.has(option.id) ? 1 : 0),
                 0
@@ -1104,7 +1325,7 @@ export default function UploadGalleryTagManagerDialog({
 
                   {!isCollapsed ? (
                     <div className="gallery-tag-manager-category-items">
-                      {group.options.map((option) => {
+                      {displayedOptions.map((option) => {
                         const optionCount = getTagUsageCount(option)
                         const usagePercent = Math.max(4, Math.round((optionCount / maxTagCount) * 100))
                         const isActive = selectedOption?.id === option.id
@@ -1146,6 +1367,18 @@ export default function UploadGalleryTagManagerDialog({
                           </div>
                         )
                       })}
+                      {isLimitedUnresolvedGroup ? (
+                        <button
+                          type="button"
+                          className="secondary gallery-tag-manager-show-more"
+                          onClick={() => setShowAllUnresolvedTags((current) => !current)}
+                          disabled={isBusy}
+                        >
+                          {showAllUnresolvedTags
+                            ? 'Weniger anzeigen'
+                            : `${group.options.length - UNRESOLVED_TAG_PREVIEW_LIMIT} weitere Tags anzeigen`}
+                        </button>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -1186,6 +1419,63 @@ export default function UploadGalleryTagManagerDialog({
                 <span className="gallery-tag-manager-detail-meter" aria-hidden="true">
                   <span style={{ width: `${selectedTagShare}%` }} />
                 </span>
+              </div>
+
+              <div className="gallery-tag-manager-category-editor">
+                <label>
+                  <span>Kategorie</span>
+                  <select
+                    value={selectedCategoryId}
+                    onChange={(event) => {
+                      void handleCategoryChange(event.target.value)
+                    }}
+                    disabled={isBusy}
+                  >
+                    <option value="">Ungeordnet</option>
+                    {tagCategoryCatalog.categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <small>
+                  Quelle: {
+                    selectedCategoryResolution.status === 'unresolved'
+                      ? 'noch nicht zugeordnet'
+                      : selectedCategoryResolution.source === 'manual'
+                        ? 'manuell bestaetigt'
+                        : selectedCategoryResolution.source === 'ai'
+                          ? 'gelernter Cache'
+                          : 'statische Taxonomie'
+                  }
+                </small>
+                {selectedCategoryResolution.status === 'resolved'
+                  && selectedCategoryResolution.source !== 'static' ? (
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => {
+                        void handleCategoryChange('')
+                      }}
+                      disabled={isBusy}
+                    >
+                      Manuelle Zuordnung entfernen
+                    </button>
+                  ) : null}
+                {selectedCategoryResolution.status === 'resolved'
+                  && tagCategoryCatalog.categories.find((category) => category.id === selectedCategoryId)?.source === 'manual' ? (
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => {
+                        void onDeleteTagCategory(selectedCategoryId)
+                      }}
+                      disabled={isBusy}
+                    >
+                      Eigene Kategorie loeschen
+                    </button>
+                  ) : null}
               </div>
 
               <label
@@ -1272,11 +1562,13 @@ export default function UploadGalleryTagManagerDialog({
                   onClick={() => {
                     void handleRename()
                   }}
-                  disabled={isBusy || !canRename}
+                  disabled={!canRename || isClassifyingUnknownTags}
+                  busy={isBusy && !isClassifyingUnknownTags}
+                  busyLabel="Speichert ..."
                   data-app-tooltip="Ausgewaehlten Tag auf den neuen Namen umbenennen."
                   data-app-tooltip-position="top"
                 >
-                  {isBusy ? 'Speichert ...' : 'Umbenennen'}
+                  Umbenennen
                 </AnimatedButton>
                 <AnimatedButton
                   className="secondary"
@@ -1288,6 +1580,33 @@ export default function UploadGalleryTagManagerDialog({
                   Entfernen
                 </AnimatedButton>
               </div>
+
+              <form
+                className="gallery-tag-manager-manual-form"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void handleAddManualTag()
+                }}
+              >
+                <span className="saved-games-kicker">Manueller Batch-Tag</span>
+                <p>
+                  Fuegt einen eigenen Tag zu den Motiven hinzu, die links per Checkbox ausgewaehlt sind.
+                </p>
+                <input
+                  value={manualTagLabel}
+                  onChange={(event) => setManualTagLabel(event.target.value)}
+                  placeholder="Eigenen Tag eingeben..."
+                  maxLength={40}
+                  disabled={isBusy}
+                />
+                <button
+                  type="submit"
+                  className="secondary"
+                  disabled={isBusy || !normalizedManualTagLabel || selectedEntryIds.length === 0}
+                >
+                  Zu {formatTagCount(selectedEntryIds.length)} hinzufuegen
+                </button>
+              </form>
             </>
           ) : (
             <div className="gallery-tag-manager-empty" role="status">
@@ -1302,6 +1621,36 @@ export default function UploadGalleryTagManagerDialog({
           {feedbackMessage}
         </div>
       ) : null}
+
+      <form
+        className="gallery-tag-manager-create-category"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void handleCreateCategory()
+        }}
+      >
+        <span className="saved-games-kicker">Eigene Kategorie</span>
+        <input
+          value={newCategoryLabel}
+          onChange={(event) => setNewCategoryLabel(event.target.value)}
+          placeholder="Kategoriename..."
+          maxLength={60}
+          disabled={isBusy}
+        />
+        <select
+          value={newCategoryIconId}
+          onChange={(event) => setNewCategoryIconId(event.target.value as TagCategoryIconId)}
+          disabled={isBusy}
+          aria-label="Icon fuer neue Kategorie"
+        >
+          {TAG_CATEGORY_ICON_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>{option.label}</option>
+          ))}
+        </select>
+        <button type="submit" className="secondary" disabled={isBusy || !normalizedNewCategoryLabel}>
+          Kategorie anlegen
+        </button>
+      </form>
 
       <div className="gallery-tag-manager-actions">
         <div className="gallery-tag-manager-filter-actions">

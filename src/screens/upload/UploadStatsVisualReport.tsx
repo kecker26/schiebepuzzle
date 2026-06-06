@@ -1958,7 +1958,9 @@ export default function UploadStatsVisualReport({
                     onClick={() => {
                       void handleExportActiveRawCsv()
                     }}
-                    disabled={isSavingRawExport || (rawStatsView === 'history' ? filteredHistory.length === 0 : completionHistory.length === 0)}
+                    disabled={rawStatsView === 'history' ? filteredHistory.length === 0 : completionHistory.length === 0}
+                    busy={isSavingRawExport}
+                    busyLabel="Speichere CSV ..."
                     data-app-tooltip="Aktuelle Rohdatenansicht als CSV in statistik-exporte speichern."
                     data-app-tooltip-position="top"
                   >
@@ -1971,7 +1973,9 @@ export default function UploadStatsVisualReport({
                     onClick={() => {
                       void handleExportRawJson()
                     }}
-                    disabled={isSavingRawExport || (!stats && completionHistory.length === 0)}
+                    disabled={!stats && completionHistory.length === 0}
+                    busy={isSavingRawExport}
+                    busyLabel="Speichere JSON ..."
                     data-app-tooltip="Alle Statistik-Rohdaten als JSON in statistik-exporte speichern."
                     data-app-tooltip-position="top"
                   >

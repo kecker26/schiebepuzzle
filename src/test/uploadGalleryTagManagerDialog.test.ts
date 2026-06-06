@@ -7,6 +7,7 @@ import {
   normalizeGermanTagConceptKey,
 } from '../screens/upload/UploadGalleryTagManagerDialog.tsx'
 import type { GalleryTagFilterOption } from '../screens/upload/UploadGalleryToolbar.tsx'
+import type { TagCategoryCatalog } from '../services/tagCategories/tagCategoryTypes.ts'
 
 function createTagOption(label: string, entryIds: string[]): GalleryTagFilterOption {
   return {
@@ -48,10 +49,10 @@ describe('UploadGalleryTagManagerDialog tag grouping', () => {
       createTagOption('Virtual Reality', ['entry-1']),
     ])
 
-    const themesGroup = groups.find((group) => group.category.id === 'themes')
+    const unresolvedGroup = groups.find((group) => group.category.id === 'unresolved')
 
-    expect(themesGroup?.options).toHaveLength(4)
-    expect(themesGroup?.totalCount).toBe(1)
+    expect(unresolvedGroup?.options).toHaveLength(2)
+    expect(unresolvedGroup?.totalCount).toBe(1)
   })
 
   it('prefers native German spelling as canonical when spellings are otherwise equivalent', () => {
@@ -70,6 +71,7 @@ describe('UploadGalleryTagManagerDialog tag grouping', () => {
     expect(getGalleryTagCategoryId('Portrait')).toBe('people')
     expect(getGalleryTagCategoryId('Tierportrait')).toBe('animals')
     expect(getGalleryTagCategoryId('Tierportr\u00e4t')).toBe('animals')
+    expect(getGalleryTagCategoryId('Schwan')).toBe('animals')
     expect(getGalleryTagCategoryId('Blume')).toBe('plants')
     expect(getGalleryTagCategoryId('Baum')).toBe('nature')
     expect(getGalleryTagCategoryId('Schnee')).toBe('weatherLight')
@@ -86,6 +88,51 @@ describe('UploadGalleryTagManagerDialog tag grouping', () => {
     expect(getGalleryTagCategoryId('Stoff')).toBe('materials')
     expect(getGalleryTagCategoryId('Verkehrsschild')).toBe('textSigns')
     expect(getGalleryTagCategoryId('Holz')).toBe('materials')
-    expect(getGalleryTagCategoryId('Unbekannter Begriff')).toBe('themes')
+    expect(getGalleryTagCategoryId('Unbekannter Begriff')).toBe('unresolved')
+    expect(getGalleryTagCategoryId('Autonomie')).toBe('unresolved')
+  })
+
+  it('uses persisted manual category assignments before the static taxonomy', () => {
+    const catalog: TagCategoryCatalog = {
+      categories: [],
+      assignments: [{
+        tagKey: 'schwan',
+        categoryId: 'art',
+        source: 'manual',
+        confirmed: true,
+        confidence: 1,
+        originalLabels: ['Schwan'],
+        updatedAt: '2026-06-06T12:00:00.000Z',
+      }],
+      lastUpdatedAt: '2026-06-06T12:00:00.000Z',
+    }
+
+    expect(getGalleryTagCategoryId('Schwan', catalog)).toBe('art')
+  })
+
+  it('groups tags into dynamic categories from the catalog', () => {
+    const catalog: TagCategoryCatalog = {
+      categories: [{
+        id: 'mythical-creatures',
+        label: 'Fabelwesen',
+        iconId: 'tags',
+        keywords: [],
+        source: 'manual',
+      }],
+      assignments: [{
+        tagKey: 'drache',
+        categoryId: 'mythical-creatures',
+        source: 'manual',
+        confirmed: true,
+        confidence: 1,
+        originalLabels: ['Drache'],
+        updatedAt: '2026-06-06T12:00:00.000Z',
+      }],
+      lastUpdatedAt: '2026-06-06T12:00:00.000Z',
+    }
+
+    const groups = groupTagOptionsByCategory([createTagOption('Drache', ['entry-1'])], catalog)
+    expect(groups[0]?.category.label).toBe('Fabelwesen')
+    expect(groups[0]?.options[0]?.label).toBe('Drache')
   })
 })

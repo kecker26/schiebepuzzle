@@ -87,6 +87,7 @@ interface UploadScreenProps {
   onReplayGalleryEntry: (entry: SolvedGalleryEntry) => void
   onDeleteGalleryEntries: (entryIds: string[]) => Promise<void>
   onUpdateGalleryTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
+  onEditGalleryEntryTags?: (entryIds: string[], add?: string[], remove?: string[]) => Promise<void>
   onRetryGalleryTagging?: (entryId: string) => Promise<void>
   onCreateImageCollection?: (name: string, imageIds: string[], description?: string) => Promise<ImageCollections>
   onUpdateImageCollection?: (
@@ -196,6 +197,7 @@ export default function UploadScreen({
   onReplayGalleryEntry,
   onDeleteGalleryEntries,
   onUpdateGalleryTags,
+  onEditGalleryEntryTags,
   onRetryGalleryTagging,
   onCreateImageCollection,
   onUpdateImageCollection,
@@ -207,6 +209,7 @@ export default function UploadScreen({
   onImportBackupFile,
 }: UploadScreenProps) {
   const screenRef = useRef<HTMLDivElement>(null)
+  const uploadContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const promptInputRef = useRef<HTMLTextAreaElement>(null)
   const primaryUploadCardRef = useRef<HTMLButtonElement>(null)
@@ -226,6 +229,7 @@ export default function UploadScreen({
   const pendingStartFocusRef = useRef<StartFocusTarget | null>(null)
   const handledCommandRequestIdRef = useRef<number | null>(null)
   const dragDepthRef = useRef(0)
+  const selectionImageRequestLockRef = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const [isDragActive, setIsDragActive] = useState(false)
   const [activeWindow, setActiveWindow] = useState<UploadWorkspaceWindow>('start')
@@ -250,11 +254,31 @@ export default function UploadScreen({
   const [uploadClipboardPasteStatus, setUploadClipboardPasteStatus] = useState<UploadClipboardPasteStatus>('idle')
   const [promptImagePrompt, setPromptImagePrompt] = useState('')
   const [isGeneratingPromptImage, setIsGeneratingPromptImage] = useState(false)
+  const isSelectionImageRequestBusy = activeWindow === 'start' && (isFetchingRandom || isGeneratingPromptImage)
 
-  const handleFetchRandomFromSelection = useCallback(() => {
+  const handleFetchRandomFromSelection = useCallback(async () => {
+    if (selectionImageRequestLockRef.current || isSelectionImageRequestBusy) return
+
     const searchQuery = randomImageQuery.trim()
-    return onFetchRandomImage(searchQuery || undefined)
-  }, [onFetchRandomImage, randomImageQuery])
+    selectionImageRequestLockRef.current = true
+    try {
+      await onFetchRandomImage(searchQuery || undefined)
+    } finally {
+      selectionImageRequestLockRef.current = false
+    }
+  }, [isSelectionImageRequestBusy, onFetchRandomImage, randomImageQuery])
+
+  useEffect(() => {
+    const uploadContainer = uploadContainerRef.current
+    if (!uploadContainer) return
+
+    if (isSelectionImageRequestBusy) {
+      uploadContainer.setAttribute('inert', '')
+      return () => uploadContainer.removeAttribute('inert')
+    }
+
+    uploadContainer.removeAttribute('inert')
+  }, [isSelectionImageRequestBusy])
 
   const alignSelectionViewportToTop = useCallback(() => {
     screenRef.current?.scrollIntoView({ block: 'start', inline: 'nearest' })
@@ -424,6 +448,11 @@ export default function UploadScreen({
 
   const handlePaste = useCallback(
     (event: ClipboardEvent) => {
+      if (selectionImageRequestLockRef.current || isSelectionImageRequestBusy) {
+        event.preventDefault()
+        return
+      }
+
       if (isTextEntryTarget(event.target)) {
         return
       }
@@ -441,7 +470,7 @@ export default function UploadScreen({
       clearError()
       void loadImageFile(file)
     },
-    [clearError, loadImageFile, setTimedError]
+    [clearError, isSelectionImageRequestBusy, loadImageFile, setTimedError]
   )
 
   useEffect(() => {
@@ -472,6 +501,7 @@ export default function UploadScreen({
         || event.metaKey
         || activeWindow !== 'start'
         || isBlockingDialogOpen
+        || isSelectionImageRequestBusy
       ) {
         return
       }
@@ -492,7 +522,7 @@ export default function UploadScreen({
     return () => {
       window.removeEventListener('keydown', handleWindowKeyDown)
     }
-  }, [activeWindow, isBlockingDialogOpen, onGoToStartScreen])
+  }, [activeWindow, isBlockingDialogOpen, isSelectionImageRequestBusy, onGoToStartScreen])
 
   useEffect(() => {
     if (activeWindow !== 'start') {
@@ -500,7 +530,7 @@ export default function UploadScreen({
       return
     }
 
-    if (isBlockingDialogOpen || hasFocusedStartWindowRef.current) {
+    if (isBlockingDialogOpen || isSelectionImageRequestBusy || hasFocusedStartWindowRef.current) {
       return
     }
 
@@ -535,7 +565,7 @@ export default function UploadScreen({
       isCancelled = true
       window.cancelAnimationFrame(frameId)
     }
-  }, [activeWindow, getStartFocusTarget, isBlockingDialogOpen])
+  }, [activeWindow, getStartFocusTarget, isBlockingDialogOpen, isSelectionImageRequestBusy])
 
   const resetDragState = useCallback(() => {
     dragDepthRef.current = 0
@@ -562,22 +592,22 @@ export default function UploadScreen({
   }, [])
 
   useEffect(() => {
-    if (!isBlockingDialogOpen) return
+    if (!isBlockingDialogOpen && !isSelectionImageRequestBusy) return
     closeContextMenu()
-  }, [closeContextMenu, isBlockingDialogOpen])
+  }, [closeContextMenu, isBlockingDialogOpen, isSelectionImageRequestBusy])
 
   useEffect(() => {
-    if (!isBlockingDialogOpen) return
+    if (!isBlockingDialogOpen && !isSelectionImageRequestBusy) return
     resetDragState()
-  }, [isBlockingDialogOpen, resetDragState])
+  }, [isBlockingDialogOpen, isSelectionImageRequestBusy, resetDragState])
 
   const handleDragEnter = useCallback((event: DragEvent<HTMLDivElement>) => {
-    if (isBlockingDialogOpen || !hasDraggedFiles(event.dataTransfer)) return
+    if (isBlockingDialogOpen || isSelectionImageRequestBusy || !hasDraggedFiles(event.dataTransfer)) return
 
     event.preventDefault()
     dragDepthRef.current += 1
     setIsDragActive(true)
-  }, [isBlockingDialogOpen])
+  }, [isBlockingDialogOpen, isSelectionImageRequestBusy])
 
   const handleDragLeave = useCallback((event: DragEvent<HTMLDivElement>) => {
     if (!hasDraggedFiles(event.dataTransfer)) return
@@ -589,19 +619,19 @@ export default function UploadScreen({
   }, [])
 
   const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
-    if (isBlockingDialogOpen || !hasDraggedFiles(event.dataTransfer)) return
+    if (isBlockingDialogOpen || isSelectionImageRequestBusy || !hasDraggedFiles(event.dataTransfer)) return
 
     event.preventDefault()
     event.dataTransfer.dropEffect = 'copy'
     setIsDragActive(true)
-  }, [isBlockingDialogOpen])
+  }, [isBlockingDialogOpen, isSelectionImageRequestBusy])
 
   const handleDrop = useCallback(async (event: DragEvent<HTMLDivElement>) => {
     if (!hasDraggedFiles(event.dataTransfer)) return
 
     event.preventDefault()
     resetDragState()
-    if (isBlockingDialogOpen) return
+    if (isBlockingDialogOpen || isSelectionImageRequestBusy) return
 
     clearError()
 
@@ -613,9 +643,14 @@ export default function UploadScreen({
     }
 
     await loadImageFile(files[0])
-  }, [clearError, isBlockingDialogOpen, loadImageFile, resetDragState, setTimedError])
+  }, [clearError, isBlockingDialogOpen, isSelectionImageRequestBusy, loadImageFile, resetDragState, setTimedError])
 
   const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
+    if (selectionImageRequestLockRef.current || isSelectionImageRequestBusy) {
+      event.target.value = ''
+      return
+    }
+
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -625,6 +660,8 @@ export default function UploadScreen({
   }
 
   const handlePasteImageFromClipboard = useCallback(async () => {
+    if (selectionImageRequestLockRef.current || isSelectionImageRequestBusy) return
+
     try {
       const imageDataUrl = await readClipboardImageDataUrl()
       const clipboardImageFile = await createFileFromImageDataUrl(imageDataUrl)
@@ -635,9 +672,11 @@ export default function UploadScreen({
       setUploadClipboardPasteStatus('unavailable')
       setTimedError(`Bild konnte nicht aus der Zwischenablage eingefuegt werden: ${getErrorMessage(clipboardError)}`)
     }
-  }, [loadImageFile, setTimedError])
+  }, [isSelectionImageRequestBusy, loadImageFile, setTimedError])
 
   const handlePastePromptFromClipboard = useCallback(async () => {
+    if (selectionImageRequestLockRef.current || isSelectionImageRequestBusy) return
+
     try {
       const clipboardText = await readClipboardText()
       if (!clipboardText) {
@@ -661,9 +700,11 @@ export default function UploadScreen({
     } catch (clipboardError) {
       setTimedError(`Prompt konnte nicht eingefuegt werden: ${getErrorMessage(clipboardError)}`)
     }
-  }, [clearError, promptImagePrompt, setTimedError])
+  }, [clearError, isSelectionImageRequestBusy, promptImagePrompt, setTimedError])
 
   const handleGeneratePromptImage = useCallback(async () => {
+    if (selectionImageRequestLockRef.current || isSelectionImageRequestBusy) return
+
     const prompt = promptImagePrompt.trim()
     if (!prompt) {
       setTimedError('Bitte gib zuerst einen Prompt fuer das KI-Bild ein.')
@@ -671,6 +712,7 @@ export default function UploadScreen({
     }
 
     clearError()
+    selectionImageRequestLockRef.current = true
     setIsGeneratingPromptImage(true)
 
     try {
@@ -680,8 +722,9 @@ export default function UploadScreen({
       setTimedError(`KI-Bild konnte nicht erstellt werden: ${getErrorMessage(promptImageError)}`)
     } finally {
       setIsGeneratingPromptImage(false)
+      selectionImageRequestLockRef.current = false
     }
-  }, [clearError, onImageLoaded, promptImagePrompt, setTimedError])
+  }, [clearError, isSelectionImageRequestBusy, onImageLoaded, promptImagePrompt, setTimedError])
 
   const handleOpenSavedGamesWindow = () => {
     handleWindowChange('savedGames')
@@ -700,6 +743,8 @@ export default function UploadScreen({
   }
 
   const handleWindowChange = useCallback((window: UploadWorkspaceWindow) => {
+    if (selectionImageRequestLockRef.current || isSelectionImageRequestBusy) return
+
     if (window === 'start') {
       scheduleSelectionViewportAlignment()
       hasFocusedStartWindowRef.current = false
@@ -713,7 +758,7 @@ export default function UploadScreen({
     pendingStartFocusRef.current = null
     setIsWorkspaceExiting(false)
     setActiveWindow(window)
-  }, [activeWindow, scheduleSelectionViewportAlignment])
+  }, [activeWindow, isSelectionImageRequestBusy, scheduleSelectionViewportAlignment])
 
   const handleWorkspaceExitComplete = useCallback(() => {
     if (!isWorkspaceExiting) {
@@ -893,6 +938,10 @@ export default function UploadScreen({
       return
     }
 
+    if (selectionImageRequestLockRef.current || isSelectionImageRequestBusy) {
+      return
+    }
+
     if (handledCommandRequestIdRef.current === commandRequest.id) {
       return
     }
@@ -939,7 +988,7 @@ export default function UploadScreen({
         void handleOpenBackupBrowser()
         return
     }
-  }, [commandRequest, handleExportBackupRequest, handleOpenBackupBrowser, handleWindowChange])
+  }, [commandRequest, handleExportBackupRequest, handleOpenBackupBrowser, handleWindowChange, isSelectionImageRequestBusy])
 
   const handleBackupImportSelection = (backupFile: PuzzleDataBackupFile) => {
     setIsShowingBackupBrowser(false)
@@ -1147,7 +1196,11 @@ export default function UploadScreen({
 
   const openContextWindow = useCallback((request: AppContextMenuRequest) => {
     const isPromptFieldContext = isPromptFieldContextTarget(request.target)
-    if ((shouldPreserveNativeContextMenu(request.target) && !isPromptFieldContext) || isBlockingDialogOpen) return
+    if (
+      (shouldPreserveNativeContextMenu(request.target) && !isPromptFieldContext)
+      || isBlockingDialogOpen
+      || isSelectionImageRequestBusy
+    ) return
 
     request.preventDefault?.()
 
@@ -1167,7 +1220,7 @@ export default function UploadScreen({
     }
 
     resetUploadClipboardState()
-  }, [isBlockingDialogOpen, refreshUploadClipboardState, resetUploadClipboardState])
+  }, [isBlockingDialogOpen, isSelectionImageRequestBusy, refreshUploadClipboardState, resetUploadClipboardState])
 
   useEffect(() => {
     registerAppContextMenuHandler(openContextWindow)
@@ -1332,10 +1385,11 @@ export default function UploadScreen({
   return (
     <div
       ref={screenRef}
-      className={`upload-screen${isDragActive ? ' is-drag-active' : ''}`}
+      className={`upload-screen${isDragActive ? ' is-drag-active' : ''}${isSelectionImageRequestBusy ? ' is-image-request-busy' : ''}`}
       data-page-focus-root="true"
       data-image-mood={activePalette?.mood}
       data-image-palette-source={activePalette?.source}
+      aria-busy={isSelectionImageRequestBusy}
       style={paletteStyle}
       onContextMenu={handleOpenContextWindow}
       onDragEnter={handleDragEnter}
@@ -1345,7 +1399,10 @@ export default function UploadScreen({
         void handleDrop(event)
       }}
     >
-        <div className={`upload-container${isDragActive ? ' is-drag-active' : ''}`}>
+        <div
+          ref={uploadContainerRef}
+          className={`upload-container${isDragActive ? ' is-drag-active' : ''}${isSelectionImageRequestBusy ? ' is-image-request-busy' : ''}`}
+        >
         <div className={`upload-hero${isWorkspaceOpen ? ' is-workspace-open' : ''}`} aria-hidden={isWorkspaceOpen}>
           <span className="upload-kicker">Foto rein. Puzzle los.</span>
           <h1>
@@ -1495,6 +1552,7 @@ export default function UploadScreen({
               onReplayGalleryEntry={onReplayGalleryEntry}
               onDeleteGalleryEntries={onDeleteGalleryEntries}
               onUpdateGalleryTags={onUpdateGalleryTags}
+              onEditGalleryEntryTags={onEditGalleryEntryTags}
               onRetryGalleryTagging={onRetryGalleryTagging}
               onFetchRandomImage={onFetchRandomImage}
               onCreateImageCollection={handleCreateCollection}
