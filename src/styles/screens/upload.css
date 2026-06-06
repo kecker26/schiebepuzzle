@@ -4285,6 +4285,30 @@
   white-space: nowrap;
 }
 
+.gallery-card-ai-suggestion.is-ai {
+  border-style: dashed;
+  border-radius: 8px 999px 999px 8px;
+  border-color: color-mix(in srgb, var(--primary-color) 60%, var(--secondary-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 22%, transparent), transparent 64%),
+    color-mix(in srgb, var(--secondary-bg) 86%, transparent);
+}
+
+.gallery-card-ai-suggestion-label {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  min-height: 16px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: color-mix(in srgb, var(--primary-color) 82%, var(--text-main));
+  background: color-mix(in srgb, var(--primary-color) 18%, transparent);
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
 .gallery-detail-dialog .saved-game-chip,
 .gallery-detail-dialog .gallery-detail-timeline-insights span {
   border-color: color-mix(in srgb, var(--image-radiance-ring) 28%, var(--secondary-border));

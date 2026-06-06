@@ -732,15 +732,28 @@ export default function UploadGalleryPanel({
     }
   }, [onAddCollectionImages])
 
-  const handleAddSuggestedCollection = useCallback(async (collectionId: string, entry: GalleryDisplayEntry) => {
+  const handleAddSuggestedCollection = useCallback(async (
+    collectionId: string,
+    entry: GalleryDisplayEntry,
+    source: 'tag' | 'ai'
+  ) => {
     const busyKey = `${entry.id}:${collectionId}`
     setSuggestedCollectionBusyKey(busyKey)
     try {
       await onAddCollectionImages(collectionId, [entry.representativeEntry.id])
+      if (source === 'ai') {
+        const collection = collections.find((candidate) => candidate.id === collectionId)
+        if (collection) {
+          const motifEntryIds = Array.from(new Set(
+            entry.allEntries.flatMap((galleryEntry) => motifEntryIdsByEntryId.get(galleryEntry.id) ?? [galleryEntry.id])
+          ))
+          await onEditEntryTags(motifEntryIds, [collection.name], [])
+        }
+      }
     } finally {
       setSuggestedCollectionBusyKey(null)
     }
-  }, [onAddCollectionImages])
+  }, [collections, motifEntryIdsByEntryId, onAddCollectionImages, onEditEntryTags])
 
   const handleCreateCollectionFromTag = useCallback(async () => {
     if (!activeTagOption || tagCollectionImageIds.length === 0) return
