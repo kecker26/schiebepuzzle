@@ -29,6 +29,7 @@ import { useReducedMotionPreference } from '../../motion/useReducedMotionPrefere
 import { DIFFICULTY_OPTIONS, formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import UploadGalleryPanel from './UploadGalleryPanel.tsx'
 import UploadCollectionsPanel from './UploadCollectionsPanel.tsx'
+import { getTagCollectionImageRemovals } from './galleryTagCollectionSync.ts'
 import { countUniqueGalleryEntries, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
 import UploadStatsReport from './UploadStatsReport.tsx'
 import type { VisualStatsView } from './UploadStatsVisualReport.tsx'
@@ -215,6 +216,18 @@ export default function UploadDashboard({
     setRequestedGalleryTagFilterLabel(tagLabel)
     onWindowChange('gallery')
   }, [onWindowChange])
+  const handleEditGalleryEntryTags = useCallback(async (
+    entryIds: string[],
+    add: string[] = [],
+    remove: string[] = []
+  ) => {
+    await onEditGalleryEntryTags(entryIds, add, remove)
+
+    const collectionRemovals = getTagCollectionImageRemovals(collections, entryIds, remove)
+    for (const removal of collectionRemovals) {
+      await onRemoveImageCollectionImages(removal.collectionId, removal.imageIds)
+    }
+  }, [collections, onEditGalleryEntryTags, onRemoveImageCollectionImages])
   const resetWorkspaceScrollPosition = useCallback(() => {
     const overlay = document.querySelector('.workspace-window-overlay')
     const shell = document.querySelector('.workspace-window-shell')
@@ -800,7 +813,7 @@ export default function UploadDashboard({
                       requestedTagFilterLabel={requestedGalleryTagFilterLabel}
                       onDeleteEntries={onDeleteGalleryEntries}
                       onUpdateTags={onUpdateGalleryTags}
-                      onEditEntryTags={onEditGalleryEntryTags}
+                      onEditEntryTags={handleEditGalleryEntryTags}
                       onRetryTagging={onRetryGalleryTagging}
                       onCreateCollection={onCreateImageCollection}
                       onAddCollectionImages={onAddImageCollectionImages}
@@ -878,6 +891,7 @@ export default function UploadDashboard({
                       onUpdateCollection={onUpdateImageCollection}
                       onDeleteCollection={onDeleteImageCollection}
                       onRemoveCollectionImages={onRemoveImageCollectionImages}
+                      onEditEntryTags={handleEditGalleryEntryTags}
                       titleId="workspace-window-collections-title"
                       panelRole="region"
                       paletteStyle={paletteStyle}

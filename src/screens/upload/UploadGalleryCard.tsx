@@ -14,6 +14,7 @@ import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { ImageCollection, ImageThemePalette, SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
+import { getTagCollectionSuggestions } from './galleryTagCollectionSync.ts'
 import { useUploadImagePalette } from './uploadImagePalette.ts'
 import { formatDate } from './uploadUtils.ts'
 
@@ -23,7 +24,11 @@ interface UploadGalleryCardProps {
   onCollectEntry?: (entry: GalleryDisplayEntry) => void
   onTagFilter?: (tagLabel: string) => void
   onRetryTagging?: (entry: SolvedGalleryEntry) => Promise<void>
-  onAddSuggestedCollection?: (collectionId: string, entry: GalleryDisplayEntry) => void
+  onAddSuggestedCollection?: (
+    collectionId: string,
+    entry: GalleryDisplayEntry,
+    source: 'tag' | 'ai'
+  ) => void
   collections?: ImageCollection[]
   suggestedCollectionBusyKey?: string | null
   retryingTagEntryId?: string | null
@@ -58,13 +63,32 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   const totalSolveCountLabel = formatGallerySolveCount(entry.motifReplaySummary.totalSolveCount)
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
-  const collectionSuggestions = (aiTagging?.collectionSuggestions ?? [])
-    .map((suggestion) => ({
-      suggestion,
-      collection: collections.find((collection) => collection.id === suggestion.collectionId) ?? null,
+  const motifEntryIds = new Set(entry.allEntries.map((galleryEntry) => galleryEntry.id))
+  const tagCollectionSuggestions = getTagCollectionSuggestions(collections, entry.allEntries)
+    .map(({ collection, tagLabel }) => ({
+      collection,
+      reason: `Tag-Vorschlag: Das Motiv ist mit #${tagLabel} getaggt.`,
+      source: 'tag' as const,
     }))
-    .filter(({ collection }) => collection && !collection.imageIds.includes(representativeEntry.id))
-    .slice(0, 2)
+  const tagCollectionIds = new Set(tagCollectionSuggestions.map(({ collection }) => collection.id))
+  const aiCollectionSuggestions = (aiTagging?.collectionSuggestions ?? [])
+    .map((suggestion) => ({
+      reason: suggestion.reason
+        ? `KI-Vorschlag: ${suggestion.reason}`
+        : 'KI-Vorschlag auf Grundlage der Bildanalyse.',
+      collection: collections.find((collection) => collection.id === suggestion.collectionId) ?? null,
+      source: 'ai' as const,
+    }))
+    .filter(({ collection }) =>
+      collection
+      && !tagCollectionIds.has(collection.id)
+      && !collection.imageIds.some((imageId) => motifEntryIds.has(imageId))
+    )
+  const remainingAiSuggestionSlots = Math.max(0, 2 - tagCollectionSuggestions.length)
+  const collectionSuggestions = [
+    ...tagCollectionSuggestions,
+    ...aiCollectionSuggestions.slice(0, remainingAiSuggestionSlots),
+  ]
   const { activePalette, paletteStyle: cardPaletteStyle } = useUploadImagePalette({
     paletteSource: representativeEntry.previewImage ?? representativeEntry.sourceImage,
     storedPalette,
@@ -212,7 +236,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
 
       <div className="gallery-card-body">
         {aiTags.length > 0 || collectionSuggestions.length > 0 ? (
-          <div className="gallery-card-ai" aria-label="KI-Tags und Sammlungsvorschlaege">
+          <div className="gallery-card-ai" aria-label="Tags und Sammlungsvorschlaege">
             <div className="gallery-card-run-count" aria-label={`Gesamtzahl der Laeufe: ${totalSolveCountLabel}`}>
               <UploadScreenIcon name="refreshCw" className="gallery-card-run-count-icon" />
               <span>{totalSolveCountLabel}</span>
@@ -220,7 +244,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
 
             {aiTags.length > 0 ? (
               <div className="gallery-card-ai-tags">
-                {aiTags.slice(0, 5).map((tag) => (
+                {aiTags.map((tag) => (
                   <button
                     key={tag.label}
                     type="button"
@@ -241,27 +265,31 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
 
             {collectionSuggestions.length > 0 ? (
               <div className="gallery-card-ai-suggestions">
-                {collectionSuggestions.map(({ suggestion, collection }) => {
+                {collectionSuggestions.map(({ reason, collection, source }) => {
                   if (!collection) return null
 
                   const busyKey = `${entry.id}:${collection.id}`
                   const isBusy = suggestedCollectionBusyKey === busyKey
+                  const isAiSuggestion = source === 'ai'
 
                   return (
                     <button
                       key={collection.id}
                       type="button"
-                      className="gallery-card-ai-suggestion"
+                      className={`gallery-card-ai-suggestion${isAiSuggestion ? ' is-ai' : ' is-tag-match'}`}
                       data-gallery-action="suggestion"
                       data-gallery-entry-id={entry.id}
+                      data-suggestion-source={source}
                       {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
-                      onClick={() => onAddSuggestedCollection?.(collection.id, entry)}
+                      aria-label={`${isAiSuggestion ? 'KI-Vorschlag' : 'Tag-Vorschlag'} ${collection.name}`}
+                      onClick={() => onAddSuggestedCollection?.(collection.id, entry, source)}
                       onKeyDown={handleActionKeyDown}
                       disabled={isDeleting || isBusy || !onAddSuggestedCollection}
-                      data-app-tooltip={suggestion.reason || `Dieses Motiv zur Sammlung ${collection.name} hinzufuegen.`}
+                      data-app-tooltip={reason || `Dieses Motiv zur Sammlung ${collection.name} hinzufuegen.`}
                       data-app-tooltip-position="top"
                     >
                       <UploadScreenIcon name="sparkles" className="gallery-card-action-icon" />
+                      {isAiSuggestion ? <span className="gallery-card-ai-suggestion-label">KI</span> : null}
                       <span>{isBusy ? <BusyIndicator label="Sortiere ..." /> : collection.name}</span>
                     </button>
                   )

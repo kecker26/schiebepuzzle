@@ -42,6 +42,7 @@ interface UploadCollectionsPanelProps {
   ) => Promise<void>
   onDeleteCollection: (collectionId: string) => Promise<void>
   onRemoveCollectionImages: (collectionId: string, imageIds: string[]) => Promise<void>
+  onEditEntryTags?: (entryIds: string[], add?: string[], remove?: string[]) => Promise<void>
   titleId?: string
   panelRole?: AriaRole
   primaryActionRef?: RefObject<HTMLButtonElement>
@@ -74,6 +75,7 @@ export default function UploadCollectionsPanel({
   onUpdateCollection,
   onDeleteCollection,
   onRemoveCollectionImages,
+  onEditEntryTags,
   titleId = 'workspace-window-collections-title',
   panelRole = 'region',
   primaryActionRef,
@@ -98,6 +100,7 @@ export default function UploadCollectionsPanel({
   const [renamingCollection, setRenamingCollection] = useState<RenameState | null>(null)
   const [pendingDeleteCollection, setPendingDeleteCollection] = useState<ImageCollection | null>(null)
   const [busyCollectionId, setBusyCollectionId] = useState<string | null>(null)
+  const [isEditingTags, setIsEditingTags] = useState(false)
   const [currentCollectionPage, setCurrentCollectionPage] = useState(1)
   const selectedDisplayEntry =
     displayEntries.find((entry) => entry.collection.id === selectedCollectionId)
@@ -111,6 +114,10 @@ export default function UploadCollectionsPanel({
   const similarDetailEntries = useMemo(
     () => selectedDetailEntry ? getSimilarGalleryEntries(selectedDetailEntry, galleryDetailEntries) : [],
     [galleryDetailEntries, selectedDetailEntry]
+  )
+  const allTagLabels = useMemo(
+    () => Array.from(new Set(galleryEntries.flatMap((entry) => (entry.tags ?? []).map((tag) => tag.label)))),
+    [galleryEntries]
   )
   const pagedCollectionEntries = useMemo(() => {
     const entries = selectedDisplayEntry?.entries ?? []
@@ -130,6 +137,22 @@ export default function UploadCollectionsPanel({
   useEffect(() => {
     setCurrentCollectionPage((page) => Math.min(page, collectionPageCount))
   }, [collectionPageCount])
+
+  useEffect(() => {
+    if (!selectedDetailEntry) return
+
+    const nextSelectedDetailEntry =
+      galleryDetailEntries.find((entry) => entry.id === selectedDetailEntry.id) ?? null
+
+    if (!nextSelectedDetailEntry) {
+      setSelectedDetailEntry(null)
+      return
+    }
+
+    if (nextSelectedDetailEntry !== selectedDetailEntry) {
+      setSelectedDetailEntry(nextSelectedDetailEntry)
+    }
+  }, [galleryDetailEntries, selectedDetailEntry])
 
   const focusPanelElement = useCallback((target: HTMLElement | null) => {
     if (!target) {
@@ -307,6 +330,21 @@ export default function UploadCollectionsPanel({
     void onFetchRandomImage?.(tagLabel)
   }, [onFetchRandomImage])
 
+  const handleEditEntryTags = useCallback(async (
+    entryIds: string[],
+    add: string[] = [],
+    remove: string[] = []
+  ) => {
+    if (!onEditEntryTags) return
+
+    setIsEditingTags(true)
+    try {
+      await onEditEntryTags(entryIds, add, remove)
+    } finally {
+      setIsEditingTags(false)
+    }
+  }, [onEditEntryTags])
+
   return (
     <>
       <div
@@ -459,6 +497,9 @@ export default function UploadCollectionsPanel({
           onFetchRandomImage={onFetchRandomImage ? handleDetailTagImageSearch : undefined}
           onOpenSimilarEntry={setSelectedDetailEntry}
           similarEntries={similarDetailEntries}
+          allTagLabels={allTagLabels}
+          onEditTags={onEditEntryTags ? handleEditEntryTags : undefined}
+          isEditingTags={isEditingTags}
           onClose={() => setSelectedDetailEntry(null)}
         />
       ) : null}

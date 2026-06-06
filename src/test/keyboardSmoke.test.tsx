@@ -1591,6 +1591,228 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(stadtTagButton)
   })
 
+  it('shows all tags on gallery cards', () => {
+    const entry = createGalleryDisplayEntry('1', '2026-04-11T10:00:00.000Z')
+    entry.representativeEntry.tags = [
+      { label: 'Natur', confidence: 1, source: 'manual' },
+      { label: 'Portrait', confidence: 0.95, source: 'gemini' },
+      { label: 'Kunst', confidence: 0.9, source: 'gemini' },
+      { label: 'Malerei', confidence: 0.85, source: 'gemini' },
+      { label: 'Menschen', confidence: 0.8, source: 'gemini' },
+      { label: 'Historisch', confidence: 0.75, source: 'gemini' },
+    ]
+
+    render(
+      <div className="gallery-grid">
+        <UploadGalleryCard
+          entry={entry}
+          onOpenDetails={vi.fn()}
+          onTagFilter={vi.fn()}
+          onDeleteEntry={vi.fn()}
+          isDeleting={false}
+        />
+      </div>
+    )
+
+    for (const tag of entry.representativeEntry.tags) {
+      expect(screen.getByRole('button', { name: `#${tag.label}` })).toBeTruthy()
+    }
+  })
+
+  it('shows all matching tag collections before AI collection suggestions', () => {
+    const entry = createGalleryDisplayEntry('1', '2026-04-11T10:00:00.000Z')
+    entry.representativeEntry.tags = [
+      { label: 'Natur', confidence: 1, source: 'manual' },
+      { label: 'Kunst', confidence: 0.9, source: 'gemini' },
+      { label: 'Menschen', confidence: 0.8, source: 'gemini' },
+    ]
+    entry.representativeEntry.aiTagging = {
+      status: 'tagged',
+      provider: 'gemini',
+      model: 'gemini-test',
+      generatedAt: '2026-04-11T10:00:00.000Z',
+      error: null,
+      collectionSuggestions: [
+        {
+          collectionId: 'art',
+          collectionName: 'Kunst',
+          reason: 'KI-Vorschlag Kunst',
+          confidence: 0.9,
+          source: 'gemini',
+        },
+        {
+          collectionId: 'people',
+          collectionName: 'Menschen',
+          reason: 'KI-Vorschlag Menschen',
+          confidence: 0.8,
+          source: 'gemini',
+        },
+      ],
+    }
+
+    render(
+      <div className="gallery-grid">
+        <UploadGalleryCard
+          entry={entry}
+          collections={[
+            {
+              id: 'art',
+              name: 'Kunst',
+              imageIds: [],
+              createdAt: '2026-04-11T10:00:00.000Z',
+              updatedAt: '2026-04-11T10:00:00.000Z',
+            },
+            {
+              id: 'people',
+              name: 'Menschen',
+              imageIds: [],
+              createdAt: '2026-04-11T10:00:00.000Z',
+              updatedAt: '2026-04-11T10:00:00.000Z',
+            },
+            {
+              id: 'nature',
+              name: 'Natur',
+              imageIds: [],
+              createdAt: '2026-04-11T10:00:00.000Z',
+              updatedAt: '2026-04-11T10:00:00.000Z',
+            },
+          ]}
+          onOpenDetails={vi.fn()}
+          onAddSuggestedCollection={vi.fn()}
+          onDeleteEntry={vi.fn()}
+          isDeleting={false}
+        />
+      </div>
+    )
+
+    expect(screen.getByRole('button', { name: 'Tag-Vorschlag Natur' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Tag-Vorschlag Kunst' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Tag-Vorschlag Menschen' })).toBeTruthy()
+  })
+
+  it('marks additional AI collection suggestions with a distinct badge and tooltip', () => {
+    const entry = createGalleryDisplayEntry('1', '2026-04-11T10:00:00.000Z')
+    entry.representativeEntry.tags = [
+      { label: 'Natur', confidence: 1, source: 'manual' },
+    ]
+    entry.representativeEntry.aiTagging = {
+      status: 'tagged',
+      provider: 'gemini',
+      model: 'gemini-test',
+      generatedAt: '2026-04-11T10:00:00.000Z',
+      error: null,
+      collectionSuggestions: [{
+        collectionId: 'favorites',
+        collectionName: 'Favoriten',
+        reason: 'Passt zur kuratierten Auswahl.',
+        confidence: 0.8,
+        source: 'gemini',
+      }],
+    }
+
+    render(
+      <div className="gallery-grid">
+        <UploadGalleryCard
+          entry={entry}
+          collections={[
+            {
+              id: 'nature',
+              name: 'Natur',
+              imageIds: [],
+              createdAt: '2026-04-11T10:00:00.000Z',
+              updatedAt: '2026-04-11T10:00:00.000Z',
+            },
+            {
+              id: 'favorites',
+              name: 'Favoriten',
+              imageIds: [],
+              createdAt: '2026-04-11T10:00:00.000Z',
+              updatedAt: '2026-04-11T10:00:00.000Z',
+            },
+          ]}
+          onOpenDetails={vi.fn()}
+          onAddSuggestedCollection={vi.fn()}
+          onDeleteEntry={vi.fn()}
+          isDeleting={false}
+        />
+      </div>
+    )
+
+    const tagSuggestion = screen.getByRole('button', { name: 'Tag-Vorschlag Natur' })
+    const aiSuggestion = screen.getByRole('button', { name: 'KI-Vorschlag Favoriten' })
+
+    expect(tagSuggestion.classList.contains('is-tag-match')).toBe(true)
+    expect(tagSuggestion.getAttribute('data-suggestion-source')).toBe('tag')
+    expect(tagSuggestion.getAttribute('data-app-tooltip')).toBe(
+      'Tag-Vorschlag: Das Motiv ist mit #Natur getaggt.'
+    )
+    expect(aiSuggestion.classList.contains('is-ai')).toBe(true)
+    expect(aiSuggestion.getAttribute('data-suggestion-source')).toBe('ai')
+    expect(aiSuggestion.getAttribute('data-app-tooltip')).toBe(
+      'KI-Vorschlag: Passt zur kuratierten Auswahl.'
+    )
+  })
+
+  it('adds the collection name as a manual motif tag after accepting an AI suggestion', async () => {
+    const galleryEntry = createSolvedGalleryEntry('1', '2026-04-11T10:00:00.000Z')
+    galleryEntry.aiTagging = {
+      status: 'tagged',
+      provider: 'gemini',
+      model: 'gemini-test',
+      generatedAt: '2026-04-11T10:00:00.000Z',
+      error: null,
+      collectionSuggestions: [{
+        collectionId: 'favorites',
+        collectionName: 'Favoriten',
+        reason: 'Passt zur kuratierten Auswahl.',
+        confidence: 0.8,
+        source: 'gemini',
+      }],
+    }
+    const onAddCollectionImages = vi.fn(() => Promise.resolve())
+    const onEditEntryTags = vi.fn(() => Promise.resolve())
+
+    render(
+      <div className="workspace-window-shell is-gallery">
+        <button type="button" className="workspace-window-nav-button" aria-current="page">
+          Galerie
+        </button>
+        <UploadGalleryPanel
+          gallery={{
+            entries: [galleryEntry],
+            totalEntries: 1,
+            lastCompletedAt: galleryEntry.completedAt,
+            lastUpdatedAt: galleryEntry.completedAt,
+          }}
+          collections={[{
+            id: 'favorites',
+            name: 'Favoriten',
+            imageIds: [],
+            createdAt: '2026-04-11T10:00:00.000Z',
+            updatedAt: '2026-04-11T10:00:00.000Z',
+          }]}
+          isLoadingGallery={false}
+          onReplayEntry={vi.fn()}
+          onDeleteEntries={vi.fn(() => Promise.resolve())}
+          onAddCollectionImages={onAddCollectionImages}
+          onEditEntryTags={onEditEntryTags}
+          titleId="gallery-panel-title"
+          panelRole="region"
+        />
+      </div>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'KI-Vorschlag Favoriten' }))
+
+    await waitFor(() => {
+      expect(onAddCollectionImages).toHaveBeenCalledWith('favorites', [galleryEntry.id])
+      expect(onEditEntryTags).toHaveBeenCalledWith([galleryEntry.id], ['Favoriten'], [])
+    })
+    expect(onAddCollectionImages.mock.invocationCallOrder[0]).toBeLessThan(
+      onEditEntryTags.mock.invocationCallOrder[0]
+    )
+  })
+
   it('moves through gallery actions by the visible card grid', () => {
     const firstEntry = createGalleryDisplayEntry('1', '2026-04-11T10:00:00.000Z')
     const secondEntry = createGalleryDisplayEntry('2', '2026-04-11T11:00:00.000Z')
