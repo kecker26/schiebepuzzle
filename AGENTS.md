@@ -5,7 +5,7 @@
 - Halte Aenderungen klein, nachvollziehbar und kompatibel mit dem bestehenden React-, TypeScript- und Vite-Setup.
 
 ## Projektueberblick
-- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Hinweisen, Solver, Statistik, Galerie, interaktivem KI-Tag-System, manuellen und dauerhaft abgelehnten KI-Tags, Gemini-Tagging, Gemini-Spielstandstiteln, sentiment-basiertem Bild-Theme, Sammlungen, Backup und Musik.
+- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Pause mit verdecktem Board, Hinweisen, Solver, Statistik, Galerie, interaktivem KI-Tag-System, manuellen und dauerhaft abgelehnten KI-Tags, tag-basierten Partikeleffekten beim Gewinn, Gemini-Tagging, Gemini-Spielstandstiteln, sentiment-basiertem Bild-Theme, Sammlungen, Backup und Musik.
 - Frontend: React 18 + TypeScript.
 - Animationen: `motion` / `motion/react` plus `@react-spring/web` fuer federnde Zahlen- und Karten-Mikrointeraktionen.
 - Statistik-Charts: `recharts` fuer responsive Donut- und Line-Charts.
@@ -51,7 +51,7 @@
 - Aenderungen an App-Flows immer gegen `src/App.tsx`, die betroffenen Hooks in `src/app/` und die jeweiligen Screen-Props pruefen.
 - Aenderungen an Spielmechanik immer gegen `PuzzleEngine`, `PuzzleStateService`, `PuzzleSolver`, `ExactPuzzleSolver`, Worker-Protokolle und betroffene Typen pruefen.
 - Aenderungen an Save-/Stats-/Gallery-/Collections-/Backup-Features immer auf Frontend-Service, `src/types/index.ts` und `localApi.ts` abstimmen.
-- Bestehende API-Pfade (`/api/saves`, `/api/saves/:saveId/title`, `/api/stats`, `/api/gallery`, `/api/gallery/:entryId/analyze`, `/api/collections`, `/api/backup`, `/api/clipboard`, `/api/generated-image`, `/api/music`) nur aendern, wenn Frontend und lokale API gemeinsam angepasst werden.
+- Bestehende API-Pfade (`/api/saves`, `/api/saves/:saveId/title`, `/api/stats`, `/api/gallery`, `/api/gallery/:entryId/analyze`, `/api/gallery/win-effect-tags`, `/api/collections`, `/api/backup`, `/api/clipboard`, `/api/generated-image`, `/api/music`) nur aendern, wenn Frontend und lokale API gemeinsam angepasst werden.
 - Bei persistierten Formaten rueckwaertskompatibel bleiben; bestehende Saves, `__stats.json`, `__gallery.json`, `__collections.json` und `.spbkp`-Backups muessen weiter defensiv gelesen werden.
 - `dist/`, `node_modules/`, `spielstaende/`, `backups/`, `preview.*.txt`, temporaere Dateien und Office-Lockdateien nicht manuell bearbeiten, ausser die Aufgabe verlangt es explizit.
 - Bestehende deutsche UI-Texte beibehalten, sofern kein ausdrueckliches Rewriting gewuenscht ist.

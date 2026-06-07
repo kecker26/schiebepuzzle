@@ -1,4 +1,4 @@
-import { useCallback, useId, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useId, useMemo, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Medal, MousePointer2, Route, Sparkles, Timer, Trophy } from 'lucide-react'
 import AnimatedButton from '../motion/AnimatedButton.tsx'
 import BusyIndicator from '../motion/BusyIndicator.tsx'
@@ -7,11 +7,15 @@ import AnimatedReveal from '../motion/AnimatedReveal.tsx'
 import AnimatedStaggerGroup from '../motion/AnimatedStaggerGroup.tsx'
 import '../styles/components/windialog.css'
 import {
+  GalleryImageTag,
   PuzzleAssistanceMode,
   PuzzleConfig,
   RecordPuzzleCompletionResult,
   WinStats,
 } from '../types/index'
+import type { TagCategoryCatalog } from '../services/tagCategories/tagCategoryTypes.ts'
+import WinParticleEffect from './win-effects/WinParticleEffect.tsx'
+import { resolveWinParticleSelection } from './win-effects/winParticleEffects.ts'
 import { formatDifficultyLabel } from '../utils/puzzleDifficulty.ts'
 import {
   ComparisonTone,
@@ -30,6 +34,9 @@ interface WinDialogProps {
   completionResult: RecordPuzzleCompletionResult | null
   completionStatsError: string | null
   isRecordingStats: boolean
+  imageTags?: GalleryImageTag[]
+  rejectedAiTags?: string[]
+  tagCategoryCatalog?: TagCategoryCatalog | null
   onRetryStats: () => void
   onReplaySameImage: () => void
   onGoToSelectionScreen: () => void
@@ -250,6 +257,9 @@ export default function WinDialog({
   completionResult,
   completionStatsError,
   isRecordingStats,
+  imageTags = [],
+  rejectedAiTags = [],
+  tagCategoryCatalog = null,
   onRetryStats,
   onReplaySameImage,
   onGoToSelectionScreen,
@@ -257,6 +267,10 @@ export default function WinDialog({
   onNextDifficulty,
 }: WinDialogProps) {
   const replayButtonRef = useRef<HTMLButtonElement>(null)
+  const particleSelection = useMemo(
+    () => resolveWinParticleSelection(imageTags, rejectedAiTags, tagCategoryCatalog),
+    [imageTags, rejectedAiTags, tagCategoryCatalog]
+  )
   const keyboardHintId = useId()
   const difficultyLabel = formatDifficultyLabel(config)
   const currentRun = toComparableRun(stats)
@@ -414,6 +428,7 @@ export default function WinDialog({
       restoreFocus
       lockScroll
       initialFocusRef={replayButtonRef}
+      overlayDecoration={<WinParticleEffect selection={particleSelection} />}
     >
       <AnimatedStaggerGroup level="medium">
         <AnimatedReveal className="win-hero" interaction="surface" level="medium">

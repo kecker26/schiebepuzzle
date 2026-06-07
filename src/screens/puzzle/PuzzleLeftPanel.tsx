@@ -27,6 +27,7 @@ interface PuzzleLeftPanelProps {
   hintPreview: SuggestedHintPreview | null
   isComputingSuggestion: boolean
   isInteractionLocked: boolean
+  isPaused: boolean
   isPreviewVisible: boolean
   isGhostPreviewVisible: boolean
   isHeatmapOverlayVisible: boolean
@@ -36,6 +37,7 @@ interface PuzzleLeftPanelProps {
   moveHistoryLength: number
   redoHistoryLength: number
   onShowHint: () => void
+  onTogglePause: () => void
   onSuggestedMove: () => void
   onTogglePreview: () => void
   onToggleGhostPreview: () => void
@@ -58,6 +60,7 @@ interface PuzzleLeftPanelProps {
     redo: RefObject<HTMLButtonElement>
     helpTrigger: RefObject<HTMLButtonElement>
     quit: RefObject<HTMLButtonElement>
+    pause: RefObject<HTMLButtonElement>
   }
 }
 
@@ -118,6 +121,7 @@ export default function PuzzleLeftPanel({
   hintPreview,
   isComputingSuggestion,
   isInteractionLocked,
+  isPaused,
   isPreviewVisible,
   isGhostPreviewVisible,
   isHeatmapOverlayVisible,
@@ -127,6 +131,7 @@ export default function PuzzleLeftPanel({
   moveHistoryLength,
   redoHistoryLength,
   onShowHint,
+  onTogglePause,
   onSuggestedMove,
   onTogglePreview,
   onToggleGhostPreview,
@@ -146,7 +151,7 @@ export default function PuzzleLeftPanel({
     ? Math.max(0, progressMetrics.totalTiles - progressMetrics.correctTiles)
     : playableTileCount
   const progressStatusLabel = getProgressStatusLabel(progressMetrics?.progressPercent)
-  const canUseBoardTools = progressMetrics !== null
+  const canUseBoardTools = progressMetrics !== null && !isPaused
   const canTriggerSuggestion = canUseBoardTools && !isInteractionLocked
   const activeGhostPreviewMode =
     GHOST_PREVIEW_MODE_OPTIONS.find((option) => option.value === ghostPreviewMode) ?? GHOST_PREVIEW_MODE_OPTIONS[0]
@@ -184,6 +189,10 @@ export default function PuzzleLeftPanel({
               : `${difficultyLabel} mit ${playableTileCount} Kacheln.`}
           </p>
           <div className="puzzle-header-shortcuts" aria-label="Wichtige Tastaturbefehle">
+            <span className="puzzle-header-shortcut">
+              <span className="puzzle-header-shortcut-key" aria-hidden="true">P</span>
+              <span className="puzzle-header-shortcut-copy">Pause</span>
+            </span>
             <span className="puzzle-header-shortcut">
               <span className="puzzle-header-shortcut-key" aria-hidden="true">B</span>
               <span className="puzzle-header-shortcut-copy">Brettfokus</span>
@@ -390,6 +399,7 @@ export default function PuzzleLeftPanel({
             ref={actionButtonRefs.preview}
             className="secondary puzzle-tool-toggle"
             onClick={onTogglePreview}
+            disabled={isPaused}
             aria-keyshortcuts="Space"
             data-puzzle-allow-hotkeys="true"
             data-app-tooltip={isPreviewVisible ? 'Referenzbild rechts ausblenden.' : 'Referenzbild rechts anzeigen.'}
@@ -536,6 +546,22 @@ export default function PuzzleLeftPanel({
       </AnimatePresence>
 
       <AnimatedReveal className="puzzle-side-footer" level="subtle">
+        <AnimatedButton
+          ref={actionButtonRefs.pause}
+          onClick={onTogglePause}
+          className={'secondary puzzle-pause-toggle' + (isPaused ? ' is-active' : '')}
+          aria-keyshortcuts="P"
+          aria-pressed={isPaused}
+          data-puzzle-allow-hotkeys="true"
+          data-app-tooltip={isPaused ? 'Runde fortsetzen und Brett wieder anzeigen.' : 'Timer anhalten und Brett verdecken.'}
+          data-app-tooltip-position="top"
+          reveal
+          revealLevel="subtle"
+        >
+          <PuzzleScreenIcon name={isPaused ? 'play' : 'pause'} />
+          <span className="puzzle-button-label">{isPaused ? 'Weiterspielen' : 'Pause'}</span>
+          <span className="puzzle-button-hotkey" aria-hidden="true">P</span>
+        </AnimatedButton>
         <AnimatedButton
           ref={actionButtonRefs.quit}
           onClick={onQuit}

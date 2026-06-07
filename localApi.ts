@@ -654,6 +654,10 @@ interface AnalyzeGalleryEntryResponse {
   entry: StoredGalleryEntry
 }
 
+interface AnalyzeWinEffectImageResponse {
+  tags: StoredGalleryImageTag[]
+}
+
 type UpdateGalleryTagsAction = 'rename' | 'remove'
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
@@ -4331,6 +4335,29 @@ async function updateGalleryTags(input: {
   return nextGallery
 }
 
+async function analyzeWinEffectImage(
+  image: string,
+  config: StoredPuzzleConfig,
+  aiConfig: GeminiGalleryConfig
+): Promise<AnalyzeWinEffectImageResponse> {
+  const analysis = await analyzeGalleryImageWithGemini({
+    id: 'win-effect-preview',
+    completedAt: new Date().toISOString(),
+    previewImage: image,
+    sourceImage: null,
+    config,
+    moves: 0,
+    time: 0,
+    actionMoves: 0,
+    assistanceMode: 'clean',
+    hasDetailedProfile: true,
+  }, [], aiConfig)
+
+  return {
+    tags: analysis.aiTagging?.status === 'tagged' ? analysis.tags ?? [] : [],
+  }
+}
+
 async function editGalleryEntryTags(input: {
   entryIds: string[]
   add?: string[]
@@ -4759,6 +4786,17 @@ function validateGalleryTagsUpdatePayload(payload: unknown): payload is {
       (typeof input.targetLabel === 'string' && sanitizeGalleryTagLabel(input.targetLabel) !== null)
     )
   )
+}
+
+function validateWinEffectImagePayload(payload: unknown): payload is {
+  image: string
+  config: StoredPuzzleConfig
+} {
+  if (!payload || typeof payload !== 'object') return false
+  const input = payload as { image?: unknown; config?: unknown }
+  return typeof input.image === 'string'
+    && input.image.startsWith('data:image/')
+    && isValidPuzzleConfig(input.config)
 }
 
 function validateGalleryEntryTagsEditPayload(payload: unknown): payload is {
@@ -5433,6 +5471,17 @@ async function handleGalleryApi(
 
     if (req.method === 'GET' && parts.length === 3 && parts[2] === 'tag-categories') {
       sendJson(res, 200, await readTagCategoryCatalog())
+      return
+    }
+
+    if (req.method === 'POST' && parts.length === 3 && parts[2] === 'win-effect-tags') {
+      const body = await readJsonBody(req)
+      if (!validateWinEffectImagePayload(body)) {
+        sendJson(res, 400, { error: 'Ungueltige Nutzdaten fuer Gewinneffekt-Tags' })
+        return
+      }
+
+      sendJson(res, 200, await analyzeWinEffectImage(body.image, body.config, geminiGalleryConfig))
       return
     }
 

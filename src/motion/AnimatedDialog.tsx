@@ -11,6 +11,7 @@ interface AnimatedDialogProps {
   titleId: string
   descriptionId?: string
   children: ReactNode
+  overlayDecoration?: ReactNode
   onClose?: () => void
   onOverlayClick?: () => void
   role?: AriaRole
@@ -31,6 +32,7 @@ export default function AnimatedDialog({
   titleId,
   descriptionId,
   children,
+  overlayDecoration,
   onClose,
   onOverlayClick,
   role = 'dialog',
@@ -75,6 +77,7 @@ export default function AnimatedDialog({
         }
       }}
     >
+      {overlayDecoration}
       <motion.div
         ref={dialogRef}
         className={dialogClassName}

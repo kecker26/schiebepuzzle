@@ -21,6 +21,7 @@ interface PuzzleRightPanelProps {
   difficultyLabel: string
   playableTileCount: number
   isPreviewVisible: boolean
+  isPaused: boolean
   progressMetrics: PuzzleProgressMetrics | null
   contextHint: PuzzleContextHint | null
   highlightedReferenceIndex: number | null
@@ -76,6 +77,7 @@ export default function PuzzleRightPanel({
   difficultyLabel,
   playableTileCount,
   isPreviewVisible,
+  isPaused,
   progressMetrics,
   contextHint,
   highlightedReferenceIndex,
@@ -108,13 +110,13 @@ export default function PuzzleRightPanel({
 
   return (
     <aside
-      className={'puzzle-side-panel puzzle-side-panel-right' + (isPreviewVisible ? '' : ' is-preview-collapsed')}
+      className={'puzzle-side-panel puzzle-side-panel-right' + (isPreviewVisible && !isPaused ? '' : ' is-preview-collapsed') + (isPaused ? ' is-paused' : '')}
       aria-label="Referenzbild, Strategiefokus und Musik"
     >
       <AnimatedStaggerGroup className="puzzle-preview-panel" level="medium">
         <AnimatedReveal
-          className={'puzzle-preview-reference' + (isPreviewVisible ? '' : ' is-hidden')}
-          aria-hidden={!isPreviewVisible}
+          className={'puzzle-preview-reference' + (isPreviewVisible && !isPaused ? '' : ' is-hidden')}
+          aria-hidden={!isPreviewVisible || isPaused}
           interaction="surface"
           level="medium"
         >
@@ -186,10 +188,10 @@ export default function PuzzleRightPanel({
 
         <div className="puzzle-preview-supporting">
           <AnimatePresence initial={false}>
-            {contextHint && (
+            {contextHint && !isPaused && (
               <AnimatedReveal
                 key={`${contextHint.title}-${contextHint.reason}-${contextHint.anchorLabel}`}
-                className={'puzzle-preview-insight' + (isPreviewVisible ? '' : ' puzzle-preview-insight--promoted')}
+                className={'puzzle-preview-insight' + (isPreviewVisible && !isPaused ? '' : ' puzzle-preview-insight--promoted')}
                 aria-live="polite"
                 interaction="surface"
                 level="medium"

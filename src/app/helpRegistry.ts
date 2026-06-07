@@ -551,6 +551,11 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
             label: 'Den Fokus jederzeit direkt zurueck auf das Puzzlebrett holen',
           },
           {
+            keys: ['P'],
+            label: 'Runde pausieren oder fortsetzen',
+            detail: 'Beim Pausieren stoppt der Timer und Brett sowie Zielbild werden verdeckt. Ein versteckter Browser-Tab pausiert die Runde automatisch.',
+          },
+          {
             keys: ['Pfeile'],
             label: 'Bei fokussiertem Brett eine benachbarte Kachel in das Leerfeld schieben',
           },
