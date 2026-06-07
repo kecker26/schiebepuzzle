@@ -55,7 +55,9 @@ import UploadSavedGamesPanel from '../screens/upload/UploadSavedGamesPanel.tsx'
 import UploadStatsComparisonMatrix from '../screens/upload/UploadStatsComparisonMatrix.tsx'
 import UploadStatsHistorySection from '../screens/upload/UploadStatsHistorySection.tsx'
 import UploadStatsSection from '../screens/upload/UploadStatsSection.tsx'
+import UploadStatsVisualReport from '../screens/upload/UploadStatsVisualReport.tsx'
 import UploadWorkspaceLauncher from '../screens/upload/UploadWorkspaceLauncher.tsx'
+import { DIFFICULTY_OPTIONS } from '../utils/puzzleDifficulty.ts'
 import type {
   PuzzleCompletionRecord,
   PuzzleDataBackupFile,
@@ -3543,6 +3545,49 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.keyDown(lastSortButton, { key: 'Home' })
     expect(document.activeElement).toBe(firstSortButton)
+  })
+
+  it('shows the solve-time histogram with separate difficulty color legends', () => {
+    const completionHistory = [
+      { ...createCompletionRecord('1', '2026-04-10T10:00:00.000Z'), config: { rows: 3, cols: 3 }, time: 90 },
+      { ...createCompletionRecord('2', '2026-04-11T10:00:00.000Z'), config: { rows: 3, cols: 3 }, time: 100 },
+      { ...createCompletionRecord('3', '2026-04-12T10:00:00.000Z'), config: { rows: 4, cols: 4 }, time: 110 },
+      { ...createCompletionRecord('4', '2026-04-13T10:00:00.000Z'), config: { rows: 4, cols: 4 }, time: 120 },
+      { ...createCompletionRecord('5', '2026-04-14T10:00:00.000Z'), config: { rows: 4, cols: 4 }, time: 5400 },
+    ]
+    const standardDifficultyStats = DIFFICULTY_OPTIONS.map((option) => ({ option, stats: null }))
+    const { container } = render(
+      <UploadStatsVisualReport
+        stats={null}
+        latestCompletion={completionHistory[3]}
+        favoriteDifficulty={null}
+        fastestDifficulty={null}
+        completionHistory={completionHistory}
+        filteredHistory={completionHistory}
+        historyFilter="all"
+        historyFilterOptions={[{ id: 'all', label: 'Alle Siege' }]}
+        standardDifficultyStats={standardDifficultyStats}
+        onHistoryFilterChange={vi.fn()}
+        onReloadView={vi.fn()}
+        onBackToStart={vi.fn()}
+        activeView="history"
+        onActiveViewChange={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('Gemeinsame Legende')).toBeNull()
+    expect(screen.getByLabelText('Farblegende Trenddiagramm')).toBeTruthy()
+    expect(screen.getByLabelText('Farblegende Histogramm')).toBeTruthy()
+    expect(screen.getByText('Verteilung der Loesungszeiten')).toBeTruthy()
+    expect(container.textContent).toContain('5 sichtbare Laeufe')
+    expect(container.querySelectorAll('.stats-recharts-histogram-frame')).toHaveLength(1)
+    expect(container.textContent).toContain('Hauptbereich: 15-Sekunden-Intervalle, danach zunehmend groesser')
+    expect(container.textContent).toContain('Leerluecken als ... verdichtet')
+    expect(container.textContent).not.toContain('1:00+')
+    const histogramFrame = container.querySelector('.stats-recharts-histogram-frame')
+    expect(Number(histogramFrame?.getAttribute('data-gap-count'))).toBeGreaterThan(0)
+    expect(histogramFrame?.getAttribute('data-gap-position-step')).toBe('0.5')
+    expect(histogramFrame?.getAttribute('data-core-bucket-step')).toBe('15')
   })
 
   it('renders the compact statistics history table without obsolete move columns or empty assistance details', () => {
