@@ -92,7 +92,7 @@ function createParticles(preset: WinParticlePreset, count: number, layer: 'prima
     const travelX = Math.round((nextRandom() - 0.5) * 180)
     const travelY = Math.round(70 + nextRandom() * 170)
     const delay = Math.round(nextRandom() * 1800)
-    const duration = Math.round(3000 + nextRandom() * 2600)
+    const duration = Math.round(4600 + nextRandom() * 3400)
     const rotation = Math.round((nextRandom() - 0.5) * 520)
     const color = preset.colors[index % preset.colors.length]
 
