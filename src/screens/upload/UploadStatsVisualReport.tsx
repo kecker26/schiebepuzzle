@@ -180,12 +180,50 @@ interface TrendReferenceDisplay {
   shouldMerge: boolean
 }
 
+interface SolveTimeHistogramBreakdown {
+  key: string
+  label: string
+  color: string
+  count: number
+  shareOfBucket: number
+  shareOfDifficulty: number
+}
+
+interface SolveTimeHistogramDatum {
+  id: string
+  label: string
+  displayIndex: number
+  minSeconds: number
+  maxSeconds: number
+  total: number
+  gapMarker: number
+  isGap: boolean
+  skippedBucketCount: number
+  medianTime: number | null
+  averageTime: number | null
+  averageMoves: number | null
+  cleanCount: number
+  assistedCount: number
+  isPeak: boolean
+  breakdown: SolveTimeHistogramBreakdown[]
+  [key: string]: unknown
+}
+
+interface SolveTimeHistogramSummary {
+  data: SolveTimeHistogramDatum[]
+  total: number
+  median: number | null
+  peakLabel: string | null
+  axisMaximum: number | null
+  compressedGapCount: number
+}
+
 interface ChartTooltipPayload {
   name?: string | number
   value?: unknown
   color?: string
   dataKey?: unknown
-  payload?: TrendSeriesChartPoint | DonutSegment | ScoreBreakdownDatum | FavoriteDifficultyDatum
+  payload?: TrendSeriesChartPoint | DonutSegment | ScoreBreakdownDatum | FavoriteDifficultyDatum | SolveTimeHistogramDatum
 }
 
 interface ChartTooltipProps {
@@ -239,6 +277,10 @@ const HISTORY_RANGES: Array<{
 const TREND_MOVING_AVERAGE_WINDOW = 5
 const TREND_CHART_HEIGHT = 340
 const TREND_REFERENCE_LABEL_COLLISION_DISTANCE = 24
+const HISTOGRAM_CORE_BUCKET_STEP = 15
+const HISTOGRAM_CORE_SHARE = 0.7
+const HISTOGRAM_TAIL_BUCKET_STEPS = [30, 30, 60, 60, 120, 120, 300, 300, 600, 600, 1200, 1200, 1800, 3600]
+const HISTOGRAM_GAP_POSITION_STEP = 0.5
 
 const RAW_STATS_VIEWS: Array<{
   id: RawStatsView
@@ -908,6 +950,242 @@ function buildTrendSeriesChartPoints(points: TrendPoint[], metric: TrendMetric):
   )
 }
 
+function getHistogramSeriesDataKey(difficultyKey: string): string {
+  return `difficulty_${difficultyKey.replace('x', '_')}`
+}
+
+function formatHistogramBoundary(seconds: number): string {
+  const roundedSeconds = Math.max(0, Math.round(seconds))
+  const hours = Math.floor(roundedSeconds / 3600)
+  const minutes = Math.floor((roundedSeconds % 3600) / 60)
+  const remainingSeconds = roundedSeconds % 60
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')} h`
+  }
+
+  return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`
+}
+
+function getHistogramDenseRange(times: number[]): { minSeconds: number; maxSeconds: number } {
+  const sortedTimes = [...times].sort((left, right) => left - right)
+  const windowSize = Math.max(1, Math.ceil(sortedTimes.length * HISTOGRAM_CORE_SHARE))
+  let bestStartIndex = 0
+  let bestWidth = Number.POSITIVE_INFINITY
+
+  for (let startIndex = 0; startIndex + windowSize - 1 < sortedTimes.length; startIndex += 1) {
+    const endIndex = startIndex + windowSize - 1
+    const width = sortedTimes[endIndex] - sortedTimes[startIndex]
+    if (width < bestWidth) {
+      bestWidth = width
+      bestStartIndex = startIndex
+    }
+  }
+
+  const firstTime = sortedTimes[bestStartIndex] ?? 0
+  const lastTime = sortedTimes[bestStartIndex + windowSize - 1] ?? firstTime
+  const minSeconds = Math.floor(firstTime / HISTOGRAM_CORE_BUCKET_STEP) * HISTOGRAM_CORE_BUCKET_STEP
+  const maxSeconds = Math.max(
+    minSeconds + HISTOGRAM_CORE_BUCKET_STEP,
+    (Math.floor(lastTime / HISTOGRAM_CORE_BUCKET_STEP) + 1) * HISTOGRAM_CORE_BUCKET_STEP
+  )
+
+  return { minSeconds, maxSeconds }
+}
+
+function buildHistogramBucketRanges(times: number[]): Array<{ minSeconds: number; maxSeconds: number }> {
+  const maximumTime = Math.max(...times)
+  const denseRange = getHistogramDenseRange(times)
+  const coreRanges: Array<{ minSeconds: number; maxSeconds: number }> = []
+
+  for (
+    let minSeconds = denseRange.minSeconds;
+    minSeconds < denseRange.maxSeconds;
+    minSeconds += HISTOGRAM_CORE_BUCKET_STEP
+  ) {
+    coreRanges.push({
+      minSeconds,
+      maxSeconds: minSeconds + HISTOGRAM_CORE_BUCKET_STEP,
+    })
+  }
+
+  const leftRanges: Array<{ minSeconds: number; maxSeconds: number }> = []
+  let leftCursor = denseRange.minSeconds
+  let leftStepIndex = 0
+  while (leftCursor > 0) {
+    const step = HISTOGRAM_TAIL_BUCKET_STEPS[leftStepIndex]
+      ?? HISTOGRAM_TAIL_BUCKET_STEPS[HISTOGRAM_TAIL_BUCKET_STEPS.length - 1]
+    const minSeconds = Math.max(0, leftCursor - step)
+    leftRanges.unshift({ minSeconds, maxSeconds: leftCursor })
+    leftCursor = minSeconds
+    leftStepIndex += 1
+  }
+
+  const rightRanges: Array<{ minSeconds: number; maxSeconds: number }> = []
+  let rightCursor = denseRange.maxSeconds
+  let rightStepIndex = 0
+  while (rightCursor <= maximumTime) {
+    const step = HISTOGRAM_TAIL_BUCKET_STEPS[rightStepIndex]
+      ?? HISTOGRAM_TAIL_BUCKET_STEPS[HISTOGRAM_TAIL_BUCKET_STEPS.length - 1]
+    rightRanges.push({ minSeconds: rightCursor, maxSeconds: rightCursor + step })
+    rightCursor += step
+    rightStepIndex += 1
+  }
+
+  return [...leftRanges, ...coreRanges, ...rightRanges]
+}
+
+function buildSolveTimeHistogram(
+  entries: PuzzleCompletionRecord[],
+  visibleSeries: TrendDifficultySeries[]
+): SolveTimeHistogramSummary {
+  const visibleSeriesMap = new Map(visibleSeries.map((series) => [series.key, series]))
+  const histogramEntries = entries.filter((entry) => (
+    visibleSeriesMap.has(getCompletionDifficultyKey(entry))
+    && Number.isFinite(entry.time)
+    && entry.time >= 0
+  ))
+
+  if (histogramEntries.length === 0) {
+    return {
+      data: [],
+      total: 0,
+      median: null,
+      peakLabel: null,
+      axisMaximum: null,
+      compressedGapCount: 0,
+    }
+  }
+
+  const times = histogramEntries.map((entry) => entry.time)
+  const bucketRanges = buildHistogramBucketRanges(times)
+  const buckets: SolveTimeHistogramDatum[] = bucketRanges.map(({ minSeconds, maxSeconds }, index) => ({
+        id: `solve-time-${index}`,
+        label: `${formatHistogramBoundary(minSeconds)}-${formatHistogramBoundary(maxSeconds)}`,
+        displayIndex: index,
+        minSeconds,
+        maxSeconds,
+        total: 0,
+        gapMarker: 0,
+        isGap: false,
+        skippedBucketCount: 0,
+        medianTime: null,
+        averageTime: null,
+        averageMoves: null,
+        cleanCount: 0,
+        assistedCount: 0,
+        isPeak: false,
+        breakdown: [],
+  }))
+  const bucketEntries = new Map<string, PuzzleCompletionRecord[]>()
+  const difficultyTotals = histogramEntries.reduce<Map<string, number>>((totals, entry) => {
+    const difficultyKey = getCompletionDifficultyKey(entry)
+    totals.set(difficultyKey, (totals.get(difficultyKey) ?? 0) + 1)
+    return totals
+  }, new Map())
+
+  histogramEntries.forEach((entry) => {
+    const bucketIndex = buckets.findIndex((bucket, index) => (
+      entry.time >= bucket.minSeconds
+      && (entry.time < bucket.maxSeconds || index === buckets.length - 1)
+    ))
+    if (bucketIndex < 0) return
+
+    const bucket = buckets[bucketIndex]
+    const difficultyKey = getCompletionDifficultyKey(entry)
+    const dataKey = getHistogramSeriesDataKey(difficultyKey)
+
+    bucket.total += 1
+    bucket[dataKey] = (typeof bucket[dataKey] === 'number' ? bucket[dataKey] : 0) + 1
+    bucketEntries.set(bucket.id, [...(bucketEntries.get(bucket.id) ?? []), entry])
+  })
+
+  buckets.forEach((bucket) => {
+    const entriesInBucket = bucketEntries.get(bucket.id) ?? []
+    bucket.medianTime = calculateMedian(entriesInBucket.map((entry) => entry.time))
+    bucket.averageTime = calculateAverage(entriesInBucket.map((entry) => entry.time))
+    bucket.averageMoves = calculateAverage(entriesInBucket.map((entry) => entry.moves))
+    bucket.cleanCount = entriesInBucket.filter((entry) => (
+      entry.hasDetailedProfile && entry.assistanceMode === 'clean'
+    )).length
+    bucket.assistedCount = entriesInBucket.filter((entry) => (
+      entry.hasDetailedProfile && entry.assistanceMode !== 'clean'
+    )).length
+    bucket.breakdown = visibleSeries
+      .map((series) => ({
+        key: series.key,
+        label: series.label,
+        color: series.color,
+        count: typeof bucket[getHistogramSeriesDataKey(series.key)] === 'number'
+          ? bucket[getHistogramSeriesDataKey(series.key)] as number
+          : 0,
+        shareOfBucket: 0,
+        shareOfDifficulty: 0,
+      }))
+      .filter((entry) => entry.count > 0)
+      .map((entry) => ({
+        ...entry,
+        shareOfBucket: Math.round((entry.count / bucket.total) * 100),
+        shareOfDifficulty: Math.round((entry.count / (difficultyTotals.get(entry.key) ?? entry.count)) * 100),
+      }))
+  })
+
+  const peakBucket = buckets.reduce((peak, bucket) => bucket.total > peak.total ? bucket : peak, buckets[0])
+  if (peakBucket) peakBucket.isPeak = true
+  const compressedBuckets = buckets.reduce<SolveTimeHistogramDatum[]>((result, bucket) => {
+    if (bucket.total > 0) {
+      result.push(bucket)
+      return result
+    }
+
+    const previousBucket = result[result.length - 1]
+    if (previousBucket?.isGap) {
+      previousBucket.maxSeconds = bucket.maxSeconds
+      previousBucket.skippedBucketCount += 1
+      return result
+    }
+
+    result.push({
+      ...bucket,
+      id: `solve-time-gap-${bucket.id}`,
+      label: '...',
+      gapMarker: Math.max(1, Math.ceil((peakBucket?.total ?? 1) * 0.12)),
+      isGap: true,
+      skippedBucketCount: 1,
+    })
+    return result
+  }, [])
+  let displayIndex = 0
+  compressedBuckets.forEach((bucket, index) => {
+    if (index > 0) {
+      const previousBucket = compressedBuckets[index - 1]
+      displayIndex += bucket.isGap || previousBucket.isGap ? HISTOGRAM_GAP_POSITION_STEP : 1
+    }
+    bucket.displayIndex = displayIndex
+  })
+
+  return {
+    data: compressedBuckets,
+    total: histogramEntries.length,
+    median: calculateMedian(times),
+    peakLabel: peakBucket?.label ?? null,
+    axisMaximum: buckets[buckets.length - 1]?.maxSeconds ?? null,
+    compressedGapCount: compressedBuckets.filter((bucket) => bucket.isGap).length,
+  }
+}
+
+function getHistogramChartLayout(bucketCount: number): {
+  barCategoryGap: string
+  maxBarSize: number
+} {
+  if (bucketCount >= 8) return { barCategoryGap: '3%', maxBarSize: 44 }
+  if (bucketCount >= 7) return { barCategoryGap: '6%', maxBarSize: 50 }
+  if (bucketCount >= 6) return { barCategoryGap: '9%', maxBarSize: 56 }
+  if (bucketCount >= 5) return { barCategoryGap: '12%', maxBarSize: 62 }
+  if (bucketCount >= 4) return { barCategoryGap: '15%', maxBarSize: 68 }
+  return { barCategoryGap: '18%', maxBarSize: 72 }
+}
+
 function getTrendTicks(points: TrendPoint[]): number[] {
   const maximumTicks = 8
   if (points.length <= maximumTicks) return points.map((point) => point.index)
@@ -1262,6 +1540,72 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
   )
 }
 
+function renderSolveTimeHistogramTooltip(
+  { active, payload }: ChartTooltipProps,
+  total: number,
+  overallMedian: number | null
+) {
+  if (!active || !payload || payload.length === 0) return null
+
+  const bucket = payload[0]?.payload as SolveTimeHistogramDatum | undefined
+  if (!bucket) return null
+
+  if (bucket.isGap) {
+    return (
+      <CursorTooltipPortal active>
+        <div className="stats-recharts-tooltip stats-histogram-tooltip stats-histogram-gap-tooltip">
+          <strong>Leerer Zeitbereich</strong>
+          <span>{formatHistogramBoundary(bucket.minSeconds)}-{formatHistogramBoundary(bucket.maxSeconds)}</span>
+          <small>
+            {bucket.skippedBucketCount} {bucket.skippedBucketCount === 1 ? 'leeres Intervall wurde' : 'leere Intervalle wurden'} kompakt zusammengefasst.
+          </small>
+        </div>
+      </CursorTooltipPortal>
+    )
+  }
+
+  if (bucket.total <= 0) return null
+
+  const percentage = total > 0 ? Math.round((bucket.total / total) * 100) : 0
+  const legacyCount = bucket.total - bucket.cleanCount - bucket.assistedCount
+  const medianRelation = overallMedian === null
+    ? null
+    : bucket.maxSeconds <= overallMedian
+      ? 'Dieser Bereich liegt unter dem Gesamtmedian.'
+      : bucket.minSeconds >= overallMedian
+        ? 'Dieser Bereich liegt ueber dem Gesamtmedian.'
+        : 'Der Gesamtmedian liegt in diesem Bereich.'
+
+  return (
+    <CursorTooltipPortal active>
+        <div className="stats-recharts-tooltip stats-histogram-tooltip">
+          <strong>{bucket.label}</strong>
+          <span>{bucket.total} {bucket.total === 1 ? 'Lauf' : 'Laeufe'} · {percentage}% aller sichtbaren Laeufe</span>
+          <span>Intervallbreite: {formatOptionalDuration(bucket.maxSeconds - bucket.minSeconds)}</span>
+          {bucket.isPeak ? <small className="stats-histogram-tooltip-highlight">Haeufigster Zeitbereich</small> : null}
+        <div className="stats-recharts-tooltip-list stats-histogram-tooltip-summary">
+          <span>Median im Bereich: {formatOptionalDuration(bucket.medianTime)}</span>
+          <span>Durchschnitt: {formatOptionalDuration(bucket.averageTime)}</span>
+          <span>Durchschn. Netto-Zuege: {formatOptionalMoves(bucket.averageMoves)}</span>
+          <span>
+            Laufarten: {bucket.cleanCount} clean · {bucket.assistedCount} unterstuetzt
+            {legacyCount > 0 ? ` · ${legacyCount} Legacy` : ''}
+          </span>
+        </div>
+        <div className="stats-recharts-tooltip-list">
+          {bucket.breakdown.map((entry) => (
+            <span key={entry.key}>
+              <i aria-hidden="true" style={{ backgroundColor: entry.color }} />
+              {entry.label}: {entry.count} · {entry.shareOfBucket}% des Balkens · {entry.shareOfDifficulty}% der Stufe
+            </span>
+          ))}
+        </div>
+        {medianRelation ? <small>{medianRelation}</small> : null}
+      </div>
+    </CursorTooltipPortal>
+  )
+}
+
 function renderDonutTooltip({ active, payload }: ChartTooltipProps, total: number) {
   if (!active || !payload || payload.length === 0) return null
 
@@ -1414,6 +1758,17 @@ export default function UploadStatsVisualReport({
   const trendFormatter = getTrendValueFormatter(trendMetric)
   const selectedTrend = TREND_METRICS.find((metric) => metric.id === trendMetric) ?? TREND_METRICS[0]
   const averageQuality = averageScoreBreakdown?.score ?? null
+  const solveTimeHistogram = useMemo(
+    () => buildSolveTimeHistogram(rangedHistory, visibleTrendSeries),
+    [rangedHistory, visibleTrendSeries]
+  )
+  const solveTimeHistogramLayout = getHistogramChartLayout(solveTimeHistogram.data.length)
+  const solveTimeHistogramTickLabels = useMemo(
+    () => new Map(solveTimeHistogram.data.map((bucket) => [bucket.displayIndex, bucket.label])),
+    [solveTimeHistogram.data]
+  )
+  const solveTimeHistogramTicks = solveTimeHistogram.data.map((bucket) => bucket.displayIndex)
+  const solveTimeHistogramLastIndex = solveTimeHistogramTicks[solveTimeHistogramTicks.length - 1] ?? 0
 
   const handleToggleTrendSeries = (seriesKey: string) => {
     setHiddenTrendDifficultyKeys((current) => {
@@ -1462,6 +1817,30 @@ export default function UploadStatsVisualReport({
               <i aria-hidden="true" />
               {series.label}
             </AnimatedChipButton>
+          )
+        })}
+      </div>
+    )
+  }
+
+  const renderDifficultyColorLegend = (label: string) => {
+    if (trendSeriesOptions.length === 0) return null
+
+    return (
+      <div className="stats-chart-color-legend" aria-label={label}>
+        <span className="stats-chart-color-legend-label">Schwierigkeiten</span>
+        {trendSeriesOptions.map((series) => {
+          const isVisible = !hiddenTrendDifficultyKeys.includes(series.key)
+
+          return (
+            <span
+              key={series.key}
+              className={`stats-chart-color-legend-item${isVisible ? '' : ' is-muted'}`}
+              style={{ '--series-color': series.color } as CSSProperties}
+            >
+              <i aria-hidden="true" />
+              {series.label}
+            </span>
           )
         })}
       </div>
@@ -1916,6 +2295,7 @@ export default function UploadStatsVisualReport({
                   </div>
                 )}
 
+                {renderDifficultyColorLegend('Farblegende Trenddiagramm')}
                 {renderTrendFocusControls()}
 
                 <div className="stats-visual-line-legend">
@@ -1923,6 +2303,106 @@ export default function UploadStatsVisualReport({
                   <span>{visibleTrendSeries.length} von {trendSeriesOptions.length} Stufen sichtbar</span>
                   <span>{isMovingAverageVisible ? 'Rohlaeufe als Punkte, 5er-Trend als Linie' : 'Rohlaeufe mit geraden Verbindungen'}</span>
                   <span>{focusedTrendSeries ? `Fokus: ${focusedTrendSeries.label}` : 'Alle sichtbaren Stufen gleichwertig'}</span>
+                </div>
+              </article>
+
+              <article className="stats-report-card stats-visual-line-card stats-visual-histogram-card">
+                <div className="stats-visual-line-head">
+                  <span>
+                    <strong>Verteilung der Loesungszeiten</strong>
+                    <span> Haeufigkeit je Zeitbereich, aufgeteilt nach Schwierigkeit.</span>
+                  </span>
+                  <span>
+                    <strong>{solveTimeHistogram.total}</strong>
+                    <span> sichtbare Laeufe</span>
+                  </span>
+                </div>
+
+                {solveTimeHistogram.data.length === 0 ? (
+                  <div className="stats-empty-state dashboard-empty-state">
+                    <span className="empty-icon" aria-hidden="true"><Activity /></span>
+                    <p>Keine Laufzeiten fuer diese Verteilung.</p>
+                    <p className="empty-hint">Waehle einen anderen Zeitraum oder blende weitere Stufen ein.</p>
+                  </div>
+                ) : (
+                  <div
+                    className="stats-recharts-line-frame stats-recharts-histogram-frame"
+                    data-bucket-count={solveTimeHistogram.data.length}
+                    data-gap-count={solveTimeHistogram.compressedGapCount}
+                    data-gap-position-step={HISTOGRAM_GAP_POSITION_STEP}
+                    data-core-bucket-step={HISTOGRAM_CORE_BUCKET_STEP}
+                    data-bar-category-gap={solveTimeHistogramLayout.barCategoryGap}
+                  >
+                    <ResponsiveContainer width="100%" height={320}>
+                      <BarChart
+                        data={solveTimeHistogram.data}
+                        margin={{ top: 18, right: 22, left: 4, bottom: 12 }}
+                        barCategoryGap={solveTimeHistogramLayout.barCategoryGap}
+                        barGap={0}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis
+                          dataKey="displayIndex"
+                          type="number"
+                          tickLine={false}
+                          axisLine={false}
+                          domain={[-0.5, solveTimeHistogramLastIndex + 0.5]}
+                          ticks={solveTimeHistogramTicks}
+                          tickFormatter={(value) => solveTimeHistogramTickLabels.get(Number(value)) ?? ''}
+                          angle={solveTimeHistogram.data.length > 6 ? -18 : 0}
+                          textAnchor={solveTimeHistogram.data.length > 6 ? 'end' : 'middle'}
+                          height={solveTimeHistogram.data.length > 6 ? 54 : 34}
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          allowDecimals={false}
+                          width={42}
+                        />
+                        <Tooltip
+                          content={(props) => renderSolveTimeHistogramTooltip(
+                            props,
+                            solveTimeHistogram.total,
+                            solveTimeHistogram.median
+                          )}
+                          cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }}
+                        />
+                        {visibleTrendSeries.map((series) => (
+                          <Bar
+                            key={series.key}
+                            dataKey={getHistogramSeriesDataKey(series.key)}
+                            name={series.label}
+                            stackId="solve-times"
+                            fill={series.color}
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={solveTimeHistogramLayout.maxBarSize}
+                          />
+                        ))}
+                        <Bar
+                          dataKey="gapMarker"
+                          name="Leerer Zeitbereich"
+                          stackId="solve-times"
+                          fill="var(--text-muted)"
+                          radius={[999, 999, 0, 0]}
+                          maxBarSize={8}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {renderDifficultyColorLegend('Farblegende Histogramm')}
+                <div className="stats-visual-line-legend">
+                  <span>Median: {formatOptionalDuration(solveTimeHistogram.median)}</span>
+                  <span>Haeufigster Bereich: {solveTimeHistogram.peakLabel ?? '--'}</span>
+                  <span>Hauptbereich: 15-Sekunden-Intervalle, danach zunehmend groesser</span>
+                  <span>Zeitleiste bis: {formatOptionalDuration(solveTimeHistogram.axisMaximum)}</span>
+                  {solveTimeHistogram.compressedGapCount > 0 ? (
+                    <span>
+                      {solveTimeHistogram.compressedGapCount} {solveTimeHistogram.compressedGapCount === 1 ? 'Leerluecke' : 'Leerluecken'} als ... verdichtet
+                    </span>
+                  ) : null}
+                  <span>Farben entsprechen den Schwierigkeitsreihen oben</span>
                 </div>
               </article>
             </>

@@ -7692,6 +7692,51 @@
   filter: drop-shadow(0 8px 12px color-mix(in srgb, currentColor 14%, transparent));
 }
 
+.stats-recharts-histogram-frame {
+  min-height: 320px;
+}
+
+.stats-recharts-histogram-frame .recharts-rectangle {
+  filter: drop-shadow(0 8px 12px color-mix(in srgb, currentColor 12%, transparent));
+}
+
+.stats-recharts-histogram-frame .recharts-cartesian-axis-tick text {
+  font-size: 11px;
+}
+
+.stats-visual-histogram-card {
+  margin-top: 2px;
+}
+
+.stats-histogram-tooltip {
+  min-width: 250px;
+  max-width: min(390px, 86vw);
+}
+
+.stats-histogram-tooltip-summary {
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.18);
+}
+
+.stats-histogram-tooltip-highlight {
+  width: fit-content;
+  margin-top: 2px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.16);
+  color: #a7f3d0 !important;
+  font-weight: 850;
+}
+
+.stats-histogram-gap-tooltip {
+  min-width: 210px;
+}
+
+.stats-recharts-histogram-frame .recharts-bar-rectangle:last-child .recharts-rectangle {
+  opacity: 0.76;
+  filter: none;
+}
+
 .stats-recharts-tooltip {
   display: flex;
   flex-direction: column;
@@ -8407,6 +8452,41 @@
 .stats-visual-series-chip:not(.is-active) i {
   background: color-mix(in srgb, var(--series-color, var(--primary-color)) 36%, var(--text-muted));
   box-shadow: none;
+}
+
+.stats-chart-color-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 14px;
+  padding: 8px 2px 2px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 780;
+}
+
+.stats-chart-color-legend-label {
+  color: var(--text-main);
+  font-weight: 900;
+}
+
+.stats-chart-color-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stats-chart-color-legend-item.is-muted {
+  opacity: 0.42;
+}
+
+.stats-chart-color-legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--series-color, var(--primary-color));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--series-color, var(--primary-color)) 16%, transparent);
 }
 
 .stats-visual-record-grid {
