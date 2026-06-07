@@ -74,6 +74,7 @@ export function createPersistedPuzzleProgress({
   config,
   moveCount,
   elapsedTime,
+  isPaused = false,
   optimalStartMoveCount,
   optimalStartMoveCountKind,
   optimalStartMoveCountSolverVersion,
@@ -92,6 +93,7 @@ export function createPersistedPuzzleProgress({
   config: PuzzleConfig
   moveCount: number
   elapsedTime: number
+  isPaused?: boolean
   optimalStartMoveCount?: number | null
   optimalStartMoveCountKind?: OptimalStartMoveCountKind
   optimalStartMoveCountSolverVersion?: string
@@ -110,6 +112,7 @@ export function createPersistedPuzzleProgress({
     puzzleState: normalizePuzzleState(state, config),
     moveCount,
     elapsedTime,
+    isPaused,
     optimalStartMoveCount,
     optimalStartMoveCountKind,
     optimalStartMoveCountSolverVersion:

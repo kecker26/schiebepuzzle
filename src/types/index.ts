@@ -112,6 +112,7 @@ export interface PersistedPuzzleProgress {
   puzzleState: PuzzleState
   moveCount: number
   elapsedTime: number
+  isPaused?: boolean
   optimalStartMoveCount?: number | null
   optimalStartMoveCountKind?: OptimalStartMoveCountKind
   optimalStartMoveCountSolverVersion?: string
@@ -491,6 +492,15 @@ export interface RecordSolvedGalleryEntryPayload {
 export interface AnalyzeSolvedGalleryEntryResult {
   gallery: SolvedGallery
   entry: SolvedGalleryEntry
+}
+
+export interface AnalyzeWinEffectImagePayload {
+  image: string
+  config: PuzzleConfig
+}
+
+export interface AnalyzeWinEffectImageResult {
+  tags: GalleryImageTag[]
 }
 
 export type UpdateSolvedGalleryTagsAction = 'rename' | 'remove'

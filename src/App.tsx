@@ -76,8 +76,10 @@ import {
 import {
   addSolvedGalleryEntry,
   analyzeSolvedGalleryEntry,
+  analyzeWinEffectImage,
   deleteSolvedGalleryEntries,
   editSolvedGalleryEntryTags,
+  loadTagCategoryCatalog,
   updateSolvedGalleryTags,
 } from './services/GalleryService.ts'
 import {
@@ -102,12 +104,14 @@ import {
   PuzzleDataImportResult,
   PuzzleConfig,
   GalleryChallengeTarget,
+  GalleryImageTag,
   GalleryReplaySetup,
   RecordPuzzleCompletionPayload,
   RecordPuzzleCompletionResult,
   RecordSolvedGalleryEntryPayload,
   SavedGameSummary,
   SolvedGalleryEntry,
+  TagCategoryCatalog,
   ImageThemePalette,
   ImageCollection,
   ImageCollections,
@@ -349,6 +353,9 @@ export default function App() {
   const [completionStatsError, setCompletionStatsError] = useState<string | null>(null)
   const [isRecordingCompletion, setIsRecordingCompletion] = useState(false)
   const [winStats, setWinStats] = useState<WinStats | null>(null)
+  const [winEffectTags, setWinEffectTags] = useState<GalleryImageTag[]>([])
+  const [winGalleryEntryId, setWinGalleryEntryId] = useState<string | null>(null)
+  const [winTagCategoryCatalog, setWinTagCategoryCatalog] = useState<TagCategoryCatalog | null>(null)
   const [puzzleRunKey, setPuzzleRunKey] = useState(0)
   const [quitHint, setQuitHint] = useState<string | null>(null)
   const [isFetchingRandom, setIsFetchingRandom] = useState(false)
@@ -415,6 +422,10 @@ export default function App() {
     refreshGallery,
     resetGallery,
   } = useSolvedGallery()
+  const winGalleryEntry = useMemo(
+    () => gallery?.entries.find((entry) => entry.id === winGalleryEntryId) ?? null,
+    [gallery, winGalleryEntryId]
+  )
   const {
     collections,
     isLoadingCollections,
@@ -541,6 +552,39 @@ export default function App() {
     if (appState !== 'playing') return
     audioService.noteGameStarted()
   }, [appState, puzzleRunKey])
+
+  useEffect(() => {
+    if (appState !== 'playing' && appState !== 'imageLoaded') return
+    const effectImage = croppedImage ?? image
+    if (!effectImage) return
+
+    const sessionId = activeSessionRef.current
+    const queryTag = randomImageQuery.trim()
+    if (queryTag) {
+      setWinEffectTags((current) => current.some((tag) => (
+        tag.label.toLocaleLowerCase('de-DE') === queryTag.toLocaleLowerCase('de-DE')
+      ))
+        ? current
+        : [{ label: queryTag, confidence: 1, source: 'manual' }, ...current])
+    }
+
+    void createGalleryPreviewImage(effectImage)
+      .then((previewImage) => analyzeWinEffectImage({ image: previewImage, config }))
+      .then((result) => {
+        if (activeSessionRef.current !== sessionId) return
+        setWinEffectTags((current) => {
+          const tagsByKey = new Map(current.map((tag) => [tag.label.toLocaleLowerCase('de-DE'), tag]))
+          for (const tag of result.tags) {
+            const key = tag.label.toLocaleLowerCase('de-DE')
+            if (!tagsByKey.has(key)) tagsByKey.set(key, tag)
+          }
+          return [...tagsByKey.values()]
+        })
+      })
+      .catch(() => {
+        // Search and replay tags remain usable when early image analysis is unavailable.
+      })
+  }, [appState, config, croppedImage, image, randomImageQuery])
 
   useEffect(() => {
     if (appState === 'welcome') {
@@ -714,6 +758,8 @@ export default function App() {
     setCurrentSaveId(null)
     setSavedProgress(null)
     setWinStats(null)
+    setWinEffectTags([])
+    setWinGalleryEntryId(null)
     setRandomImageError(null)
     resetCompletionFeedback()
   }, [resetCompletionFeedback])
@@ -1693,6 +1739,7 @@ export default function App() {
     transform: CropDraftSnapshot['transform']
     useFullImage: boolean
   }) => {
+    const preparedWinEffectTags = winEffectTags
     const completedCropSnapshot = confirmedCropDraft
       ? buildCropDraftSnapshot(confirmedCropDraft)
       : cropDraftSnapshotRef.current
@@ -1709,6 +1756,7 @@ export default function App() {
     confirmedCropSnapshotRef.current = completedCropSnapshot
     beginSession()
     resetRunArtifacts()
+    setWinEffectTags(preparedWinEffectTags)
     commitCropDraftSnapshot(null, {
       immediate: true,
     })
@@ -1816,6 +1864,9 @@ export default function App() {
       setCompletionStatsError(null)
       setIsRecordingCompletion(true)
       setAppState('solved')
+      void loadTagCategoryCatalog()
+        .then(setWinTagCategoryCatalog)
+        .catch(() => setWinTagCategoryCatalog(null))
 
       void (async () => {
         try {
@@ -1823,6 +1874,9 @@ export default function App() {
             createCompletionPayload(stats, completedConfig),
             createGalleryEntryPayload(stats, completedConfig),
           ])
+          if (activeSessionRef.current === sessionId) {
+            setWinGalleryEntryId(galleryPayload.id ?? null)
+          }
 
           const [statsOutcome, galleryOutcome] = await Promise.allSettled([
             recordPuzzleCompletion(completionPayload),
@@ -2000,6 +2054,7 @@ export default function App() {
           setPendingGalleryChallengeTarget(null)
           setActiveGalleryReplaySetup(replaySetup)
           setActiveGalleryChallengeTarget(createGalleryChallengeTarget(entry))
+          setWinEffectTags(entry.tags ?? [])
           setConfig(entry.config)
           setImagePalette(entry.imageTheme ?? null)
           setImage(replayImage)
@@ -2044,6 +2099,7 @@ export default function App() {
     setPendingGalleryChallengeTarget(mode === 'run' && replaySetup ? createGalleryChallengeTarget(entry) : null)
     setActiveGalleryReplaySetup(null)
     setActiveGalleryChallengeTarget(null)
+    setWinEffectTags(entry.tags ?? [])
     setConfig(entry.config)
     setImagePalette(entry.imageTheme ?? null)
     setImage(replayImage)
@@ -2908,6 +2964,9 @@ export default function App() {
             completionResult={completionResult}
             completionStatsError={completionStatsError}
             isRecordingStats={isRecordingCompletion}
+            imageTags={winEffectTags.length > 0 ? winEffectTags : winGalleryEntry?.tags}
+            rejectedAiTags={winGalleryEntry?.rejectedAiTags}
+            tagCategoryCatalog={winTagCategoryCatalog}
             onRetryStats={handleRetryStats}
             onReplaySameImage={handleReplaySameImage}
             onGoToSelectionScreen={handleReset}

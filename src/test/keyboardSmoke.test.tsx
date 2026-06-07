@@ -2373,9 +2373,11 @@ describe('keyboard smoke tests', () => {
       usePuzzleKeyboardShortcuts({
         isRestartConfirmOpen: false,
         isHelpOpen: false,
+        isPaused: false,
         puzzleState: activePuzzleState,
         isInteractionLocked: false,
         onFocusBoard: () => boardRef.current?.focus(),
+        onTogglePause: vi.fn(),
         onQuit: vi.fn(),
         onTogglePreview: vi.fn(),
         onToggleGhostPreview: vi.fn(),
@@ -2408,6 +2410,55 @@ describe('keyboard smoke tests', () => {
     fireEvent.keyDown(volumeSlider, { key: 'b' })
 
     expect(document.activeElement).toBe(board)
+  })
+
+  it('toggles puzzle pause with P even while the puzzle is paused', () => {
+    const activePuzzleState: PuzzleState = {
+      tiles: [],
+      board: [],
+      emptyIndex: 0,
+      emptyRow: 0,
+      emptyCol: 0,
+      moveCount: 0,
+      startTime: 0,
+      isSolved: false,
+      isAnimating: false,
+      dragState: null,
+    }
+    const onTogglePause = vi.fn()
+    const onShowHint = vi.fn()
+
+    function PuzzlePauseShortcutHarness() {
+      usePuzzleKeyboardShortcuts({
+        isRestartConfirmOpen: false,
+        isHelpOpen: false,
+        isPaused: true,
+        puzzleState: activePuzzleState,
+        isInteractionLocked: true,
+        onFocusBoard: vi.fn(),
+        onTogglePause,
+        onQuit: vi.fn(),
+        onTogglePreview: vi.fn(),
+        onToggleGhostPreview: vi.fn(),
+        onToggleHeatmapOverlay: vi.fn(),
+        onShowTileNumbers: vi.fn(),
+        onSuggestedMove: vi.fn(),
+        onShowHint,
+        onRestart: vi.fn(),
+        onUndo: vi.fn(),
+        onRedo: vi.fn(),
+      })
+
+      return <button type="button">Pause-Overlay</button>
+    }
+
+    render(<PuzzlePauseShortcutHarness />)
+
+    fireEvent.keyDown(window, { key: 'p' })
+    fireEvent.keyDown(window, { key: 'h' })
+
+    expect(onTogglePause).toHaveBeenCalledTimes(1)
+    expect(onShowHint).not.toHaveBeenCalled()
   })
 
   it('scrolls focused actions smoothly into view while tabbing even if they are only partly visible', () => {

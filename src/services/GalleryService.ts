@@ -1,5 +1,7 @@
 import {
   AnalyzeSolvedGalleryEntryResult,
+  AnalyzeWinEffectImagePayload,
+  AnalyzeWinEffectImageResult,
   ClassifyTagCategoriesPayload,
   ClassifyTagCategoriesResult,
   CreateTagCategoryPayload,
@@ -44,6 +46,15 @@ export async function analyzeSolvedGalleryEntry(entryId: string): Promise<Analyz
     `/api/gallery/${encodeURIComponent(entryId)}/analyze`,
     { method: 'POST' }
   )
+}
+
+export async function analyzeWinEffectImage(
+  payload: AnalyzeWinEffectImagePayload
+): Promise<AnalyzeWinEffectImageResult> {
+  return requestJson<AnalyzeWinEffectImageResult>('/api/gallery/win-effect-tags', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }
 
 export async function updateSolvedGalleryTags(payload: UpdateSolvedGalleryTagsPayload): Promise<SolvedGallery> {

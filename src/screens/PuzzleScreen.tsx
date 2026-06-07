@@ -39,6 +39,7 @@ import { isGalleryReplaySetupCompatible } from '../utils/galleryReplaySetup.ts'
 import { formatDifficultyLabel, shouldUseFastSuggestion } from '../utils/puzzleDifficulty.ts'
 import PuzzleLeftPanel from './puzzle/PuzzleLeftPanel.tsx'
 import PuzzleContextMenu, { type ContextMenuPosition } from './puzzle/PuzzleContextMenu.tsx'
+import PuzzlePauseOverlay from './puzzle/PuzzlePauseOverlay.tsx'
 import PuzzleRestartConfirmDialog from './puzzle/PuzzleRestartConfirmDialog.tsx'
 import PuzzleRightPanel from './puzzle/PuzzleRightPanel.tsx'
 import {
@@ -320,6 +321,7 @@ export default function PuzzleScreen({
   const undoButtonRef = useRef<HTMLButtonElement | null>(null)
   const redoButtonRef = useRef<HTMLButtonElement | null>(null)
   const helpTriggerButtonRef = useRef<HTMLButtonElement | null>(null)
+  const pauseButtonRef = useRef<HTMLButtonElement | null>(null)
   const quitButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const { requestSolutionValues } = usePuzzleSolverWorker()
@@ -330,6 +332,7 @@ export default function PuzzleScreen({
   const [canvasDisplaySize, setCanvasDisplaySize] = useState<{ width: number; height: number } | null>(null)
   const [moveCount, setMoveCount] = useState(0)
   const [elapsedTime, setElapsedTime] = useState(0)
+  const [isPaused, setIsPaused] = useState(Boolean(initialProgressRef.current?.isPaused))
   const [optimalStartMoveCountState, setOptimalStartMoveCountState] = useState<StartOptimalMoveCountState>(
     createLoadingStartOptimalMoveCountState
   )
@@ -431,7 +434,7 @@ export default function PuzzleScreen({
   }, [clearHintAutoHideTimeout])
 
   useEffect(() => {
-    if (hasInitialCanvasFocusRef.current || isHelpOpen || isRestartConfirmOpen) {
+    if (hasInitialCanvasFocusRef.current || isHelpOpen || isRestartConfirmOpen || isPaused) {
       return
     }
 
@@ -443,7 +446,7 @@ export default function PuzzleScreen({
     return () => {
       window.cancelAnimationFrame(frameId)
     }
-  }, [focusBoardCanvas, isHelpOpen, isRestartConfirmOpen])
+  }, [focusBoardCanvas, isHelpOpen, isPaused, isRestartConfirmOpen])
 
   useEffect(() => {
     const updateHelpContext = (target: EventTarget | null) => {
@@ -526,7 +529,7 @@ export default function PuzzleScreen({
   }, [cancelSuggestionFlow, hideTileNumbers])
 
   const handleShowTileNumbers = useCallback(() => {
-    if (!puzzleState) return
+    if (!puzzleState || isPaused) return
 
     showBoardToolHelp('tile-numbers')
     endActiveBoardHelp()
@@ -536,7 +539,7 @@ export default function PuzzleScreen({
       tileNumbersTimeoutRef.current = null
       hideTileNumbers()
     }, TILE_NUMBER_PREVIEW_MS)
-  }, [endActiveBoardHelp, hideTileNumbers, puzzleState, showBoardToolHelp, startTileNumberCorrectnessPulse])
+  }, [endActiveBoardHelp, hideTileNumbers, isPaused, puzzleState, showBoardToolHelp, startTileNumberCorrectnessPulse])
 
   const mapTileValueToId = useCallback((state: PuzzleState, tileValue: number): string | null => {
     const directTile = state.tiles[tileValue]
@@ -1092,6 +1095,7 @@ export default function PuzzleScreen({
         startBoardIntro()
         setMoveCount(restoredMoveCount)
         setElapsedTime(Math.max(0, restoredProgress.elapsedTime))
+        setIsPaused(Boolean(restoredProgress.isPaused))
         setRunMetrics(normalizeRunMetrics(restoredProgress.runMetrics, restoredMoveCount))
         setMoveHistory(restoredMoveHistory)
         setRedoHistory(restoredRedoHistory)
@@ -1125,6 +1129,7 @@ export default function PuzzleScreen({
           startBoardIntro()
           setMoveCount(0)
           setElapsedTime(0)
+          setIsPaused(false)
           setKnownStartSolutionMoveCount(replaySetup.shuffleMoves.length > 0 ? replaySetup.shuffleMoves.length : null)
           setRunMetrics(createEmptyRunMetrics())
           setMoveHistory([])
@@ -1147,6 +1152,7 @@ export default function PuzzleScreen({
       startBoardIntro()
       setMoveCount(0)
       setElapsedTime(0)
+      setIsPaused(false)
       setKnownStartSolutionMoveCount(shuffledResult.moves.length > 0 ? shuffledResult.moves.length : null)
       setRunMetrics(createEmptyRunMetrics())
       setMoveHistory([])
@@ -1271,7 +1277,7 @@ export default function PuzzleScreen({
     return () => window.clearTimeout(timeout)
   }, [showRestoredNotice])
 
-  const isTimerActive = puzzleState !== null && !puzzleState.isSolved
+  const isTimerActive = puzzleState !== null && !puzzleState.isSolved && !isPaused
 
   useEffect(() => {
     if (!isTimerActive) return
@@ -1404,6 +1410,7 @@ export default function PuzzleScreen({
         config,
         moveCount,
         elapsedTime: persistedElapsedTime,
+        isPaused,
         optimalStartMoveCount:
           optimalStartMoveCountState.status === 'loading'
             ? undefined
@@ -1437,6 +1444,7 @@ export default function PuzzleScreen({
     ghostPreviewMode,
     isHeatmapOverlayVisible,
     isGhostPreviewVisible,
+    isPaused,
     isPreviewVisible,
     moveCount,
     moveHistory,
@@ -1466,7 +1474,7 @@ export default function PuzzleScreen({
   }, [elapsedTime, moveCount, optimalStartMoveCountState, puzzleState?.isSolved, runMetrics, startWinCelebration])
 
   const isMoveAnimating = Boolean(moveAnimation)
-  const isInteractionLocked = isMoveAnimating || isCelebratingWin || isComputingSuggestion
+  const isInteractionLocked = isMoveAnimating || isCelebratingWin || isComputingSuggestion || isPaused
   const useFastSuggestionOnly = shouldUseFastSuggestion(config)
 
   const requestExactSolutionMoves = useCallback(async (snapshot: PuzzleState): Promise<string[] | null> => {
@@ -1790,11 +1798,11 @@ export default function PuzzleScreen({
 
   const openContextWindow = useCallback((request: AppContextMenuRequest) => {
     if (shouldPreserveNativeContextMenu(request.target)) return
-    if (!puzzleState) return
+    if (!puzzleState || isPaused) return
 
     request.preventDefault?.()
     setContextMenuPosition({ x: request.clientX, y: request.clientY })
-  }, [puzzleState])
+  }, [isPaused, puzzleState])
 
   useEffect(() => {
     registerAppContextMenuHandler(openContextWindow)
@@ -1817,7 +1825,7 @@ export default function PuzzleScreen({
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
     event.currentTarget.focus({ preventScroll: true })
 
-    if (!puzzleState || !engineRef.current || puzzleState.isSolved || isMoveAnimating || isComputingSuggestionRef.current) {
+    if (!puzzleState || !engineRef.current || puzzleState.isSolved || isPaused || isMoveAnimating || isComputingSuggestionRef.current) {
       return
     }
 
@@ -1827,7 +1835,7 @@ export default function PuzzleScreen({
   }
 
   const handleReferenceTileHover = useCallback((correctIndex: number | null) => {
-    if (correctIndex === null || !puzzleState) {
+    if (correctIndex === null || !puzzleState || isPaused) {
       updateHoveredSearchTileId(null)
       return
     }
@@ -1835,7 +1843,7 @@ export default function PuzzleScreen({
     const tileId = mapTileValueToId(puzzleState, correctIndex)
     const playableTile = getPlayableTileById(puzzleState, tileId)
     updateHoveredSearchTileId(playableTile?.id ?? null)
-  }, [getPlayableTileById, mapTileValueToId, puzzleState, updateHoveredSearchTileId])
+  }, [getPlayableTileById, isPaused, mapTileValueToId, puzzleState, updateHoveredSearchTileId])
 
   const getTileIdForKeyboardMove = (direction: PuzzleMoveDirection): string | null => {
     if (!puzzleState) return null
@@ -1976,36 +1984,41 @@ export default function PuzzleScreen({
   }
 
   const togglePersistentPreviewVisibility = useCallback(() => {
+    if (isPaused) return
     showBoardToolHelp('preview')
     hideTileNumbers()
     setIsPreviewVisible((prev) => !prev)
-  }, [hideTileNumbers, showBoardToolHelp])
+  }, [hideTileNumbers, isPaused, showBoardToolHelp])
 
   const toggleGhostPreviewVisibility = useCallback(() => {
+    if (isPaused) return
     showBoardToolHelp('ghost-preview')
     const nextValue = !isGhostPreviewVisible
     if (nextValue) {
       endActiveBoardHelp()
     }
     setIsGhostPreviewVisible(nextValue)
-  }, [endActiveBoardHelp, isGhostPreviewVisible, showBoardToolHelp])
+  }, [endActiveBoardHelp, isGhostPreviewVisible, isPaused, showBoardToolHelp])
 
   const toggleHeatmapOverlayVisibility = useCallback(() => {
+    if (isPaused) return
     showBoardToolHelp('heatmap')
     const nextValue = !isHeatmapOverlayVisible
     if (nextValue) {
       endActiveBoardHelp()
     }
     setIsHeatmapOverlayVisible(nextValue)
-  }, [endActiveBoardHelp, isHeatmapOverlayVisible, showBoardToolHelp])
+  }, [endActiveBoardHelp, isHeatmapOverlayVisible, isPaused, showBoardToolHelp])
 
   const handleGhostPreviewWeightChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    if (isPaused) return
     setGhostPreviewWeight(normalizeGhostPreviewWeight(Number(event.target.value)))
-  }, [])
+  }, [isPaused])
 
   const handleGhostPreviewModeChange = useCallback((mode: GhostPreviewMode) => {
+    if (isPaused) return
     setGhostPreviewMode(mode)
-  }, [])
+  }, [isPaused])
 
   const closeRestartConfirm = useCallback(() => {
     setIsRestartConfirmOpen(false)
@@ -2135,12 +2148,66 @@ export default function PuzzleScreen({
     focusHotkeyFeedbackTarget(redoButtonRef)
   }
 
+  const pausePuzzle = useCallback(() => {
+    if (!puzzleState || puzzleState.isSolved || isPaused) return
+
+    endActiveBoardHelp()
+    clearCorrectTilePulse()
+    clearInvalidTileFeedback()
+    setContextMenuPosition(null)
+    setIsRestartConfirmOpen(false)
+    updateHoveredSearchTileId(null)
+    setIsPaused(true)
+    setBoardCaption('Pause aktiv. Timer, Brett und Zielbild sind bis zum Weiterspielen gesperrt.')
+    announceAccessibility('Puzzle pausiert. Timer, Brett und Zielbild sind verdeckt.')
+  }, [
+    announceAccessibility,
+    clearCorrectTilePulse,
+    clearInvalidTileFeedback,
+    endActiveBoardHelp,
+    isPaused,
+    puzzleState,
+    updateHoveredSearchTileId,
+  ])
+
+  const resumePuzzle = useCallback(() => {
+    if (!isPaused) return
+
+    setIsPaused(false)
+    setBoardCaption(DEFAULT_BOARD_CAPTION)
+    announceAccessibility('Puzzle wird fortgesetzt.')
+    focusBoardCanvas()
+  }, [announceAccessibility, focusBoardCanvas, isPaused])
+
+  const togglePause = useCallback(() => {
+    if (isPaused) {
+      resumePuzzle()
+      return
+    }
+
+    pausePuzzle()
+  }, [isPaused, pausePuzzle, resumePuzzle])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        pausePuzzle()
+      }
+    }
+
+    handleVisibilityChange()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [pausePuzzle])
+
   usePuzzleKeyboardShortcuts({
     isRestartConfirmOpen,
     isHelpOpen,
+    isPaused,
     puzzleState,
     isInteractionLocked,
     onFocusBoard: focusBoardCanvas,
+    onTogglePause: togglePause,
     onQuit,
     onTogglePreview: togglePreviewFromHotkey,
     onToggleGhostPreview: toggleGhostPreviewFromHotkey,
@@ -2199,6 +2266,7 @@ export default function PuzzleScreen({
             hintPreview={hintPreview}
             isComputingSuggestion={isComputingSuggestion}
             isInteractionLocked={isInteractionLocked}
+            isPaused={isPaused}
             isPreviewVisible={isPreviewVisible}
             isGhostPreviewVisible={isGhostPreviewVisible}
             isHeatmapOverlayVisible={isHeatmapOverlayVisible}
@@ -2208,6 +2276,7 @@ export default function PuzzleScreen({
             moveHistoryLength={moveHistory.length}
             redoHistoryLength={redoHistory.length}
             onShowHint={handleShowHint}
+            onTogglePause={togglePause}
             onSuggestedMove={handleSuggestedMove}
             onTogglePreview={togglePersistentPreviewVisibility}
             onToggleGhostPreview={toggleGhostPreviewVisibility}
@@ -2229,16 +2298,17 @@ export default function PuzzleScreen({
                 undo: undoButtonRef,
                 redo: redoButtonRef,
                 helpTrigger: helpTriggerButtonRef,
+                pause: pauseButtonRef,
                 quit: quitButtonRef,
               }}
             />
 
           <div className="puzzle-content-area">
             <div className={`puzzle-board-stage${isBoardFocused ? ' is-board-focused' : ''}`}>
-              <div className={`puzzle-board-frame${isBoardFocused ? ' is-focused' : ''}`}>
+              <div className={`puzzle-board-frame${isBoardFocused ? ' is-focused' : ''}${isPaused ? ' is-paused' : ''}`}>
                 <div className="puzzle-board-viewport" ref={boardViewportRef}>
                   <div
-                    className={`puzzle-board-canvas-stack${isBoardIntroActive ? ' is-intro' : ''}${isCelebratingWin ? ' is-celebrating' : ''}`}
+                    className={`puzzle-board-canvas-stack${isBoardIntroActive ? ' is-intro' : ''}${isCelebratingWin ? ' is-celebrating' : ''}${isPaused ? ' is-paused' : ''}`}
                     style={canvasDisplaySize ? { width: `${canvasDisplaySize.width}px`, height: `${canvasDisplaySize.height}px` } : undefined}
                     data-app-tooltip="Brett fokussieren: Pfeile/WASD bewegen, H Hinweis, Enter Auto-Zug, Leertaste Vorschau."
                     data-app-tooltip-align="start"
@@ -2255,11 +2325,11 @@ export default function PuzzleScreen({
                       onMouseMove={handleCanvasMouseMove}
                       onMouseLeave={handleCanvasMouseLeave}
                       onKeyDown={handleCanvasKeyDown}
-                      tabIndex={0}
+                      tabIndex={isPaused ? -1 : 0}
                       aria-label="Puzzlebrett. Wenn das Brett fokussiert ist, bewegen Pfeiltasten oder WASD benachbarte Kacheln in das Leerfeld."
                       aria-describedby={`${boardDescriptionId} ${boardCaptionId}`}
                       aria-roledescription="Schiebepuzzle-Brett"
-                      aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight W A S D B H Enter Space G M N Control+Z Control+Y Control+Shift+Z R Escape"
+                      aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight W A S D B H Enter Space G M N P Control+Z Control+Y Control+Shift+Z R Escape"
                     />
                     <canvas
                       ref={celebrationCanvasRef}
@@ -2267,6 +2337,12 @@ export default function PuzzleScreen({
                       style={canvasDisplaySize ? { width: '100%', height: '100%' } : undefined}
                       aria-hidden="true"
                     />
+                    {isPaused && (
+                      <PuzzlePauseOverlay
+                        elapsedTime={elapsedTime}
+                        onResume={resumePuzzle}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -2286,6 +2362,7 @@ export default function PuzzleScreen({
             difficultyLabel={difficultyLabel}
             playableTileCount={playableTileCount}
             isPreviewVisible={isPreviewVisible}
+            isPaused={isPaused}
             progressMetrics={progressMetrics}
             contextHint={contextHint}
             highlightedReferenceIndex={highlightedReferenceIndex}

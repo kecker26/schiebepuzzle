@@ -15,12 +15,91 @@
 }
 
 .win-dialog {
+  position: relative;
+  z-index: 1;
   width: min(560px, 100%);
   display: flex;
   flex-direction: column;
   gap: 10px;
   color: var(--text-main);
   margin: auto 0;
+}
+
+.win-particle-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.win-particle {
+  --particle-x: 50%;
+  --particle-y: 50%;
+  --particle-travel-x: 0px;
+  --particle-travel-y: 120px;
+  --particle-delay: 0ms;
+  --particle-duration: 4200ms;
+  --particle-rotation: 180deg;
+  --particle-color: #fff;
+  --particle-size: 18px;
+  position: absolute;
+  left: var(--particle-x);
+  top: var(--particle-y);
+  width: var(--particle-size);
+  height: var(--particle-size);
+  color: var(--particle-color);
+  opacity: 0;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--particle-color) 60%, transparent));
+  animation-delay: var(--particle-delay);
+  animation-duration: var(--particle-duration);
+  animation-fill-mode: both;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  will-change: transform, opacity;
+}
+
+.win-particle svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.win-particle.is-accent {
+  opacity: 0;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--particle-color) 48%, transparent));
+}
+
+.win-particle-fall {
+  animation-name: win-particle-fall;
+}
+
+.win-particle-float {
+  animation-name: win-particle-float;
+}
+
+.win-particle-burst {
+  animation-name: win-particle-burst;
+}
+
+.win-particle-orbit {
+  animation-name: win-particle-orbit;
+}
+
+.win-particle-flow {
+  animation-name: win-particle-flow;
+}
+
+.win-particle-build {
+  animation-name: win-particle-build;
+}
+
+.win-particle-focus {
+  animation-name: win-particle-focus;
+}
+
+.win-particle-route {
+  animation-name: win-particle-route;
 }
 
 .win-hero,
@@ -810,8 +889,155 @@
   }
 }
 
+@keyframes win-particle-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -18vh, 0) rotate(0deg);
+  }
+
+  12%,
+  72% {
+    opacity: 0.76;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--particle-travel-x), 110vh, 0) rotate(var(--particle-rotation));
+  }
+}
+
+@keyframes win-particle-float {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 28vh, 0) scale(0.72) rotate(-12deg);
+  }
+
+  18%,
+  76% {
+    opacity: 0.72;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--particle-travel-x), -90vh, 0) scale(1.12) rotate(var(--particle-rotation));
+  }
+}
+
+@keyframes win-particle-burst {
+  0% {
+    opacity: 0;
+    transform: translate3d(calc(50vw - var(--particle-x)), calc(50vh - var(--particle-y)), 0) scale(0.2);
+  }
+
+  14%,
+  58% {
+    opacity: 0.8;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--particle-travel-x), var(--particle-travel-y), 0) scale(1.1) rotate(var(--particle-rotation));
+  }
+}
+
+@keyframes win-particle-orbit {
+  0% {
+    opacity: 0;
+    transform: rotate(0deg) translateX(20px) rotate(0deg) scale(0.5);
+  }
+
+  18%,
+  76% {
+    opacity: 0.78;
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotate(360deg) translateX(calc(42px + var(--particle-size))) rotate(-360deg) scale(1.08);
+  }
+}
+
+@keyframes win-particle-flow {
+  0% {
+    opacity: 0;
+    transform: translate3d(-35vw, 10px, 0) rotate(-18deg);
+  }
+
+  16%,
+  74% {
+    opacity: 0.72;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(65vw, var(--particle-travel-x), 0) rotate(var(--particle-rotation));
+  }
+}
+
+@keyframes win-particle-build {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 38vh, 0) scale(0.45);
+  }
+
+  22%,
+  68% {
+    opacity: 0.7;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -16px, 0) scale(1.08);
+  }
+}
+
+@keyframes win-particle-focus {
+  0% {
+    opacity: 0;
+    transform: scale(2.4) rotate(-25deg);
+  }
+
+  26%,
+  68% {
+    opacity: 0.78;
+    transform: scale(1) rotate(0deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.45) rotate(25deg);
+  }
+}
+
+@keyframes win-particle-route {
+  0% {
+    opacity: 0;
+    transform: translate3d(-35vw, 20vh, 0) rotate(-12deg);
+  }
+
+  18%,
+  72% {
+    opacity: 0.76;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(75vw, var(--particle-travel-x), 0) rotate(18deg);
+  }
+}
+
 [data-motion="reduced"] .win-hero-aura,
 [data-motion="reduced"] .win-icon-shell,
-[data-motion="reduced"] .win-final-board span {
+[data-motion="reduced"] .win-final-board span,
+[data-motion="reduced"] .win-particle {
   animation: none;
+}
+
+[data-motion="reduced"] .win-particle {
+  opacity: 0.24;
+}
+
+[data-motion="reduced"] .win-particle:nth-child(n + 7) {
+  display: none;
 }
