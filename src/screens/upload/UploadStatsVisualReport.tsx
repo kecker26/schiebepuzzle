@@ -1,4 +1,4 @@
-import { type CSSProperties, type RefObject, useMemo, useState } from 'react'
+import { type CSSProperties, type RefObject, useMemo, useRef, useState } from 'react'
 import {
   Activity,
   ArrowUp,
@@ -1686,6 +1686,7 @@ export default function UploadStatsVisualReport({
   onActiveViewChange,
   primaryFocusRef,
 }: UploadStatsVisualReportProps) {
+  const reportRef = useRef<HTMLElement>(null)
   const [trendMetric, setTrendMetric] = useState<TrendMetric>('actions')
   const [trendRange, setTrendRange] = useState<HistoryRange>('recent12')
   const [histogramMetric, setHistogramMetric] = useState<TrendMetric>('time')
@@ -2004,9 +2005,10 @@ export default function UploadStatsVisualReport({
     }
   }
 
-  const scrollToStatisticsTop = (source: HTMLElement) => {
-    const overlay = source.closest<HTMLElement>('.workspace-window-overlay')
-    const statsScrollContainer = source.closest<HTMLElement>('.dashboard-panel-scroll')
+  const scrollToStatisticsTop = (source?: HTMLElement | null) => {
+    const scrollSource = source ?? reportRef.current
+    const overlay = scrollSource?.closest<HTMLElement>('.workspace-window-overlay')
+    const statsScrollContainer = scrollSource?.closest<HTMLElement>('.dashboard-panel-scroll')
 
     if (overlay) {
       overlay.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
@@ -2016,9 +2018,10 @@ export default function UploadStatsVisualReport({
       window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
     }
   }
+  const scrollRawStatisticsToTop = () => scrollToStatisticsTop()
 
   return (
-    <section className="stats-visual-report" aria-label="Statistik visualisieren">
+    <section ref={reportRef} className="stats-visual-report" aria-label="Statistik visualisieren">
       <div className="stats-visual-nav" role="tablist" aria-label="Statistikansicht waehlen" onKeyDown={handleDirectionalFocusNavigation}>
         {VISUAL_STATS_VIEWS.map((view) => {
           const Icon = view.icon
@@ -2600,7 +2603,7 @@ export default function UploadStatsVisualReport({
                       stats={stats}
                       completionHistory={completionHistory}
                       standardDifficultyStats={standardDifficultyStats}
-                      onReloadView={onReloadView}
+                      onReloadView={scrollRawStatisticsToTop}
                       onBackToStart={onBackToStart}
                     />
                   ) : null}
@@ -2614,7 +2617,7 @@ export default function UploadStatsVisualReport({
                       historyFilterOptions={historyFilterOptions}
                       standardDifficultyStats={standardDifficultyStats}
                       onHistoryFilterChange={onHistoryFilterChange}
-                      onReloadView={onReloadView}
+                      onReloadView={scrollRawStatisticsToTop}
                       onBackToStart={onBackToStart}
                     />
                   ) : null}
@@ -2627,7 +2630,7 @@ export default function UploadStatsVisualReport({
                       fastestDifficulty={fastestDifficulty}
                       completionHistory={completionHistory}
                       standardDifficultyStats={standardDifficultyStats}
-                      onReloadView={onReloadView}
+                      onReloadView={scrollRawStatisticsToTop}
                       onBackToStart={onBackToStart}
                     />
                   ) : null}
