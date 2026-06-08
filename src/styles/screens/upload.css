@@ -8129,6 +8129,35 @@
   flex-wrap: wrap;
 }
 
+.stats-chart-toolbar {
+  margin-bottom: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--secondary-border) 58%, transparent);
+}
+
+.stats-trend-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  width: 100%;
+}
+
+.stats-trend-toolbar-metric {
+  justify-self: start;
+}
+
+.stats-trend-toolbar-average {
+  justify-self: center;
+}
+
+.stats-trend-toolbar-range {
+  justify-self: end;
+}
+
+.stats-chart-back-to-top {
+  align-self: center;
+  margin-top: 8px;
+}
+
 .stats-visual-line-card {
   z-index: 0;
   min-height: 380px;
@@ -10677,6 +10706,16 @@
   .stats-visual-toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .stats-trend-toolbar {
+    display: flex;
+  }
+
+  .stats-trend-toolbar-metric,
+  .stats-trend-toolbar-average,
+  .stats-trend-toolbar-range {
+    justify-self: auto;
   }
 
   .stats-raw-explorer-head {

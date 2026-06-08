@@ -1,6 +1,7 @@
 import { type CSSProperties, type RefObject, useMemo, useState } from 'react'
 import {
   Activity,
+  ArrowUp,
   Download,
   Info,
   LayoutDashboard,
@@ -58,7 +59,7 @@ import {
 
 export type VisualStatsView = 'overview' | 'history' | 'raw'
 
-type TrendMetric = 'actions' | 'time' | 'quality'
+type TrendMetric = 'actions' | 'time'
 
 type HistoryRange = 'recent12' | 'recent30' | 'all'
 
@@ -201,6 +202,8 @@ interface SolveTimeHistogramDatum {
   skippedBucketCount: number
   medianTime: number | null
   averageTime: number | null
+  medianActions: number | null
+  averageActions: number | null
   averageMoves: number | null
   cleanCount: number
   assistedCount: number
@@ -216,6 +219,7 @@ interface SolveTimeHistogramSummary {
   peakLabel: string | null
   axisMaximum: number | null
   compressedGapCount: number
+  coreStep: number | null
 }
 
 interface ChartTooltipPayload {
@@ -239,7 +243,7 @@ const VISUAL_STATS_VIEWS: Array<{
   icon: typeof LayoutDashboard
 }> = [
   { id: 'overview', label: 'Dashboard', description: 'KPI-Karten, Laufarten und aktuelle Bestwerte anzeigen.', icon: LayoutDashboard },
-  { id: 'history', label: 'Verlauf & Trends', description: 'Zeit, Aktionen und Lauf-Score als Verlauf vergleichen.', icon: LineChartIcon },
+  { id: 'history', label: 'Verlauf & Trends', description: 'Zeit und Aktionen als Verlauf und Verteilung vergleichen.', icon: LineChartIcon },
   { id: 'raw', label: 'Rohdaten & Details', description: 'Tabellen, Rohdatenansichten und Exporte oeffnen.', icon: Table2 },
 ]
 
@@ -251,17 +255,12 @@ const TREND_METRICS: Array<{
   {
     id: 'actions',
     label: 'Aktionen',
-    description: 'Netto-Zuege ueber die Zeit, getrennt nach Schwierigkeit.',
+    description: 'Gesamtaktionen ueber die Zeit, getrennt nach Schwierigkeit.',
   },
   {
     id: 'time',
     label: 'Zeit',
     description: 'Laufzeiten ueber die Zeit, getrennt nach Schwierigkeit.',
-  },
-  {
-    id: 'quality',
-    label: 'Lauf-Score',
-    description: 'Lauf-Score ueber die Zeit, getrennt nach Schwierigkeit.',
   },
 ]
 
@@ -280,6 +279,8 @@ const TREND_REFERENCE_LABEL_COLLISION_DISTANCE = 24
 const HISTOGRAM_CORE_BUCKET_STEP = 15
 const HISTOGRAM_CORE_SHARE = 0.7
 const HISTOGRAM_TAIL_BUCKET_STEPS = [30, 30, 60, 60, 120, 120, 300, 300, 600, 600, 1200, 1200, 1800, 3600]
+const ACTION_HISTOGRAM_TARGET_CORE_BUCKETS = 5
+const ACTION_HISTOGRAM_TAIL_STEP_FACTORS = [2, 2, 4, 4, 10, 10, 20, 20, 50, 50, 100]
 const HISTOGRAM_GAP_POSITION_STEP = 0.5
 
 const RAW_STATS_VIEWS: Array<{
@@ -906,11 +907,9 @@ function getTrendMetricValue(point: TrendPoint, metric: TrendMetric): number | n
   switch (metric) {
     case 'time':
       return point.time
-    case 'quality':
-      return point.quality
     case 'actions':
     default:
-      return point.moves
+      return point.actions
   }
 }
 
@@ -967,45 +966,69 @@ function formatHistogramBoundary(seconds: number): string {
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`
 }
 
-function getHistogramDenseRange(times: number[]): { minSeconds: number; maxSeconds: number } {
-  const sortedTimes = [...times].sort((left, right) => left - right)
-  const windowSize = Math.max(1, Math.ceil(sortedTimes.length * HISTOGRAM_CORE_SHARE))
+function formatHistogramValue(value: number, metric: TrendMetric): string {
+  return metric === 'time' ? formatHistogramBoundary(value) : `${Math.round(value)}`
+}
+
+function getDenseValueWindow(values: number[]): { firstValue: number; lastValue: number } {
+  const sortedValues = [...values].sort((left, right) => left - right)
+  const windowSize = Math.max(1, Math.ceil(sortedValues.length * HISTOGRAM_CORE_SHARE))
   let bestStartIndex = 0
   let bestWidth = Number.POSITIVE_INFINITY
 
-  for (let startIndex = 0; startIndex + windowSize - 1 < sortedTimes.length; startIndex += 1) {
+  for (let startIndex = 0; startIndex + windowSize - 1 < sortedValues.length; startIndex += 1) {
     const endIndex = startIndex + windowSize - 1
-    const width = sortedTimes[endIndex] - sortedTimes[startIndex]
+    const width = sortedValues[endIndex] - sortedValues[startIndex]
     if (width < bestWidth) {
       bestWidth = width
       bestStartIndex = startIndex
     }
   }
 
-  const firstTime = sortedTimes[bestStartIndex] ?? 0
-  const lastTime = sortedTimes[bestStartIndex + windowSize - 1] ?? firstTime
-  const minSeconds = Math.floor(firstTime / HISTOGRAM_CORE_BUCKET_STEP) * HISTOGRAM_CORE_BUCKET_STEP
+  const firstValue = sortedValues[bestStartIndex] ?? 0
+  return {
+    firstValue,
+    lastValue: sortedValues[bestStartIndex + windowSize - 1] ?? firstValue,
+  }
+}
+
+function getNiceActionBucketStep(actions: number[]): number {
+  const { firstValue, lastValue } = getDenseValueWindow(actions)
+  const rawStep = Math.max(1, (lastValue - firstValue) / ACTION_HISTOGRAM_TARGET_CORE_BUCKETS)
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep))
+  const normalizedStep = rawStep / magnitude
+  const niceNormalizedStep = normalizedStep <= 1 ? 1 : normalizedStep <= 2 ? 2 : normalizedStep <= 5 ? 5 : 10
+  return Math.max(1, niceNormalizedStep * magnitude)
+}
+
+function getHistogramDenseRange(values: number[], coreStep: number): { minSeconds: number; maxSeconds: number } {
+  const { firstValue, lastValue } = getDenseValueWindow(values)
+  const minSeconds = Math.floor(firstValue / coreStep) * coreStep
   const maxSeconds = Math.max(
-    minSeconds + HISTOGRAM_CORE_BUCKET_STEP,
-    (Math.floor(lastTime / HISTOGRAM_CORE_BUCKET_STEP) + 1) * HISTOGRAM_CORE_BUCKET_STEP
+    minSeconds + coreStep,
+    (Math.floor(lastValue / coreStep) + 1) * coreStep
   )
 
   return { minSeconds, maxSeconds }
 }
 
-function buildHistogramBucketRanges(times: number[]): Array<{ minSeconds: number; maxSeconds: number }> {
-  const maximumTime = Math.max(...times)
-  const denseRange = getHistogramDenseRange(times)
+function buildHistogramBucketRanges(
+  values: number[],
+  coreStep: number,
+  tailSteps: number[]
+): Array<{ minSeconds: number; maxSeconds: number }> {
+  const maximumValue = Math.max(...values)
+  const denseRange = getHistogramDenseRange(values, coreStep)
   const coreRanges: Array<{ minSeconds: number; maxSeconds: number }> = []
 
   for (
     let minSeconds = denseRange.minSeconds;
     minSeconds < denseRange.maxSeconds;
-    minSeconds += HISTOGRAM_CORE_BUCKET_STEP
+    minSeconds += coreStep
   ) {
     coreRanges.push({
       minSeconds,
-      maxSeconds: minSeconds + HISTOGRAM_CORE_BUCKET_STEP,
+      maxSeconds: minSeconds + coreStep,
     })
   }
 
@@ -1013,8 +1036,7 @@ function buildHistogramBucketRanges(times: number[]): Array<{ minSeconds: number
   let leftCursor = denseRange.minSeconds
   let leftStepIndex = 0
   while (leftCursor > 0) {
-    const step = HISTOGRAM_TAIL_BUCKET_STEPS[leftStepIndex]
-      ?? HISTOGRAM_TAIL_BUCKET_STEPS[HISTOGRAM_TAIL_BUCKET_STEPS.length - 1]
+    const step = tailSteps[leftStepIndex] ?? tailSteps[tailSteps.length - 1]
     const minSeconds = Math.max(0, leftCursor - step)
     leftRanges.unshift({ minSeconds, maxSeconds: leftCursor })
     leftCursor = minSeconds
@@ -1024,9 +1046,8 @@ function buildHistogramBucketRanges(times: number[]): Array<{ minSeconds: number
   const rightRanges: Array<{ minSeconds: number; maxSeconds: number }> = []
   let rightCursor = denseRange.maxSeconds
   let rightStepIndex = 0
-  while (rightCursor <= maximumTime) {
-    const step = HISTOGRAM_TAIL_BUCKET_STEPS[rightStepIndex]
-      ?? HISTOGRAM_TAIL_BUCKET_STEPS[HISTOGRAM_TAIL_BUCKET_STEPS.length - 1]
+  while (rightCursor <= maximumValue) {
+    const step = tailSteps[rightStepIndex] ?? tailSteps[tailSteps.length - 1]
     rightRanges.push({ minSeconds: rightCursor, maxSeconds: rightCursor + step })
     rightCursor += step
     rightStepIndex += 1
@@ -1037,13 +1058,15 @@ function buildHistogramBucketRanges(times: number[]): Array<{ minSeconds: number
 
 function buildSolveTimeHistogram(
   entries: PuzzleCompletionRecord[],
-  visibleSeries: TrendDifficultySeries[]
+  visibleSeries: TrendDifficultySeries[],
+  metric: TrendMetric
 ): SolveTimeHistogramSummary {
   const visibleSeriesMap = new Map(visibleSeries.map((series) => [series.key, series]))
   const histogramEntries = entries.filter((entry) => (
     visibleSeriesMap.has(getCompletionDifficultyKey(entry))
-    && Number.isFinite(entry.time)
-    && entry.time >= 0
+    && (metric === 'time' || entry.hasDetailedProfile)
+    && Number.isFinite(metric === 'time' ? entry.time : entry.actionMoves)
+    && (metric === 'time' ? entry.time : entry.actionMoves) >= 0
   ))
 
   if (histogramEntries.length === 0) {
@@ -1054,14 +1077,19 @@ function buildSolveTimeHistogram(
       peakLabel: null,
       axisMaximum: null,
       compressedGapCount: 0,
+      coreStep: null,
     }
   }
 
-  const times = histogramEntries.map((entry) => entry.time)
-  const bucketRanges = buildHistogramBucketRanges(times)
+  const values = histogramEntries.map((entry) => metric === 'time' ? entry.time : entry.actionMoves)
+  const coreStep = metric === 'time' ? HISTOGRAM_CORE_BUCKET_STEP : getNiceActionBucketStep(values)
+  const tailSteps = metric === 'time'
+    ? HISTOGRAM_TAIL_BUCKET_STEPS
+    : ACTION_HISTOGRAM_TAIL_STEP_FACTORS.map((factor) => factor * coreStep)
+  const bucketRanges = buildHistogramBucketRanges(values, coreStep, tailSteps)
   const buckets: SolveTimeHistogramDatum[] = bucketRanges.map(({ minSeconds, maxSeconds }, index) => ({
-        id: `solve-time-${index}`,
-        label: `${formatHistogramBoundary(minSeconds)}-${formatHistogramBoundary(maxSeconds)}`,
+        id: `solve-${metric}-${index}`,
+        label: `${formatHistogramValue(minSeconds, metric)}-${formatHistogramValue(maxSeconds, metric)}`,
         displayIndex: index,
         minSeconds,
         maxSeconds,
@@ -1071,6 +1099,8 @@ function buildSolveTimeHistogram(
         skippedBucketCount: 0,
         medianTime: null,
         averageTime: null,
+        medianActions: null,
+        averageActions: null,
         averageMoves: null,
         cleanCount: 0,
         assistedCount: 0,
@@ -1085,9 +1115,10 @@ function buildSolveTimeHistogram(
   }, new Map())
 
   histogramEntries.forEach((entry) => {
+    const value = metric === 'time' ? entry.time : entry.actionMoves
     const bucketIndex = buckets.findIndex((bucket, index) => (
-      entry.time >= bucket.minSeconds
-      && (entry.time < bucket.maxSeconds || index === buckets.length - 1)
+      value >= bucket.minSeconds
+      && (value < bucket.maxSeconds || index === buckets.length - 1)
     ))
     if (bucketIndex < 0) return
 
@@ -1104,6 +1135,8 @@ function buildSolveTimeHistogram(
     const entriesInBucket = bucketEntries.get(bucket.id) ?? []
     bucket.medianTime = calculateMedian(entriesInBucket.map((entry) => entry.time))
     bucket.averageTime = calculateAverage(entriesInBucket.map((entry) => entry.time))
+    bucket.medianActions = calculateMedian(entriesInBucket.map((entry) => entry.actionMoves))
+    bucket.averageActions = calculateAverage(entriesInBucket.map((entry) => entry.actionMoves))
     bucket.averageMoves = calculateAverage(entriesInBucket.map((entry) => entry.moves))
     bucket.cleanCount = entriesInBucket.filter((entry) => (
       entry.hasDetailedProfile && entry.assistanceMode === 'clean'
@@ -1147,7 +1180,7 @@ function buildSolveTimeHistogram(
 
     result.push({
       ...bucket,
-      id: `solve-time-gap-${bucket.id}`,
+      id: `solve-${metric}-gap-${bucket.id}`,
       label: '...',
       gapMarker: Math.max(1, Math.ceil((peakBucket?.total ?? 1) * 0.12)),
       isGap: true,
@@ -1167,10 +1200,11 @@ function buildSolveTimeHistogram(
   return {
     data: compressedBuckets,
     total: histogramEntries.length,
-    median: calculateMedian(times),
+    median: calculateMedian(values),
     peakLabel: peakBucket?.label ?? null,
     axisMaximum: buckets[buckets.length - 1]?.maxSeconds ?? null,
     compressedGapCount: compressedBuckets.filter((bucket) => bucket.isGap).length,
+    coreStep,
   }
 }
 
@@ -1217,22 +1251,21 @@ function getTrendReferenceStats(
   }
 
   return {
-    best: metric === 'quality' ? Math.max(...values) : Math.min(...values),
+    best: Math.min(...values),
     median: calculateMedian(values),
   }
 }
 
 function getTrendReferenceDisplay(
   stats: TrendReferenceStats,
-  visibleValues: number[],
-  metric: TrendMetric
+  visibleValues: number[]
 ): TrendReferenceDisplay {
   if (stats.best === null || stats.median === null) {
     return { shouldMerge: false }
   }
 
-  const domainMinimum = metric === 'quality' ? 0 : Math.min(...visibleValues, stats.best, stats.median)
-  const domainMaximum = metric === 'quality' ? 100 : Math.max(...visibleValues, stats.best, stats.median)
+  const domainMinimum = Math.min(...visibleValues, stats.best, stats.median)
+  const domainMaximum = Math.max(...visibleValues, stats.best, stats.median)
   const domainRange = domainMaximum - domainMinimum
   const renderedDistance = domainRange === 0
     ? 0
@@ -1246,7 +1279,6 @@ function getTrendValueFormatter(metric: TrendMetric): (value: unknown) => string
   return (value) => {
     if (typeof value !== 'number') return '--'
     if (metric === 'time') return formatOptionalDuration(value)
-    if (metric === 'quality') return `${value}/100`
     return `${value}`
   }
 }
@@ -1256,11 +1288,10 @@ function formatTrendMovingAverage(value: number | null, metric: TrendMetric): st
   if (metric === 'time') return formatOptionalDuration(Math.round(value))
 
   const roundedValue = Math.round(value * 10) / 10
-  return metric === 'quality' ? `${roundedValue}/100` : `${roundedValue}`
+  return `${roundedValue}`
 }
 
-function getTrendDomain(metric: TrendMetric): [number | string, number | string] {
-  if (metric === 'quality') return [0, 100]
+function getTrendDomain(): [number | string, number | string] {
   return ['auto', 'auto']
 }
 
@@ -1524,7 +1555,7 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
         <div className="stats-recharts-tooltip-list">
           <span>
             <i aria-hidden="true" style={{ backgroundColor: visiblePayload[0]?.color ?? 'currentColor' }} />
-            {metric === 'time' ? 'Zeit' : metric === 'quality' ? 'Lauf-Score' : 'Netto-Zuege'}: {formatter(metricValue)}
+            {metric === 'time' ? 'Zeit' : 'Aktionen'}: {formatter(metricValue)}
           </span>
           {movingAverage !== null ? (
             <span>5er-Trend: {formatTrendMovingAverage(movingAverage, metric)}</span>
@@ -1543,7 +1574,8 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
 function renderSolveTimeHistogramTooltip(
   { active, payload }: ChartTooltipProps,
   total: number,
-  overallMedian: number | null
+  overallMedian: number | null,
+  metric: TrendMetric
 ) {
   if (!active || !payload || payload.length === 0) return null
 
@@ -1554,8 +1586,8 @@ function renderSolveTimeHistogramTooltip(
     return (
       <CursorTooltipPortal active>
         <div className="stats-recharts-tooltip stats-histogram-tooltip stats-histogram-gap-tooltip">
-          <strong>Leerer Zeitbereich</strong>
-          <span>{formatHistogramBoundary(bucket.minSeconds)}-{formatHistogramBoundary(bucket.maxSeconds)}</span>
+          <strong>Leerer {metric === 'time' ? 'Zeitbereich' : 'Aktionsbereich'}</strong>
+          <span>{formatHistogramValue(bucket.minSeconds, metric)}-{formatHistogramValue(bucket.maxSeconds, metric)}</span>
           <small>
             {bucket.skippedBucketCount} {bucket.skippedBucketCount === 1 ? 'leeres Intervall wurde' : 'leere Intervalle wurden'} kompakt zusammengefasst.
           </small>
@@ -1581,11 +1613,24 @@ function renderSolveTimeHistogramTooltip(
         <div className="stats-recharts-tooltip stats-histogram-tooltip">
           <strong>{bucket.label}</strong>
           <span>{bucket.total} {bucket.total === 1 ? 'Lauf' : 'Laeufe'} · {percentage}% aller sichtbaren Laeufe</span>
-          <span>Intervallbreite: {formatOptionalDuration(bucket.maxSeconds - bucket.minSeconds)}</span>
-          {bucket.isPeak ? <small className="stats-histogram-tooltip-highlight">Haeufigster Zeitbereich</small> : null}
+          <span>
+            Intervallbreite: {metric === 'time'
+              ? formatOptionalDuration(bucket.maxSeconds - bucket.minSeconds)
+              : `${bucket.maxSeconds - bucket.minSeconds} Aktionen`}
+          </span>
+          {bucket.isPeak ? <small className="stats-histogram-tooltip-highlight">Haeufigster Bereich</small> : null}
         <div className="stats-recharts-tooltip-list stats-histogram-tooltip-summary">
-          <span>Median im Bereich: {formatOptionalDuration(bucket.medianTime)}</span>
-          <span>Durchschnitt: {formatOptionalDuration(bucket.averageTime)}</span>
+          <span>
+            Median im Bereich: {metric === 'time'
+              ? formatOptionalDuration(bucket.medianTime)
+              : formatOptionalMoves(bucket.medianActions)}
+          </span>
+          <span>
+            Durchschnitt: {metric === 'time'
+              ? formatOptionalDuration(bucket.averageTime)
+              : formatOptionalMoves(bucket.averageActions)}
+          </span>
+          {metric === 'actions' ? <span>Durchschn. Zeit: {formatOptionalDuration(bucket.averageTime)}</span> : null}
           <span>Durchschn. Netto-Zuege: {formatOptionalMoves(bucket.averageMoves)}</span>
           <span>
             Laufarten: {bucket.cleanCount} clean · {bucket.assistedCount} unterstuetzt
@@ -1642,7 +1687,9 @@ export default function UploadStatsVisualReport({
   primaryFocusRef,
 }: UploadStatsVisualReportProps) {
   const [trendMetric, setTrendMetric] = useState<TrendMetric>('actions')
-  const [historyRange, setHistoryRange] = useState<HistoryRange>('recent12')
+  const [trendRange, setTrendRange] = useState<HistoryRange>('recent12')
+  const [histogramMetric, setHistogramMetric] = useState<TrendMetric>('time')
+  const [histogramRange, setHistogramRange] = useState<HistoryRange>('recent12')
   const [showMovingAverage, setShowMovingAverage] = useState(false)
   const [focusedTrendDifficultyKey, setFocusedTrendDifficultyKey] = useState<string | null | undefined>(undefined)
   const [hiddenTrendDifficultyKeys, setHiddenTrendDifficultyKeys] = useState<string[]>([])
@@ -1658,11 +1705,15 @@ export default function UploadStatsVisualReport({
     () => difficultyRows.filter((row) => row.solveCount > 0),
     [difficultyRows]
   )
-  const rangedHistory = useMemo(
-    () => getHistoryRangeEntries(completionHistory, historyRange),
-    [completionHistory, historyRange]
+  const rangedTrendHistory = useMemo(
+    () => getHistoryRangeEntries(completionHistory, trendRange),
+    [completionHistory, trendRange]
   )
-  const trendPoints = useMemo(() => buildTrendPoints(rangedHistory), [rangedHistory])
+  const rangedHistogramHistory = useMemo(
+    () => getHistoryRangeEntries(completionHistory, histogramRange),
+    [completionHistory, histogramRange]
+  )
+  const trendPoints = useMemo(() => buildTrendPoints(rangedTrendHistory), [rangedTrendHistory])
   const trendSeriesChartPoints = useMemo(
     () => buildTrendSeriesChartPoints(trendPoints, trendMetric),
     [trendMetric, trendPoints]
@@ -1754,13 +1805,13 @@ export default function UploadStatsVisualReport({
   const visibleTrendValues = visibleTrendSeries.flatMap((series) =>
     (trendSeriesChartPoints[series.key] ?? []).map((point) => point.value)
   )
-  const focusedTrendReferenceDisplay = getTrendReferenceDisplay(focusedTrendStats, visibleTrendValues, trendMetric)
+  const focusedTrendReferenceDisplay = getTrendReferenceDisplay(focusedTrendStats, visibleTrendValues)
   const trendFormatter = getTrendValueFormatter(trendMetric)
   const selectedTrend = TREND_METRICS.find((metric) => metric.id === trendMetric) ?? TREND_METRICS[0]
   const averageQuality = averageScoreBreakdown?.score ?? null
   const solveTimeHistogram = useMemo(
-    () => buildSolveTimeHistogram(rangedHistory, visibleTrendSeries),
-    [rangedHistory, visibleTrendSeries]
+    () => buildSolveTimeHistogram(rangedHistogramHistory, visibleTrendSeries, histogramMetric),
+    [histogramMetric, rangedHistogramHistory, visibleTrendSeries]
   )
   const solveTimeHistogramLayout = getHistogramChartLayout(solveTimeHistogram.data.length)
   const solveTimeHistogramTickLabels = useMemo(
@@ -1953,6 +2004,19 @@ export default function UploadStatsVisualReport({
     }
   }
 
+  const scrollToStatisticsTop = (source: HTMLElement) => {
+    const overlay = source.closest<HTMLElement>('.workspace-window-overlay')
+    const statsScrollContainer = source.closest<HTMLElement>('.dashboard-panel-scroll')
+
+    if (overlay) {
+      overlay.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+    } else if (statsScrollContainer) {
+      statsScrollContainer.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+    }
+  }
+
   return (
     <section className="stats-visual-report" aria-label="Statistik visualisieren">
       <div className="stats-visual-nav" role="tablist" aria-label="Statistikansicht waehlen" onKeyDown={handleDirectionalFocusNavigation}>
@@ -2107,59 +2171,59 @@ export default function UploadStatsVisualReport({
 
           {activeView === 'history' ? (
             <>
-              <div className="stats-visual-toolbar">
-                <div className="dashboard-filter-row stats-visual-segmented" aria-label="Trendmetrik waehlen" onKeyDown={handleDirectionalFocusNavigation}>
-                  {TREND_METRICS.map((metric) => (
-                    <AnimatedChipButton
-                      key={metric.id}
-                      className={`dashboard-filter-chip${trendMetric === metric.id ? ' is-active' : ''}`}
-                      onClick={() => setTrendMetric(metric.id)}
-                      data-app-tooltip={metric.description}
-                      data-app-tooltip-position="top"
-                    >
-                      {metric.label}
-                    </AnimatedChipButton>
-                  ))}
-                </div>
-
-                <div className="dashboard-filter-row" aria-label="Zeitraum waehlen" onKeyDown={handleDirectionalFocusNavigation}>
-                  {HISTORY_RANGES.map((range) => (
-                    <AnimatedChipButton
-                      key={range.id}
-                      className={`dashboard-filter-chip${historyRange === range.id ? ' is-active' : ''}`}
-                      onClick={() => setHistoryRange(range.id)}
-                      data-app-tooltip={`Trendzeitraum: ${range.label}.`}
-                      data-app-tooltip-position="top"
-                    >
-                      {range.label}
-                    </AnimatedChipButton>
-                  ))}
-                </div>
-
-                <div className="dashboard-filter-row" aria-label="Trendglaettung waehlen" onKeyDown={handleDirectionalFocusNavigation}>
-                  <AnimatedChipButton
-                    className={`dashboard-filter-chip${isMovingAverageVisible ? ' is-active' : ''}`}
-                    onClick={() => setShowMovingAverage((current) => !current)}
-                    disabled={!canShowMovingAverage}
-                    aria-pressed={isMovingAverageVisible}
-                    data-app-tooltip={canShowMovingAverage
-                      ? 'Gleitenden Durchschnitt aus jeweils 5 Laeufen derselben Stufe anzeigen.'
-                      : 'Der 5er-Trend braucht mindestens 5 Laeufe derselben Stufe im Ausschnitt.'}
-                    data-app-tooltip-position="top"
-                  >
-                    5er-Trend
-                  </AnimatedChipButton>
-                </div>
-              </div>
-
               <article className="stats-report-card stats-visual-line-card">
+                <div className="stats-visual-toolbar stats-chart-toolbar stats-trend-toolbar">
+                  <div className="dashboard-filter-row stats-visual-segmented stats-trend-toolbar-metric" aria-label="Verlaufsmetrik waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                    {TREND_METRICS.map((metric) => (
+                      <AnimatedChipButton
+                        key={metric.id}
+                        className={`dashboard-filter-chip${trendMetric === metric.id ? ' is-active' : ''}`}
+                        onClick={() => setTrendMetric(metric.id)}
+                        data-app-tooltip={`Verlaufsdiagramm: ${metric.description}`}
+                        data-app-tooltip-position="top"
+                      >
+                        {metric.label}
+                      </AnimatedChipButton>
+                    ))}
+                  </div>
+
+                  <div className="dashboard-filter-row stats-trend-toolbar-average" aria-label="Trendglaettung waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                    <AnimatedChipButton
+                      className={`dashboard-filter-chip${isMovingAverageVisible ? ' is-active' : ''}`}
+                      onClick={() => setShowMovingAverage((current) => !current)}
+                      disabled={!canShowMovingAverage}
+                      aria-pressed={isMovingAverageVisible}
+                      data-app-tooltip={canShowMovingAverage
+                        ? 'Gleitenden Durchschnitt aus jeweils 5 Laeufen derselben Stufe anzeigen.'
+                        : 'Der 5er-Trend braucht mindestens 5 Laeufe derselben Stufe im Ausschnitt.'}
+                      data-app-tooltip-position="top"
+                    >
+                      5er-Trend
+                    </AnimatedChipButton>
+                  </div>
+
+                  <div className="dashboard-filter-row stats-trend-toolbar-range" aria-label="Verlaufszeitraum waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                    {HISTORY_RANGES.map((range) => (
+                      <AnimatedChipButton
+                        key={range.id}
+                        className={`dashboard-filter-chip${trendRange === range.id ? ' is-active' : ''}`}
+                        onClick={() => setTrendRange(range.id)}
+                        data-app-tooltip={`Verlaufsdiagramm: ${range.label}.`}
+                        data-app-tooltip-position="top"
+                      >
+                        {range.label}
+                      </AnimatedChipButton>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="stats-visual-line-head">
                   <span>
                     <strong>{selectedTrend.label}</strong>
                     <span> {selectedTrend.description}</span>
                   </span>
                   <span>
-                    <strong>{rangedHistory.length}</strong>
+                    <strong>{rangedTrendHistory.length}</strong>
                     <span> Laeufe im Ausschnitt</span>
                   </span>
                 </div>
@@ -2189,7 +2253,7 @@ export default function UploadStatsVisualReport({
                           tickLine={false}
                           axisLine={false}
                           width={64}
-                          domain={getTrendDomain(trendMetric)}
+                          domain={getTrendDomain()}
                           tickFormatter={(value) => trendFormatter(typeof value === 'number' ? value : null)}
                         />
                         <Tooltip
@@ -2304,13 +2368,51 @@ export default function UploadStatsVisualReport({
                   <span>{isMovingAverageVisible ? 'Rohlaeufe als Punkte, 5er-Trend als Linie' : 'Rohlaeufe mit geraden Verbindungen'}</span>
                   <span>{focusedTrendSeries ? `Fokus: ${focusedTrendSeries.label}` : 'Alle sichtbaren Stufen gleichwertig'}</span>
                 </div>
+                <AnimatedButton
+                  className="secondary stats-chart-back-to-top"
+                  interaction="chip"
+                  onClick={(event) => scrollToStatisticsTop(event.currentTarget)}
+                >
+                  <ArrowUp size={16} aria-hidden="true" />
+                  Zum Seitenanfang
+                </AnimatedButton>
               </article>
 
               <article className="stats-report-card stats-visual-line-card stats-visual-histogram-card">
+                <div className="stats-visual-toolbar stats-chart-toolbar">
+                  <div className="dashboard-filter-row stats-visual-segmented" aria-label="Verteilungsmetrik waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                    {TREND_METRICS.map((metric) => (
+                      <AnimatedChipButton
+                        key={metric.id}
+                        className={`dashboard-filter-chip${histogramMetric === metric.id ? ' is-active' : ''}`}
+                        onClick={() => setHistogramMetric(metric.id)}
+                        data-app-tooltip={`Verteilungsdiagramm: ${metric.description}`}
+                        data-app-tooltip-position="top"
+                      >
+                        {metric.label}
+                      </AnimatedChipButton>
+                    ))}
+                  </div>
+
+                  <div className="dashboard-filter-row" aria-label="Verteilungszeitraum waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                    {HISTORY_RANGES.map((range) => (
+                      <AnimatedChipButton
+                        key={range.id}
+                        className={`dashboard-filter-chip${histogramRange === range.id ? ' is-active' : ''}`}
+                        onClick={() => setHistogramRange(range.id)}
+                        data-app-tooltip={`Verteilungsdiagramm: ${range.label}.`}
+                        data-app-tooltip-position="top"
+                      >
+                        {range.label}
+                      </AnimatedChipButton>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="stats-visual-line-head">
                   <span>
-                    <strong>Verteilung der Loesungszeiten</strong>
-                    <span> Haeufigkeit je Zeitbereich, aufgeteilt nach Schwierigkeit.</span>
+                    <strong>Verteilung der {histogramMetric === 'time' ? 'Loesungszeiten' : 'Aktionen'}</strong>
+                    <span> Haeufigkeit je {histogramMetric === 'time' ? 'Zeitbereich' : 'Aktionsbereich'}, aufgeteilt nach Schwierigkeit.</span>
                   </span>
                   <span>
                     <strong>{solveTimeHistogram.total}</strong>
@@ -2321,7 +2423,7 @@ export default function UploadStatsVisualReport({
                 {solveTimeHistogram.data.length === 0 ? (
                   <div className="stats-empty-state dashboard-empty-state">
                     <span className="empty-icon" aria-hidden="true"><Activity /></span>
-                    <p>Keine Laufzeiten fuer diese Verteilung.</p>
+                    <p>Keine {histogramMetric === 'time' ? 'Laufzeiten' : 'Aktionsdaten'} fuer diese Verteilung.</p>
                     <p className="empty-hint">Waehle einen anderen Zeitraum oder blende weitere Stufen ein.</p>
                   </div>
                 ) : (
@@ -2330,7 +2432,7 @@ export default function UploadStatsVisualReport({
                     data-bucket-count={solveTimeHistogram.data.length}
                     data-gap-count={solveTimeHistogram.compressedGapCount}
                     data-gap-position-step={HISTOGRAM_GAP_POSITION_STEP}
-                    data-core-bucket-step={HISTOGRAM_CORE_BUCKET_STEP}
+                    data-core-bucket-step={solveTimeHistogram.coreStep}
                     data-bar-category-gap={solveTimeHistogramLayout.barCategoryGap}
                   >
                     <ResponsiveContainer width="100%" height={320}>
@@ -2363,7 +2465,8 @@ export default function UploadStatsVisualReport({
                           content={(props) => renderSolveTimeHistogramTooltip(
                             props,
                             solveTimeHistogram.total,
-                            solveTimeHistogram.median
+                            solveTimeHistogram.median,
+                            histogramMetric
                           )}
                           cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }}
                         />
@@ -2380,7 +2483,7 @@ export default function UploadStatsVisualReport({
                         ))}
                         <Bar
                           dataKey="gapMarker"
-                          name="Leerer Zeitbereich"
+                          name={histogramMetric === 'time' ? 'Leerer Zeitbereich' : 'Leerer Aktionsbereich'}
                           stackId="solve-times"
                           fill="var(--text-muted)"
                           radius={[999, 999, 0, 0]}
@@ -2393,10 +2496,22 @@ export default function UploadStatsVisualReport({
 
                 {renderDifficultyColorLegend('Farblegende Histogramm')}
                 <div className="stats-visual-line-legend">
-                  <span>Median: {formatOptionalDuration(solveTimeHistogram.median)}</span>
+                  <span>
+                    Median: {histogramMetric === 'time'
+                      ? formatOptionalDuration(solveTimeHistogram.median)
+                      : formatOptionalMoves(solveTimeHistogram.median)}
+                  </span>
                   <span>Haeufigster Bereich: {solveTimeHistogram.peakLabel ?? '--'}</span>
-                  <span>Hauptbereich: 15-Sekunden-Intervalle, danach zunehmend groesser</span>
-                  <span>Zeitleiste bis: {formatOptionalDuration(solveTimeHistogram.axisMaximum)}</span>
+                  <span>
+                    Hauptbereich: {histogramMetric === 'time'
+                      ? '15-Sekunden-Intervalle'
+                      : `${solveTimeHistogram.coreStep ?? '--'}-Aktions-Intervalle`}, danach zunehmend groesser
+                  </span>
+                  <span>
+                    {histogramMetric === 'time' ? 'Zeitleiste' : 'Aktionsskala'} bis: {histogramMetric === 'time'
+                      ? formatOptionalDuration(solveTimeHistogram.axisMaximum)
+                      : formatOptionalMoves(solveTimeHistogram.axisMaximum)}
+                  </span>
                   {solveTimeHistogram.compressedGapCount > 0 ? (
                     <span>
                       {solveTimeHistogram.compressedGapCount} {solveTimeHistogram.compressedGapCount === 1 ? 'Leerluecke' : 'Leerluecken'} als ... verdichtet
@@ -2404,6 +2519,14 @@ export default function UploadStatsVisualReport({
                   ) : null}
                   <span>Farben entsprechen den Schwierigkeitsreihen oben</span>
                 </div>
+                <AnimatedButton
+                  className="secondary stats-chart-back-to-top"
+                  interaction="chip"
+                  onClick={(event) => scrollToStatisticsTop(event.currentTarget)}
+                >
+                  <ArrowUp size={16} aria-hidden="true" />
+                  Zum Seitenanfang
+                </AnimatedButton>
               </article>
             </>
           ) : null}
