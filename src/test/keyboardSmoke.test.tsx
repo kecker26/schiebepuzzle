@@ -3643,6 +3643,10 @@ describe('keyboard smoke tests', () => {
     expect(Number(histogramFrame?.getAttribute('data-gap-count'))).toBeGreaterThan(0)
     expect(histogramFrame?.getAttribute('data-gap-position-step')).toBe('0.5')
     expect(histogramFrame?.getAttribute('data-core-bucket-step')).toBe('15')
+    expect(within(screen.getByLabelText('Verlaufszeitraum waehlen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
+    expect(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
+    expect(within(screen.getByLabelText('Schwierigkeitsstufe fokussieren')).getByRole('button', { name: 'Alle vergleichen' }).classList.contains('is-active')).toBe(true)
+    expect(container.textContent).toContain('Alle sichtbaren Stufen gleichwertig')
 
     const trendMetricControls = screen.getByLabelText('Verlaufsmetrik waehlen')
     const histogramMetricControls = screen.getByLabelText('Verteilungsmetrik waehlen')
@@ -3656,9 +3660,9 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Verteilung der Aktionen')).toBeTruthy()
     expect(within(screen.getByLabelText('Verteilungsmetrik waehlen')).getByRole('button', { name: 'Aktionen' }).classList.contains('is-active')).toBe(true)
 
-    fireEvent.click(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Alle' }))
-    expect(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
-    expect(within(screen.getByLabelText('Verlaufszeitraum waehlen')).getByRole('button', { name: 'Letzte 12' }).classList.contains('is-active')).toBe(true)
+    fireEvent.click(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Letzte 12' }))
+    expect(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Letzte 12' }).classList.contains('is-active')).toBe(true)
+    expect(within(screen.getByLabelText('Verlaufszeitraum waehlen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
   })
 
   it('renders the compact statistics history table without obsolete move columns or empty assistance details', () => {
