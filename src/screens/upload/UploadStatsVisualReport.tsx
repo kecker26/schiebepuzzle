@@ -1688,11 +1688,11 @@ export default function UploadStatsVisualReport({
 }: UploadStatsVisualReportProps) {
   const reportRef = useRef<HTMLElement>(null)
   const [trendMetric, setTrendMetric] = useState<TrendMetric>('actions')
-  const [trendRange, setTrendRange] = useState<HistoryRange>('recent12')
+  const [trendRange, setTrendRange] = useState<HistoryRange>('all')
   const [histogramMetric, setHistogramMetric] = useState<TrendMetric>('time')
-  const [histogramRange, setHistogramRange] = useState<HistoryRange>('recent12')
+  const [histogramRange, setHistogramRange] = useState<HistoryRange>('all')
   const [showMovingAverage, setShowMovingAverage] = useState(false)
-  const [focusedTrendDifficultyKey, setFocusedTrendDifficultyKey] = useState<string | null | undefined>(undefined)
+  const [focusedTrendDifficultyKey, setFocusedTrendDifficultyKey] = useState<string | null>(null)
   const [hiddenTrendDifficultyKeys, setHiddenTrendDifficultyKeys] = useState<string[]>([])
   const [rawStatsView, setRawStatsView] = useState<RawStatsView>('difficulties')
   const [isSavingRawExport, setIsSavingRawExport] = useState(false)
@@ -1749,15 +1749,9 @@ export default function UploadStatsVisualReport({
     [trendSeriesOptions]
   )
   const visibleTrendSeries = trendSeriesOptions.filter((series) => !hiddenTrendDifficultyKeys.includes(series.key))
-  const automaticFocusedTrendKey = [...trendPoints]
-    .reverse()
-    .find((point) => visibleTrendSeries.some((series) => series.key === point.difficultyKey))
-    ?.difficultyKey
-  const effectiveFocusedTrendKey = focusedTrendDifficultyKey === undefined
-    ? automaticFocusedTrendKey ?? null
-    : visibleTrendSeries.some((series) => series.key === focusedTrendDifficultyKey)
-      ? focusedTrendDifficultyKey
-      : null
+  const effectiveFocusedTrendKey = visibleTrendSeries.some((series) => series.key === focusedTrendDifficultyKey)
+    ? focusedTrendDifficultyKey
+    : null
   const focusedTrendSeries = visibleTrendSeries.find((series) => series.key === effectiveFocusedTrendKey) ?? null
   const movingAverageCandidateSeries = focusedTrendSeries ? [focusedTrendSeries] : visibleTrendSeries
   const canShowMovingAverage = movingAverageCandidateSeries.some((series) =>
