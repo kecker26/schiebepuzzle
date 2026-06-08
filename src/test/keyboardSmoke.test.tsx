@@ -3547,6 +3547,59 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(firstSortButton)
   })
 
+  it('keeps the selected raw statistics table when jumping to the page top', async () => {
+    const completionHistory = [
+      createCompletionRecord('1', '2026-04-10T10:00:00.000Z'),
+      createCompletionRecord('2', '2026-04-11T10:00:00.000Z'),
+    ]
+    const onReloadView = vi.fn()
+    const { container } = render(
+      <div className="dashboard-panel-scroll">
+        <UploadStatsVisualReport
+          stats={null}
+          latestCompletion={completionHistory[1]}
+          favoriteDifficulty={null}
+          fastestDifficulty={null}
+          completionHistory={completionHistory}
+          filteredHistory={completionHistory}
+          historyFilter="all"
+          historyFilterOptions={[{ id: 'all', label: 'Alle Siege' }]}
+          standardDifficultyStats={DIFFICULTY_OPTIONS.map((option) => ({ option, stats: null }))}
+          onHistoryFilterChange={vi.fn()}
+          onReloadView={onReloadView}
+          onBackToStart={vi.fn()}
+          activeView="raw"
+          onActiveViewChange={vi.fn()}
+        />
+      </div>
+    )
+    const scrollRoot = container.querySelector<HTMLElement>('.dashboard-panel-scroll')
+    expect(scrollRoot).toBeTruthy()
+    const scrollTo = mockScrollableContainer(scrollRoot!, { scrollTop: 600 })
+
+    const rawViews = [
+      { button: 'Stufen-Tabelle', heading: 'Sortierbarer Vergleich je Schwierigkeit' },
+      { button: 'Einzellauf-Tabelle', heading: 'Komplette Sieg-Historie' },
+      { button: 'Vergleichsmatrix', heading: 'Erweiterte Vergleichsmatrix' },
+    ]
+
+    for (const rawView of rawViews) {
+      fireEvent.click(screen.getByRole('button', { name: rawView.button }))
+      const heading = await screen.findByRole('heading', { name: rawView.heading })
+      const section = heading.closest<HTMLElement>('.stats-report-section, .stats-report-section-collapsible')
+      expect(section).toBeTruthy()
+
+      scrollTo.mockClear()
+      fireEvent.click(within(section!).getByRole('button', { name: 'Zum Seitenanfang' }))
+
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'smooth' })
+      expect(screen.getByRole('button', { name: rawView.button }).classList.contains('is-active')).toBe(true)
+      expect(screen.getByRole('heading', { name: rawView.heading })).toBeTruthy()
+    }
+
+    expect(onReloadView).not.toHaveBeenCalled()
+  })
+
   it('shows the solve-time histogram with separate difficulty color legends', () => {
     const completionHistory = [
       { ...createCompletionRecord('1', '2026-04-10T10:00:00.000Z'), config: { rows: 3, cols: 3 }, time: 90 },
