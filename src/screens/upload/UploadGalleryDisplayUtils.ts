@@ -1,4 +1,6 @@
-import { PuzzleConfig, SolvedGalleryEntry } from '../../types/index'
+import { ChallengeMedal, PuzzleConfig, SolvedGalleryEntry } from '../../types/index'
+import { getBestChallengeMedal } from '../../utils/galleryChallenge.ts'
+import { getChallengeMedalRank } from '../../utils/galleryChallenge.ts'
 import {
   GalleryAssistanceFilter,
   GalleryDifficultyFilter,
@@ -19,6 +21,8 @@ export interface GalleryMotifReplaySummary {
   bestTimeEntry: SolvedGalleryEntry | null
   bestMovesEntry: SolvedGalleryEntry | null
   bestCleanTimeEntry: SolvedGalleryEntry | null
+  bestChallengeMedal: ChallengeMedal | null
+  challengeSolveCount: number
 }
 
 export interface GalleryDisplayEntry {
@@ -52,6 +56,26 @@ export interface GalleryDisplayGroup {
   motifReplaySummary: GalleryMotifReplaySummary
 }
 
+export interface GalleryChallengeSeries {
+  targetId: string
+  targetEntry: SolvedGalleryEntry | null
+  attempts: SolvedGalleryEntry[]
+  bestAttempt: SolvedGalleryEntry
+  bestMedal: ChallengeMedal
+  improvedAttemptCount: number
+}
+
+export interface GalleryTimelineChallengeRelation {
+  seriesNumber: number
+  series: GalleryChallengeSeries
+  attemptNumber?: number
+}
+
+export interface GalleryTimelineRelations {
+  attemptsByEntryId: Map<string, GalleryTimelineChallengeRelation>
+  targetsByEntryId: Map<string, GalleryTimelineChallengeRelation>
+}
+
 function parseTimestamp(timestamp: string | null | undefined): number {
   if (!timestamp) return Number.NEGATIVE_INFINITY
 
@@ -66,6 +90,80 @@ function compareNumbersAscending(a: number, b: number, fallback: number): number
 
 function sortEntriesByLatest(entries: SolvedGalleryEntry[]): SolvedGalleryEntry[] {
   return [...entries].sort((a, b) => parseTimestamp(b.completedAt) - parseTimestamp(a.completedAt))
+}
+
+function compareChallengeAttempts(a: SolvedGalleryEntry, b: SolvedGalleryEntry): number {
+  const medalRankDelta = getChallengeMedalRank(b.challengeMedal ?? 'bronze')
+    - getChallengeMedalRank(a.challengeMedal ?? 'bronze')
+  if (medalRankDelta !== 0) return medalRankDelta
+  if (a.time !== b.time) return a.time - b.time
+  if (a.moves !== b.moves) return a.moves - b.moves
+  return parseTimestamp(b.completedAt) - parseTimestamp(a.completedAt)
+}
+
+export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): GalleryChallengeSeries[] {
+  const entriesById = new Map(entries.map((entry) => [entry.id, entry]))
+  const attemptsByTarget = new Map<string, SolvedGalleryEntry[]>()
+
+  for (const entry of entries) {
+    if (!entry.challengeTargetId || !entry.challengeMedal) continue
+    const attempts = attemptsByTarget.get(entry.challengeTargetId)
+    if (attempts) {
+      attempts.push(entry)
+    } else {
+      attemptsByTarget.set(entry.challengeTargetId, [entry])
+    }
+  }
+
+  return Array.from(attemptsByTarget.entries(), ([targetId, attempts]) => {
+    const sortedAttempts = [...attempts].sort(compareChallengeAttempts)
+    const targetEntry = entriesById.get(targetId) ?? null
+
+    return {
+      targetId,
+      targetEntry,
+      attempts: sortedAttempts,
+      bestAttempt: sortedAttempts[0],
+      bestMedal: sortedAttempts[0].challengeMedal ?? 'bronze',
+      improvedAttemptCount: targetEntry
+        ? sortedAttempts.filter((attempt) => attempt.time < targetEntry.time || attempt.moves < targetEntry.moves).length
+        : sortedAttempts.filter((attempt) => attempt.challengeMedal !== 'bronze').length,
+    }
+  }).sort((a, b) => {
+    const medalRankDelta = getChallengeMedalRank(b.bestMedal) - getChallengeMedalRank(a.bestMedal)
+    if (medalRankDelta !== 0) return medalRankDelta
+    return parseTimestamp(b.bestAttempt.completedAt) - parseTimestamp(a.bestAttempt.completedAt)
+  })
+}
+
+export function buildGalleryTimelineRelations(entries: SolvedGalleryEntry[]): GalleryTimelineRelations {
+  const series = buildGalleryChallengeSeries(entries)
+  const attemptsByEntryId = new Map<string, GalleryTimelineChallengeRelation>()
+  const targetsByEntryId = new Map<string, GalleryTimelineChallengeRelation>()
+
+  series.forEach((challengeSeries, index) => {
+    const seriesNumber = index + 1
+    targetsByEntryId.set(challengeSeries.targetId, {
+      seriesNumber,
+      series: challengeSeries,
+    })
+
+    const chronologicalAttempts = [...challengeSeries.attempts].sort(
+      (a, b) => parseTimestamp(a.completedAt) - parseTimestamp(b.completedAt)
+    )
+    chronologicalAttempts.forEach((attempt, attemptIndex) => {
+      attemptsByEntryId.set(attempt.id, {
+        seriesNumber,
+        series: challengeSeries,
+        attemptNumber: attemptIndex + 1,
+      })
+    })
+  })
+
+  return {
+    attemptsByEntryId,
+    targetsByEntryId,
+  }
 }
 
 function isReplayableGalleryEntry(entry: Pick<SolvedGalleryEntry, 'sourceImage' | 'previewImage'>): boolean {
@@ -151,6 +249,8 @@ function buildMotifReplaySummary(
     bestTimeEntry: findBestGalleryEntry(replayableEntries, (entry) => entry.time),
     bestMovesEntry: findBestGalleryEntry(replayableEntries, (entry) => entry.moves),
     bestCleanTimeEntry: findBestGalleryEntry(cleanReplayableEntries, (entry) => entry.time),
+    bestChallengeMedal: getBestChallengeMedal(allEntries),
+    challengeSolveCount: allEntries.filter((entry) => entry.challengeMedal && entry.challengeTargetId).length,
   }
 }
 

@@ -52,6 +52,8 @@ function createDisplayEntry(
       bestTimeEntry: null,
       bestMovesEntry: null,
       bestCleanTimeEntry: null,
+      bestChallengeMedal: null,
+      challengeSolveCount: 0,
     },
   }
 }

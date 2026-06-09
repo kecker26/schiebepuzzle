@@ -272,6 +272,9 @@
 }
 
 .puzzle-challenge-badge-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--image-accent-solid);
   font-size: 10px;
   font-weight: 800;
@@ -279,11 +282,47 @@
   text-transform: uppercase;
 }
 
+.puzzle-challenge-badge.is-ahead .puzzle-challenge-badge-label svg {
+  animation: puzzle-challenge-trophy-pulse 1.8s ease-in-out infinite;
+}
+
+.puzzle-challenge-badge-status {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 850;
+}
+
 .puzzle-challenge-badge-detail {
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 700;
   line-height: 1.45;
+}
+
+.puzzle-challenge-badge-detail.is-positive {
+  color: #86efac;
+}
+
+.puzzle-challenge-badge-detail.is-negative {
+  color: #fda4af;
+}
+
+.puzzle-challenge-badge-detail.is-muted {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+@keyframes puzzle-challenge-trophy-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px transparent);
+    transform: scale(1);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--image-accent-solid) 76%, transparent));
+    transform: scale(1.08);
+  }
 }
 
 .puzzle-kicker,
@@ -2971,6 +3010,7 @@
 }
 
 [data-motion="reduced"] .puzzle-hint-panel.is-active .puzzle-panel-kicker-icon,
+[data-motion="reduced"] .puzzle-challenge-badge.is-ahead .puzzle-challenge-badge-label svg,
 [data-motion="reduced"] .puzzle-hint-arrow,
 [data-motion="reduced"] .puzzle-hint-spinner,
 [data-motion="reduced"] .puzzle-hint-route-line::after,

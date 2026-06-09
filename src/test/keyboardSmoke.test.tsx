@@ -135,6 +135,8 @@ function createGalleryDisplayEntry(id: string, completedAt: string): GalleryDisp
       bestTimeEntry: representativeEntry,
       bestMovesEntry: representativeEntry,
       bestCleanTimeEntry: null,
+      bestChallengeMedal: null,
+      challengeSolveCount: 0,
     },
   }
 }
@@ -3087,6 +3089,12 @@ describe('keyboard smoke tests', () => {
     function GalleryDetailHarness() {
       const [isOpen, setIsOpen] = React.useState(false)
       const detailEntry = createGalleryDisplayEntry('9', '2026-04-11T12:00:00.000Z')
+      detailEntry.representativeEntry.replaySetup = {
+        version: 1,
+        startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+        emptyIndex: 15,
+        shuffleMoves: ['tile-15'],
+      }
       const bestTimeEntry = {
         ...createSolvedGalleryEntry('10', '2026-04-10T09:00:00.000Z'),
         time: 80,
@@ -3137,7 +3145,7 @@ describe('keyboard smoke tests', () => {
     fireEvent.keyDown(collectButton, { key: 'ArrowRight' })
     expect(document.activeElement).toBe(closeButton)
 
-    expect(screen.getByText('Laufverlauf')).toBeTruthy()
+    expect(screen.getByText('Eigenstaendige Laeufe')).toBeTruthy()
     expect(screen.getByText('Aktuell')).toBeTruthy()
     expect(screen.getByText('Bestzeit')).toBeTruthy()
     expect(screen.getByText('Bestweg')).toBeTruthy()
@@ -3145,7 +3153,10 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('+0:19 zur Bestzeit')).toBeTruthy()
     expect(screen.getAllByText(/vs\. vorher/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText('gleiche Stufe').length).toBeGreaterThan(0)
-    expect(document.querySelectorAll('.gallery-detail-timeline-preview img')).toHaveLength(3)
+    expect(document.querySelectorAll('.gallery-detail-timeline-preview img')).toHaveLength(2)
+    expect(document.querySelectorAll('.gallery-detail-timeline-preview.has-start-board')).toHaveLength(1)
+    expect(document.querySelectorAll('.gallery-detail-timeline-preview .gallery-start-board-preview-tile')).toHaveLength(16)
+    expect(document.querySelectorAll('.gallery-detail-timeline-preview .gallery-start-board-preview-tile.is-empty')).toHaveLength(1)
     expect(screen.queryByText('Schnellstarts')).toBeNull()
     expect(screen.queryByRole('button', { name: /bestzeit spielen/i })).toBeNull()
     const timelineButtons = screen.getAllByRole('button', { name: /lauf normal 4x4 vom/i })
@@ -3163,6 +3174,71 @@ describe('keyboard smoke tests', () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(opener)
     })
+  })
+
+  it('groups repeated challenges against the same run in a duel card', () => {
+    const onReplayEntry = vi.fn()
+    const detailEntry = createGalleryDisplayEntry('20', '2026-04-11T12:00:00.000Z')
+    const target = {
+      ...createSolvedGalleryEntry('21', '2026-04-10T09:00:00.000Z'),
+      time: 120,
+      moves: 40,
+      replaySetup: {
+        version: 1 as const,
+        startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+        emptyIndex: 15,
+        shuffleMoves: ['tile-15'],
+      },
+    }
+    const goldAttempt = {
+      ...createSolvedGalleryEntry('22', '2026-04-11T09:00:00.000Z'),
+      time: 105,
+      moves: 36,
+      challengeTargetId: target.id,
+      challengeMedal: 'gold' as const,
+    }
+    const bronzeAttempt = {
+      ...createSolvedGalleryEntry('23', '2026-04-11T10:00:00.000Z'),
+      time: 130,
+      moves: 44,
+      challengeTargetId: target.id,
+      challengeMedal: 'bronze' as const,
+    }
+
+    detailEntry.motifReplaySummary = {
+      ...detailEntry.motifReplaySummary,
+      allEntries: [detailEntry.representativeEntry, bronzeAttempt, goldAttempt, target],
+      totalSolveCount: 4,
+      replayableSolveCount: 4,
+      bestChallengeMedal: 'gold',
+      challengeSolveCount: 2,
+    }
+
+    render(
+      <UploadGalleryDetailDialog
+        entry={detailEntry}
+        onReplayEntry={onReplayEntry}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Challenge-Serien')).toBeTruthy()
+    expect(screen.getByText('2 Versuche')).toBeTruthy()
+    expect(screen.getByText('1 mit verbessertem Zielwert')).toBeTruthy()
+    expect(screen.getByText('Eigenstaendiger Lauf')).toBeTruthy()
+    expect(screen.getByText('Challenge-Serie 1')).toBeTruthy()
+    expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
+    expect(screen.getByText('Zugehoerige Versuche')).toBeTruthy()
+    expect(screen.getByText('Versuch 1 von 2')).toBeTruthy()
+    expect(screen.getByText('Versuch 2 von 2')).toBeTruthy()
+    expect(document.querySelectorAll('.gallery-detail-challenge-start-board.has-start-board')).toHaveLength(1)
+    expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile')).toHaveLength(16)
+    expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile.is-empty')).toHaveLength(1)
+    expect(screen.getByText(/Gold · Bester Versuch/)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Vorlage herausfordern' }))
+    expect(onReplayEntry).toHaveBeenCalledWith(target, 'run')
+    expect(screen.queryByRole('button', { name: /versuch.*herausfordern/i })).toBeNull()
   })
 
   it('moves through gallery detail tag actions with arrows', () => {

@@ -47,7 +47,6 @@ import {
   CORRECT_TILE_PULSE_DURATION_MS,
   createMoveRecordForStates,
   EXACT_SOLUTION_NODE_LIMIT,
-  formatElapsedTime,
   GHOST_PREVIEW_MODE_DEFAULT,
   getKeyboardMoveDirection,
   GHOST_PREVIEW_WEIGHT_DEFAULT,
@@ -245,19 +244,6 @@ function createReplaySetupFromStartState(
     optimalStartMoveCountKind: optimalState.status === 'loading' ? undefined : optimalState.status,
     optimalStartMoveCountSolverVersion: optimalState.status === 'loading' ? undefined : optimalState.solverVersion,
   }
-}
-
-function formatChallengeTargetSummary(challengeTarget: GalleryChallengeTarget | null | undefined): string | null {
-  if (!challengeTarget) return null
-
-  const optimalText =
-    typeof challengeTarget.optimalStartMoveCount === 'number'
-      ? challengeTarget.optimalStartMoveCountKind === 'lower-bound'
-        ? `min. ${challengeTarget.optimalStartMoveCount}`
-        : `${challengeTarget.optimalStartMoveCount}`
-      : 'unbekannt'
-
-  return `Vorlage: ${formatElapsedTime(challengeTarget.time)}, ${challengeTarget.actionMoves} Netto-Zuege, optimal ${optimalText}.`
 }
 
 export default function PuzzleScreen({
@@ -1435,10 +1421,12 @@ export default function PuzzleScreen({
           shuffleMoves: [...shuffleMovesRef.current],
           reducedMovePath: [...reducedMovePathRef.current],
         },
+        challengeTarget,
         historyLimit: PERSISTED_HISTORY_LIMIT,
       })
     )
   }, [
+    challengeTarget,
     config,
     ghostPreviewWeight,
     ghostPreviewMode,
@@ -1511,8 +1499,6 @@ export default function PuzzleScreen({
       : optimalStartMoveCountState.status === 'loading'
         ? 'Optimal wird berechnet ...'
         : 'Optimal momentan nicht verfuegbar'
-  const challengeSummary = formatChallengeTargetSummary(challengeTarget)
-
   const resolveSuggestedQueue = async (
     puzzleSnapshot: PuzzleState
   ): Promise<{ queue: string[]; source: 'exact' | 'tracked' | 'greedy' } | null> => {
@@ -2258,9 +2244,10 @@ export default function PuzzleScreen({
             <PuzzleLeftPanel
               config={config}
               moveCount={moveCount}
+            actionMoves={runMetrics.actionMoves}
             optimalMoveSummary={optimalMoveSummary}
             isImprovingStartSolution={isImprovingStartSolution}
-            challengeSummary={challengeSummary}
+            challengeTarget={challengeTarget}
             elapsedTime={elapsedTime}
             progressMetrics={progressMetrics}
             hintPreview={hintPreview}

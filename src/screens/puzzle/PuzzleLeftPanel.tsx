@@ -1,5 +1,6 @@
 import { AnimatePresence } from 'motion/react'
 import type { ChangeEvent, RefObject } from 'react'
+import { Trophy } from 'lucide-react'
 import PuzzleScreenIcon from '../../components/PuzzleScreenIcon.tsx'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
@@ -7,7 +8,7 @@ import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
 import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import SpringNumber from '../../motion/SpringNumber.tsx'
 import { type PuzzleProgressMetrics } from '../../services/PuzzleSolver.ts'
-import { type GhostPreviewMode } from '../../types/index'
+import { type GalleryChallengeTarget, type GhostPreviewMode } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import {
   formatElapsedTime,
@@ -19,9 +20,10 @@ import {
 interface PuzzleLeftPanelProps {
   config: { rows: number; cols: number }
   moveCount: number
+  actionMoves: number
   optimalMoveSummary: string
   isImprovingStartSolution?: boolean
-  challengeSummary?: string | null
+  challengeTarget?: GalleryChallengeTarget | null
   elapsedTime: number
   progressMetrics: PuzzleProgressMetrics | null
   hintPreview: SuggestedHintPreview | null
@@ -110,12 +112,18 @@ function HintDirectionIcon({ direction }: { direction: HintDirection }) {
   )
 }
 
+function formatSignedDelta(delta: number, suffix: string = ''): string {
+  if (delta === 0) return `±0${suffix}`
+  return `${delta > 0 ? '+' : '-'}${Math.abs(delta)}${suffix}`
+}
+
 export default function PuzzleLeftPanel({
   config,
   moveCount,
+  actionMoves,
   optimalMoveSummary,
   isImprovingStartSolution = false,
-  challengeSummary,
+  challengeTarget,
   elapsedTime,
   progressMetrics,
   hintPreview,
@@ -155,6 +163,14 @@ export default function PuzzleLeftPanel({
   const canTriggerSuggestion = canUseBoardTools && !isInteractionLocked
   const activeGhostPreviewMode =
     GHOST_PREVIEW_MODE_OPTIONS.find((option) => option.value === ghostPreviewMode) ?? GHOST_PREVIEW_MODE_OPTIONS[0]
+  const challengeMovesDelta = challengeTarget ? moveCount - challengeTarget.moves : 0
+  const challengeTimeDelta = challengeTarget ? elapsedTime - challengeTarget.time : 0
+  const challengeStatus =
+    challengeMovesDelta < 0 && challengeTimeDelta < 0
+      ? 'Beide Ziele noch erreichbar'
+      : challengeMovesDelta >= 0 && challengeTimeDelta >= 0
+        ? 'Vorlage liegt aktuell vorn'
+        : 'Ein Ziel noch erreichbar'
 
   return (
     <AnimatedStaggerGroup
@@ -206,10 +222,25 @@ export default function PuzzleLeftPanel({
               <span className="puzzle-header-shortcut-copy">Hilfe</span>
             </span>
           </div>
-          {challengeSummary && (
-            <div className="puzzle-challenge-badge" role="status" aria-label="Challenge-Start aktiv">
-              <span className="puzzle-challenge-badge-label">Challenge-Start</span>
-              <span className="puzzle-challenge-badge-detail">{challengeSummary}</span>
+          {challengeTarget && (
+            <div
+              className={`puzzle-challenge-badge${challengeMovesDelta < 0 && challengeTimeDelta < 0 ? ' is-ahead' : ' is-behind'}`}
+              aria-label={`Challenge aktiv. ${challengeStatus}.`}
+            >
+              <span className="puzzle-challenge-badge-label">
+                <Trophy aria-hidden="true" size={14} strokeWidth={2.3} />
+                Live-Zielvergleich
+              </span>
+              <span className="puzzle-challenge-badge-status">{challengeStatus}</span>
+              <span className={`puzzle-challenge-badge-detail${challengeMovesDelta < 0 ? ' is-positive' : ' is-negative'}`}>
+                Netto-Zuege: {moveCount} / {challengeTarget.moves} ({formatSignedDelta(challengeMovesDelta)})
+              </span>
+              <span className={`puzzle-challenge-badge-detail${challengeTimeDelta < 0 ? ' is-positive' : ' is-negative'}`}>
+                Zeit: {formatElapsedTime(elapsedTime)} / {formatElapsedTime(challengeTarget.time)} ({formatSignedDelta(challengeTimeDelta, 's')})
+              </span>
+              <span className="puzzle-challenge-badge-detail is-muted">
+                Aktionen: {actionMoves} / {challengeTarget.actionMoves}
+              </span>
             </div>
           )}
         </div>

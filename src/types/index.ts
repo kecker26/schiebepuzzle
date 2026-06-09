@@ -125,6 +125,7 @@ export interface PersistedPuzzleProgress {
   ghostPreviewMode?: GhostPreviewMode
   heatmapOverlayVisible?: boolean
   solverProgress?: SolverProgress
+  challengeTarget?: GalleryChallengeTarget | null
 }
 
 export interface PersistedPuzzleMeta {
@@ -232,6 +233,8 @@ export interface SolvedGalleryEntry {
   useFullImage?: boolean
   replaySetup?: GalleryReplaySetup
   imageTheme?: ImageThemePalette
+  challengeTargetId?: string
+  challengeMedal?: ChallengeMedal
 }
 
 export interface GalleryReplaySetup {
@@ -253,6 +256,13 @@ export interface GalleryChallengeTarget {
   assistanceMode: PuzzleAssistanceMode
   optimalStartMoveCount?: number | null
   optimalStartMoveCountKind?: OptimalStartMoveCountKind
+}
+
+export type ChallengeMedal = 'bronze' | 'silver' | 'gold' | 'diamond'
+
+export interface ChallengeResult {
+  targetId: string
+  medal: ChallengeMedal
 }
 
 export type GalleryTagSource = 'gemini' | 'imported' | 'manual'
@@ -487,6 +497,8 @@ export interface RecordSolvedGalleryEntryPayload {
   useFullImage?: boolean
   replaySetup?: GalleryReplaySetup
   imageTheme?: ImageThemePalette | null
+  challengeTargetId?: string
+  challengeMedal?: ChallengeMedal
 }
 
 export interface AnalyzeSolvedGalleryEntryResult {

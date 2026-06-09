@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   resolveWinParticleSelection,
+  resolveChallengeWinParticleSelection,
   WIN_PARTICLE_PRESETS,
 } from '../components/win-effects/winParticleEffects.ts'
 import type { GalleryImageTag } from '../types/index.ts'
@@ -84,5 +85,13 @@ describe('winParticleEffects', () => {
 
   it('uses a neutral celebration when no tag can be resolved', () => {
     expect(resolveWinParticleSelection([tag('Unbekanntes Motiv')]).primary.id).toBe('neutral')
+  })
+
+  it('uses medal-specific particles while preserving the motif as accent', () => {
+    const motif = resolveWinParticleSelection([tag('Meer')]).primary
+    const selection = resolveChallengeWinParticleSelection('diamond', motif)
+
+    expect(selection.primary.id).toBe('challenge-diamond')
+    expect(selection.accent?.id).toBe('tag-ocean')
   })
 })

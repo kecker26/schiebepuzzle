@@ -176,6 +176,7 @@ interface StoredPuzzleConfig {
 }
 
 type StoredAssistanceMode = 'clean' | 'hinted' | 'auto-assisted'
+type StoredChallengeMedal = 'bronze' | 'silver' | 'gold' | 'diamond'
 
 interface StoredRunMetrics {
   actionMoves: number
@@ -233,6 +234,17 @@ interface StoredSaveProgress {
   elapsedTime: number
   runMetrics?: StoredRunMetrics
   [key: string]: unknown
+}
+
+interface StoredGalleryChallengeTarget {
+  entryId: string
+  completedAt: string
+  time: number
+  moves: number
+  actionMoves: number
+  assistanceMode: StoredAssistanceMode
+  optimalStartMoveCount?: number | null
+  optimalStartMoveCountKind?: 'exact' | 'lower-bound' | 'unavailable'
 }
 
 interface StoredSaveFile {
@@ -349,6 +361,8 @@ interface StoredGalleryEntry {
   useFullImage?: boolean
   replaySetup?: StoredGalleryReplaySetup
   imageTheme?: StoredImageThemePalette
+  challengeTargetId?: string
+  challengeMedal?: StoredChallengeMedal
 }
 
 type StoredGalleryTagSource = 'gemini' | 'imported' | 'manual'
@@ -1952,12 +1966,19 @@ function sanitizeRunMetrics(input: unknown, fallbackMoveCount: number = 0): Stor
 function sanitizeProgress(progress: unknown): StoredSaveProgress {
   const input = progress && typeof progress === 'object' ? (progress as Record<string, unknown>) : {}
   const moveCount = sanitizeCount(input.moveCount)
-  return {
+  const challengeTarget = sanitizeGalleryChallengeTarget(input.challengeTarget)
+  const normalizedProgress: StoredSaveProgress = {
     ...input,
     moveCount,
     elapsedTime: sanitizeCount(input.elapsedTime),
     runMetrics: sanitizeRunMetrics(input.runMetrics, moveCount),
   }
+  if (challengeTarget) {
+    normalizedProgress.challengeTarget = challengeTarget
+  } else {
+    delete normalizedProgress.challengeTarget
+  }
+  return normalizedProgress
 }
 
 function sanitizeSaveTitleSource(value: unknown): StoredSaveTitleSource | undefined {
@@ -3332,6 +3353,45 @@ function sanitizeOptimalStartMoveCountKind(value: unknown): StoredGalleryReplayS
     : undefined
 }
 
+function sanitizeChallengeMedal(value: unknown): StoredChallengeMedal | undefined {
+  return value === 'bronze' || value === 'silver' || value === 'gold' || value === 'diamond'
+    ? value
+    : undefined
+}
+
+function sanitizeGalleryChallengeTarget(value: unknown): StoredGalleryChallengeTarget | undefined {
+  if (!value || typeof value !== 'object') return undefined
+
+  const input = value as Record<string, unknown>
+  if (
+    typeof input.entryId !== 'string'
+    || input.entryId.trim().length === 0
+    || typeof input.completedAt !== 'string'
+    || input.completedAt.length === 0
+  ) {
+    return undefined
+  }
+
+  const moves = sanitizeCount(input.moves)
+  const optimalStartMoveCount = sanitizeOptionalCount(input.optimalStartMoveCount)
+  const optimalStartMoveCountKind = sanitizeOptimalStartMoveCountKind(input.optimalStartMoveCountKind)
+
+  return {
+    entryId: input.entryId,
+    completedAt: input.completedAt,
+    time: sanitizeCount(input.time),
+    moves,
+    actionMoves: Math.max(moves, sanitizeCount(input.actionMoves)),
+    assistanceMode: sanitizeAssistanceMode(input.assistanceMode, { hintCount: 0, suggestedMoveCount: 0 }),
+    ...(input.optimalStartMoveCount === null
+      ? { optimalStartMoveCount: null }
+      : optimalStartMoveCount !== null
+        ? { optimalStartMoveCount }
+        : {}),
+    ...(optimalStartMoveCountKind ? { optimalStartMoveCountKind } : {}),
+  }
+}
+
 function sanitizeGalleryReplaySetup(value: unknown, config: StoredPuzzleConfig): StoredGalleryReplaySetup | undefined {
   if (!value || typeof value !== 'object') return undefined
 
@@ -3634,6 +3694,8 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     useFullImage?: unknown
     replaySetup?: unknown
     imageTheme?: unknown
+    challengeTargetId?: unknown
+    challengeMedal?: unknown
   }
 
   if (typeof input.id !== 'string' || typeof input.completedAt !== 'string' || !isValidPuzzleConfig(input.config)) {
@@ -3649,6 +3711,10 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
   const cropTransform = sanitizeCropTransform(input.cropTransform)
   const replaySetup = sanitizeGalleryReplaySetup(input.replaySetup, input.config)
   const imageTheme = sanitizeImageThemePalette(input.imageTheme)
+  const challengeTargetId = typeof input.challengeTargetId === 'string' && input.challengeTargetId.trim().length > 0
+    ? input.challengeTargetId
+    : undefined
+  const challengeMedal = challengeTargetId ? sanitizeChallengeMedal(input.challengeMedal) : undefined
 
   return {
     id: input.id,
@@ -3668,6 +3734,7 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     ...(typeof input.useFullImage === 'boolean' ? { useFullImage: input.useFullImage } : {}),
     ...(replaySetup ? { replaySetup } : {}),
     ...(imageTheme ? { imageTheme } : {}),
+    ...(challengeTargetId && challengeMedal ? { challengeTargetId, challengeMedal } : {}),
   }
 }
 
@@ -4730,6 +4797,8 @@ function validateGalleryPayload(payload: unknown): payload is {
   useFullImage?: boolean
   replaySetup?: StoredGalleryReplaySetup
   imageTheme?: StoredImageThemePalette | null
+  challengeTargetId?: string
+  challengeMedal?: StoredChallengeMedal
 } {
   if (!payload || typeof payload !== 'object') return false
 
@@ -4754,6 +4823,14 @@ function validateGalleryPayload(payload: unknown): payload is {
     (
       input.replaySetup === undefined ||
       sanitizeGalleryReplaySetup(input.replaySetup, input.config as StoredPuzzleConfig) !== undefined
+    ) &&
+    (
+      (input.challengeTargetId === undefined && input.challengeMedal === undefined)
+      || (
+        typeof input.challengeTargetId === 'string'
+        && input.challengeTargetId.trim().length > 0
+        && sanitizeChallengeMedal(input.challengeMedal) !== undefined
+      )
     )
   )
 }
@@ -5651,6 +5728,7 @@ async function handleGalleryApi(
       const previewImage = sanitizeOptionalPreviewImage(body.previewImage)
       const sourceImage = sanitizeOptionalPreviewImage(body.sourceImage) ?? previewImage
       const imageTheme = sanitizeImageThemePalette(body.imageTheme)
+      const challengeMedal = sanitizeChallengeMedal(body.challengeMedal)
       const entry: StoredGalleryEntry = {
         id: typeof body.id === 'string' && body.id.length > 0 ? body.id : randomUUID(),
         completedAt,
@@ -5666,6 +5744,9 @@ async function handleGalleryApi(
         useFullImage: typeof body.useFullImage === 'boolean' ? body.useFullImage : undefined,
         replaySetup: sanitizeGalleryReplaySetup(body.replaySetup, body.config),
         ...(imageTheme ? { imageTheme } : {}),
+        ...(typeof body.challengeTargetId === 'string' && challengeMedal
+          ? { challengeTargetId: body.challengeTargetId, challengeMedal }
+          : {}),
         aiTagging: {
           status: 'pending',
           provider: geminiGalleryConfig.provider,
