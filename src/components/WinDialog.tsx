@@ -8,6 +8,8 @@ import AnimatedStaggerGroup from '../motion/AnimatedStaggerGroup.tsx'
 import '../styles/components/windialog.css'
 import {
   GalleryImageTag,
+  GalleryChallengeTarget,
+  ChallengeMedal,
   PuzzleAssistanceMode,
   PuzzleConfig,
   RecordPuzzleCompletionResult,
@@ -15,7 +17,7 @@ import {
 } from '../types/index'
 import type { TagCategoryCatalog } from '../services/tagCategories/tagCategoryTypes.ts'
 import WinParticleEffect from './win-effects/WinParticleEffect.tsx'
-import { resolveWinParticleSelection } from './win-effects/winParticleEffects.ts'
+import { resolveChallengeWinParticleSelection, resolveWinParticleSelection } from './win-effects/winParticleEffects.ts'
 import { formatDifficultyLabel } from '../utils/puzzleDifficulty.ts'
 import {
   ComparisonTone,
@@ -37,6 +39,8 @@ interface WinDialogProps {
   imageTags?: GalleryImageTag[]
   rejectedAiTags?: string[]
   tagCategoryCatalog?: TagCategoryCatalog | null
+  challengeTarget?: GalleryChallengeTarget | null
+  challengeMedal?: ChallengeMedal | null
   onRetryStats: () => void
   onReplaySameImage: () => void
   onGoToSelectionScreen: () => void
@@ -260,6 +264,8 @@ export default function WinDialog({
   imageTags = [],
   rejectedAiTags = [],
   tagCategoryCatalog = null,
+  challengeTarget = null,
+  challengeMedal = null,
   onRetryStats,
   onReplaySameImage,
   onGoToSelectionScreen,
@@ -267,9 +273,15 @@ export default function WinDialog({
   onNextDifficulty,
 }: WinDialogProps) {
   const replayButtonRef = useRef<HTMLButtonElement>(null)
-  const particleSelection = useMemo(
+  const motifParticleSelection = useMemo(
     () => resolveWinParticleSelection(imageTags, rejectedAiTags, tagCategoryCatalog),
     [imageTags, rejectedAiTags, tagCategoryCatalog]
+  )
+  const particleSelection = useMemo(
+    () => challengeMedal
+      ? resolveChallengeWinParticleSelection(challengeMedal, motifParticleSelection.primary)
+      : motifParticleSelection,
+    [challengeMedal, motifParticleSelection]
   )
   const keyboardHintId = useId()
   const difficultyLabel = formatDifficultyLabel(config)
@@ -298,6 +310,17 @@ export default function WinDialog({
     completionResult?.isNewBestCleanMoves ? 'Clean-Rekord' : null,
   ].filter((badge): badge is string => badge !== null)
   const hasAchievement = achievementBadges.length > 0
+  const challengeMovesDelta = challengeTarget ? stats.moves - challengeTarget.moves : null
+  const challengeTimeDelta = challengeTarget ? stats.time - challengeTarget.time : null
+  const challengeMedalLabel = challengeMedal
+    ? challengeMedal === 'diamond'
+      ? 'Diamant'
+      : challengeMedal === 'gold'
+        ? 'Gold'
+        : challengeMedal === 'silver'
+          ? 'Silber'
+          : 'Bronze'
+    : null
   const timeComparison = compareLowerIsBetterMetric(currentRun.time, previousRun?.time ?? null)
   const movesComparison = compareLowerIsBetterMetric(currentRun.moves, previousRun?.moves ?? null)
   const timeGapComparison = compareGapToBest(
@@ -435,7 +458,7 @@ export default function WinDialog({
           <div className="win-hero-aura" aria-hidden="true" />
           <div className="win-hero-row">
             <div className="win-icon-shell" aria-hidden="true">
-              {hasAchievement ? (
+              {hasAchievement || challengeMedal ? (
                 <Trophy className="win-icon-symbol" strokeWidth={2.4} absoluteStrokeWidth />
               ) : (
                 <Sparkles className="win-icon-symbol" strokeWidth={2.4} absoluteStrokeWidth />
@@ -455,6 +478,11 @@ export default function WinDialog({
                     {badge}
                   </span>
                 ))}
+                {challengeMedalLabel ? (
+                  <span className={`win-tag win-tag-challenge is-${challengeMedal}`}>
+                    Challenge: {challengeMedalLabel}
+                  </span>
+                ) : null}
               </div>
             </div>
             <div
@@ -468,6 +496,39 @@ export default function WinDialog({
             </div>
           </div>
         </AnimatedReveal>
+
+        {challengeTarget && challengeMedal && challengeMedalLabel ? (
+          <AnimatedReveal
+            className={`win-challenge-summary is-${challengeMedal}`}
+            interaction="surface"
+            level="medium"
+          >
+            <div className="win-challenge-medal" aria-hidden="true">
+              <Medal strokeWidth={2.2} absoluteStrokeWidth />
+            </div>
+            <div className="win-challenge-copy">
+              <span className="win-kicker">Herausforderung gemeistert</span>
+              <h3>{challengeMedalLabel}-Medaille</h3>
+              <p>
+                {challengeMedal === 'diamond'
+                  ? 'Clean, schneller als die Vorlage und exakt solver-optimal.'
+                  : challengeMedal === 'gold'
+                    ? 'Clean geloest und beide Ziele unterboten.'
+                    : challengeMedal === 'silver'
+                      ? 'Mindestens ein Ziel der Vorlage unterboten.'
+                      : 'Challenge abgeschlossen. Die Vorlage bleibt dein naechstes Ziel.'}
+              </p>
+            </div>
+            <div className="win-challenge-grid" aria-label="Vergleich mit der Challenge-Vorlage">
+              <span>Zeit</span>
+              <strong>{formatTime(stats.time)} / {formatTime(challengeTarget.time)}</strong>
+              <em>{challengeTimeDelta !== null && challengeTimeDelta < 0 ? `${Math.abs(challengeTimeDelta)} Sek. schneller` : challengeTimeDelta === 0 ? 'Gleichstand' : `${challengeTimeDelta} Sek. langsamer`}</em>
+              <span>Netto-Zuege</span>
+              <strong>{stats.moves} / {challengeTarget.moves}</strong>
+              <em>{challengeMovesDelta !== null && challengeMovesDelta < 0 ? `${Math.abs(challengeMovesDelta)} weniger` : challengeMovesDelta === 0 ? 'Gleichstand' : `${challengeMovesDelta} mehr`}</em>
+            </div>
+          </AnimatedReveal>
+        ) : null}
 
         <AnimatedStaggerGroup className="stats-display" level="subtle">
           <AnimatedReveal className="stat-item" interaction="surface" level="subtle">

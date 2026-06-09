@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Plus, Search, X } from 'lucide-react'
+import { GitBranch, Medal, Plus, Search, Sparkles, Target, Trophy, X } from 'lucide-react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import { FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE } from '../../app/focusVisibility.ts'
 import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
@@ -7,8 +7,14 @@ import AsyncStatusPanel from '../../motion/AsyncStatusPanel.tsx'
 import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { type AiMetadataProvider, type ImageThemePalette, type SolvedGalleryEntry } from '../../types/index'
 import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
+import { formatChallengeMedalLabel } from '../../utils/galleryChallenge.ts'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
-import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
+import {
+  buildGalleryChallengeSeries,
+  buildGalleryTimelineRelations,
+  GalleryDisplayEntry,
+  formatGallerySolveCount,
+} from './UploadGalleryDisplayUtils.ts'
 import { getGalleryTimelineComparisonHints } from './galleryComparisonHints.ts'
 import {
   formatAssistanceModeLabel,
@@ -17,6 +23,7 @@ import {
   formatTime,
 } from './uploadUtils.ts'
 import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
+import GalleryStartBoardPreview from './GalleryStartBoardPreview.tsx'
 import { useUploadImagePalette } from './uploadImagePalette.ts'
 
 interface UploadGalleryDetailDialogProps {
@@ -53,6 +60,11 @@ function formatAiProviderLabel(provider?: AiMetadataProvider | null): string {
   if (provider === 'openai-compatible') return 'der LLM-Dienst'
   if (provider === 'groq') return 'Groq'
   return 'Gemini'
+}
+
+function formatChallengeDelta(value: number, unit: string): string {
+  if (value === 0) return `gleich viele ${unit}`
+  return `${Math.abs(value)} ${unit} ${value < 0 ? 'weniger' : 'mehr'}`
 }
 
 export default function UploadGalleryDetailDialog({
@@ -109,6 +121,22 @@ export default function UploadGalleryDetailDialog({
   const timelineEntries = motifReplaySummary.allEntries.length > 0
     ? motifReplaySummary.allEntries
     : entry.allEntries
+  const challengeSeries = useMemo(
+    () => buildGalleryChallengeSeries(timelineEntries),
+    [timelineEntries]
+  )
+  const timelineRelations = useMemo(
+    () => buildGalleryTimelineRelations(timelineEntries),
+    [timelineEntries]
+  )
+  const standaloneTimelineEntries = useMemo(
+    () => timelineEntries.filter(
+      (timelineEntry) =>
+        !timelineRelations.attemptsByEntryId.has(timelineEntry.id)
+        && !timelineRelations.targetsByEntryId.has(timelineEntry.id)
+    ),
+    [timelineEntries, timelineRelations]
+  )
   const motifReplayEntry = representativeEntry.sourceImage || representativeEntry.previewImage
     ? representativeEntry
     : motifReplaySummary.lastReplayableEntry
@@ -503,24 +531,194 @@ export default function UploadGalleryDetailDialog({
             </article>
           </div>
 
-          {timelineEntries.length > 0 ? (
+          {challengeSeries.length > 0 ? (
+            <section className="gallery-detail-challenge-series" aria-labelledby="gallery-detail-challenge-series-title">
+              <div className="gallery-detail-replay-header">
+                <span id="gallery-detail-challenge-series-title" className="saved-games-kicker">Challenge-Serien</span>
+                <p className="gallery-detail-replay-copy">
+                  Jede Farbe verbindet genau eine Vorlage mit allen direkten Versuchen gegen diesen Lauf.
+                </p>
+              </div>
+
+              <div className="gallery-detail-challenge-series-list">
+                {challengeSeries.map((series, seriesIndex) => {
+                  const target = series.targetEntry
+                  const bestAttempt = series.bestAttempt
+                  const targetOrigin = timelineRelations.attemptsByEntryId.get(series.targetId) ?? null
+                  const canChallengeAgain = Boolean(
+                    target
+                    && hasGalleryChallengeSetup(target)
+                    && (target.sourceImage ?? target.previewImage)
+                  )
+                  const bestTimeDelta = target ? bestAttempt.time - target.time : null
+                  const bestMovesDelta = target ? bestAttempt.moves - target.moves : null
+                  const chronologicalAttempts = [...series.attempts].sort(
+                    (a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt)
+                  )
+
+                  return (
+                    <article
+                      key={series.targetId}
+                      className={`gallery-detail-challenge-card series-tone-${seriesIndex % 4}`}
+                    >
+                      <div className="gallery-detail-challenge-card-head">
+                        <span className="gallery-detail-challenge-medal" aria-hidden="true">
+                          <GitBranch size={22} strokeWidth={2.3} />
+                        </span>
+                        <div>
+                          <span className="saved-games-kicker">Challenge-Serie {seriesIndex + 1}</span>
+                          <strong>
+                            {target
+                              ? `${formatDifficultyLabel(target.config)} vom ${formatDate(target.completedAt)}`
+                              : 'Vorlagenlauf nicht mehr vorhanden'}
+                          </strong>
+                          {targetOrigin ? (
+                            <small className="gallery-detail-challenge-origin">
+                              Entstanden aus Versuch {targetOrigin.attemptNumber} der Challenge-Serie {targetOrigin.seriesNumber}.
+                            </small>
+                          ) : null}
+                        </div>
+                        <span className={`gallery-detail-challenge-best-medal is-${series.bestMedal}`}>
+                          <Medal aria-hidden="true" size={15} strokeWidth={2.4} />
+                          {formatChallengeMedalLabel(series.bestMedal)}
+                        </span>
+                      </div>
+
+                      <div className="gallery-detail-challenge-target">
+                        <GalleryStartBoardPreview
+                          entry={target}
+                          className="gallery-detail-challenge-start-board"
+                        />
+                        <div className="gallery-detail-challenge-target-copy">
+                          <div className="gallery-detail-challenge-target-heading">
+                            <span className="gallery-detail-challenge-target-icon" aria-hidden="true">
+                              <Target size={17} strokeWidth={2.5} />
+                            </span>
+                            <span>Vorlage dieser Serie</span>
+                          </div>
+                          {target ? (
+                            <div className="gallery-detail-challenge-target-metrics" aria-label="Werte der Challenge-Vorlage">
+                              <span>
+                                <small>Zeit</small>
+                                <strong>{formatTime(target.time)}</strong>
+                              </span>
+                              <span>
+                                <small>Netto-Zuege</small>
+                                <strong>{target.moves}</strong>
+                              </span>
+                            </div>
+                          ) : (
+                            <strong>Nicht mehr vorhanden</strong>
+                          )}
+                          <small>
+                            {target
+                              ? `${series.attempts.length} direkte ${series.attempts.length === 1 ? 'Herausforderung' : 'Herausforderungen'} gegen genau diesen Lauf.`
+                              : 'Historische Challenge-Serie ohne vorhandene Vorlage.'}
+                          </small>
+                          <button
+                            type="button"
+                            className="gallery-detail-challenge-replay"
+                            disabled={!canChallengeAgain || !target}
+                            onClick={() => {
+                              if (target) {
+                                onReplayEntry(target, 'run')
+                              }
+                            }}
+                            onKeyDown={handleActionKeyDown}
+                            data-app-tooltip={canChallengeAgain
+                              ? 'Nur diese Vorlage mit demselben gespeicherten Startzustand erneut herausfordern.'
+                              : 'Die Vorlage kann nicht erneut als Challenge gestartet werden.'}
+                            data-app-tooltip-position="top"
+                          >
+                            Vorlage herausfordern
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="gallery-detail-challenge-comparison">
+                        <div>
+                          <span>Bester Versuch</span>
+                          <strong>{formatTime(bestAttempt.time)} · {bestAttempt.moves} Netto</strong>
+                          {bestTimeDelta !== null && bestMovesDelta !== null ? (
+                            <small>
+                              {formatChallengeDelta(bestTimeDelta, 'Sek.')} · {formatChallengeDelta(bestMovesDelta, 'Zuege')}
+                            </small>
+                          ) : null}
+                        </div>
+                        <div>
+                          <span>Serie</span>
+                          <strong>{series.attempts.length} {series.attempts.length === 1 ? 'Versuch' : 'Versuche'}</strong>
+                          <small>{series.improvedAttemptCount} mit verbessertem Zielwert</small>
+                        </div>
+                      </div>
+
+                      <div className="gallery-detail-challenge-attempts">
+                        <div className="gallery-detail-challenge-attempts-head">
+                          <Trophy aria-hidden="true" size={16} strokeWidth={2.4} />
+                          <span>Zugehoerige Versuche</span>
+                          <strong>{series.attempts.length}</strong>
+                        </div>
+                        <div className="gallery-detail-challenge-attempt-list">
+                            {chronologicalAttempts.map((attempt, index) => {
+                              const timeDelta = target ? attempt.time - target.time : null
+                              const movesDelta = target ? attempt.moves - target.moves : null
+                              const isBestAttempt = attempt.id === bestAttempt.id
+                              const followUpSeries = timelineRelations.targetsByEntryId.get(attempt.id) ?? null
+
+                              return (
+                                <div key={attempt.id} className={`gallery-detail-challenge-attempt is-${attempt.challengeMedal ?? 'bronze'}`}>
+                                  <span className="gallery-detail-challenge-attempt-node" aria-hidden="true">
+                                    <Medal size={14} strokeWidth={2.5} />
+                                  </span>
+                                  <div>
+                                    <span>Versuch {index + 1} von {series.attempts.length}</span>
+                                    <strong>
+                                      {formatChallengeMedalLabel(attempt.challengeMedal ?? 'bronze')}
+                                      {isBestAttempt ? ' · Bester Versuch' : ''}
+                                    </strong>
+                                    <small>{formatDate(attempt.completedAt)}</small>
+                                  </div>
+                                  <div>
+                                    <strong>{formatTime(attempt.time)} · {attempt.moves} Netto</strong>
+                                    {timeDelta !== null && movesDelta !== null ? (
+                                      <small>
+                                        {formatChallengeDelta(timeDelta, 'Sek.')} · {formatChallengeDelta(movesDelta, 'Zuege')}
+                                      </small>
+                                    ) : null}
+                                    {followUpSeries ? (
+                                      <small className="is-follow-up-series">
+                                        Danach Vorlage der Challenge-Serie {followUpSeries.seriesNumber}
+                                      </small>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                        </div>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          {standaloneTimelineEntries.length > 0 ? (
             <section className="gallery-detail-timeline" aria-labelledby="gallery-detail-timeline-title">
               <div className="gallery-detail-replay-header">
-                <span id="gallery-detail-timeline-title" className="saved-games-kicker">Laufverlauf</span>
+                <span id="gallery-detail-timeline-title" className="saved-games-kicker">Eigenstaendige Laeufe</span>
                 <p className="gallery-detail-replay-copy">
-                  {timelineEntries.length} gespeicherte {timelineEntries.length === 1 ? 'Runde' : 'Runden'} fuer
-                  dieses Motiv.
+                  Eigene Startzustaende ohne Verbindung zu einer bestehenden Challenge-Serie.
                 </p>
               </div>
 
               <div className="gallery-detail-timeline-list" data-gallery-detail-action-group="true">
-                {timelineEntries.map((timelineEntry) => {
+                {standaloneTimelineEntries.map((timelineEntry) => {
                   const isCurrentEntry = timelineEntry.id === representativeEntry.id
                   const isDifferentDifficulty = getConfigKey(timelineEntry) !== getConfigKey(representativeEntry)
                   const hasChallengeSetup = hasGalleryChallengeSetup(timelineEntry)
                   const timelineMarkers = [
                     isCurrentEntry ? 'Aktuell' : null,
-                    hasChallengeSetup ? 'Challenge-Start' : null,
                     motifReplaySummary.bestTimeEntry?.id === timelineEntry.id ? 'Bestzeit' : null,
                     motifReplaySummary.bestMovesEntry?.id === timelineEntry.id ? 'Bestweg' : null,
                     motifReplaySummary.bestCleanTimeEntry?.id === timelineEntry.id ? 'Clean' : null,
@@ -537,14 +735,17 @@ export default function UploadGalleryDetailDialog({
                     motifReplaySummary,
                     representativeEntry
                   )
-                  const timelinePreviewImage = timelineEntry.previewImage ?? timelineEntry.sourceImage
-
                   return (
                     <article
                       key={timelineEntry.id}
-                      className={`gallery-detail-timeline-item${isCurrentEntry ? ' is-current' : ''}`}
+                      className={`gallery-detail-timeline-item is-standalone${isCurrentEntry ? ' is-current' : ''}`}
                     >
                       <div className="gallery-detail-timeline-content">
+                        <div className="gallery-detail-timeline-role">
+                          <span><Sparkles aria-hidden="true" size={13} strokeWidth={2.5} /> Eigenstaendiger Lauf</span>
+                          <small>Komplett neuer Lauf ohne Challenge-Bezug.</small>
+                        </div>
+
                         <div className="gallery-detail-timeline-main">
                           <span>{isCurrentEntry ? 'Angezeigt' : 'Lauf'}</span>
                           <strong>{formatDifficultyLabel(timelineEntry.config)}</strong>
@@ -558,15 +759,15 @@ export default function UploadGalleryDetailDialog({
                         </div>
 
                         {timelineMarkers.length > 0 ? (
-                          <div className="gallery-detail-timeline-markers" aria-label="Laufmarkierungen">
-                            {timelineMarkers.map((marker) => (
-                              <span
-                                key={marker}
-                                data-app-tooltip={
-                                  marker === 'Aktuell'
-                                    ? 'Dieser Lauf ist gerade im Detaildialog ausgewaehlt.'
-                                    : marker === 'Challenge-Start'
-                                      ? 'Der Lauf kann mit urspruenglichem Startzustand wiederholt werden.'
+                          <div className="gallery-detail-timeline-chip-section">
+                            <span className="gallery-detail-timeline-chip-label">Status</span>
+                            <div className="gallery-detail-timeline-markers" aria-label="Laufmarkierungen">
+                              {timelineMarkers.map((marker) => (
+                                <span
+                                  key={marker}
+                                  data-app-tooltip={
+                                    marker === 'Aktuell'
+                                      ? 'Dieser Lauf ist gerade im Detaildialog ausgewaehlt.'
                                       : marker === 'Bestzeit'
                                         ? 'Schnellster gespeicherter Lauf fuer dieses Motiv.'
                                         : marker === 'Bestweg'
@@ -576,44 +777,40 @@ export default function UploadGalleryDetailDialog({
                                             : marker === 'Archiv'
                                               ? 'Bilddaten sind nicht mehr fuer Replay verfuegbar.'
                                               : 'Dieser Lauf liegt auf einer anderen Schwierigkeit.'
-                                }
-                                data-app-tooltip-position="top"
-                              >
-                                {marker}
-                              </span>
-                            ))}
+                                  }
+                                  data-app-tooltip-position="top"
+                                >
+                                  {marker}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         ) : null}
 
                         {comparisonHints.length > 0 ? (
-                          <div className="gallery-detail-timeline-insights" aria-label="Laufvergleich">
-                            {comparisonHints.map((hint) => (
-                              <span
-                                key={hint.label}
-                                className={`is-${hint.tone}`}
-                                data-app-tooltip={hint.label}
-                                data-app-tooltip-position="top"
-                              >
-                                {hint.label}
-                              </span>
-                            ))}
+                          <div className="gallery-detail-timeline-chip-section">
+                            <span className="gallery-detail-timeline-chip-label">Vergleich</span>
+                            <div className="gallery-detail-timeline-insights" aria-label="Laufvergleich">
+                              {comparisonHints.map((hint) => (
+                                <span
+                                  key={hint.label}
+                                  className={`is-${hint.tone}`}
+                                  data-app-tooltip={hint.label}
+                                  data-app-tooltip-position="top"
+                                >
+                                  {hint.label}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         ) : null}
                       </div>
 
                       <div className="gallery-detail-timeline-action-stack">
-                        <div className="gallery-detail-timeline-preview" aria-hidden="true">
-                          {timelinePreviewImage ? (
-                            <img
-                              src={timelinePreviewImage}
-                              alt=""
-                              loading="lazy"
-                              decoding="async"
-                            />
-                          ) : (
-                            <span>Archiv</span>
-                          )}
-                        </div>
+                        <GalleryStartBoardPreview
+                          entry={timelineEntry}
+                          className="gallery-detail-timeline-preview"
+                        />
 
                         <div className="gallery-detail-timeline-action-buttons">
                           <button
@@ -634,7 +831,7 @@ export default function UploadGalleryDetailDialog({
                           >
                             {canReplayTimelineEntry
                               ? hasChallengeSetup
-                                ? 'Diesen Lauf spielen'
+                                ? 'Challenge starten'
                                 : (timelineEntry.cropTransform ? 'Ausschnitt spielen' : 'Motiv spielen')
                               : 'Archiv'}
                           </button>

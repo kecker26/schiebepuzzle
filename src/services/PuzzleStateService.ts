@@ -1,5 +1,6 @@
 import {
   type GhostPreviewMode,
+  GalleryChallengeTarget,
   OptimalStartMoveCountKind,
   PersistedPuzzleProgress,
   PuzzleConfig,
@@ -87,6 +88,7 @@ export function createPersistedPuzzleProgress({
   ghostPreviewMode,
   heatmapOverlayVisible,
   solverProgress,
+  challengeTarget,
   historyLimit = DEFAULT_PERSISTED_HISTORY_LIMIT,
 }: {
   state: PuzzleState
@@ -106,6 +108,7 @@ export function createPersistedPuzzleProgress({
   ghostPreviewMode: GhostPreviewMode
   heatmapOverlayVisible: boolean
   solverProgress?: SolverProgress
+  challengeTarget?: GalleryChallengeTarget | null
   historyLimit?: number
 }): PersistedPuzzleProgress {
   return {
@@ -133,5 +136,6 @@ export function createPersistedPuzzleProgress({
           reducedMovePath: [...solverProgress.reducedMovePath],
         }
       : undefined,
+    challengeTarget: challengeTarget ? { ...challengeTarget } : undefined,
   }
 }

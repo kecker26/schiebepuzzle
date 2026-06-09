@@ -1,4 +1,4 @@
-import type { GalleryImageTag } from '../../types/index.ts'
+import type { ChallengeMedal, GalleryImageTag } from '../../types/index.ts'
 import { normalizeTagCategoryKey, resolveTagCategory } from '../../services/tagCategories/tagCategoryResolver.ts'
 import type {
   StaticTagCategoryId,
@@ -188,6 +188,24 @@ export function resolveWinParticleSelection(
     primary,
     accent: accent?.id === primary.id ? null : accent,
     matchedCategoryIds: rankedCategories.map(([categoryId]) => categoryId),
+  }
+}
+
+export function resolveChallengeWinParticleSelection(
+  medal: ChallengeMedal,
+  accent: WinParticlePreset | null = null
+): WinParticleSelection {
+  const primary = {
+    diamond: preset('challenge-diamond', 'Diamant-Challenge', ['gem', 'sparkles', 'star'], 'burst', ['#e0f2fe', '#67e8f9', '#c4b5fd'], 28),
+    gold: preset('challenge-gold', 'Gold-Challenge', ['trophy', 'star', 'sparkles'], 'burst', ['#fef3c7', '#fbbf24', '#f59e0b'], 27),
+    silver: preset('challenge-silver', 'Silber-Challenge', ['trophy', 'star', 'sparkles'], 'fall', ['#f8fafc', '#cbd5e1', '#94a3b8'], 24),
+    bronze: preset('challenge-bronze', 'Bronze-Challenge', ['trophy', 'star'], 'float', ['#fed7aa', '#fb923c', '#b45309'], 22),
+  }[medal]
+
+  return {
+    primary,
+    accent: accent?.id === primary.id ? null : accent,
+    matchedCategoryIds: [],
   }
 }
 

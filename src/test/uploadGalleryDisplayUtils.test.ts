@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { SolvedGalleryEntry } from '../types/index.ts'
 import {
   buildGalleryDisplayEntries,
+  buildGalleryChallengeSeries,
+  buildGalleryTimelineRelations,
   getSimilarGalleryEntries,
   getUniqueGalleryMotifEntryIds,
 } from '../screens/upload/UploadGalleryDisplayUtils.ts'
@@ -132,6 +134,137 @@ describe('UploadGalleryDisplayUtils', () => {
         ],
       },
     })
+  })
+
+  it('ermittelt die beste Challenge-Medaille motivweit', () => {
+    const [entry] = buildGalleryDisplayEntries(
+      [
+        createGalleryEntry('challenge-bronze', {
+          challengeTargetId: 'target-a',
+          challengeMedal: 'bronze',
+        }),
+        createGalleryEntry('challenge-gold', {
+          completedAt: '2026-04-23T12:00:00.000Z',
+          challengeTargetId: 'target-b',
+          challengeMedal: 'gold',
+        }),
+        createGalleryEntry('normal-run', {
+          completedAt: '2026-04-22T12:00:00.000Z',
+        }),
+      ],
+      {
+        difficultyFilter: 'all',
+        assistanceFilter: 'all',
+      }
+    )
+
+    expect(entry.motifReplaySummary).toMatchObject({
+      bestChallengeMedal: 'gold',
+      challengeSolveCount: 2,
+    })
+  })
+
+  it('gruppiert Challenge-Versuche nach Vorlage und ermittelt den besten Versuch', () => {
+    const target = createGalleryEntry('target', { time: 120, moves: 40 })
+    const series = buildGalleryChallengeSeries([
+      target,
+      createGalleryEntry('bronze-attempt', {
+        completedAt: '2026-04-23T12:00:00.000Z',
+        time: 130,
+        moves: 43,
+        challengeTargetId: target.id,
+        challengeMedal: 'bronze',
+      }),
+      createGalleryEntry('silver-attempt', {
+        completedAt: '2026-04-24T12:00:00.000Z',
+        time: 110,
+        moves: 42,
+        challengeTargetId: target.id,
+        challengeMedal: 'silver',
+      }),
+      createGalleryEntry('gold-attempt', {
+        completedAt: '2026-04-22T12:00:00.000Z',
+        time: 115,
+        moves: 38,
+        challengeTargetId: target.id,
+        challengeMedal: 'gold',
+      }),
+    ])
+
+    expect(series).toHaveLength(1)
+    expect(series[0]).toMatchObject({
+      targetId: 'target',
+      targetEntry: { id: 'target' },
+      bestAttempt: { id: 'gold-attempt' },
+      bestMedal: 'gold',
+      improvedAttemptCount: 2,
+    })
+    expect(series[0].attempts.map((attempt) => attempt.id)).toEqual([
+      'gold-attempt',
+      'silver-attempt',
+      'bronze-attempt',
+    ])
+  })
+
+  it('behaelt Challenge-Serien bei fehlender Vorlage darstellbar', () => {
+    const [series] = buildGalleryChallengeSeries([
+      createGalleryEntry('orphan-attempt', {
+        challengeTargetId: 'deleted-target',
+        challengeMedal: 'silver',
+      }),
+    ])
+
+    expect(series).toMatchObject({
+      targetId: 'deleted-target',
+      targetEntry: null,
+      bestMedal: 'silver',
+      improvedAttemptCount: 1,
+    })
+  })
+
+  it('ordnet Vorlagen und auch spaetere Challenge-Versuche derselben Serie zu', () => {
+    const target = createGalleryEntry('target')
+    const firstAttempt = createGalleryEntry('first-attempt', {
+      completedAt: '2026-04-22T12:00:00.000Z',
+      challengeTargetId: target.id,
+      challengeMedal: 'silver',
+    })
+    const laterAttempt = createGalleryEntry('later-attempt', {
+      completedAt: '2026-04-24T12:00:00.000Z',
+      challengeTargetId: target.id,
+      challengeMedal: 'gold',
+    })
+    const relations = buildGalleryTimelineRelations([laterAttempt, target, firstAttempt])
+
+    expect(relations.targetsByEntryId.get(target.id)).toMatchObject({
+      seriesNumber: 1,
+      series: { targetId: target.id },
+    })
+    expect(relations.attemptsByEntryId.get(firstAttempt.id)).toMatchObject({
+      seriesNumber: 1,
+      attemptNumber: 1,
+    })
+    expect(relations.attemptsByEntryId.get(laterAttempt.id)).toMatchObject({
+      seriesNumber: 1,
+      attemptNumber: 2,
+    })
+  })
+
+  it('kann einen Challenge-Versuch zugleich als Vorlage einer spaeteren Serie markieren', () => {
+    const originalTarget = createGalleryEntry('original-target')
+    const firstAttempt = createGalleryEntry('first-attempt', {
+      challengeTargetId: originalTarget.id,
+      challengeMedal: 'silver',
+    })
+    const followUpAttempt = createGalleryEntry('follow-up-attempt', {
+      challengeTargetId: firstAttempt.id,
+      challengeMedal: 'gold',
+    })
+    const relations = buildGalleryTimelineRelations([followUpAttempt, firstAttempt, originalTarget])
+
+    expect(relations.attemptsByEntryId.has(firstAttempt.id)).toBe(true)
+    expect(relations.targetsByEntryId.has(firstAttempt.id)).toBe(true)
+    expect(relations.attemptsByEntryId.get(followUpAttempt.id)?.series.targetId).toBe(firstAttempt.id)
   })
 
   it('markiert Motive ohne gespeichertes Bild defensiv als nicht replaybar', () => {

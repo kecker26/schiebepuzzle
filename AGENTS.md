@@ -5,7 +5,7 @@
 - Halte Aenderungen klein, nachvollziehbar und kompatibel mit dem bestehenden React-, TypeScript- und Vite-Setup.
 
 ## Projektueberblick
-- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Pause mit verdecktem Board, Hinweisen, Solver, Statistik, Galerie, interaktivem KI-Tag-System, manuellen und dauerhaft abgelehnten KI-Tags, tag-basierten Partikeleffekten beim Gewinn, Gemini-Tagging, Gemini-Spielstandstiteln, sentiment-basiertem Bild-Theme, Sammlungen, Backup und Musik.
+- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Pause mit verdecktem Board, Hinweisen, Solver, Statistik, Galerie, Live-Challenge-Zielvergleich, dauerhaften Challenge-Medaillen, interaktivem KI-Tag-System, manuellen und dauerhaft abgelehnten KI-Tags, tag-basierten Partikeleffekten beim Gewinn, Gemini-Tagging, Gemini-Spielstandstiteln, sentiment-basiertem Bild-Theme, Sammlungen, Backup und Musik.
 - Frontend: React 18 + TypeScript.
 - Animationen: `motion` / `motion/react` plus `@react-spring/web` fuer federnde Zahlen- und Karten-Mikrointeraktionen.
 - Statistik-Charts: `recharts` fuer responsive Donut- und Line-Charts.
@@ -40,6 +40,7 @@
 - `localApi.ts`: lokale Dateipersistenz und API-Routen fuer Saves, Stats, Galerie, Sammlungen, Backup, Clipboard und Musik.
 - `src/types/index.ts`: zentrale Typdefinitionen.
 - `src/utils/`: Hilfslogik fuer Puzzle-Schwierigkeit, Run-Vergleich und Context-Window.
+- `src/utils/galleryChallenge.ts`: zentrale Medaillenregeln, Medaillen-Rangfolge und Challenge-Formatierung.
 - `src/styles/`: globale und screen-/component-spezifische CSS-Dateien.
 - `src/assets/system/`: kuratierte SVG-Icon-Sets fuer Kontextmenues und lokale Spezial-Icons; Screen-Icon-Komponenten koennen Lucide-Icons kapseln.
 - `public/audio/` und `public/fonts/`: statische Audio- und Font-Assets.
@@ -92,6 +93,7 @@
 - Canvas- und Solver-Code ist zustandsabhaengig; dort keine stillen Strukturbrueche an `PuzzleState`, `Tile` oder Worker-Nachrichten einfuehren.
 - Autosave, Recovery und Last-Session greifen ineinander; vor Aenderungen die Snapshots in `src/app/recoverySession.ts`, `lastSession.ts` und `cropDraftSession.ts` pruefen.
 - Persistierte Daten muessen rueckwaertskompatibel behandelt werden, wenn bestehende Dateien in `spielstaende/` und `backups/` weiter lesbar bleiben sollen. Das gilt auch fuer den Tag-Kategorie-Cache `__tag_category_cache.json` und eigene Kategorien in `__custom_tag_categories.json`.
+- Challenge-Spielstaende speichern das aktive `challengeTarget`; Galerie-Laeufe speichern optional `challengeTargetId` und `challengeMedal`. Fehlende Ziellaeufe duerfen historische Medaillen nicht invalidieren.
 - Sammlungen referenzieren Galerie-Eintraege ueber IDs; beim Laden fehlende Galerie-Referenzen defensiv ausfiltern statt die UI zu blockieren.
 - Wenn neue Features neue Felder in Save- oder Stats-Dateien brauchen, defensiv parsen und sinnvolle Defaults vorsehen.
 - Externe Provider duerfen die App nicht blockieren; bei Netzwerk-/API-Fehlern muss ein nutzbarer Fallback oder eine klare Fehlermeldung erhalten bleiben.

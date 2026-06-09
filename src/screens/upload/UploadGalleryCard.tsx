@@ -4,6 +4,7 @@ import {
   useCallback,
   useMemo,
 } from 'react'
+import { Medal } from 'lucide-react'
 import {
   ensureElementVisible,
   FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE,
@@ -13,6 +14,7 @@ import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { ImageCollection, ImageThemePalette, SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
+import { formatChallengeMedalLabel } from '../../utils/galleryChallenge.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
 import { getTagCollectionSuggestions } from './galleryTagCollectionSync.ts'
 import { useUploadImagePalette } from './uploadImagePalette.ts'
@@ -61,6 +63,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   const difficultyLabel = formatDifficultyLabel(representativeEntry.config)
   const completedAtLabel = formatDate(representativeEntry.completedAt)
   const totalSolveCountLabel = formatGallerySolveCount(entry.motifReplaySummary.totalSolveCount)
+  const bestChallengeMedal = entry.motifReplaySummary.bestChallengeMedal
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
   const motifEntryIds = new Set(entry.allEntries.map((galleryEntry) => galleryEntry.id))
@@ -230,6 +233,16 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             <span className="gallery-card-palette-swatch gallery-card-palette-swatch-primary" />
             <span className="gallery-card-palette-swatch gallery-card-palette-swatch-accent" />
             <span className="gallery-card-palette-swatch gallery-card-palette-swatch-glow" />
+          </span>
+        ) : null}
+        {bestChallengeMedal ? (
+          <span
+            className={`gallery-card-challenge-medal is-${bestChallengeMedal}`}
+            aria-label={`Beste Challenge-Medaille: ${formatChallengeMedalLabel(bestChallengeMedal)}`}
+            data-app-tooltip={`${formatChallengeMedalLabel(bestChallengeMedal)} ist die beste Challenge-Medaille fuer dieses Motiv.`}
+            data-app-tooltip-position="top"
+          >
+            <Medal aria-hidden="true" size={18} strokeWidth={2.4} />
           </span>
         ) : null}
       </button>

@@ -99,6 +99,7 @@ import { type HistoryFilter, type UploadWorkspaceWindow } from './screens/upload
 import { useUploadImagePalette } from './screens/upload/uploadImagePalette.ts'
 import {
   AppState,
+  ChallengeResult,
   PersistedPuzzleProgress,
   PuzzleDataBackupFile,
   PuzzleDataImportResult,
@@ -117,6 +118,7 @@ import {
   ImageCollections,
   WinStats,
 } from './types/index'
+import { deriveChallengeMedal } from './utils/galleryChallenge.ts'
 import { DEFAULT_PUZZLE_CONFIG, getNextDifficultyOption } from './utils/puzzleDifficulty.ts'
 import {
   createGalleryChallengeTarget,
@@ -355,6 +357,7 @@ export default function App() {
   const [winStats, setWinStats] = useState<WinStats | null>(null)
   const [winEffectTags, setWinEffectTags] = useState<GalleryImageTag[]>([])
   const [winGalleryEntryId, setWinGalleryEntryId] = useState<string | null>(null)
+  const [winChallengeResult, setWinChallengeResult] = useState<ChallengeResult | null>(null)
   const [winTagCategoryCatalog, setWinTagCategoryCatalog] = useState<TagCategoryCatalog | null>(null)
   const [puzzleRunKey, setPuzzleRunKey] = useState(0)
   const [quitHint, setQuitHint] = useState<string | null>(null)
@@ -760,6 +763,7 @@ export default function App() {
     setWinStats(null)
     setWinEffectTags([])
     setWinGalleryEntryId(null)
+    setWinChallengeResult(null)
     setRandomImageError(null)
     resetCompletionFeedback()
   }, [resetCompletionFeedback])
@@ -1387,6 +1391,7 @@ export default function App() {
       setCroppedImage(loaded.croppedImage)
       setConfig(loaded.config)
       setSavedProgress(loaded.progress)
+      setActiveGalleryChallengeTarget(loaded.progress.challengeTarget ?? null)
       setIsRandomImage(false)
       setRandomImageSource(null)
       setRandomImageQuery('')
@@ -1803,7 +1808,11 @@ export default function App() {
   )
 
   const createGalleryEntryPayload = useCallback(
-    async (stats: WinStats, completedConfig: PuzzleConfig): Promise<RecordSolvedGalleryEntryPayload> => {
+    async (
+      stats: WinStats,
+      completedConfig: PuzzleConfig,
+      challengeResult: ChallengeResult | null = null
+    ): Promise<RecordSolvedGalleryEntryPayload> => {
       const completedCropSnapshot = confirmedCropSnapshotRef.current ?? cropDraftSnapshotRef.current
 
       return {
@@ -1820,6 +1829,12 @@ export default function App() {
         useFullImage: completedCropSnapshot?.useFullImage ?? false,
         replaySetup: stats.replaySetup,
         imageTheme: activeImageThemePalette,
+        ...(challengeResult
+          ? {
+              challengeTargetId: challengeResult.targetId,
+              challengeMedal: challengeResult.medal,
+            }
+          : {}),
       }
     },
     [activeImageThemePalette, croppedImage, image]
@@ -1854,12 +1869,19 @@ export default function App() {
     (stats: WinStats) => {
       const completedConfig = { rows: config.rows, cols: config.cols }
       const completedSaveId = currentSaveIdRef.current
+      const challengeResult: ChallengeResult | null = activeGalleryChallengeTarget
+        ? {
+            targetId: activeGalleryChallengeTarget.entryId,
+            medal: deriveChallengeMedal(stats, activeGalleryChallengeTarget),
+          }
+        : null
       const sessionId = beginSession()
 
       currentSaveIdRef.current = null
       setCurrentSaveId(null)
       setSavedProgress(null)
       setWinStats(stats)
+      setWinChallengeResult(challengeResult)
       setCompletionResult(null)
       setCompletionStatsError(null)
       setIsRecordingCompletion(true)
@@ -1872,7 +1894,7 @@ export default function App() {
         try {
           const [completionPayload, galleryPayload] = await Promise.all([
             createCompletionPayload(stats, completedConfig),
-            createGalleryEntryPayload(stats, completedConfig),
+            createGalleryEntryPayload(stats, completedConfig, challengeResult),
           ])
           if (activeSessionRef.current === sessionId) {
             setWinGalleryEntryId(galleryPayload.id ?? null)
@@ -1936,6 +1958,7 @@ export default function App() {
     },
     [
       beginSession,
+      activeGalleryChallengeTarget,
       config,
       createCompletionPayload,
       createGalleryEntryPayload,
@@ -2752,6 +2775,9 @@ export default function App() {
     beginSession()
     restartPuzzleRun()
     resetRunArtifacts()
+    if (activeGalleryChallengeTarget && !activeGalleryReplaySetup) {
+      clearGalleryChallengeState()
+    }
     setAppState('playing')
   }
 
@@ -2967,6 +2993,8 @@ export default function App() {
             imageTags={winEffectTags.length > 0 ? winEffectTags : winGalleryEntry?.tags}
             rejectedAiTags={winGalleryEntry?.rejectedAiTags}
             tagCategoryCatalog={winTagCategoryCatalog}
+            challengeTarget={activeGalleryChallengeTarget}
+            challengeMedal={winChallengeResult?.medal}
             onRetryStats={handleRetryStats}
             onReplaySameImage={handleReplaySameImage}
             onGoToSelectionScreen={handleReset}
