@@ -93,9 +93,6 @@ export default function UploadGalleryDetailDialog({
     paletteSource: representativeEntry.previewImage ?? representativeEntry.sourceImage,
     storedPalette,
   })
-  const assistanceLabel = representativeEntry.hasDetailedProfile
-    ? formatAssistanceModeLabel(representativeEntry.assistanceMode)
-    : formatProfileSourceLabel(false)
   const solveCountLabel = formatGallerySolveCount(entry.totalSolveCount, entry.visibleSolveCount)
   const motifReplaySummary = entry.motifReplaySummary
   const motifDifficultyCount = motifReplaySummary.difficultyVariants.length
@@ -286,6 +283,55 @@ export default function UploadGalleryDetailDialog({
               Schwierigkeit im Zuschnitt frei waehlen
             </span>
           </button>
+
+          {similarEntries.length > 0 ? (
+            <section className="gallery-detail-similar-motifs" aria-labelledby="gallery-detail-similar-title">
+              <div className="gallery-detail-replay-header">
+                <span id="gallery-detail-similar-title" className="saved-games-kicker">Aehnliche Motive</span>
+                <p className="gallery-detail-replay-copy">
+                  Motive mit ueberschneidenden Tags aus deiner lokalen Galerie.
+                </p>
+              </div>
+
+              <div className="gallery-detail-similar-strip" aria-label="Aehnliche Galerie-Motive">
+                {similarEntries.map((similarEntry) => {
+                  const similarRepresentativeEntry = similarEntry.representativeEntry
+                  const similarImage = similarRepresentativeEntry.previewImage ?? similarRepresentativeEntry.sourceImage
+                  const similarTags = (similarRepresentativeEntry.tags ?? []).slice(0, 3)
+
+                  return (
+                    <button
+                      key={similarEntry.id}
+                      type="button"
+                      className="gallery-detail-similar-motif"
+                      onClick={() => onOpenSimilarEntry?.(similarEntry)}
+                      aria-label={`Aehnliches Motiv ${formatDifficultyLabel(similarRepresentativeEntry.config)} vom ${formatDate(similarRepresentativeEntry.completedAt)} anzeigen`}
+                      data-app-tooltip="Aehnliches Motiv aus der Galerie anzeigen."
+                      data-app-tooltip-position="top"
+                    >
+                      {similarImage ? (
+                        <img
+                          src={similarImage}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <span className="gallery-detail-similar-placeholder">Archiv</span>
+                      )}
+                      <span className="gallery-detail-similar-overlay">
+                        <strong>{formatDifficultyLabel(similarRepresentativeEntry.config)}</strong>
+                        <span>{formatGallerySolveCount(similarEntry.totalSolveCount)}</span>
+                        {similarTags.length > 0 ? (
+                          <small>{similarTags.map((tag) => `#${tag.label}`).join(' ')}</small>
+                        ) : null}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          ) : null}
         </div>
 
         <div className="gallery-detail-body">
@@ -450,86 +496,6 @@ export default function UploadGalleryDetailDialog({
               ) : null}
             </section>
           ) : null}
-
-          {similarEntries.length > 0 ? (
-            <section className="gallery-detail-similar-motifs" aria-labelledby="gallery-detail-similar-title">
-              <div className="gallery-detail-replay-header">
-                <span id="gallery-detail-similar-title" className="saved-games-kicker">Aehnliche Motive</span>
-                <p className="gallery-detail-replay-copy">
-                  Motive mit ueberschneidenden Tags aus deiner lokalen Galerie.
-                </p>
-              </div>
-
-              <div className="gallery-detail-similar-strip" aria-label="Aehnliche Galerie-Motive">
-                {similarEntries.map((similarEntry) => {
-                  const similarRepresentativeEntry = similarEntry.representativeEntry
-                  const similarImage = similarRepresentativeEntry.previewImage ?? similarRepresentativeEntry.sourceImage
-                  const similarTags = (similarRepresentativeEntry.tags ?? []).slice(0, 3)
-
-                  return (
-                    <button
-                      key={similarEntry.id}
-                      type="button"
-                      className="gallery-detail-similar-motif"
-                      onClick={() => onOpenSimilarEntry?.(similarEntry)}
-                      aria-label={`Aehnliches Motiv ${formatDifficultyLabel(similarRepresentativeEntry.config)} vom ${formatDate(similarRepresentativeEntry.completedAt)} anzeigen`}
-                      data-app-tooltip="Aehnliches Motiv aus der Galerie anzeigen."
-                      data-app-tooltip-position="top"
-                    >
-                      {similarImage ? (
-                        <img
-                          src={similarImage}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <span className="gallery-detail-similar-placeholder">Archiv</span>
-                      )}
-                      <span className="gallery-detail-similar-overlay">
-                        <strong>{formatDifficultyLabel(similarRepresentativeEntry.config)}</strong>
-                        <span>{formatGallerySolveCount(similarEntry.totalSolveCount)}</span>
-                        {similarTags.length > 0 ? (
-                          <small>{similarTags.map((tag) => `#${tag.label}`).join(' ')}</small>
-                        ) : null}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </section>
-          ) : null}
-
-          <div className="gallery-detail-metrics">
-            <article className="gallery-detail-metric">
-              <span className="gallery-detail-metric-label">Zeit</span>
-              <strong className="gallery-detail-metric-value">{formatTime(representativeEntry.time)}</strong>
-              <span className="gallery-detail-metric-copy">Gemessene Abschlusszeit des angezeigten Laufs.</span>
-            </article>
-            <article className="gallery-detail-metric">
-              <span className="gallery-detail-metric-label">Netto-Zuege</span>
-              <strong className="gallery-detail-metric-value">{representativeEntry.moves}</strong>
-              <span className="gallery-detail-metric-copy">Direkter geloester Zugweg ohne Korrekturen.</span>
-            </article>
-            <article className="gallery-detail-metric">
-              <span className="gallery-detail-metric-label">Aktionen</span>
-              <strong className="gallery-detail-metric-value">{representativeEntry.hasDetailedProfile ? representativeEntry.actionMoves : '--'}</strong>
-              <span className="gallery-detail-metric-copy">
-                {representativeEntry.hasDetailedProfile
-                  ? 'Alle wirklich gespielten Schritte dieses angezeigten Laufs.'
-                  : 'Bei Legacy-Daten wurden Aktionen damals noch nicht gespeichert.'}
-              </span>
-            </article>
-            <article className="gallery-detail-metric">
-              <span className="gallery-detail-metric-label">Laufart</span>
-              <strong className="gallery-detail-metric-value">{assistanceLabel}</strong>
-              <span className="gallery-detail-metric-copy">
-                {representativeEntry.hasDetailedProfile
-                  ? 'Zeigt, ob der Lauf clean, mit Hinweisen oder mit Auto-Zug beendet wurde.'
-                  : 'Aelterer Eintrag ohne vollstaendiges Laufprofil.'}
-              </span>
-            </article>
-          </div>
 
           {challengeSeries.length > 0 ? (
             <section className="gallery-detail-challenge-series" aria-labelledby="gallery-detail-challenge-series-title">
