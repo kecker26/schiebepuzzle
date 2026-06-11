@@ -1224,6 +1224,60 @@ describe('keyboard smoke tests', () => {
     })
   })
 
+  it('filters the gallery through the medal collection and resets the filter', async () => {
+    const galleryEntries: SolvedGalleryEntry[] = [
+      {
+        ...createSolvedGalleryEntry('gold-entry', '2026-04-11T12:00:00.000Z'),
+        previewImage: 'data:image/png;base64,preview-gold',
+        sourceImage: 'data:image/png;base64,source-gold',
+        challengeTargetId: 'gold-target',
+        challengeMedal: 'gold',
+      },
+      {
+        ...createSolvedGalleryEntry('bronze-entry', '2026-04-11T11:00:00.000Z'),
+        previewImage: 'data:image/png;base64,preview-bronze',
+        sourceImage: 'data:image/png;base64,source-bronze',
+        challengeTargetId: 'bronze-target',
+        challengeMedal: 'bronze',
+      },
+      {
+        ...createSolvedGalleryEntry('normal-entry', '2026-04-11T10:00:00.000Z'),
+        previewImage: 'data:image/png;base64,preview-normal',
+        sourceImage: 'data:image/png;base64,source-normal',
+      },
+    ]
+
+    render(
+      <UploadGalleryPanel
+        gallery={{
+          entries: galleryEntries,
+          totalEntries: galleryEntries.length,
+          lastCompletedAt: galleryEntries[0].completedAt,
+          lastUpdatedAt: galleryEntries[0].completedAt,
+        }}
+        isLoadingGallery={false}
+        onReplayEntry={vi.fn()}
+        onDeleteEntries={vi.fn(() => Promise.resolve())}
+        titleId="gallery-panel-title"
+        panelRole="region"
+      />
+    )
+
+    expect(screen.getByText('Deine Medaillen')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Gold-Medaillen filtern, 1 Motiv' })).toBeTruthy()
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Diamant-Medaillen filtern, 0 Motive' }).disabled).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Gold-Medaillen filtern, 1 Motiv' }))
+    expect(screen.getByText('1 von 3 Motiven sichtbar')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Gold-Medaillen filtern, 1 Motiv' }).getAttribute('aria-pressed')).toBe('true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zuruecksetzen' }))
+    await waitFor(() => {
+      expect(screen.getByText('3 von 3 Motiven sichtbar')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Gold-Medaillen filtern, 1 Motiv' }).getAttribute('aria-pressed')).toBe('false')
+    })
+  })
+
   it('toggles multiple gallery tag chips as AND filters', async () => {
     const galleryEntries: SolvedGalleryEntry[] = [
       {
@@ -3228,6 +3282,8 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Eigenstaendiger Lauf')).toBeTruthy()
     expect(screen.getByText('Challenge-Serie 1')).toBeTruthy()
     expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
+    expect(screen.getByText('Medaillen-Entwicklung')).toBeTruthy()
+    expect(screen.getByLabelText('Medaillen-Entwicklung: Gold zu Bronze')).toBeTruthy()
     expect(screen.getByText('Zugehoerige Versuche')).toBeTruthy()
     expect(screen.getByText('Versuch 1 von 2')).toBeTruthy()
     expect(screen.getByText('Versuch 2 von 2')).toBeTruthy()
@@ -3237,8 +3293,103 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText(/Gold · Bester Versuch/)).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Vorlage herausfordern' }))
+    expect(screen.getByText('Medaillen-Regeln')).toBeTruthy()
+    expect(screen.getByText(/Diamant ist bei diesem Puzzle nicht verfuegbar/)).toBeTruthy()
+    const challengeOverlay = document.querySelector<HTMLElement>('.gallery-challenge-start-overlay')
+    const detailOverlay = document.querySelector<HTMLElement>('.gallery-detail-overlay')
+    expect(challengeOverlay).toBeTruthy()
+    expect(detailOverlay).toBeTruthy()
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2)
+    expect(onReplayEntry).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Challenge starten' }))
     expect(onReplayEntry).toHaveBeenCalledWith(target, 'run')
     expect(screen.queryByRole('button', { name: /versuch.*herausfordern/i })).toBeNull()
+  })
+
+  it('erklaert eine assistierte Silber-Challenge und zeigt das naechste Ziel', () => {
+    render(
+      <WinDialog
+        stats={{
+          moves: 18,
+          time: 42,
+          actionMoves: 21,
+          undoCount: 0,
+          redoCount: 0,
+          hintCount: 1,
+          suggestedMoveCount: 0,
+          assistanceMode: 'hinted',
+        }}
+        config={{ rows: 4, cols: 4 }}
+        nextDifficultyLabel={null}
+        completionResult={createCompletionResult()}
+        completionStatsError={null}
+        isRecordingStats={false}
+        challengeTarget={{
+          entryId: 'challenge-target',
+          completedAt: '2026-04-10T09:00:00.000Z',
+          time: 60,
+          moves: 20,
+          actionMoves: 24,
+          assistanceMode: 'clean',
+          optimalStartMoveCount: 18,
+          optimalStartMoveCountKind: 'exact',
+        }}
+        challengeMedal="silver"
+        challengePreviousBestMedal="bronze"
+        onRetryStats={vi.fn()}
+        onReplaySameImage={vi.fn()}
+        onGoToSelectionScreen={vi.fn()}
+        onChooseNewImage={vi.fn()}
+        onNextDifficulty={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText(/Gold erfordert einen sauberen Lauf ohne Hinweise/)).toBeTruthy()
+    expect(screen.getByText('Aufstieg: Bronze zu Silber')).toBeTruthy()
+    expect(screen.getByText('Fuer Gold')).toBeTruthy()
+    expect(screen.getByText('ohne Hilfe')).toBeTruthy()
+  })
+
+  it('weist bei einer optimalen Challenge-Vorlage auf das Ueberspringen von Gold hin', () => {
+    render(
+      <WinDialog
+        stats={{
+          moves: 18,
+          time: 42,
+          actionMoves: 21,
+          undoCount: 0,
+          redoCount: 0,
+          hintCount: 1,
+          suggestedMoveCount: 0,
+          assistanceMode: 'hinted',
+        }}
+        config={{ rows: 4, cols: 4 }}
+        nextDifficultyLabel={null}
+        completionResult={createCompletionResult()}
+        completionStatsError={null}
+        isRecordingStats={false}
+        challengeTarget={{
+          entryId: 'optimal-target',
+          completedAt: '2026-04-10T09:00:00.000Z',
+          time: 60,
+          moves: 18,
+          actionMoves: 24,
+          assistanceMode: 'clean',
+          optimalStartMoveCount: 18,
+          optimalStartMoveCountKind: 'exact',
+        }}
+        challengeMedal="silver"
+        challengePreviousBestMedal="silver"
+        onRetryStats={vi.fn()}
+        onReplaySameImage={vi.fn()}
+        onGoToSelectionScreen={vi.fn()}
+        onChooseNewImage={vi.fn()}
+        onNextDifficulty={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Fuer Diamant')).toBeTruthy()
+    expect(screen.getByText(/Gold ist gegen die bereits optimale Vorlage mathematisch nicht erreichbar/)).toBeTruthy()
   })
 
   it('moves through gallery detail tag actions with arrows', () => {
@@ -3430,7 +3581,7 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(replayButton)
   })
 
-  it('cycles through win dialog actions with Tab, Shift+Tab and arrow keys when the retry action is visible', async () => {
+  it('does not render a status badge when recording stats fails', async () => {
     const user = userEvent.setup()
 
     render(
@@ -3459,12 +3610,13 @@ describe('keyboard smoke tests', () => {
     )
 
     const replayButton = await screen.findByRole('button', { name: 'Nochmal spielen' })
-    const retryButton = screen.getByRole('button', { name: 'Erneut versuchen' })
     const nextDifficultyButton = screen.getByRole('button', { name: 'Weiter: Schwer 5x5' })
     const selectionButton = screen.getByRole('button', { name: 'Zur Auswahl' })
     const startButton = screen.getByRole('button', { name: 'Zur Startseite' })
 
     expect(screen.getByText(/Tastatur: Tab, Shift\+Tab, Pfeile, Pos1 und Ende/i)).toBeTruthy()
+    expect(screen.queryByText('Statistik konnte nicht aktualisiert werden.')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Erneut versuchen' })).toBeNull()
     expect(document.activeElement).toBe(replayButton)
 
     await user.tab()
@@ -3477,25 +3629,16 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(startButton)
 
     await user.tab()
-    expect(document.activeElement).toBe(retryButton)
-
-    await user.tab()
     expect(document.activeElement).toBe(replayButton)
 
     await user.tab({ shift: true })
-    expect(document.activeElement).toBe(retryButton)
-
-    fireEvent.keyDown(retryButton, { key: 'ArrowDown' })
-    expect(document.activeElement).toBe(replayButton)
+    expect(document.activeElement).toBe(startButton)
 
     fireEvent.keyDown(replayButton, { key: 'ArrowUp' })
-    expect(document.activeElement).toBe(retryButton)
-
-    fireEvent.keyDown(retryButton, { key: 'End' })
     expect(document.activeElement).toBe(startButton)
 
     fireEvent.keyDown(startButton, { key: 'Home' })
-    expect(document.activeElement).toBe(retryButton)
+    expect(document.activeElement).toBe(replayButton)
   })
 
   it('navigates statistics section headings with arrows and Pos1', async () => {

@@ -118,7 +118,7 @@ import {
   ImageCollections,
   WinStats,
 } from './types/index'
-import { deriveChallengeMedal } from './utils/galleryChallenge.ts'
+import { deriveChallengeMedal, getPreviousBestChallengeMedalForMotif } from './utils/galleryChallenge.ts'
 import { DEFAULT_PUZZLE_CONFIG, getNextDifficultyOption } from './utils/puzzleDifficulty.ts'
 import {
   createGalleryChallengeTarget,
@@ -1873,6 +1873,10 @@ export default function App() {
         ? {
             targetId: activeGalleryChallengeTarget.entryId,
             medal: deriveChallengeMedal(stats, activeGalleryChallengeTarget),
+            previousBestMedal: getPreviousBestChallengeMedalForMotif(
+              gallery?.entries ?? [],
+              activeGalleryChallengeTarget.entryId
+            ),
           }
         : null
       const sessionId = beginSession()
@@ -1959,6 +1963,7 @@ export default function App() {
     [
       beginSession,
       activeGalleryChallengeTarget,
+      gallery,
       config,
       createCompletionPayload,
       createGalleryEntryPayload,
@@ -2995,6 +3000,7 @@ export default function App() {
             tagCategoryCatalog={winTagCategoryCatalog}
             challengeTarget={activeGalleryChallengeTarget}
             challengeMedal={winChallengeResult?.medal}
+            challengePreviousBestMedal={winChallengeResult?.previousBestMedal}
             onRetryStats={handleRetryStats}
             onReplaySameImage={handleReplaySameImage}
             onGoToSelectionScreen={handleReset}

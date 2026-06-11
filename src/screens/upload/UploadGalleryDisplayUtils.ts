@@ -56,13 +56,57 @@ export interface GalleryDisplayGroup {
   motifReplaySummary: GalleryMotifReplaySummary
 }
 
+export type GalleryMedalFilter = 'all' | ChallengeMedal
+
+export interface GalleryMedalCollectionItem {
+  medal: ChallengeMedal
+  count: number
+}
+
+const CHALLENGE_MEDALS_DESCENDING: ChallengeMedal[] = ['diamond', 'gold', 'silver', 'bronze']
+
+export function buildGalleryMedalCollection(
+  entries: Pick<GalleryDisplayEntry, 'motifReplaySummary'>[]
+): GalleryMedalCollectionItem[] {
+  const counts = new Map<ChallengeMedal, number>(
+    CHALLENGE_MEDALS_DESCENDING.map((medal) => [medal, 0])
+  )
+
+  for (const entry of entries) {
+    const medal = entry.motifReplaySummary.bestChallengeMedal
+    if (medal) {
+      counts.set(medal, (counts.get(medal) ?? 0) + 1)
+    }
+  }
+
+  return CHALLENGE_MEDALS_DESCENDING.map((medal) => ({
+    medal,
+    count: counts.get(medal) ?? 0,
+  }))
+}
+
+export function matchesGalleryMedalFilter(
+  entry: Pick<GalleryDisplayEntry, 'motifReplaySummary'>,
+  filter: GalleryMedalFilter
+): boolean {
+  return filter === 'all' || entry.motifReplaySummary.bestChallengeMedal === filter
+}
+
 export interface GalleryChallengeSeries {
   targetId: string
   targetEntry: SolvedGalleryEntry | null
   attempts: SolvedGalleryEntry[]
+  medalHistory: GalleryChallengeMedalHistoryItem[]
   bestAttempt: SolvedGalleryEntry
   bestMedal: ChallengeMedal
   improvedAttemptCount: number
+}
+
+export interface GalleryChallengeMedalHistoryItem {
+  attempt: SolvedGalleryEntry
+  attemptNumber: number
+  medal: ChallengeMedal
+  trend: 'start' | 'upgrade' | 'confirmed' | 'downgrade'
 }
 
 export interface GalleryTimelineChallengeRelation {
@@ -101,6 +145,34 @@ function compareChallengeAttempts(a: SolvedGalleryEntry, b: SolvedGalleryEntry):
   return parseTimestamp(b.completedAt) - parseTimestamp(a.completedAt)
 }
 
+export function buildGalleryChallengeMedalHistory(
+  attempts: SolvedGalleryEntry[]
+): GalleryChallengeMedalHistoryItem[] {
+  const chronologicalAttempts = [...attempts].sort(
+    (a, b) => parseTimestamp(a.completedAt) - parseTimestamp(b.completedAt)
+  )
+
+  return chronologicalAttempts.map((attempt, index) => {
+    const medal = attempt.challengeMedal ?? 'bronze'
+    const previousMedal = chronologicalAttempts[index - 1]?.challengeMedal ?? null
+    const trend =
+      previousMedal === null
+        ? 'start'
+        : getChallengeMedalRank(medal) > getChallengeMedalRank(previousMedal)
+          ? 'upgrade'
+          : getChallengeMedalRank(medal) < getChallengeMedalRank(previousMedal)
+            ? 'downgrade'
+            : 'confirmed'
+
+    return {
+      attempt,
+      attemptNumber: index + 1,
+      medal,
+      trend,
+    }
+  })
+}
+
 export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): GalleryChallengeSeries[] {
   const entriesById = new Map(entries.map((entry) => [entry.id, entry]))
   const attemptsByTarget = new Map<string, SolvedGalleryEntry[]>()
@@ -123,6 +195,7 @@ export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): Gall
       targetId,
       targetEntry,
       attempts: sortedAttempts,
+      medalHistory: buildGalleryChallengeMedalHistory(attempts),
       bestAttempt: sortedAttempts[0],
       bestMedal: sortedAttempts[0].challengeMedal ?? 'bronze',
       improvedAttemptCount: targetEntry

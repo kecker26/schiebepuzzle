@@ -1,7 +1,6 @@
 import { useCallback, useId, useMemo, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Medal, MousePointer2, Route, Sparkles, Timer, Trophy } from 'lucide-react'
 import AnimatedButton from '../motion/AnimatedButton.tsx'
-import BusyIndicator from '../motion/BusyIndicator.tsx'
 import AnimatedDialog from '../motion/AnimatedDialog.tsx'
 import AnimatedReveal from '../motion/AnimatedReveal.tsx'
 import AnimatedStaggerGroup from '../motion/AnimatedStaggerGroup.tsx'
@@ -19,6 +18,12 @@ import type { TagCategoryCatalog } from '../services/tagCategories/tagCategoryTy
 import WinParticleEffect from './win-effects/WinParticleEffect.tsx'
 import { resolveChallengeWinParticleSelection, resolveWinParticleSelection } from './win-effects/winParticleEffects.ts'
 import { formatDifficultyLabel } from '../utils/puzzleDifficulty.ts'
+import {
+  formatChallengeMedalLabel,
+  getChallengeMedalExplanation,
+  getChallengeMedalRank,
+  getNextChallengeMedalGoal,
+} from '../utils/galleryChallenge.ts'
 import {
   ComparisonTone,
   compareAssistance,
@@ -41,6 +46,7 @@ interface WinDialogProps {
   tagCategoryCatalog?: TagCategoryCatalog | null
   challengeTarget?: GalleryChallengeTarget | null
   challengeMedal?: ChallengeMedal | null
+  challengePreviousBestMedal?: ChallengeMedal | null
   onRetryStats: () => void
   onReplaySameImage: () => void
   onGoToSelectionScreen: () => void
@@ -202,71 +208,17 @@ function createAssistanceBadge(
   }
 }
 
-function getStatusMessage(
-  difficultyLabel: string,
-  completionResult: RecordPuzzleCompletionResult | null,
-  completionStatsError: string | null,
-  isRecordingStats: boolean
-): string {
-  if (isRecordingStats) {
-    return 'Statistiken werden aktualisiert ...'
-  }
-
-  if (completionStatsError) {
-    return completionStatsError
-  }
-
-  if (!completionResult) {
-    return `Runde auf ${difficultyLabel} abgeschlossen.`
-  }
-
-  const difficultyStats = completionResult.difficultyStats
-  const highlights: string[] = []
-
-  if (completionResult.isNewBestTime) {
-    highlights.push('Neue Bestzeit auf dieser Stufe.')
-  }
-
-  if (completionResult.isNewBestMoves) {
-    highlights.push('Neuer Zug-Rekord auf dieser Stufe.')
-  }
-
-  if (completionResult.isNewBestCleanMoves) {
-    highlights.push('Neuer Clean-Rekord.')
-  }
-
-  if (highlights.length > 0) {
-    return highlights.join(' ')
-  }
-
-  if (difficultyStats.bestTime !== null && difficultyStats.bestMoves !== null) {
-    return `Bestzeit ${formatTime(difficultyStats.bestTime)}. Bester Lauf ${difficultyStats.bestMoves} Zuege.`
-  }
-
-  if (difficultyStats.bestTime !== null) {
-    return `Bestzeit auf dieser Stufe: ${formatTime(difficultyStats.bestTime)}.`
-  }
-
-  if (difficultyStats.bestMoves !== null) {
-    return `Bester Lauf auf dieser Stufe: ${difficultyStats.bestMoves} Zuege.`
-  }
-
-  return `Runde auf ${difficultyLabel} abgeschlossen.`
-}
-
 export default function WinDialog({
   stats,
   config,
   nextDifficultyLabel,
   completionResult,
-  completionStatsError,
-  isRecordingStats,
   imageTags = [],
   rejectedAiTags = [],
   tagCategoryCatalog = null,
   challengeTarget = null,
   challengeMedal = null,
-  onRetryStats,
+  challengePreviousBestMedal = null,
   onReplaySameImage,
   onGoToSelectionScreen,
   onChooseNewImage,
@@ -291,19 +243,11 @@ export default function WinDialog({
     : null
   const difficultyStats = completionResult?.difficultyStats ?? null
   const extraMoves = countExtraMoves(currentRun)
-  const statusMessage = getStatusMessage(
-    difficultyLabel,
-    completionResult,
-    completionStatsError,
-    isRecordingStats
-  )
   const finalBoardTileCount = config.rows * config.cols
   const finalBoardStyle = {
     '--win-board-rows': config.rows,
     '--win-board-cols': config.cols,
   } as CSSProperties
-  const isStatusError = Boolean(!isRecordingStats && completionStatsError)
-  const isStatusPending = Boolean(isRecordingStats)
   const achievementBadges = [
     completionResult?.isNewBestTime ? 'Bestzeit' : null,
     completionResult?.isNewBestMoves ? 'Zug-Rekord' : null,
@@ -312,14 +256,19 @@ export default function WinDialog({
   const hasAchievement = achievementBadges.length > 0
   const challengeMovesDelta = challengeTarget ? stats.moves - challengeTarget.moves : null
   const challengeTimeDelta = challengeTarget ? stats.time - challengeTarget.time : null
-  const challengeMedalLabel = challengeMedal
-    ? challengeMedal === 'diamond'
-      ? 'Diamant'
-      : challengeMedal === 'gold'
-        ? 'Gold'
-        : challengeMedal === 'silver'
-          ? 'Silber'
-          : 'Bronze'
+  const challengeMedalLabel = challengeMedal ? formatChallengeMedalLabel(challengeMedal) : null
+  const challengeExplanation = challengeTarget && challengeMedal
+    ? getChallengeMedalExplanation(stats, challengeTarget, challengeMedal)
+    : null
+  const nextChallengeMedalGoal = challengeTarget && challengeMedal
+    ? getNextChallengeMedalGoal(stats, challengeTarget, challengeMedal)
+    : null
+  const challengeUpgradeLabel = challengeMedal
+    ? challengePreviousBestMedal === null
+      ? `Erste Challenge-Medaille: ${challengeMedalLabel}`
+      : getChallengeMedalRank(challengeMedal) > getChallengeMedalRank(challengePreviousBestMedal)
+        ? `Aufstieg: ${formatChallengeMedalLabel(challengePreviousBestMedal)} zu ${challengeMedalLabel}`
+        : `Medaille bestaetigt: ${challengeMedalLabel}`
     : null
   const timeComparison = compareLowerIsBetterMetric(currentRun.time, previousRun?.time ?? null)
   const movesComparison = compareLowerIsBetterMetric(currentRun.moves, previousRun?.moves ?? null)
@@ -509,15 +458,10 @@ export default function WinDialog({
             <div className="win-challenge-copy">
               <span className="win-kicker">Herausforderung gemeistert</span>
               <h3>{challengeMedalLabel}-Medaille</h3>
-              <p>
-                {challengeMedal === 'diamond'
-                  ? 'Clean, schneller als die Vorlage und exakt solver-optimal.'
-                  : challengeMedal === 'gold'
-                    ? 'Clean geloest und beide Ziele unterboten.'
-                    : challengeMedal === 'silver'
-                      ? 'Mindestens ein Ziel der Vorlage unterboten.'
-                      : 'Challenge abgeschlossen. Die Vorlage bleibt dein naechstes Ziel.'}
-              </p>
+              <p>{challengeExplanation}</p>
+              {challengeUpgradeLabel ? (
+                <span className="win-challenge-upgrade">{challengeUpgradeLabel}</span>
+              ) : null}
             </div>
             <div className="win-challenge-grid" aria-label="Vergleich mit der Challenge-Vorlage">
               <span>Zeit</span>
@@ -527,6 +471,16 @@ export default function WinDialog({
               <strong>{stats.moves} / {challengeTarget.moves}</strong>
               <em>{challengeMovesDelta !== null && challengeMovesDelta < 0 ? `${Math.abs(challengeMovesDelta)} weniger` : challengeMovesDelta === 0 ? 'Gleichstand' : `${challengeMovesDelta} mehr`}</em>
             </div>
+            {nextChallengeMedalGoal ? (
+              <div className="win-challenge-next-goal">
+                <span>
+                  {nextChallengeMedalGoal.medal
+                    ? `Fuer ${formatChallengeMedalLabel(nextChallengeMedalGoal.medal)}`
+                    : 'Medaillenstatus'}
+                </span>
+                <strong>{nextChallengeMedalGoal.label}</strong>
+              </div>
+            ) : null}
           </AnimatedReveal>
         ) : null}
 
@@ -597,31 +551,6 @@ export default function WinDialog({
             </AnimatedStaggerGroup>
           </AnimatedReveal>
         ) : null}
-
-        <AnimatedReveal
-          className={`win-status${isStatusError ? ' is-error' : ''}${isStatusPending ? ' is-pending' : ''}`}
-          interaction="surface"
-          level="medium"
-        >
-          <p className="win-status-copy">
-            {isStatusPending ? <BusyIndicator /> : null}
-            {statusMessage}
-          </p>
-          {isStatusError && (
-            <AnimatedButton
-              className="win-retry-btn"
-              onClick={onRetryStats}
-              onKeyDown={handleActionKeyDown}
-              data-win-dialog-action="true"
-              data-app-tooltip="Speichern der Siegstatistik erneut anstossen."
-              data-app-tooltip-position="top"
-              reveal
-              revealLevel="subtle"
-            >
-              Erneut versuchen
-            </AnimatedButton>
-          )}
-        </AnimatedReveal>
 
         <AnimatedStaggerGroup className="win-actions" level="subtle">
           <AnimatedButton

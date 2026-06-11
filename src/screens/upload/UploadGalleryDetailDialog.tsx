@@ -7,7 +7,7 @@ import AsyncStatusPanel from '../../motion/AsyncStatusPanel.tsx'
 import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { type AiMetadataProvider, type ImageThemePalette, type SolvedGalleryEntry } from '../../types/index'
 import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
-import { formatChallengeMedalLabel } from '../../utils/galleryChallenge.ts'
+import { formatChallengeMedalLabel, getChallengeMedalEmoji } from '../../utils/galleryChallenge.ts'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import {
   buildGalleryChallengeSeries,
@@ -24,6 +24,7 @@ import {
 } from './uploadUtils.ts'
 import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 import GalleryStartBoardPreview from './GalleryStartBoardPreview.tsx'
+import GalleryChallengeStartDialog from './GalleryChallengeStartDialog.tsx'
 import { useUploadImagePalette } from './uploadImagePalette.ts'
 
 interface UploadGalleryDetailDialogProps {
@@ -86,6 +87,7 @@ export default function UploadGalleryDetailDialog({
   const replayButtonRef = useRef<HTMLButtonElement>(null)
   const collectButtonRef = useRef<HTMLButtonElement>(null)
   const [manualTagInput, setManualTagInput] = useState('')
+  const [pendingChallengeTarget, setPendingChallengeTarget] = useState<SolvedGalleryEntry | null>(null)
   const representativeEntry = entry.representativeEntry
   const detailImage = representativeEntry.sourceImage ?? representativeEntry.previewImage
   const storedPalette = useMemo(() => findStoredDetailPalette(entry), [entry])
@@ -587,7 +589,7 @@ export default function UploadGalleryDetailDialog({
                             disabled={!canChallengeAgain || !target}
                             onClick={() => {
                               if (target) {
-                                onReplayEntry(target, 'run')
+                                setPendingChallengeTarget(target)
                               }
                             }}
                             onKeyDown={handleActionKeyDown}
@@ -615,6 +617,38 @@ export default function UploadGalleryDetailDialog({
                           <span>Serie</span>
                           <strong>{series.attempts.length} {series.attempts.length === 1 ? 'Versuch' : 'Versuche'}</strong>
                           <small>{series.improvedAttemptCount} mit verbessertem Zielwert</small>
+                        </div>
+                      </div>
+
+                      <div
+                        className="gallery-detail-challenge-medal-history"
+                        aria-label={`Medaillen-Entwicklung: ${series.medalHistory.map((item) => formatChallengeMedalLabel(item.medal)).join(' zu ')}`}
+                      >
+                        <div className="gallery-detail-challenge-medal-history-head">
+                          <Medal aria-hidden="true" size={16} strokeWidth={2.4} />
+                          <span>Medaillen-Entwicklung</span>
+                          <strong>{series.medalHistory.length}</strong>
+                        </div>
+                        <div className="gallery-detail-challenge-medal-history-track">
+                          {series.medalHistory.map((item, index) => (
+                            <div
+                              key={item.attempt.id}
+                              className={`gallery-detail-challenge-medal-history-step is-${item.medal} is-${item.trend}`}
+                              data-app-tooltip={`Versuch ${item.attemptNumber}: ${formatChallengeMedalLabel(item.medal)}${item.trend === 'upgrade' ? ' - Aufstieg' : item.trend === 'confirmed' ? ' - bestaetigt' : item.trend === 'downgrade' ? ' - unter bisherigem Stand' : ''}.`}
+                              data-app-tooltip-position="top"
+                            >
+                              {index > 0 ? <span className="gallery-detail-challenge-medal-history-arrow" aria-hidden="true">→</span> : null}
+                              <span className="gallery-detail-challenge-medal-history-node" aria-hidden="true">
+                                {getChallengeMedalEmoji(item.medal)}
+                              </span>
+                              <span className="gallery-detail-challenge-medal-history-copy">
+                                <small>Versuch {item.attemptNumber}</small>
+                                <strong>{formatChallengeMedalLabel(item.medal)}</strong>
+                                {item.trend === 'upgrade' ? <em>Aufstieg</em> : null}
+                                {item.trend === 'confirmed' ? <em>Bestaetigt</em> : null}
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       </div>
 
@@ -783,7 +817,13 @@ export default function UploadGalleryDetailDialog({
                             type="button"
                             className="gallery-detail-timeline-action"
                             disabled={!canReplayTimelineEntry}
-                            onClick={() => onReplayEntry(timelineEntry, 'run')}
+                            onClick={() => {
+                              if (hasChallengeSetup) {
+                                setPendingChallengeTarget(timelineEntry)
+                              } else {
+                                onReplayEntry(timelineEntry, 'run')
+                              }
+                            }}
                             onKeyDown={handleActionKeyDown}
                             aria-label={`Lauf ${formatDifficultyLabel(timelineEntry.config)} vom ${formatDate(timelineEntry.completedAt)} spielen`}
                             data-app-tooltip={
@@ -840,6 +880,17 @@ export default function UploadGalleryDetailDialog({
             </button>
           </div>
         </div>
+      {pendingChallengeTarget ? (
+        <GalleryChallengeStartDialog
+          target={pendingChallengeTarget}
+          onCancel={() => setPendingChallengeTarget(null)}
+          onConfirm={() => {
+            const target = pendingChallengeTarget
+            setPendingChallengeTarget(null)
+            onReplayEntry(target, 'run')
+          }}
+        />
+      ) : null}
     </AnimatedDialog>
   )
 }

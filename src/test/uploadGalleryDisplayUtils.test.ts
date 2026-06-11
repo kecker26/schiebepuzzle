@@ -3,11 +3,15 @@ import type { SolvedGalleryEntry } from '../types/index.ts'
 import {
   buildGalleryDisplayEntries,
   buildGalleryChallengeSeries,
+  buildGalleryChallengeMedalHistory,
+  buildGalleryMedalCollection,
   buildGalleryTimelineRelations,
   getSimilarGalleryEntries,
   getUniqueGalleryMotifEntryIds,
+  matchesGalleryMedalFilter,
 } from '../screens/upload/UploadGalleryDisplayUtils.ts'
 import { galleryDisplayEntryMatchesAllTagKeys, getGalleryTagKey } from '../screens/upload/UploadGalleryPanel.tsx'
+import { getChallengeMedalProgress } from '../utils/galleryChallenge.ts'
 
 function createGalleryEntry(
   id: string,
@@ -164,6 +168,108 @@ describe('UploadGalleryDisplayUtils', () => {
     })
   })
 
+  it('zaehlt jedes Motiv genau einmal nach seiner besten Challenge-Medaille', () => {
+    const entries = buildGalleryDisplayEntries(
+      [
+        createGalleryEntry('motif-a-silver', {
+          challengeTargetId: 'target-a',
+          challengeMedal: 'silver',
+        }),
+        createGalleryEntry('motif-a-gold', {
+          completedAt: '2026-04-23T12:00:00.000Z',
+          challengeTargetId: 'target-a',
+          challengeMedal: 'gold',
+        }),
+        createGalleryEntry('motif-b-bronze', {
+          sourceImage: 'source-b',
+          previewImage: 'preview-b',
+          challengeTargetId: 'target-b',
+          challengeMedal: 'bronze',
+        }),
+        createGalleryEntry('motif-c-normal', {
+          sourceImage: 'source-c',
+          previewImage: 'preview-c',
+        }),
+      ],
+      {
+        difficultyFilter: 'all',
+        assistanceFilter: 'all',
+      }
+    )
+
+    expect(buildGalleryMedalCollection(entries)).toEqual([
+      { medal: 'diamond', count: 0 },
+      { medal: 'gold', count: 1 },
+      { medal: 'silver', count: 0 },
+      { medal: 'bronze', count: 1 },
+    ])
+    expect(entries.filter((entry) => matchesGalleryMedalFilter(entry, 'gold'))).toHaveLength(1)
+    expect(entries.filter((entry) => matchesGalleryMedalFilter(entry, 'all'))).toHaveLength(3)
+  })
+
+  it('markiert die beste Medaille und das naechste erreichbare Motiv-Ziel', () => {
+    const target = createGalleryEntry('target', {
+      moves: 20,
+      replaySetup: {
+        version: 1,
+        startBoard: [],
+        emptyIndex: 0,
+        shuffleMoves: [],
+        optimalStartMoveCount: 20,
+        optimalStartMoveCountKind: 'exact',
+      },
+    })
+    const progress = getChallengeMedalProgress([
+      target,
+      createGalleryEntry('silver-attempt', {
+        challengeTargetId: target.id,
+        challengeMedal: 'silver',
+      }),
+    ])
+
+    expect(progress).toMatchObject({
+      currentMedal: 'silver',
+      nextMedal: 'diamond',
+      stages: [
+        { medal: 'bronze', status: 'completed' },
+        { medal: 'silver', status: 'current' },
+        { medal: 'gold', status: 'unavailable' },
+        { medal: 'diamond', status: 'next' },
+      ],
+    })
+    expect(progress?.label).toContain('Gold ist fuer die beste Vorlage nicht erreichbar')
+  })
+
+  it('markiert Diamant ohne exaktes Solver-Optimum als nicht verfuegbar', () => {
+    const target = createGalleryEntry('target')
+    const progress = getChallengeMedalProgress([
+      target,
+      createGalleryEntry('gold-attempt', {
+        challengeTargetId: target.id,
+        challengeMedal: 'gold',
+      }),
+    ])
+
+    expect(progress?.nextMedal).toBeNull()
+    expect(progress?.stages[progress.stages.length - 1]).toEqual({ medal: 'diamond', status: 'unavailable' })
+  })
+
+  it('zeigt fuer Motive ohne Challenge-Medaille Bronze als erstes Ziel', () => {
+    const progress = getChallengeMedalProgress([createGalleryEntry('normal-run')])
+
+    expect(progress).toMatchObject({
+      currentMedal: null,
+      nextMedal: 'bronze',
+      stages: [
+        { medal: 'bronze', status: 'next' },
+        { medal: 'silver', status: 'locked' },
+        { medal: 'gold', status: 'locked' },
+        { medal: 'diamond', status: 'locked' },
+      ],
+    })
+    expect(progress.label).toContain('Noch keine Challenge-Medaille')
+  })
+
   it('gruppiert Challenge-Versuche nach Vorlage und ermittelt den besten Versuch', () => {
     const target = createGalleryEntry('target', { time: 120, moves: 40 })
     const series = buildGalleryChallengeSeries([
@@ -203,6 +309,38 @@ describe('UploadGalleryDisplayUtils', () => {
       'gold-attempt',
       'silver-attempt',
       'bronze-attempt',
+    ])
+    expect(series[0].medalHistory.map(({ attempt, medal, trend }) => ({
+      attemptId: attempt.id,
+      medal,
+      trend,
+    }))).toEqual([
+      { attemptId: 'gold-attempt', medal: 'gold', trend: 'start' },
+      { attemptId: 'bronze-attempt', medal: 'bronze', trend: 'downgrade' },
+      { attemptId: 'silver-attempt', medal: 'silver', trend: 'upgrade' },
+    ])
+  })
+
+  it('erkennt bestaetigte Medaillen und Aufstiege chronologisch', () => {
+    const history = buildGalleryChallengeMedalHistory([
+      createGalleryEntry('silver-later', {
+        completedAt: '2026-04-24T12:00:00.000Z',
+        challengeMedal: 'silver',
+      }),
+      createGalleryEntry('bronze-first', {
+        completedAt: '2026-04-21T12:00:00.000Z',
+        challengeMedal: 'bronze',
+      }),
+      createGalleryEntry('bronze-confirmed', {
+        completedAt: '2026-04-22T12:00:00.000Z',
+        challengeMedal: 'bronze',
+      }),
+    ])
+
+    expect(history.map(({ medal, trend }) => ({ medal, trend }))).toEqual([
+      { medal: 'bronze', trend: 'start' },
+      { medal: 'bronze', trend: 'confirmed' },
+      { medal: 'silver', trend: 'upgrade' },
     ])
   })
 

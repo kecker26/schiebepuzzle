@@ -14,7 +14,11 @@ import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { ImageCollection, ImageThemePalette, SolvedGalleryEntry } from '../../types/index'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
-import { formatChallengeMedalLabel } from '../../utils/galleryChallenge.ts'
+import {
+  formatChallengeMedalLabel,
+  getChallengeMedalEmoji,
+  getChallengeMedalProgress,
+} from '../../utils/galleryChallenge.ts'
 import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
 import { getTagCollectionSuggestions } from './galleryTagCollectionSync.ts'
 import { useUploadImagePalette } from './uploadImagePalette.ts'
@@ -64,6 +68,10 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   const completedAtLabel = formatDate(representativeEntry.completedAt)
   const totalSolveCountLabel = formatGallerySolveCount(entry.motifReplaySummary.totalSolveCount)
   const bestChallengeMedal = entry.motifReplaySummary.bestChallengeMedal
+  const medalProgress = useMemo(
+    () => getChallengeMedalProgress(entry.motifReplaySummary.allEntries),
+    [entry.motifReplaySummary.allEntries]
+  )
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
   const motifEntryIds = new Set(entry.allEntries.map((galleryEntry) => galleryEntry.id))
@@ -248,6 +256,33 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
       </button>
 
       <div className="gallery-card-body">
+        <div
+          className={`gallery-card-medal-progress${medalProgress.currentMedal ? '' : ' is-empty'}`}
+          aria-label={medalProgress.label}
+          data-app-tooltip={medalProgress.label}
+          data-app-tooltip-position="top"
+        >
+          <div className="gallery-card-medal-progress-head">
+            <span>Medaillen-Fortschritt</span>
+            <strong>
+              {medalProgress.currentMedal
+                ? formatChallengeMedalLabel(medalProgress.currentMedal)
+                : 'Noch keine'}
+            </strong>
+          </div>
+          <div className="gallery-card-medal-progress-track" aria-hidden="true">
+            {medalProgress.stages.map((stage) => (
+              <span
+                key={stage.medal}
+                className={`gallery-card-medal-progress-stage is-${stage.medal} is-${stage.status}`}
+              >
+                <span>{getChallengeMedalEmoji(stage.medal)}</span>
+                <small>{formatChallengeMedalLabel(stage.medal)}</small>
+              </span>
+            ))}
+          </div>
+        </div>
+
         {aiTags.length > 0 || collectionSuggestions.length > 0 ? (
           <div className="gallery-card-ai" aria-label="Tags und Sammlungsvorschlaege">
             <div className="gallery-card-run-count" aria-label={`Gesamtzahl der Laeufe: ${totalSolveCountLabel}`}>
