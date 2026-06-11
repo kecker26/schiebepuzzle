@@ -20,16 +20,20 @@ import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import UploadConfirmDialog from './UploadConfirmDialog.tsx'
 import UploadGalleryCard from './UploadGalleryCard.tsx'
 import UploadGalleryDetailDialog from './UploadGalleryDetailDialog.tsx'
+import UploadGalleryMedalCollection from './UploadGalleryMedalCollection.tsx'
 import UploadGalleryTagManagerDialog from './UploadGalleryTagManagerDialog.tsx'
 import UploadCollectionPickerDialog from './UploadCollectionPickerDialog.tsx'
 import UploadPageNavigation from './UploadPageNavigation.tsx'
 import {
   buildGalleryDisplayEntriesFromGroups,
   buildGalleryDisplayGroups,
+  buildGalleryMedalCollection,
   formatGallerySolveCount,
   GalleryDisplayEntry,
   getGalleryMotifKey,
   getSimilarGalleryEntries,
+  GalleryMedalFilter,
+  matchesGalleryMedalFilter,
   sortGalleryDisplayEntries,
 } from './UploadGalleryDisplayUtils.ts'
 import UploadGalleryToolbar, { type GalleryTagFilterOption } from './UploadGalleryToolbar.tsx'
@@ -156,6 +160,7 @@ export default function UploadGalleryPanel({
 
   const [difficultyFilter, setDifficultyFilter] = useState<GalleryDifficultyFilter>('all')
   const [assistanceFilter, setAssistanceFilter] = useState<GalleryAssistanceFilter>('all')
+  const [medalFilter, setMedalFilter] = useState<GalleryMedalFilter>('all')
   const [tagFilters, setTagFilters] = useState<string[]>(() => getRequestedGalleryTagFilters(requestedTagFilterLabel))
   const [sortOption, setSortOption] = useState<GallerySortOption>('latest')
   const [selectedEntry, setSelectedEntry] = useState<GalleryDisplayEntry | null>(null)
@@ -218,6 +223,7 @@ export default function UploadGalleryPanel({
     }),
     [assistanceFilter, difficultyFilter, galleryGroups]
   )
+  const medalCollection = useMemo(() => buildGalleryMedalCollection(groupedEntries), [groupedEntries])
   const tagOptions = useMemo<GalleryTagFilterOption[]>(() => {
     const tagCounts = new Map<string, GalleryTagFilterOption>()
 
@@ -261,12 +267,15 @@ export default function UploadGalleryPanel({
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'de'))
   }, [galleryGroups])
   const visibleEntries = useMemo(() => {
-    const filteredEntries = tagFilters.length === 0
+    const tagFilteredEntries = tagFilters.length === 0
       ? baseFilteredEntries
       : baseFilteredEntries.filter((entry) => galleryDisplayEntryMatchesAllTagKeys(entry, tagFilters))
+    const filteredEntries = medalFilter === 'all'
+      ? tagFilteredEntries
+      : tagFilteredEntries.filter((entry) => matchesGalleryMedalFilter(entry, medalFilter))
 
     return sortGalleryDisplayEntries(filteredEntries, sortOption)
-  }, [baseFilteredEntries, sortOption, tagFilters])
+  }, [baseFilteredEntries, medalFilter, sortOption, tagFilters])
   const visibleTagOptions = useMemo<GalleryTagFilterOption[]>(() => {
     const tagCounts = new Map<string, GalleryTagFilterOption>()
 
@@ -619,11 +628,17 @@ export default function UploadGalleryPanel({
     setSortOption(value)
   }, [])
 
+  const handleMedalFilterChange = useCallback((value: GalleryMedalFilter) => {
+    setCurrentPage(1)
+    setMedalFilter(value)
+  }, [])
+
   function handleResetFilters() {
     pendingToolbarFocusRef.current = 'difficulty'
     setCurrentPage(1)
     setDifficultyFilter('all')
     setAssistanceFilter('all')
+    setMedalFilter('all')
     setTagFilters([])
     setSortOption('latest')
   }
@@ -704,8 +719,8 @@ export default function UploadGalleryPanel({
       : 'content'
   const visibleGalleryStateKey =
     visibleEntries.length === 0
-      ? `filtered-empty:${difficultyFilter}:${assistanceFilter}:${tagFilters.join('|')}:${sortOption}`
-      : `grid:${difficultyFilter}:${assistanceFilter}:${tagFilters.join('|')}:${sortOption}:${activeGalleryPage}`
+      ? `filtered-empty:${difficultyFilter}:${assistanceFilter}:${medalFilter}:${tagFilters.join('|')}:${sortOption}`
+      : `grid:${difficultyFilter}:${assistanceFilter}:${medalFilter}:${tagFilters.join('|')}:${sortOption}:${activeGalleryPage}`
   const collectingImageIds = collectingEntry ? [collectingEntry.representativeEntry.id] : []
   const collectingRepresentativeEntry = collectingEntry?.representativeEntry ?? null
   const collectingImageLabel = collectingRepresentativeEntry
@@ -912,6 +927,11 @@ export default function UploadGalleryPanel({
             />
           ) : (
             <>
+              <UploadGalleryMedalCollection
+                items={medalCollection}
+                activeFilter={medalFilter}
+                onFilterChange={handleMedalFilterChange}
+              />
               <UploadGalleryToolbar
                 difficultySelectRef={primaryFilterRef ?? difficultySelectInternalRef}
                 assistanceSelectRef={assistanceSelectRef}
@@ -920,6 +940,7 @@ export default function UploadGalleryPanel({
                 difficultyFilter={difficultyFilter}
                 difficultyOptions={difficultyOptions}
                 assistanceFilter={assistanceFilter}
+                hasActiveMedalFilter={medalFilter !== 'all'}
                 activeTagFilterCount={tagFilters.length}
                 activeTagFilterLabel={activeTagOption?.label ?? null}
                 activeTagFilterKeys={tagFilters}
@@ -949,7 +970,7 @@ export default function UploadGalleryPanel({
                     icon={'\u{1F50E}'}
                     iconName="search"
                     title="Mit den aktuellen Filtern ist gerade kein Galerie-Bild sichtbar."
-                    detail="Probiere eine andere Schwierigkeit, Laufart oder andere Tags, oder setze die Auswahl wieder auf alle Eintraege zurueck."
+                    detail="Probiere eine andere Medaille, Schwierigkeit, Laufart oder andere Tags, oder setze die Auswahl wieder auf alle Eintraege zurueck."
                     className="gallery-empty-state-filtered"
                   />
                 ) : (

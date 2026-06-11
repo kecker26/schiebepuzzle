@@ -263,6 +263,7 @@ export type ChallengeMedal = 'bronze' | 'silver' | 'gold' | 'diamond'
 export interface ChallengeResult {
   targetId: string
   medal: ChallengeMedal
+  previousBestMedal?: ChallengeMedal | null
 }
 
 export type GalleryTagSource = 'gemini' | 'imported' | 'manual'

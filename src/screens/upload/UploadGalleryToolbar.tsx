@@ -23,6 +23,7 @@ interface UploadGalleryToolbarProps {
   difficultyFilter: GalleryDifficultyFilter
   difficultyOptions: GallerySelectOption<GalleryDifficultyFilter>[]
   assistanceFilter: GalleryAssistanceFilter
+  hasActiveMedalFilter: boolean
   activeTagFilterCount: number
   activeTagFilterLabel: string | null
   activeTagFilterKeys: string[]
@@ -52,6 +53,7 @@ export default function UploadGalleryToolbar({
   difficultyFilter,
   difficultyOptions,
   assistanceFilter,
+  hasActiveMedalFilter,
   activeTagFilterCount,
   activeTagFilterLabel,
   activeTagFilterKeys,
@@ -82,6 +84,7 @@ export default function UploadGalleryToolbar({
   const hasActiveCriteria =
     difficultyFilter !== 'all' ||
     assistanceFilter !== 'all' ||
+    hasActiveMedalFilter ||
     activeTagFilterCount > 0 ||
     sortOption !== 'latest'
 

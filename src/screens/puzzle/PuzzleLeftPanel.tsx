@@ -1,14 +1,16 @@
 import { AnimatePresence } from 'motion/react'
 import type { ChangeEvent, RefObject } from 'react'
-import { Trophy } from 'lucide-react'
+import { Medal, Trophy } from 'lucide-react'
 import PuzzleScreenIcon from '../../components/PuzzleScreenIcon.tsx'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
+import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
 import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import SpringNumber from '../../motion/SpringNumber.tsx'
 import { type PuzzleProgressMetrics } from '../../services/PuzzleSolver.ts'
-import { type GalleryChallengeTarget, type GhostPreviewMode } from '../../types/index'
+import { type GalleryChallengeTarget, type GhostPreviewMode, type PuzzleAssistanceMode } from '../../types/index'
+import { deriveLiveChallengeForecast, formatChallengeMedalLabel } from '../../utils/galleryChallenge.ts'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import {
   formatElapsedTime,
@@ -24,6 +26,7 @@ interface PuzzleLeftPanelProps {
   optimalMoveSummary: string
   isImprovingStartSolution?: boolean
   challengeTarget?: GalleryChallengeTarget | null
+  assistanceMode: PuzzleAssistanceMode
   elapsedTime: number
   progressMetrics: PuzzleProgressMetrics | null
   hintPreview: SuggestedHintPreview | null
@@ -124,6 +127,7 @@ export default function PuzzleLeftPanel({
   optimalMoveSummary,
   isImprovingStartSolution = false,
   challengeTarget,
+  assistanceMode,
   elapsedTime,
   progressMetrics,
   hintPreview,
@@ -165,12 +169,9 @@ export default function PuzzleLeftPanel({
     GHOST_PREVIEW_MODE_OPTIONS.find((option) => option.value === ghostPreviewMode) ?? GHOST_PREVIEW_MODE_OPTIONS[0]
   const challengeMovesDelta = challengeTarget ? moveCount - challengeTarget.moves : 0
   const challengeTimeDelta = challengeTarget ? elapsedTime - challengeTarget.time : 0
-  const challengeStatus =
-    challengeMovesDelta < 0 && challengeTimeDelta < 0
-      ? 'Beide Ziele noch erreichbar'
-      : challengeMovesDelta >= 0 && challengeTimeDelta >= 0
-        ? 'Vorlage liegt aktuell vorn'
-        : 'Ein Ziel noch erreichbar'
+  const challengeForecast = challengeTarget
+    ? deriveLiveChallengeForecast({ moves: moveCount, time: elapsedTime, assistanceMode }, challengeTarget)
+    : null
 
   return (
     <AnimatedStaggerGroup
@@ -224,20 +225,42 @@ export default function PuzzleLeftPanel({
           </div>
           {challengeTarget && (
             <div
-              className={`puzzle-challenge-badge${challengeMovesDelta < 0 && challengeTimeDelta < 0 ? ' is-ahead' : ' is-behind'}`}
-              aria-label={`Challenge aktiv. ${challengeStatus}.`}
+              className={`puzzle-challenge-badge is-${challengeForecast?.medal ?? 'bronze'}`}
+              aria-label={`Challenge aktiv. Beste noch erreichbare Medaille: ${formatChallengeMedalLabel(challengeForecast?.medal ?? 'bronze')}.`}
             >
               <span className="puzzle-challenge-badge-label">
                 <Trophy aria-hidden="true" size={14} strokeWidth={2.3} />
                 Live-Zielvergleich
               </span>
-              <span className="puzzle-challenge-badge-status">{challengeStatus}</span>
-              <span className={`puzzle-challenge-badge-detail${challengeMovesDelta < 0 ? ' is-positive' : ' is-negative'}`}>
+              <AnimatedStateSwap
+                stateKey={challengeForecast?.medal ?? 'bronze'}
+                className="puzzle-challenge-forecast-swap"
+              >
+                <span className="puzzle-challenge-badge-status">
+                  <Medal aria-hidden="true" size={18} strokeWidth={2.4} />
+                  Beste noch erreichbar: {formatChallengeMedalLabel(challengeForecast?.medal ?? 'bronze')}
+                </span>
+              </AnimatedStateSwap>
+              <span className={`puzzle-challenge-badge-detail${challengeForecast?.movesReached ? ' is-positive' : ' is-negative'}`}>
                 Netto-Zuege: {moveCount} / {challengeTarget.moves} ({formatSignedDelta(challengeMovesDelta)})
               </span>
-              <span className={`puzzle-challenge-badge-detail${challengeTimeDelta < 0 ? ' is-positive' : ' is-negative'}`}>
+              <span className={`puzzle-challenge-badge-detail${challengeForecast?.timeReached ? ' is-positive' : ' is-negative'}`}>
                 Zeit: {formatElapsedTime(elapsedTime)} / {formatElapsedTime(challengeTarget.time)} ({formatSignedDelta(challengeTimeDelta, 's')})
               </span>
+              <span className={`puzzle-challenge-badge-detail${challengeForecast?.isClean ? ' is-positive' : ' is-negative'}`}>
+                {challengeForecast?.isClean
+                  ? challengeForecast?.goldAvailable
+                    ? 'Ohne Hilfe: Gold bleibt erreichbar'
+                    : challengeForecast?.medal === 'diamond'
+                      ? 'Vorlage ist optimal: Gold wird uebersprungen, Diamant bleibt erreichbar'
+                      : 'Vorlage ist optimal: Gold ist nicht erreichbar'
+                  : 'Hilfe genutzt: Gold und Diamant sind fuer diesen Lauf nicht mehr erreichbar'}
+              </span>
+              {!challengeForecast?.diamondAvailable ? (
+                <span className="puzzle-challenge-badge-detail is-muted">
+                  Diamant ist ohne exakte optimale Zugzahl nicht verfuegbar.
+                </span>
+              ) : null}
               <span className="puzzle-challenge-badge-detail is-muted">
                 Aktionen: {actionMoves} / {challengeTarget.actionMoves}
               </span>

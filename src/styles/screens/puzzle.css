@@ -254,6 +254,7 @@
 }
 
 .puzzle-challenge-badge {
+  --live-medal-color: var(--image-accent-solid);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -271,6 +272,22 @@
     0 12px 28px color-mix(in srgb, var(--image-accent-solid) 10%, rgba(2, 6, 23, 0.2));
 }
 
+.puzzle-challenge-badge.is-diamond {
+  --live-medal-color: #67e8f9;
+}
+
+.puzzle-challenge-badge.is-gold {
+  --live-medal-color: #fbbf24;
+}
+
+.puzzle-challenge-badge.is-silver {
+  --live-medal-color: #cbd5e1;
+}
+
+.puzzle-challenge-badge.is-bronze {
+  --live-medal-color: #fb923c;
+}
+
 .puzzle-challenge-badge-label {
   display: inline-flex;
   align-items: center;
@@ -282,14 +299,27 @@
   text-transform: uppercase;
 }
 
-.puzzle-challenge-badge.is-ahead .puzzle-challenge-badge-label svg {
+.puzzle-challenge-badge.is-diamond .puzzle-challenge-badge-label svg,
+.puzzle-challenge-badge.is-gold .puzzle-challenge-badge-label svg {
   animation: puzzle-challenge-trophy-pulse 1.8s ease-in-out infinite;
 }
 
+.puzzle-challenge-forecast-swap {
+  min-height: 24px;
+}
+
 .puzzle-challenge-badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 850;
+}
+
+.puzzle-challenge-badge-status svg {
+  color: var(--live-medal-color);
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--live-medal-color) 48%, transparent));
 }
 
 .puzzle-challenge-badge-detail {
