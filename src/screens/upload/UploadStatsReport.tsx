@@ -2,7 +2,7 @@ import type { RefObject } from 'react'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
-import { PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats } from '../../types/index'
+import { PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats, SolvedGallery } from '../../types/index'
 import UploadStatsVisualReport, { type VisualStatsView } from './UploadStatsVisualReport.tsx'
 import UploadStateNotice from './UploadStateNotice.tsx'
 import {
@@ -14,6 +14,7 @@ import {
 interface UploadStatsReportProps {
   isLoadingStats: boolean
   stats: PuzzleStats | null
+  gallery: SolvedGallery | null
   latestCompletion: PuzzleCompletionRecord | null
   favoriteDifficulty: PuzzleDifficultyStats | null
   fastestDifficulty: PuzzleDifficultyStats | null
@@ -33,6 +34,7 @@ interface UploadStatsReportProps {
 export default function UploadStatsReport({
   isLoadingStats,
   stats,
+  gallery,
   latestCompletion,
   favoriteDifficulty,
   fastestDifficulty,
@@ -80,6 +82,7 @@ export default function UploadStatsReport({
             <UploadStatsVisualReport
               primaryFocusRef={primaryFocusRef}
               stats={stats}
+              gallery={gallery}
               latestCompletion={latestCompletion}
               favoriteDifficulty={favoriteDifficulty}
               fastestDifficulty={fastestDifficulty}

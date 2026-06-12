@@ -6,9 +6,12 @@ import {
   buildGalleryChallengeMedalHistory,
   buildGalleryMedalCollection,
   buildGalleryTimelineRelations,
+  getGalleryMedalHuntStatus,
   getSimilarGalleryEntries,
   getUniqueGalleryMotifEntryIds,
+  matchesGalleryMedalHuntFilter,
   matchesGalleryMedalFilter,
+  sortGalleryDisplayEntries,
 } from '../screens/upload/UploadGalleryDisplayUtils.ts'
 import { galleryDisplayEntryMatchesAllTagKeys, getGalleryTagKey } from '../screens/upload/UploadGalleryPanel.tsx'
 import { getChallengeMedalProgress } from '../utils/galleryChallenge.ts'
@@ -205,6 +208,64 @@ describe('UploadGalleryDisplayUtils', () => {
     ])
     expect(entries.filter((entry) => matchesGalleryMedalFilter(entry, 'gold'))).toHaveLength(1)
     expect(entries.filter((entry) => matchesGalleryMedalFilter(entry, 'all'))).toHaveLength(3)
+  })
+
+  it('filtert Medaillen-Jagden und sortiert nach Upgrade-Potenzial', () => {
+    const entries = buildGalleryDisplayEntries(
+      [
+        createGalleryEntry('silver-target', {
+          sourceImage: 'source-silver',
+          previewImage: 'preview-silver',
+          moves: 40,
+          time: 100,
+        }),
+        createGalleryEntry('silver-attempt', {
+          sourceImage: 'source-silver',
+          previewImage: 'preview-silver',
+          challengeTargetId: 'silver-target',
+          challengeMedal: 'silver',
+          assistanceMode: 'clean',
+          moves: 41,
+          time: 101,
+        }),
+        createGalleryEntry('gold-target', {
+          sourceImage: 'source-gold',
+          previewImage: 'preview-gold',
+        }),
+        createGalleryEntry('gold-attempt', {
+          sourceImage: 'source-gold',
+          previewImage: 'preview-gold',
+          challengeTargetId: 'gold-target',
+          challengeMedal: 'gold',
+        }),
+        createGalleryEntry('normal-run', {
+          sourceImage: 'source-normal',
+          previewImage: 'preview-normal',
+        }),
+      ],
+      {
+        difficultyFilter: 'all',
+        assistanceFilter: 'all',
+      }
+    )
+
+    const silverEntry = entries.find((entry) => entry.motifId === 'source-silver')
+    expect(silverEntry).toBeDefined()
+    expect(silverEntry ? getGalleryMedalHuntStatus(silverEntry) : null).toMatchObject({
+      bestMedal: 'silver',
+      nextMedal: 'gold',
+      upgradeable: true,
+      nearUpgrade: true,
+    })
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-medal'))).toHaveLength(1)
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-gold'))).toHaveLength(2)
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable'))).toHaveLength(2)
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'near-upgrade'))).toEqual([silverEntry])
+    expect(sortGalleryDisplayEntries(entries, 'upgrade-potential').map((entry) => entry.motifId)).toEqual([
+      'source-silver',
+      'source-normal',
+      'source-gold',
+    ])
   })
 
   it('markiert die beste Medaille und das naechste erreichbare Motiv-Ziel', () => {

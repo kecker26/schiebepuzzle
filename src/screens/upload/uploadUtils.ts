@@ -23,6 +23,12 @@ export type GalleryAssistanceFilter =
   | 'hinted'
   | 'auto-assisted'
   | 'legacy'
+export type GalleryMedalHuntFilter =
+  | 'all'
+  | 'no-medal'
+  | 'no-gold'
+  | 'upgradeable'
+  | 'near-upgrade'
 export type GallerySortOption =
   | 'latest'
   | 'oldest'
@@ -30,6 +36,7 @@ export type GallerySortOption =
   | 'fewest-moves'
   | 'fewest-actions'
   | 'fewest-detours'
+  | 'upgrade-potential'
 
 export interface DashboardTabDefinition {
   id: StatsDashboardTab
@@ -500,6 +507,14 @@ export const GALLERY_ASSISTANCE_FILTER_OPTIONS: GallerySelectOption<GalleryAssis
   { id: 'legacy', label: 'Nur Legacy-Daten' },
 ]
 
+export const GALLERY_MEDAL_HUNT_FILTER_OPTIONS: GallerySelectOption<GalleryMedalHuntFilter>[] = [
+  { id: 'all', label: 'Alle Motive' },
+  { id: 'no-medal', label: 'Ohne Medaille' },
+  { id: 'no-gold', label: 'Ohne Gold oder Diamant' },
+  { id: 'upgradeable', label: 'Noch upgradefaehig' },
+  { id: 'near-upgrade', label: 'Nahe am naechsten Upgrade' },
+]
+
 export const GALLERY_SORT_OPTIONS: GallerySelectOption<GallerySortOption>[] = [
   { id: 'latest', label: 'Neueste zuerst' },
   { id: 'oldest', label: 'Aelteste zuerst' },
@@ -507,6 +522,7 @@ export const GALLERY_SORT_OPTIONS: GallerySelectOption<GallerySortOption>[] = [
   { id: 'fewest-moves', label: 'Wenigste Netto-Zuege' },
   { id: 'fewest-actions', label: 'Wenigste Aktionen' },
   { id: 'fewest-detours', label: 'Wenigste Korrekturen' },
+  { id: 'upgrade-potential', label: 'Bestes Upgrade-Potenzial' },
 ]
 
 export function matchesGalleryDifficultyFilter(

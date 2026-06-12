@@ -1,5 +1,6 @@
 import {
   ArchiveRestore,
+  ArrowUp,
   BadgeCheck,
   ChartNoAxesColumn,
   CircleHelp,
@@ -16,6 +17,7 @@ import {
   Layers,
   ListRestart,
   MousePointerClick,
+  Pencil,
   PlayCircle,
   RefreshCw,
   Search,
@@ -30,6 +32,7 @@ import {
 
 const uploadScreenIconAssets = {
   archiveRestore: ArchiveRestore,
+  arrowUp: ArrowUp,
   award: Trophy,
   barChart2: ChartNoAxesColumn,
   checkCircle: BadgeCheck,
@@ -48,6 +51,7 @@ const uploadScreenIconAssets = {
   layers: Layers,
   listRestart: ListRestart,
   mousePointerClick: MousePointerClick,
+  pencil: Pencil,
   playCircle: PlayCircle,
   refreshCw: RefreshCw,
   search: Search,

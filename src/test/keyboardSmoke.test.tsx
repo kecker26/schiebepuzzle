@@ -1278,6 +1278,74 @@ describe('keyboard smoke tests', () => {
     })
   })
 
+  it('filters and sorts the gallery for medal hunting', async () => {
+    const silverTarget = {
+      ...createSolvedGalleryEntry('silver-target', '2026-04-11T09:00:00.000Z'),
+      previewImage: 'data:image/png;base64,preview-silver',
+      sourceImage: 'data:image/png;base64,source-silver',
+      moves: 40,
+      time: 100,
+    }
+    const galleryEntries: SolvedGalleryEntry[] = [
+      {
+        ...createSolvedGalleryEntry('silver-attempt', '2026-04-11T12:00:00.000Z'),
+        previewImage: silverTarget.previewImage,
+        sourceImage: silverTarget.sourceImage,
+        moves: 41,
+        time: 101,
+        assistanceMode: 'clean',
+        challengeTargetId: silverTarget.id,
+        challengeMedal: 'silver',
+      },
+      silverTarget,
+      {
+        ...createSolvedGalleryEntry('normal-entry', '2026-04-11T10:00:00.000Z'),
+        previewImage: 'data:image/png;base64,preview-normal',
+        sourceImage: 'data:image/png;base64,source-normal',
+      },
+    ]
+
+    render(
+      <UploadGalleryPanel
+        gallery={{
+          entries: galleryEntries,
+          totalEntries: galleryEntries.length,
+          lastCompletedAt: galleryEntries[0].completedAt,
+          lastUpdatedAt: galleryEntries[0].completedAt,
+        }}
+        isLoadingGallery={false}
+        onReplayEntry={vi.fn()}
+        onDeleteEntries={vi.fn(() => Promise.resolve())}
+        titleId="gallery-panel-title"
+        panelRole="region"
+      />
+    )
+
+    let huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Jagd' })
+    let sortSelect = screen.getByRole('combobox', { name: 'Sortierung' })
+
+    fireEvent.change(huntSelect, { target: { value: 'near-upgrade' } })
+    await waitFor(() => {
+      expect(screen.getByText('1 von 2 Motiven sichtbar')).toBeTruthy()
+    })
+
+    huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Jagd' })
+    fireEvent.change(huntSelect, { target: { value: 'upgradeable' } })
+    await waitFor(() => {
+      expect(screen.getByText('2 von 2 Motiven sichtbar')).toBeTruthy()
+    })
+
+    sortSelect = screen.getByRole('combobox', { name: 'Sortierung' })
+    fireEvent.change(sortSelect, { target: { value: 'upgrade-potential' } })
+    expect((sortSelect as HTMLSelectElement).value).toBe('upgrade-potential')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zuruecksetzen' }))
+    await waitFor(() => {
+      expect((screen.getByRole('combobox', { name: 'Medaillen-Jagd' }) as HTMLSelectElement).value).toBe('all')
+      expect((screen.getByRole('combobox', { name: 'Sortierung' }) as HTMLSelectElement).value).toBe('latest')
+    })
+  })
+
   it('toggles multiple gallery tag chips as AND filters', async () => {
     const galleryEntries: SolvedGalleryEntry[] = [
       {
@@ -3827,6 +3895,66 @@ describe('keyboard smoke tests', () => {
     expect(onReloadView).not.toHaveBeenCalled()
   })
 
+  it('shows five equally ranked dashboard cards including medal statistics', () => {
+    const completionHistory = [
+      createCompletionRecord('1', '2026-04-10T10:00:00.000Z'),
+      createCompletionRecord('2', '2026-04-11T10:00:00.000Z'),
+    ]
+    const silverTarget = {
+      ...createSolvedGalleryEntry('medal-target', '2026-04-09T10:00:00.000Z'),
+      sourceImage: 'data:image/png;base64,medal-motif',
+      previewImage: 'data:image/png;base64,medal-motif-preview',
+    }
+    const galleryEntries: SolvedGalleryEntry[] = [
+      silverTarget,
+      {
+        ...createSolvedGalleryEntry('medal-attempt', '2026-04-11T10:00:00.000Z'),
+        sourceImage: silverTarget.sourceImage,
+        previewImage: silverTarget.previewImage,
+        challengeTargetId: silverTarget.id,
+        challengeMedal: 'silver',
+      },
+    ]
+    const gallery = {
+      entries: galleryEntries,
+      totalEntries: galleryEntries.length,
+      lastCompletedAt: galleryEntries[1].completedAt,
+      lastUpdatedAt: galleryEntries[1].completedAt,
+    }
+    const reportProps = {
+      stats: null,
+      gallery,
+      latestCompletion: completionHistory[1],
+      favoriteDifficulty: null,
+      fastestDifficulty: null,
+      completionHistory,
+      filteredHistory: completionHistory,
+      historyFilter: 'all' as const,
+      historyFilterOptions: [{ id: 'all' as const, label: 'Alle Siege' }],
+      standardDifficultyStats: DIFFICULTY_OPTIONS.map((option) => ({ option, stats: null })),
+      onHistoryFilterChange: vi.fn(),
+      onReloadView: vi.fn(),
+      onBackToStart: vi.fn(),
+      onActiveViewChange: vi.fn(),
+    }
+    const { container, rerender } = render(
+      <UploadStatsVisualReport
+        {...reportProps}
+        activeView="overview"
+      />
+    )
+
+    expect(container.querySelectorAll('.stats-visual-dashboard-grid > .stats-report-card')).toHaveLength(5)
+    expect(screen.getByText('Challenge-Erfolge')).toBeTruthy()
+    expect(screen.getByText('1 Motive')).toBeTruthy()
+
+    rerender(<UploadStatsVisualReport {...reportProps} activeView="history" />)
+
+    expect(screen.getByLabelText('Medaillen-Aufstiege, neueste zuerst')).toBeTruthy()
+    expect(screen.getByText('Erste Medaille')).toBeTruthy()
+    expect(screen.getByText(/Silber erreicht/)).toBeTruthy()
+  })
+
   it('shows the solve-time histogram with separate difficulty color legends', () => {
     const completionHistory = [
       { ...createCompletionRecord('1', '2026-04-10T10:00:00.000Z'), config: { rows: 3, cols: 3 }, time: 90 },
@@ -3860,7 +3988,12 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByLabelText('Farblegende Histogramm')).toBeTruthy()
     expect(screen.getByText('Verteilung der Loesungszeiten')).toBeTruthy()
     expect(screen.queryByText('Lauf-Score')).toBeNull()
-    expect(screen.getAllByRole('button', { name: 'Zum Seitenanfang' })).toHaveLength(2)
+    const pageTopButtons = screen.getAllByRole('button', { name: 'Zum Seitenanfang' })
+    const backToSelectionButtons = screen.getAllByRole('button', { name: 'Zur Auswahl' })
+    expect(pageTopButtons).toHaveLength(2)
+    expect(backToSelectionButtons).toHaveLength(2)
+    expect(pageTopButtons.every((button) => button.querySelector('svg'))).toBe(true)
+    expect(backToSelectionButtons.every((button) => button.querySelector('svg'))).toBe(true)
     expect(container.textContent).toContain('5 sichtbare Laeufe')
     expect(container.querySelectorAll('.stats-recharts-histogram-frame')).toHaveLength(1)
     expect(container.textContent).toContain('Hauptbereich: 15-Sekunden-Intervalle, danach zunehmend groesser')

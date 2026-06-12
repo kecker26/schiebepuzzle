@@ -1,9 +1,13 @@
 import { ChallengeMedal, PuzzleConfig, SolvedGalleryEntry } from '../../types/index'
-import { getBestChallengeMedal } from '../../utils/galleryChallenge.ts'
-import { getChallengeMedalRank } from '../../utils/galleryChallenge.ts'
+import {
+  getBestChallengeMedal,
+  getChallengeMedalProgress,
+  getChallengeMedalRank,
+} from '../../utils/galleryChallenge.ts'
 import {
   GalleryAssistanceFilter,
   GalleryDifficultyFilter,
+  GalleryMedalHuntFilter,
   GallerySortOption,
   getCompletionExtraMoves,
   matchesGalleryAssistanceFilter,
@@ -58,6 +62,15 @@ export interface GalleryDisplayGroup {
 
 export type GalleryMedalFilter = 'all' | ChallengeMedal
 
+export interface GalleryMedalHuntStatus {
+  bestMedal: ChallengeMedal | null
+  nextMedal: ChallengeMedal | null
+  hasStarted: boolean
+  upgradeable: boolean
+  nearUpgrade: boolean
+  proximityScore: number | null
+}
+
 export interface GalleryMedalCollectionItem {
   medal: ChallengeMedal
   count: number
@@ -90,6 +103,95 @@ export function matchesGalleryMedalFilter(
   filter: GalleryMedalFilter
 ): boolean {
   return filter === 'all' || entry.motifReplaySummary.bestChallengeMedal === filter
+}
+
+function normalizedGap(value: number, target: number): number {
+  return Math.max(0, value) / Math.max(1, target)
+}
+
+function getAttemptUpgradeProximity(
+  attempt: SolvedGalleryEntry,
+  target: SolvedGalleryEntry,
+  nextMedal: ChallengeMedal
+): number | null {
+  if (nextMedal === 'silver') {
+    return Math.min(
+      normalizedGap(attempt.time - target.time, target.time),
+      normalizedGap(attempt.moves - target.moves, target.moves)
+    )
+  }
+
+  const cleanPenalty = attempt.assistanceMode === 'clean' ? 0 : 0.2
+  const timeGap = normalizedGap(attempt.time - target.time + 1, target.time)
+
+  if (nextMedal === 'gold') {
+    return timeGap
+      + normalizedGap(attempt.moves - target.moves + 1, target.moves)
+      + cleanPenalty
+  }
+
+  if (
+    nextMedal === 'diamond'
+    && target.replaySetup?.optimalStartMoveCountKind === 'exact'
+    && typeof target.replaySetup.optimalStartMoveCount === 'number'
+  ) {
+    return timeGap
+      + normalizedGap(
+        attempt.moves - target.replaySetup.optimalStartMoveCount,
+        target.replaySetup.optimalStartMoveCount
+      )
+      + cleanPenalty
+  }
+
+  return null
+}
+
+export function getGalleryMedalHuntStatus(
+  entry: Pick<GalleryDisplayEntry, 'motifReplaySummary'>
+): GalleryMedalHuntStatus {
+  const allEntries = entry.motifReplaySummary.allEntries
+  const progress = getChallengeMedalProgress(allEntries)
+  const bestMedal = progress.currentMedal
+  const nextMedal = progress.nextMedal
+  const hasStarted = bestMedal !== null
+  const upgradeable = nextMedal !== null
+  let proximityScore: number | null = null
+
+  if (bestMedal && nextMedal) {
+    for (const attempt of allEntries) {
+      if (attempt.challengeMedal !== bestMedal || !attempt.challengeTargetId) continue
+      const target = allEntries.find((candidate) => candidate.id === attempt.challengeTargetId)
+      if (!target) continue
+
+      const score = getAttemptUpgradeProximity(attempt, target, nextMedal)
+      if (score !== null && (proximityScore === null || score < proximityScore)) {
+        proximityScore = score
+      }
+    }
+  }
+
+  return {
+    bestMedal,
+    nextMedal,
+    hasStarted,
+    upgradeable,
+    nearUpgrade: proximityScore !== null && proximityScore <= 0.2,
+    proximityScore,
+  }
+}
+
+export function matchesGalleryMedalHuntFilter(
+  entry: Pick<GalleryDisplayEntry, 'motifReplaySummary'>,
+  filter: GalleryMedalHuntFilter
+): boolean {
+  if (filter === 'all') return true
+
+  const status = getGalleryMedalHuntStatus(entry)
+  if (filter === 'no-medal') return !status.hasStarted
+  if (filter === 'no-gold') return status.bestMedal === null
+    || getChallengeMedalRank(status.bestMedal) < getChallengeMedalRank('gold')
+  if (filter === 'near-upgrade') return status.nearUpgrade
+  return !status.hasStarted || status.upgradeable
 }
 
 export interface GalleryChallengeSeries {
@@ -464,6 +566,20 @@ export function sortGalleryDisplayEntries(
         return compareNumbersAscending(a.bestVisibleActionMoves, b.bestVisibleActionMoves, latestFallback)
       case 'fewest-detours':
         return compareNumbersAscending(a.bestVisibleDetours, b.bestVisibleDetours, latestFallback)
+      case 'upgrade-potential': {
+        const statusA = getGalleryMedalHuntStatus(a)
+        const statusB = getGalleryMedalHuntStatus(b)
+        if (statusA.upgradeable !== statusB.upgradeable) return statusA.upgradeable ? -1 : 1
+        if (statusA.hasStarted !== statusB.hasStarted) return statusA.hasStarted ? -1 : 1
+
+        const rankA = statusA.bestMedal ? getChallengeMedalRank(statusA.bestMedal) : 0
+        const rankB = statusB.bestMedal ? getChallengeMedalRank(statusB.bestMedal) : 0
+        if (rankA !== rankB) return rankB - rankA
+
+        const scoreA = statusA.proximityScore ?? Number.POSITIVE_INFINITY
+        const scoreB = statusB.proximityScore ?? Number.POSITIVE_INFINITY
+        return compareNumbersAscending(scoreA, scoreB, latestFallback)
+      }
       case 'latest':
       default:
         return latestFallback
