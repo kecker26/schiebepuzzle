@@ -26,6 +26,7 @@ import {
 import { formatDate, formatTime } from './uploadUtils.ts'
 import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 import UploadPageNavigation from './UploadPageNavigation.tsx'
+import UploadPanelFooterNavigation from './UploadPanelFooterNavigation.tsx'
 import UploadStateNotice from './UploadStateNotice.tsx'
 import { useUploadImagePalette } from './uploadImagePalette.ts'
 
@@ -43,6 +44,8 @@ interface UploadCollectionsPanelProps {
   onDeleteCollection: (collectionId: string) => Promise<void>
   onRemoveCollectionImages: (collectionId: string, imageIds: string[]) => Promise<void>
   onEditEntryTags?: (entryIds: string[], add?: string[], remove?: string[]) => Promise<void>
+  onBackToStart?: () => void
+  onScrollToStart?: () => void
   titleId?: string
   panelRole?: AriaRole
   primaryActionRef?: RefObject<HTMLButtonElement>
@@ -76,6 +79,8 @@ export default function UploadCollectionsPanel({
   onDeleteCollection,
   onRemoveCollectionImages,
   onEditEntryTags,
+  onBackToStart,
+  onScrollToStart,
   titleId = 'workspace-window-collections-title',
   panelRole = 'region',
   primaryActionRef,
@@ -421,6 +426,7 @@ export default function UploadCollectionsPanel({
             </div>
           )}
         </AnimatedStateSwap>
+        <UploadPanelFooterNavigation onBackToStart={onBackToStart} onScrollToStart={onScrollToStart} />
       </div>
 
       {renamingCollection ? (
@@ -672,6 +678,7 @@ function CollectionDetail({
             data-app-tooltip="Name und Beschreibung der Sammlung bearbeiten."
             data-app-tooltip-position="top"
           >
+            <UploadScreenIcon name="pencil" />
             Bearbeiten
           </AnimatedButton>
           <AnimatedButton
@@ -681,6 +688,7 @@ function CollectionDetail({
             data-app-tooltip="Sammlung loeschen. Die Galerie-Motive bleiben erhalten."
             data-app-tooltip-position="top"
           >
+            <UploadScreenIcon name="trash" />
             Loeschen
           </AnimatedButton>
         </div>

@@ -1,6 +1,7 @@
 import { type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, ReactNode, RefObject, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useAccessibilityAnnouncer } from '../../app/accessibilityAnnouncer.tsx'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
+import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedCollapse from '../../motion/AnimatedCollapse.tsx'
 import { motionTransitions } from '../../motion/tokens.ts'
@@ -59,6 +60,7 @@ export default function UploadStatsSection({
             data-app-tooltip="Zum Anfang dieses Statistikbereichs springen."
             data-app-tooltip-position="top"
           >
+            <UploadScreenIcon name="arrowUp" />
             Zum Seitenanfang
           </AnimatedButton>
         ) : null}
@@ -70,6 +72,7 @@ export default function UploadStatsSection({
             data-app-tooltip="Zur Auswahluebersicht zurueckkehren."
             data-app-tooltip-position="top"
           >
+            <UploadScreenIcon name="home" />
             Zur Auswahl
           </AnimatedButton>
         ) : null}

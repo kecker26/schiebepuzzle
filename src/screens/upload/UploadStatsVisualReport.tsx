@@ -3,9 +3,11 @@ import {
   Activity,
   ArrowUp,
   Download,
+  Home,
   Info,
   LayoutDashboard,
   LineChart as LineChartIcon,
+  Medal,
   Table2,
 } from 'lucide-react'
 import {
@@ -31,13 +33,21 @@ import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedChipButton from '../../motion/AnimatedChipButton.tsx'
 import AnimatedSwapPane from '../../motion/AnimatedSwapPane.tsx'
 import SpringNumber from '../../motion/SpringNumber.tsx'
+import { useReducedMotionPreference } from '../../motion/useReducedMotionPreference.ts'
 import { savePuzzleStatsExportFile } from '../../services/StatsService.ts'
-import { PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats } from '../../types/index'
+import { PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats, SolvedGallery } from '../../types/index'
+import { formatChallengeMedalLabel, getChallengeMedalEmoji } from '../../utils/galleryChallenge.ts'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import UploadStatsComparisonMatrix from './UploadStatsComparisonMatrix.tsx'
 import UploadStatsDifficultyTable from './UploadStatsDifficultyTable.tsx'
 import UploadStatsHistorySection from './UploadStatsHistorySection.tsx'
 import UploadStatsRunComparison from './UploadStatsRunComparison.tsx'
+import {
+  buildMedalDistribution,
+  buildMedalTrend,
+  MEDAL_STATS_COLORS,
+  MEDAL_STATS_ORDER,
+} from './UploadMedalStatsUtils.ts'
 import {
   DifficultyReportRow,
   HistoryFilter,
@@ -77,6 +87,7 @@ interface AssistanceSummary {
 
 interface UploadStatsVisualReportProps {
   stats: PuzzleStats | null
+  gallery?: SolvedGallery | null
   latestCompletion: PuzzleCompletionRecord | null
   favoriteDifficulty: PuzzleDifficultyStats | null
   fastestDifficulty: PuzzleDifficultyStats | null
@@ -1220,7 +1231,7 @@ function getHistogramChartLayout(bucketCount: number): {
   return { barCategoryGap: '18%', maxBarSize: 72 }
 }
 
-function getTrendTicks(points: TrendPoint[]): number[] {
+function getTrendTicks(points: Array<{ index: number }>): number[] {
   const maximumTicks = 8
   if (points.length <= maximumTicks) return points.map((point) => point.index)
 
@@ -1669,8 +1680,28 @@ function renderDonutTooltip({ active, payload }: ChartTooltipProps, total: numbe
   )
 }
 
+function renderMedalDonutTooltip({ active, payload }: ChartTooltipProps, total: number) {
+  if (!active || !payload || payload.length === 0) return null
+
+  const segment = payload[0]?.payload as DonutSegment | undefined
+  if (!segment) return null
+  const percentage = total > 0 ? Math.round((segment.value / total) * 100) : 0
+
+  return (
+    <CursorTooltipPortal active>
+      <div className="stats-recharts-tooltip">
+        <strong>{segment.label}</strong>
+        <span>{segment.value} {segment.value === 1 ? 'Motiv' : 'Motive'}</span>
+        <span>{percentage}% der Motive mit Challenge-Medaille</span>
+        <small>Pro Motiv zaehlt ausschliesslich die beste erreichte Medaille.</small>
+      </div>
+    </CursorTooltipPortal>
+  )
+}
+
 export default function UploadStatsVisualReport({
   stats,
+  gallery = null,
   latestCompletion,
   favoriteDifficulty,
   fastestDifficulty,
@@ -1686,6 +1717,7 @@ export default function UploadStatsVisualReport({
   onActiveViewChange,
   primaryFocusRef,
 }: UploadStatsVisualReportProps) {
+  const shouldReduceMotion = useReducedMotionPreference()
   const reportRef = useRef<HTMLElement>(null)
   const [trendMetric, setTrendMetric] = useState<TrendMetric>('actions')
   const [trendRange, setTrendRange] = useState<HistoryRange>('all')
@@ -1775,6 +1807,12 @@ export default function UploadStatsVisualReport({
     [assistanceSummary, completionHistory, latestCompletion, stats]
   )
   const donutSegments = useMemo(() => buildDonutSegments(selectedAssistanceSummary), [selectedAssistanceSummary])
+  const medalDistribution = useMemo(
+    () => buildMedalDistribution(gallery?.entries ?? []).filter((segment) => segment.value > 0),
+    [gallery]
+  )
+  const medalTrend = useMemo(() => buildMedalTrend(gallery?.entries ?? []), [gallery])
+  const totalMedalMotifs = medalDistribution.reduce((sum, segment) => sum + segment.value, 0)
   const latestScoreBreakdown = useMemo(
     () => latestCompletion ? calculateQualityBreakdown(latestCompletion) : null,
     [latestCompletion]
@@ -2003,13 +2041,14 @@ export default function UploadStatsVisualReport({
     const scrollSource = source ?? reportRef.current
     const overlay = scrollSource?.closest<HTMLElement>('.workspace-window-overlay')
     const statsScrollContainer = scrollSource?.closest<HTMLElement>('.dashboard-panel-scroll')
+    const behavior = shouldReduceMotion ? 'auto' : 'smooth'
 
     if (overlay) {
-      overlay.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+      overlay.scrollTo({ top: 0, left: 0, behavior })
     } else if (statsScrollContainer) {
-      statsScrollContainer.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+      statsScrollContainer.scrollTo({ top: 0, left: 0, behavior })
     } else {
-      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+      window.scrollTo({ top: 0, left: 0, behavior })
     }
   }
   const scrollRawStatisticsToTop = () => scrollToStatisticsTop()
@@ -2098,6 +2137,51 @@ export default function UploadStatsVisualReport({
                     </div>
                   )}
                   {renderDifficultyFilterControls()}
+                </article>
+
+                <article className="stats-report-card stats-visual-donut-card stats-visual-medal-card">
+                  <div className="stats-visual-card-head">
+                    <span className="saved-games-kicker">Challenge-Erfolge</span>
+                    <strong className="stats-report-card-value">
+                      <SpringNumber
+                        value={totalMedalMotifs}
+                        from={0}
+                        durationMs={1700}
+                        formatter={(value) => `${Math.round(value)} Motive`}
+                      />
+                    </strong>
+                    <p className="stats-report-card-copy">
+                      Verteilung der besten Challenge-Medaille pro Motiv. Niedrigere bereits erreichte Stufen werden nicht doppelt gezaehlt.
+                    </p>
+                  </div>
+                  {medalDistribution.length === 0 ? (
+                    <div className="stats-empty-state dashboard-empty-state">
+                      <span className="empty-icon" aria-hidden="true"><Medal /></span>
+                      <p>Noch keine Challenge-Medaillen vorhanden.</p>
+                    </div>
+                  ) : (
+                    <div className="stats-recharts-donut-frame">
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie
+                            data={medalDistribution}
+                            dataKey="value"
+                            nameKey="label"
+                            innerRadius="58%"
+                            outerRadius="82%"
+                            paddingAngle={3}
+                            stroke="transparent"
+                          >
+                            {medalDistribution.map((segment) => (
+                              <Cell key={segment.key} fill={segment.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip content={(props) => renderMedalDonutTooltip(props, totalMedalMotifs)} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 </article>
 
                 <article className="stats-report-card stats-visual-focus-card stats-visual-latest-card">
@@ -2365,14 +2449,28 @@ export default function UploadStatsVisualReport({
                   <span>{isMovingAverageVisible ? 'Rohlaeufe als Punkte, 5er-Trend als Linie' : 'Rohlaeufe mit geraden Verbindungen'}</span>
                   <span>{focusedTrendSeries ? `Fokus: ${focusedTrendSeries.label}` : 'Alle sichtbaren Stufen gleichwertig'}</span>
                 </div>
-                <AnimatedButton
-                  className="secondary stats-chart-back-to-top"
-                  interaction="chip"
-                  onClick={(event) => scrollToStatisticsTop(event.currentTarget)}
-                >
-                  <ArrowUp size={16} aria-hidden="true" />
-                  Zum Seitenanfang
-                </AnimatedButton>
+                <div className="stats-chart-footer-navigation" onKeyDown={handleDirectionalFocusNavigation}>
+                  <AnimatedButton
+                    className="secondary stats-chart-footer-button"
+                    interaction="chip"
+                    onClick={(event) => scrollToStatisticsTop(event.currentTarget)}
+                    data-app-tooltip="Zum Anfang der Statistikseite springen."
+                    data-app-tooltip-position="top"
+                  >
+                    <ArrowUp size={16} aria-hidden="true" />
+                    Zum Seitenanfang
+                  </AnimatedButton>
+                  <AnimatedButton
+                    className="secondary stats-chart-footer-button"
+                    interaction="chip"
+                    onClick={onBackToStart}
+                    data-app-tooltip="Zur Auswahluebersicht zurueckkehren."
+                    data-app-tooltip-position="top"
+                  >
+                    <Home size={16} aria-hidden="true" />
+                    Zur Auswahl
+                  </AnimatedButton>
+                </div>
               </article>
 
               <article className="stats-report-card stats-visual-line-card stats-visual-histogram-card">
@@ -2516,14 +2614,103 @@ export default function UploadStatsVisualReport({
                   ) : null}
                   <span>Farben entsprechen den Schwierigkeitsreihen oben</span>
                 </div>
-                <AnimatedButton
-                  className="secondary stats-chart-back-to-top"
-                  interaction="chip"
-                  onClick={(event) => scrollToStatisticsTop(event.currentTarget)}
-                >
-                  <ArrowUp size={16} aria-hidden="true" />
-                  Zum Seitenanfang
-                </AnimatedButton>
+                <div className="stats-chart-footer-navigation" onKeyDown={handleDirectionalFocusNavigation}>
+                  <AnimatedButton
+                    className="secondary stats-chart-footer-button"
+                    interaction="chip"
+                    onClick={(event) => scrollToStatisticsTop(event.currentTarget)}
+                    data-app-tooltip="Zum Anfang der Statistikseite springen."
+                    data-app-tooltip-position="top"
+                  >
+                    <ArrowUp size={16} aria-hidden="true" />
+                    Zum Seitenanfang
+                  </AnimatedButton>
+                  <AnimatedButton
+                    className="secondary stats-chart-footer-button"
+                    interaction="chip"
+                    onClick={onBackToStart}
+                    data-app-tooltip="Zur Auswahluebersicht zurueckkehren."
+                    data-app-tooltip-position="top"
+                  >
+                    <Home size={16} aria-hidden="true" />
+                    Zur Auswahl
+                  </AnimatedButton>
+                </div>
+              </article>
+
+              <article className="stats-report-card stats-visual-line-card stats-visual-medal-trend-card">
+                <div className="stats-visual-line-head">
+                  <span>
+                    <strong>Medaillen-Aufstiege</strong>
+                    <span> Neueste Erfolge und echte Upgrades pro Motiv.</span>
+                  </span>
+                  <span>
+                    <strong>{totalMedalMotifs}</strong>
+                    <span> Motive mit Medaille</span>
+                  </span>
+                </div>
+
+                <div className="stats-medal-summary" aria-label="Aktuelle beste Medaillen pro Motiv">
+                  {MEDAL_STATS_ORDER.map((medal) => {
+                    const count = medalDistribution.find((segment) => segment.key === medal)?.value ?? 0
+                    return (
+                      <div
+                        key={medal}
+                        className={`stats-medal-summary-item is-${medal}`}
+                        style={{ '--medal-color': MEDAL_STATS_COLORS[medal] } as CSSProperties}
+                      >
+                        <span className="stats-medal-summary-emoji" aria-hidden="true">
+                          {getChallengeMedalEmoji(medal)}
+                        </span>
+                        <span>
+                          <strong>{formatChallengeMedalLabel(medal)}</strong>
+                          <small>{count} {count === 1 ? 'Motiv' : 'Motive'}</small>
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {medalTrend.length === 0 ? (
+                  <div className="stats-empty-state dashboard-empty-state">
+                    <span className="empty-icon" aria-hidden="true"><Medal /></span>
+                    <p>Noch keine Medaillen-Aufstiege vorhanden.</p>
+                    <p className="empty-hint">Schliesse eine Challenge ab, damit die Timeline beginnt.</p>
+                  </div>
+                ) : (
+                  <div className="stats-medal-timeline" aria-label="Medaillen-Aufstiege, neueste zuerst">
+                    {[...medalTrend].reverse().map((event) => (
+                      <article
+                        key={event.id}
+                        className={`stats-medal-timeline-item is-${event.medal}`}
+                        style={{ '--medal-color': MEDAL_STATS_COLORS[event.medal] } as CSSProperties}
+                      >
+                        <div className="stats-medal-timeline-preview" aria-hidden="true">
+                          {event.previewImage ? <img src={event.previewImage} alt="" /> : <Medal />}
+                        </div>
+                        <div className="stats-medal-timeline-main">
+                          <span className="saved-games-kicker">
+                            {event.previousMedal ? 'Medaillen-Upgrade' : 'Erste Medaille'}
+                          </span>
+                          <strong>
+                            {event.previousMedal
+                              ? `${getChallengeMedalEmoji(event.previousMedal)} ${formatChallengeMedalLabel(event.previousMedal)} \u2192 ${getChallengeMedalEmoji(event.medal)} ${event.medalLabel}`
+                              : `${getChallengeMedalEmoji(event.medal)} ${event.medalLabel} erreicht`}
+                          </strong>
+                          <small>{formatDate(event.date)}</small>
+                        </div>
+                        <div className="stats-medal-timeline-metrics">
+                          <span>{formatTime(event.time)}</span>
+                          <span>{event.moves} Netto-Zuege</span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                <div className="stats-visual-line-legend">
+                  <span>Neueste Erfolge stehen oben</span>
+                  <span>Wiederholte gleiche Medaillen werden nicht erneut angezeigt</span>
+                </div>
               </article>
             </>
           ) : null}

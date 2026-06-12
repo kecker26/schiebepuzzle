@@ -9,10 +9,12 @@ import {
   useState,
 } from 'react'
 import { ensureElementVisible } from '../../app/focusVisibility.ts'
+import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
 import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { SavedGameSummary } from '../../types/index'
 import UploadPageNavigation from './UploadPageNavigation.tsx'
+import UploadPanelFooterNavigation from './UploadPanelFooterNavigation.tsx'
 import UploadSavedGameItem from './UploadSavedGameItem.tsx'
 import UploadStateNotice from './UploadStateNotice.tsx'
 
@@ -26,6 +28,8 @@ interface UploadSavedGamesPanelProps {
   onLoadSave: (saveId: string) => void
   onDeleteRequest: (save: SavedGameSummary) => void
   onDeleteAllRequest: () => void
+  onBackToStart?: () => void
+  onScrollToStart?: () => void
   titleId?: string
   panelRole?: AriaRole
   primaryActionRef?: RefObject<HTMLButtonElement>
@@ -48,6 +52,8 @@ export default function UploadSavedGamesPanel({
   onLoadSave,
   onDeleteRequest,
   onDeleteAllRequest,
+  onBackToStart,
+  onScrollToStart,
   titleId = 'dashboard-savedgames-title',
   panelRole = 'tabpanel',
   primaryActionRef,
@@ -296,6 +302,7 @@ export default function UploadSavedGamesPanel({
               data-app-tooltip="Alle gespeicherten Zwischenstaende loeschen. Statistik und Galerie bleiben erhalten."
               data-app-tooltip-position="top"
             >
+              <UploadScreenIcon name="trash" />
               {isDeletingAllSavedGames ? <BusyIndicator label="Loesche alle ..." /> : 'Alle loeschen'}
             </button>
           </div>
@@ -350,6 +357,7 @@ export default function UploadSavedGamesPanel({
           </div>
         )}
       </AnimatedStateSwap>
+      <UploadPanelFooterNavigation onBackToStart={onBackToStart} onScrollToStart={onScrollToStart} />
     </div>
   )
 }

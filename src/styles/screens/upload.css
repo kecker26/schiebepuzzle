@@ -142,6 +142,20 @@
   vertical-align: -0.125em;
 }
 
+.workspace-window-header-buttons button,
+.saved-games-delete-all-button,
+.collection-detail-actions button,
+.stats-report-jump-row button,
+.stats-chart-footer-navigation button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+}
+
 .upload-container h1 {
   display: flex;
   align-items: center;
@@ -3512,6 +3526,24 @@
   margin-top: 0;
 }
 
+.gallery-overview-tools {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.65fr);
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 18px;
+}
+
+.gallery-overview-tools > .gallery-medal-collection,
+.gallery-overview-tools > .gallery-toolbar {
+  height: 100%;
+  margin-bottom: 0;
+}
+
+.gallery-overview-tools .gallery-medal-collection-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .gallery-medal-collection {
   --gallery-medal-collection-color: var(--image-accent-solid);
   display: grid;
@@ -3644,9 +3676,8 @@
 
 .gallery-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
-  align-items: end;
   margin-bottom: 18px;
   padding: 18px;
   border-radius: 24px;
@@ -3656,9 +3687,21 @@
 }
 
 .gallery-toolbar-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--card-border) 76%, transparent);
+}
+
+.gallery-overview-tools .gallery-toolbar-summary {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+}
+
+.gallery-overview-tools .gallery-toolbar-copy {
+  text-align: left;
 }
 
 .gallery-toolbar-count {
@@ -3672,13 +3715,25 @@
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.55;
+  text-align: right;
 }
 
 .gallery-toolbar-controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.gallery-toolbar-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-items: end;
+}
+
+.gallery-toolbar-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .gallery-toolbar-field {
@@ -5699,14 +5754,42 @@
 
 
 @media (max-width: 1180px) {
-  .gallery-toolbar {
+  .gallery-overview-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-overview-tools .gallery-medal-collection-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1000px) {
+  .gallery-overview-tools .gallery-medal-collection-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gallery-toolbar-actions {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 767px) {
-  .gallery-toolbar-controls {
+  .gallery-overview-tools {
     grid-template-columns: 1fr;
+  }
+
+  .gallery-overview-tools .gallery-medal-collection-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gallery-toolbar-summary,
+  .gallery-toolbar-filters,
+  .gallery-toolbar-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-toolbar-copy {
+    text-align: left;
   }
 
   .gallery-toolbar-tag-chips {
@@ -8183,8 +8266,8 @@
 
 .stats-visual-dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
   align-items: stretch;
   overflow: visible;
 }
@@ -8205,6 +8288,7 @@
 }
 
 .stats-visual-dashboard-grid > .stats-report-card {
+  min-width: 0;
   min-height: 430px;
 }
 
@@ -9133,8 +9217,12 @@
   justify-self: end;
 }
 
-.stats-chart-back-to-top {
+.stats-chart-footer-navigation {
   align-self: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
   margin-top: 8px;
 }
 
@@ -9159,6 +9247,157 @@
   color: var(--text-main);
   font-size: 16px;
   font-weight: 900;
+}
+
+.stats-visual-medal-trend-card {
+  overflow: hidden;
+}
+
+.stats-medal-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.stats-medal-summary-item {
+  --medal-color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--medal-color) 38%, var(--card-border));
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--medal-color) 12%, transparent), transparent 70%),
+    color-mix(in srgb, var(--secondary-bg) 88%, transparent);
+}
+
+.stats-medal-summary-item > span:last-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stats-medal-summary-item strong {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--medal-color) 78%, var(--text-main));
+  font-size: 12px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+}
+
+.stats-medal-summary-item small {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.stats-medal-summary-emoji {
+  flex: 0 0 auto;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.stats-medal-timeline {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin-top: 14px;
+}
+
+.stats-medal-timeline-item {
+  --medal-color: var(--text-muted);
+  position: relative;
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 12px 14px 12px 12px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--medal-color) 38%, var(--card-border));
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--medal-color) 12%, transparent), transparent 62%),
+    color-mix(in srgb, var(--secondary-bg) 92%, transparent);
+}
+
+.stats-medal-timeline-item::before {
+  content: '';
+  position: absolute;
+  inset: 12px auto 12px 0;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: var(--medal-color);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--medal-color) 52%, transparent);
+}
+
+.stats-medal-timeline-preview {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 52px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--medal-color) 45%, var(--card-border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--medal-color) 12%, var(--surface-soft));
+  color: var(--medal-color);
+}
+
+.stats-medal-timeline-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stats-medal-timeline-preview svg {
+  width: 22px;
+  height: 22px;
+}
+
+.stats-medal-timeline-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.stats-medal-timeline-main .saved-games-kicker {
+  color: color-mix(in srgb, var(--medal-color) 72%, var(--text-secondary));
+}
+
+.stats-medal-timeline-main strong {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.stats-medal-timeline-main small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.stats-medal-timeline-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stats-medal-timeline-metrics span {
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--medal-color) 24%, var(--card-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--medal-color) 9%, var(--surface-soft));
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .stats-visual-chart-legend {
@@ -9600,13 +9839,6 @@
   z-index: 2;
   margin-top: 2px;
 }
-
-@media (max-width: 1280px) {
-  .stats-visual-dashboard-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 
 /* ─── Stats report jump row ────────────────────────────────────────── */
 
@@ -11550,6 +11782,26 @@
   object-fit: cover;
 }
 
+@media (max-width: 900px) {
+  .stats-medal-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-medal-timeline-item {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .stats-medal-timeline-preview {
+    width: 56px;
+    height: 48px;
+  }
+
+  .stats-medal-timeline-metrics {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
 
 /* ─── Responsive: stats report ─────────────────────────────────────── */
 
@@ -11717,6 +11969,20 @@
 
   .stats-visual-line-card {
     min-height: 330px;
+  }
+
+  .stats-visual-line-head,
+  .stats-visual-line-legend {
+    flex-direction: column;
+  }
+
+  .stats-medal-timeline-item {
+    gap: 10px;
+    padding-right: 12px;
+  }
+
+  .stats-medal-timeline-metrics {
+    grid-column: 1 / -1;
   }
 
   .stats-recharts-line-frame {

@@ -228,26 +228,37 @@ export default function UploadDashboard({
       await onRemoveImageCollectionImages(removal.collectionId, removal.imageIds)
     }
   }, [collections, onEditGalleryEntryTags, onRemoveImageCollectionImages])
-  const resetWorkspaceScrollPosition = useCallback(() => {
+  const resetWorkspaceScrollPosition = useCallback((behavior: ScrollBehavior = 'auto') => {
     const overlay = document.querySelector('.workspace-window-overlay')
     const shell = document.querySelector('.workspace-window-shell')
 
     if (overlay instanceof HTMLElement) {
-      overlay.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      overlay.scrollTo({ top: 0, left: 0, behavior })
     }
 
     if (shell instanceof HTMLElement) {
-      shell.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      shell.scrollTo({ top: 0, left: 0, behavior })
     }
   }, [])
 
   const handleReloadStatsView = () => {
-    resetWorkspaceScrollPosition()
+    resetWorkspaceScrollPosition(shouldReduceMotion ? 'auto' : 'smooth')
 
     startTransition(() => {
       setStatsViewReloadKey((current) => current + 1)
     })
   }
+
+  const handleScrollToWorkspaceStart = useCallback(() => {
+    resetWorkspaceScrollPosition(shouldReduceMotion ? 'auto' : 'smooth')
+
+    window.requestAnimationFrame(() => {
+      const activeNavButton = document.querySelector<HTMLButtonElement>(
+        '.workspace-window-nav-button[aria-current="page"]'
+      )
+      activeNavButton?.focus({ preventScroll: true })
+    })
+  }, [resetWorkspaceScrollPosition, shouldReduceMotion])
 
   const handleWorkspaceNavKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
@@ -660,6 +671,7 @@ export default function UploadDashboard({
                     data-app-tooltip="Gespeicherte Statistikdaten loeschen. Galerie und Spielstaende bleiben separat."
                     data-app-tooltip-position="top"
                   >
+                    <UploadScreenIcon name="trash" />
                     Statistik loeschen
                   </AnimatedButton>
                 )}
@@ -673,6 +685,7 @@ export default function UploadDashboard({
                     data-app-tooltip="Galerie geloester Motive loeschen. Spielstaende bleiben separat."
                     data-app-tooltip-position="top"
                   >
+                    <UploadScreenIcon name="trash" />
                     Galerie loeschen
                   </AnimatedButton>
                 )}
@@ -683,6 +696,7 @@ export default function UploadDashboard({
                   data-app-tooltip="Zum Auswahl-Dashboard zurueckkehren."
                   data-app-tooltip-position="top"
                 >
+                  <UploadScreenIcon name="home" />
                   Auswahl
                 </AnimatedButton>
               </div>
@@ -736,6 +750,7 @@ export default function UploadDashboard({
                       primaryFocusRef={statsPrimaryActionRef}
                       isLoadingStats={isLoadingStats}
                       stats={stats}
+                      gallery={gallery}
                       latestCompletion={latestCompletion}
                       favoriteDifficulty={favoriteDifficulty}
                       fastestDifficulty={fastestDifficulty}
@@ -817,6 +832,8 @@ export default function UploadDashboard({
                       onRetryTagging={onRetryGalleryTagging}
                       onCreateCollection={onCreateImageCollection}
                       onAddCollectionImages={onAddImageCollectionImages}
+                      onBackToStart={handleReturnToStart}
+                      onScrollToStart={handleScrollToWorkspaceStart}
                       titleId="workspace-window-gallery-title"
                       panelRole="region"
                       paletteStyle={paletteStyle}
@@ -892,6 +909,8 @@ export default function UploadDashboard({
                       onDeleteCollection={onDeleteImageCollection}
                       onRemoveCollectionImages={onRemoveImageCollectionImages}
                       onEditEntryTags={handleEditGalleryEntryTags}
+                      onBackToStart={handleReturnToStart}
+                      onScrollToStart={handleScrollToWorkspaceStart}
                       titleId="workspace-window-collections-title"
                       panelRole="region"
                       paletteStyle={paletteStyle}
@@ -934,6 +953,8 @@ export default function UploadDashboard({
                       onLoadSave={onLoadSave}
                       onDeleteRequest={onDeleteRequest}
                       onDeleteAllRequest={onDeleteAllRequest}
+                      onBackToStart={handleReturnToStart}
+                      onScrollToStart={handleScrollToWorkspaceStart}
                       titleId="workspace-window-savedgames-title"
                       panelRole="region"
                     />
