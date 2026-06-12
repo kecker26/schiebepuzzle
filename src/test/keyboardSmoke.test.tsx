@@ -3348,6 +3348,14 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Aufstieg: Bronze zu Silber')).toBeTruthy()
     expect(screen.getByText('Fuer Gold')).toBeTruthy()
     expect(screen.getByText('ohne Hilfe')).toBeTruthy()
+    expect(screen.getByText('Stufenvergleich')).toBeTruthy()
+    expect(screen.getByText('Aktueller Lauf · Zeit')).toBeTruthy()
+    expect(screen.getByText('Aktueller Lauf · Netto-Zuege')).toBeTruthy()
+    expect(screen.getByText('Aktueller Lauf · Laufart')).toBeTruthy()
+    expect(screen.getByText(/Die Challenge-Vorlage wird oben separat verglichen/)).toBeTruthy()
+    expect(screen.getByText(/Letzter abgeschlossener Normal 4x4-Lauf/)).toBeTruthy()
+    expect(screen.getByText(/schneller als letzter Normal 4x4-Lauf/)).toBeTruthy()
+    expect(screen.getByText(/Stufen-Bestzeit/)).toBeTruthy()
   })
 
   it('weist bei einer optimalen Challenge-Vorlage auf das Ueberspringen von Gold hin', () => {

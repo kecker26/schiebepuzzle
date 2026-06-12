@@ -115,38 +115,38 @@ function getToneClass(tone: ComparisonTone): string {
   }
 }
 
-function createTimeBadge(delta: number | null): WinComparisonBadge | null {
+function createTimeBadge(delta: number | null, difficultyLabel: string): WinComparisonBadge | null {
   if (delta === null) {
     return null
   }
 
   if (delta === 0) {
     return {
-      label: 'Zeit wie zuletzt',
+      label: `Gleich schnell wie letzter ${difficultyLabel}-Lauf`,
       tone: 'neutral',
     }
   }
 
   return {
-    label: `${formatShortDuration(Math.abs(delta))} ${delta < 0 ? 'schneller' : 'langsamer'}`,
+    label: `${formatShortDuration(Math.abs(delta))} ${delta < 0 ? 'schneller' : 'langsamer'} als letzter ${difficultyLabel}-Lauf`,
     tone: delta < 0 ? 'positive' : 'negative',
   }
 }
 
-function createMovesBadge(delta: number | null): WinComparisonBadge | null {
+function createMovesBadge(delta: number | null, difficultyLabel: string): WinComparisonBadge | null {
   if (delta === null) {
     return null
   }
 
   if (delta === 0) {
     return {
-      label: 'Wie zuletzt',
+      label: `Gleich viele Zuege wie letzter ${difficultyLabel}-Lauf`,
       tone: 'neutral',
     }
   }
 
   return {
-    label: `${formatCount(Math.abs(delta), 'Zug', 'Zuege')} ${delta < 0 ? 'weniger' : 'mehr'}`,
+    label: `${formatCount(Math.abs(delta), 'Zug', 'Zuege')} ${delta < 0 ? 'weniger' : 'mehr'} als letzter ${difficultyLabel}-Lauf`,
     tone: delta < 0 ? 'positive' : 'negative',
   }
 }
@@ -194,15 +194,16 @@ function createBestGapBadge(
 }
 
 function createAssistanceBadge(
-  trend: 'better' | 'worse' | 'same' | 'unknown'
+  trend: 'better' | 'worse' | 'same' | 'unknown',
+  difficultyLabel: string
 ): WinComparisonBadge | null {
   switch (trend) {
     case 'better':
-      return { label: 'Sauberer als zuletzt', tone: 'positive' }
+      return { label: `Sauberer als letzter ${difficultyLabel}-Lauf`, tone: 'positive' }
     case 'worse':
-      return { label: 'Mehr Hilfe als zuletzt', tone: 'negative' }
+      return { label: `Mehr Hilfe als letzter ${difficultyLabel}-Lauf`, tone: 'negative' }
     case 'same':
-      return { label: 'Gleich sauber wie zuletzt', tone: 'neutral' }
+      return { label: `Gleiche Hilfeart wie letzter ${difficultyLabel}-Lauf`, tone: 'neutral' }
     default:
       return null
   }
@@ -286,20 +287,20 @@ export default function WinDialog({
   const comparisonCards: WinComparisonCard[] = completionResult
     ? [
         {
-          label: 'Zeit',
+          label: 'Aktueller Lauf · Zeit',
           value: formatTime(currentRun.time),
           copy: previousRun
-            ? `Voriger Lauf: ${formatTime(previousRun.time)} auf derselben Stufe.`
-            : `Aktuelle Bestzeit: ${difficultyStats?.bestTime !== null && difficultyStats?.bestTime !== undefined ? formatTime(difficultyStats.bestTime) : '--'}.`,
+            ? `Letzter abgeschlossener ${difficultyLabel}-Lauf: ${formatTime(previousRun.time)}.`
+            : `Noch kein vorheriger ${difficultyLabel}-Lauf. Stufen-Bestzeit: ${difficultyStats?.bestTime !== null && difficultyStats?.bestTime !== undefined ? formatTime(difficultyStats.bestTime) : '--'}.`,
           tone: resolveComparisonTone(timeComparison.trend, timeGapComparison.trend),
           badges: [
-            createTimeBadge(timeComparison.deltaToPrevious),
+            createTimeBadge(timeComparison.deltaToPrevious, difficultyLabel),
             createBestGapBadge(
               timeGapComparison.currentGap,
               timeGapComparison.deltaToPreviousGap,
               timeGapComparison.trend,
-              'Bestzeit erreicht',
-              'Bestzeit',
+              'Stufen-Bestzeit erreicht',
+              'Stufen-Bestzeit',
               'Sek.',
               'Sek.',
               true
@@ -307,32 +308,32 @@ export default function WinDialog({
           ].filter((badge): badge is WinComparisonBadge => badge !== null),
         },
         {
-          label: 'Netto-Zuege',
+          label: 'Aktueller Lauf · Netto-Zuege',
           value: `${currentRun.moves}`,
           copy: `${currentRun.actionMoves} Aktionen, ${extraMoves} Korrekturen in diesem Lauf.`,
           tone: resolveComparisonTone(movesComparison.trend, movesGapComparison.trend),
           badges: [
-            createMovesBadge(movesComparison.deltaToPrevious),
+            createMovesBadge(movesComparison.deltaToPrevious, difficultyLabel),
             createBestGapBadge(
               movesGapComparison.currentGap,
               movesGapComparison.deltaToPreviousGap,
               movesGapComparison.trend,
-              'Rekord erreicht',
-              'Rekord',
+              'Stufen-Zugrekord erreicht',
+              'Stufen-Zugrekord',
               'Zug',
               'Zuege'
             ),
           ].filter((badge): badge is WinComparisonBadge => badge !== null),
         },
         {
-          label: 'Laufart',
+          label: 'Aktueller Lauf · Laufart',
           value: formatAssistanceLabel(currentRun.assistanceMode),
           copy: previousRun?.hasDetailedProfile
-            ? `Jetzt ${formatAssistanceBreakdown(currentRun.hintCount, currentRun.suggestedMoveCount)}. Davor ${formatAssistanceBreakdown(previousRun.hintCount, previousRun.suggestedMoveCount)}.`
-            : `Dieser Lauf nutzte ${formatAssistanceBreakdown(currentRun.hintCount, currentRun.suggestedMoveCount)}.`,
+            ? `Aktueller Lauf: ${formatAssistanceBreakdown(currentRun.hintCount, currentRun.suggestedMoveCount)}. Letzter ${difficultyLabel}-Lauf: ${formatAssistanceBreakdown(previousRun.hintCount, previousRun.suggestedMoveCount)}.`
+            : `Aktueller Lauf: ${formatAssistanceBreakdown(currentRun.hintCount, currentRun.suggestedMoveCount)}. Kein vergleichbares Detailprofil vom letzten ${difficultyLabel}-Lauf.`,
           tone: resolveComparisonTone(assistanceComparison.trend),
           badges: [
-            createAssistanceBadge(assistanceComparison.trend),
+            createAssistanceBadge(assistanceComparison.trend, difficultyLabel),
             currentRun.assistanceMode === 'clean'
               ? { label: 'Ohne Hilfe abgeschlossen', tone: 'positive' as const }
               : null,
@@ -518,10 +519,15 @@ export default function WinDialog({
         {comparisonCards.length > 0 ? (
           <AnimatedReveal className="win-comparison" interaction="surface" level="medium">
             <div className="win-comparison-head">
-              <span className="win-kicker">Direkter Vergleich</span>
+              <span className="win-kicker">Stufenvergleich</span>
               <p className="win-comparison-copy">
-                Gegen den letzten Lauf und die Rekorde auf {difficultyLabel}.
+                Dieser Lauf gegen den zuletzt abgeschlossenen {difficultyLabel}-Lauf und deine persoenlichen Rekorde auf dieser Stufe.
               </p>
+              {challengeTarget ? (
+                <p className="win-comparison-context-note">
+                  Die Challenge-Vorlage wird oben separat verglichen und ist nicht die Referenz dieser Karten.
+                </p>
+              ) : null}
             </div>
             <AnimatedStaggerGroup className="win-comparison-grid" level="subtle">
               {comparisonCards.map((card) => (
