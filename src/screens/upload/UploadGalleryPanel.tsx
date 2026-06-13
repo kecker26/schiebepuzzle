@@ -58,6 +58,8 @@ interface UploadGalleryPanelProps {
   onReplayEntry: GalleryReplayRequestHandler
   onFetchRandomImage?: (query?: string) => Promise<void> | void
   requestedTagFilterLabel?: string | null
+  requestedMedalHuntFilter?: GalleryMedalHuntFilter | null
+  requestedMedalHuntFilterId?: number | null
   onDeleteEntries: (entryIds: string[]) => Promise<void>
   onUpdateTags?: (action: 'rename' | 'remove', sourceLabel: string, targetLabel?: string) => Promise<void>
   onEditEntryTags?: (entryIds: string[], add?: string[], remove?: string[]) => Promise<void>
@@ -143,6 +145,8 @@ export default function UploadGalleryPanel({
   onReplayEntry,
   onFetchRandomImage = async () => undefined,
   requestedTagFilterLabel = null,
+  requestedMedalHuntFilter = null,
+  requestedMedalHuntFilterId = null,
   onDeleteEntries,
   onUpdateTags = async () => undefined,
   onEditEntryTags = async () => undefined,
@@ -398,6 +402,15 @@ export default function UploadGalleryPanel({
     setCurrentPage(1)
     setTagFilters(requestedTagFilters)
   }, [requestedTagFilterLabel])
+
+  useEffect(() => {
+    if (!requestedMedalHuntFilter || requestedMedalHuntFilterId === null) return
+
+    pendingToolbarFocusRef.current = 'medal-hunt'
+    setCurrentPage(1)
+    setMedalHuntFilter(requestedMedalHuntFilter)
+    setSortOption('upgrade-potential')
+  }, [requestedMedalHuntFilter, requestedMedalHuntFilterId])
 
   useEffect(() => {
     if (!selectedEntry) return

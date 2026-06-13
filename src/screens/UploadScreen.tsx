@@ -965,6 +965,12 @@ export default function UploadScreen({
       case 'open-gallery':
         handleWindowChange('gallery')
         return
+      case 'open-medal-stats':
+        handleWindowChange('stats')
+        return
+      case 'open-medal-hunt':
+        handleWindowChange('gallery')
+        return
       case 'open-collections':
         handleWindowChange('collections')
         return
@@ -1521,6 +1527,7 @@ export default function UploadScreen({
           {!isWorkspaceExiting && activeWindow !== 'start' && (
             <UploadDashboard
               activeWindow={activeWindow}
+              commandRequest={commandRequest}
               paletteStyle={paletteStyle}
               savedGames={savedGames}
               savedGamesCount={savedGamesCount}

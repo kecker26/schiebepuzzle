@@ -20,7 +20,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Bild-Sammlungen fuer Lieblingsmotive aus der Galerie mit 9er-Seitennavigation, visuell sowie per Tooltip getrennt gekennzeichneten KI- und direkten Tag-Sammlungsvorschlaegen, automatischem Motiv-Tag beim Annehmen eines KI-Sammlungsvorschlags, allen priorisierten direkten Vorschlaegen fuer namensgleiche Motiv-Tags, motivweit deduplizierten Sammlungen aus Tag-Treffern und denselben bearbeitbaren Motiv-Tags wie im Galerie-Detail. Wird dort ein Tag entfernt, wird das Motiv zugleich aus der namensgleichen Tag-Sammlung entfernt.
 - Lokale Backups fuer Spielstaende, Statistik, Galerie und Sammlungen.
 - Musik- und Sound-Unterstuetzung mit lokalen Fallback-Tracks.
-- Command Palette, globale Hilfe, Kontextmenues, Theme-Umschaltung und Motion-Animationen.
+- Command Palette mit direkten Schnellaktionen fuer Medaillen-Aufstiege und Medaillen-Jagd, kontextbezogene globale Hilfe inklusive Challenge- und Medaillen-Regeln, Kontextmenues, Theme-Umschaltung und Motion-Animationen.
 - Konsistente animierte Wartezustaende fuer KI-, Netzwerk-, Speicher-, Import-, Export-, Solver- und Hintergrundaufgaben mit reduzierter Bewegung fuer entsprechende Systemeinstellungen.
 
 ## Technologie
