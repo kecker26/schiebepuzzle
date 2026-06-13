@@ -71,6 +71,12 @@ export interface GalleryMedalHuntStatus {
   proximityScore: number | null
 }
 
+export interface GalleryMedalHuntRecommendation {
+  label: string
+  detail: string
+  tone: 'new' | 'near' | 'reachable' | 'open' | 'complete'
+}
+
 export interface GalleryMedalCollectionItem {
   medal: ChallengeMedal
   count: number
@@ -192,6 +198,64 @@ export function matchesGalleryMedalHuntFilter(
     || getChallengeMedalRank(status.bestMedal) < getChallengeMedalRank('gold')
   if (filter === 'near-upgrade') return status.nearUpgrade
   return !status.hasStarted || status.upgradeable
+}
+
+export function getGalleryMedalHuntRecommendation(
+  status: GalleryMedalHuntStatus
+): GalleryMedalHuntRecommendation {
+  if (!status.nextMedal) {
+    return {
+      label: 'Hoechste verfuegbare Stufe',
+      detail: 'Fuer dieses Motiv ist aktuell kein weiteres Medaillen-Upgrade verfuegbar.',
+      tone: 'complete',
+    }
+  }
+
+  if (!status.hasStarted) {
+    return {
+      label: 'Erste Medaille holen',
+      detail: 'Schliesse eine Challenge ab, um Bronze zu sichern.',
+      tone: 'new',
+    }
+  }
+
+  if (status.proximityScore === null) {
+    return {
+      label: 'Neues Upgrade-Ziel',
+      detail: 'Starte einen weiteren Challenge-Lauf, um dich der naechsten Stufe zu naehern.',
+      tone: 'open',
+    }
+  }
+
+  if (status.proximityScore <= 0.05) {
+    return {
+      label: 'Sehr nah am Upgrade',
+      detail: 'Nur eine kleine Verbesserung trennt dieses Motiv von der naechsten Medaille.',
+      tone: 'near',
+    }
+  }
+
+  if (status.proximityScore <= 0.2) {
+    return {
+      label: 'Nah am Upgrade',
+      detail: 'Dieses Motiv gehoert zu deinen aussichtsreichsten Medaillen-Jagden.',
+      tone: 'near',
+    }
+  }
+
+  if (status.proximityScore <= 0.5) {
+    return {
+      label: 'Upgrade in Reichweite',
+      detail: 'Mit einem verbesserten Challenge-Lauf ist die naechste Stufe realistisch.',
+      tone: 'reachable',
+    }
+  }
+
+  return {
+    label: 'Upgrade offen',
+    detail: 'Die naechste Medaille braucht noch einen deutlich staerkeren Challenge-Lauf.',
+    tone: 'open',
+  }
 }
 
 export interface GalleryChallengeSeries {

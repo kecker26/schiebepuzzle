@@ -19,7 +19,12 @@ import {
   getChallengeMedalEmoji,
   getChallengeMedalProgress,
 } from '../../utils/galleryChallenge.ts'
-import { GalleryDisplayEntry, formatGallerySolveCount } from './UploadGalleryDisplayUtils.ts'
+import {
+  GalleryDisplayEntry,
+  formatGallerySolveCount,
+  getGalleryMedalHuntRecommendation,
+  getGalleryMedalHuntStatus,
+} from './UploadGalleryDisplayUtils.ts'
 import { getTagCollectionSuggestions } from './galleryTagCollectionSync.ts'
 import { useUploadImagePalette } from './uploadImagePalette.ts'
 import { formatDate } from './uploadUtils.ts'
@@ -40,6 +45,7 @@ interface UploadGalleryCardProps {
   retryingTagEntryId?: string | null
   onDeleteEntry: (entry: GalleryDisplayEntry) => void
   isDeleting: boolean
+  showMedalHuntHint?: boolean
 }
 
 function findStoredCardPalette(entry: GalleryDisplayEntry): ImageThemePalette | null {
@@ -61,6 +67,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   suggestedCollectionBusyKey = null,
   onDeleteEntry,
   isDeleting,
+  showMedalHuntHint = false,
 }: UploadGalleryCardProps) {
   const representativeEntry = entry.representativeEntry
   const storedPalette = useMemo(() => findStoredCardPalette(entry), [entry])
@@ -71,6 +78,14 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
   const medalProgress = useMemo(
     () => getChallengeMedalProgress(entry.motifReplaySummary.allEntries),
     [entry.motifReplaySummary.allEntries]
+  )
+  const medalHuntStatus = useMemo(
+    () => getGalleryMedalHuntStatus(entry),
+    [entry]
+  )
+  const medalHuntRecommendation = useMemo(
+    () => getGalleryMedalHuntRecommendation(medalHuntStatus),
+    [medalHuntStatus]
   )
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
@@ -282,6 +297,26 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             ))}
           </div>
         </div>
+
+        {showMedalHuntHint ? (
+          <div
+            className={`gallery-card-medal-hunt is-${medalHuntRecommendation.tone}`}
+            aria-label={`Medaillen-Jagd: ${medalHuntRecommendation.label}. ${medalHuntRecommendation.detail}`}
+          >
+            <span className="gallery-card-medal-hunt-icon" aria-hidden="true">
+              {medalHuntStatus.nextMedal ? getChallengeMedalEmoji(medalHuntStatus.nextMedal) : '\u2713'}
+            </span>
+            <span className="gallery-card-medal-hunt-copy">
+              <small>Jagd-Ziel</small>
+              <strong>
+                {medalHuntStatus.nextMedal
+                  ? `${formatChallengeMedalLabel(medalHuntStatus.nextMedal)}: ${medalHuntRecommendation.label}`
+                  : medalHuntRecommendation.label}
+              </strong>
+              <span>{medalHuntRecommendation.detail}</span>
+            </span>
+          </div>
+        ) : null}
 
         {aiTags.length > 0 || collectionSuggestions.length > 0 ? (
           <div className="gallery-card-ai" aria-label="Tags und Sammlungsvorschlaege">

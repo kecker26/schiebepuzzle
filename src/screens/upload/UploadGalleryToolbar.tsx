@@ -89,6 +89,25 @@ export default function UploadGalleryToolbar({
   const hasSingleActiveTag = activeTagFilterCount === 1 && activeTagFilterLabel !== null
   const hasActiveTagCollection = hasSingleActiveTag && activeTagCollectionCount > 0
   const activeTagKeySet = new Set(activeTagFilterKeys)
+  const activeMedalHuntOption = GALLERY_MEDAL_HUNT_FILTER_OPTIONS.find((option) => option.id === medalHuntFilter)
+  const isUpgradePotentialSort = sortOption === 'upgrade-potential'
+  const medalHuntSummary = medalHuntFilter !== 'all'
+    ? {
+        title: activeMedalHuntOption?.label ?? 'Medaillen-Jagd',
+        detail: medalHuntFilter === 'near-upgrade'
+          ? 'Die Karten zeigen deine aussichtsreichsten direkten Upgrades.'
+          : medalHuntFilter === 'no-medal'
+            ? 'Diese Motive warten noch auf ihre erste Challenge-Medaille.'
+            : medalHuntFilter === 'no-gold'
+              ? 'Diese Motive haben noch keine Gold- oder Diamant-Medaille.'
+              : 'Diese Motive besitzen noch eine erreichbare naechste Medaillenstufe.',
+      }
+    : isUpgradePotentialSort
+      ? {
+          title: 'Bestes Upgrade-Potenzial',
+          detail: 'Upgradefaehige Motive und besonders nahe Ziele stehen zuerst.',
+        }
+      : null
   const hasActiveCriteria =
     difficultyFilter !== 'all' ||
     assistanceFilter !== 'all' ||
@@ -107,6 +126,17 @@ export default function UploadGalleryToolbar({
           Gleiches Motiv auf derselben Schwierigkeit wird als eine Karte zusammengefasst. Auf anderen Stufen bleibt es separat sichtbar.
         </span>
       </div>
+
+      {medalHuntSummary ? (
+        <div className="gallery-toolbar-medal-hunt-status" role="status">
+          <span className="gallery-toolbar-medal-hunt-mark" aria-hidden="true">{'\u{1F3AF}'}</span>
+          <span>
+            <small>Medaillen-Jagd aktiv</small>
+            <strong>{medalHuntSummary.title}</strong>
+            <span>{medalHuntSummary.detail}</span>
+          </span>
+        </div>
+      ) : null}
 
       <div className="gallery-toolbar-controls">
         <div className="gallery-toolbar-filters">
