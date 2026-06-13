@@ -35,6 +35,7 @@ import UploadStatsReport from './UploadStatsReport.tsx'
 import type { VisualStatsView } from './UploadStatsVisualReport.tsx'
 import UploadSavedGamesPanel from './UploadSavedGamesPanel.tsx'
 import UploadWorkspaceSideNav from './UploadWorkspaceSideNav.tsx'
+import type { UploadCommandRequest } from './uploadCommandRequest.ts'
 import {
   DashboardMetric,
   HistoryFilter,
@@ -50,6 +51,7 @@ import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 
 interface UploadDashboardProps {
   activeWindow: Exclude<UploadWorkspaceWindow, 'start'>
+  commandRequest?: UploadCommandRequest | null
   paletteStyle?: CSSProperties
   savedGames: SavedGameSummary[]
   savedGamesCount: number
@@ -119,6 +121,7 @@ function getDashboardMetricIconName(label: string): UploadScreenIconName {
 
 export default function UploadDashboard({
   activeWindow,
+  commandRequest,
   paletteStyle,
   savedGames,
   savedGamesCount,
@@ -216,6 +219,12 @@ export default function UploadDashboard({
     setRequestedGalleryTagFilterLabel(tagLabel)
     onWindowChange('gallery')
   }, [onWindowChange])
+
+  useEffect(() => {
+    if (commandRequest?.action === 'open-medal-stats') {
+      setStatsVisualView('medals')
+    }
+  }, [commandRequest])
   const handleEditGalleryEntryTags = useCallback(async (
     entryIds: string[],
     add: string[] = [],
@@ -835,6 +844,12 @@ export default function UploadDashboard({
                       onReplayEntry={onReplayGalleryEntry}
                       onFetchRandomImage={onFetchRandomImage}
                       requestedTagFilterLabel={requestedGalleryTagFilterLabel}
+                      requestedMedalHuntFilter={
+                        commandRequest?.action === 'open-medal-hunt' ? 'upgradeable' : null
+                      }
+                      requestedMedalHuntFilterId={
+                        commandRequest?.action === 'open-medal-hunt' ? commandRequest.id : null
+                      }
                       onDeleteEntries={onDeleteGalleryEntries}
                       onUpdateTags={onUpdateGalleryTags}
                       onEditEntryTags={handleEditGalleryEntryTags}

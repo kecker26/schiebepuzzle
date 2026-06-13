@@ -390,6 +390,26 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
         ],
       },
+      {
+        title: 'Medaillen-Aufstiege',
+        icon: 'medal',
+        items: [
+          {
+            label: 'Die Medaillen-Ansicht gruppiert Challenge-Laeufe pro Motiv und zeigt nur echte Aufstiege.',
+          },
+          {
+            label: 'Pro Motiv zaehlt in der Verteilung ausschliesslich die beste erreichte Medaille.',
+          },
+          {
+            label: 'Medaillenfilter, Sortierung und Motivkarten helfen dir, Aufstiegswege gezielt nachzuvollziehen.',
+          },
+          {
+            keys: ['F8'],
+            label: 'Medaillen-Aufstiege direkt oeffnen',
+            detail: 'Suche in den Schnellaktionen nach Medaillen-Aufstiege.',
+          },
+        ],
+      },
     ],
   },
   'upload-gallery': {
@@ -448,6 +468,32 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             label: 'Ueber die Filter-Selects oben kannst du Schwierigkeit und Laufart einschraenken.',
+          },
+        ],
+      },
+      {
+        title: 'Challenges und Medaillen',
+        icon: 'medal',
+        items: [
+          {
+            label: 'Bronze: Zeit oder Zugziel der Vorlage strikt unterbieten.',
+          },
+          {
+            label: 'Silber: Beide Zielwerte der Vorlage erreichen oder unterbieten.',
+          },
+          {
+            label: 'Gold: Beide Zielwerte strikt unterbieten und ohne Hilfe loesen.',
+          },
+          {
+            label: 'Diamant: Ohne Hilfe, schneller als die Vorlage und exakt solver-optimal loesen.',
+          },
+          {
+            label: 'Gold oder Diamant koennen fuer einzelne Vorlagen mathematisch nicht erreichbar sein.',
+          },
+          {
+            keys: ['F8'],
+            label: 'Medaillen-Jagd direkt oeffnen',
+            detail: 'Zeigt upgradefaehige Motive zuerst nach ihrem besten Upgrade-Potenzial.',
           },
         ],
       },
@@ -659,6 +705,24 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
         ],
       },
+      {
+        title: 'Challenge-Ziel',
+        icon: 'medal',
+        items: [
+          {
+            label: 'Die Live-Prognose zeigt die beste Medaille, die mit dem aktuellen Stand noch erreichbar ist.',
+          },
+          {
+            label: 'Erreicht bedeutet gleich gut oder besser; strikt unterboten bedeutet schneller oder mit weniger Zuegen.',
+          },
+          {
+            label: 'Hinweise und automatische Zuege verhindern Gold und Diamant, Silber und Bronze bleiben erreichbar.',
+          },
+          {
+            label: 'Diamant ist nur verfuegbar, wenn eine exakte optimale Zugzahl fuer das Startbrett bekannt ist.',
+          },
+        ],
+      },
     ],
   },
   solved: {
@@ -703,6 +767,21 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             label: 'Die Runde wird automatisch in der Statistik und der Galerie vermerkt.',
+          },
+        ],
+      },
+      {
+        title: 'Challenge-Ergebnis',
+        icon: 'medal',
+        items: [
+          {
+            label: 'Der Gewinn-Dialog erklaert deine erreichte Medaille und ob sie einen neuen Aufstieg darstellt.',
+          },
+          {
+            label: 'Das naechste Medaillenziel nennt konkret, welche Zeit, Zugzahl oder Hilfe-Bedingung noch fehlt.',
+          },
+          {
+            label: 'Ein Challenge-Abschluss ohne Medaille entfernt keine bereits frueher erreichte Medaille.',
           },
         ],
       },
