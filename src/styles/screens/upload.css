@@ -3718,6 +3718,57 @@
   text-align: right;
 }
 
+.gallery-toolbar-medal-hunt-status {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, #fbbf24 38%, var(--card-border));
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #fbbf24 13%, transparent), transparent 68%),
+    color-mix(in srgb, var(--secondary-bg) 92%, transparent);
+}
+
+.gallery-toolbar-medal-hunt-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #fbbf24 15%, var(--secondary-bg));
+  font-size: 19px;
+  box-shadow: 0 0 18px color-mix(in srgb, #fbbf24 18%, transparent);
+}
+
+.gallery-toolbar-medal-hunt-status > span:last-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gallery-toolbar-medal-hunt-status small {
+  color: color-mix(in srgb, #fbbf24 78%, var(--text-muted));
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gallery-toolbar-medal-hunt-status strong {
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.gallery-toolbar-medal-hunt-status > span:last-child > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .gallery-toolbar-controls {
   display: grid;
   gap: 14px;
@@ -4299,6 +4350,77 @@
 .gallery-card-medal-progress-stage.is-unavailable small {
   text-decoration: line-through;
   opacity: 0.58;
+}
+
+.gallery-card-medal-hunt {
+  --gallery-hunt-color: #94a3b8;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--gallery-hunt-color) 34%, var(--secondary-border));
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--gallery-hunt-color) 11%, transparent), transparent 70%),
+    color-mix(in srgb, var(--secondary-bg) 94%, transparent);
+}
+
+.gallery-card-medal-hunt.is-new {
+  --gallery-hunt-color: #fb923c;
+}
+
+.gallery-card-medal-hunt.is-near {
+  --gallery-hunt-color: #fbbf24;
+}
+
+.gallery-card-medal-hunt.is-reachable {
+  --gallery-hunt-color: #67e8f9;
+}
+
+.gallery-card-medal-hunt.is-complete {
+  --gallery-hunt-color: #4ade80;
+}
+
+.gallery-card-medal-hunt-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--gallery-hunt-color) 15%, var(--secondary-bg));
+  color: color-mix(in srgb, var(--gallery-hunt-color) 82%, var(--text-main));
+  font-size: 16px;
+  font-weight: 900;
+  box-shadow: 0 0 15px color-mix(in srgb, var(--gallery-hunt-color) 18%, transparent);
+}
+
+.gallery-card-medal-hunt-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gallery-card-medal-hunt-copy small {
+  color: color-mix(in srgb, var(--gallery-hunt-color) 76%, var(--text-muted));
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gallery-card-medal-hunt-copy strong {
+  color: var(--text-main);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+.gallery-card-medal-hunt-copy > span {
+  color: var(--text-secondary);
+  font-size: 9px;
+  line-height: 1.35;
 }
 
 .gallery-card-header {

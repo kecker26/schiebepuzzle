@@ -1006,6 +1006,7 @@ export default function UploadGalleryPanel({
                       <UploadGalleryCard
                         key={entry.id}
                         entry={entry}
+                        showMedalHuntHint={medalHuntFilter !== 'all' || sortOption === 'upgrade-potential'}
                         onOpenDetails={setSelectedEntry}
                         onCollectEntry={handleCollectEntryRequest}
                         onTagFilter={handleTagFilterRequest}

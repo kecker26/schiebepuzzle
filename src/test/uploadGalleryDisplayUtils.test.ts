@@ -7,6 +7,7 @@ import {
   buildGalleryMedalCollection,
   buildGalleryTimelineRelations,
   getGalleryMedalHuntStatus,
+  getGalleryMedalHuntRecommendation,
   getSimilarGalleryEntries,
   getUniqueGalleryMotifEntryIds,
   matchesGalleryMedalHuntFilter,
@@ -257,6 +258,13 @@ describe('UploadGalleryDisplayUtils', () => {
       upgradeable: true,
       nearUpgrade: true,
     })
+    expect(silverEntry
+      ? getGalleryMedalHuntRecommendation(getGalleryMedalHuntStatus(silverEntry))
+      : null
+    ).toMatchObject({
+      label: 'Nah am Upgrade',
+      tone: 'near',
+    })
     expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-medal'))).toHaveLength(1)
     expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-gold'))).toHaveLength(2)
     expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable'))).toHaveLength(2)
@@ -266,6 +274,44 @@ describe('UploadGalleryDisplayUtils', () => {
       'source-normal',
       'source-gold',
     ])
+  })
+
+  it('beschreibt neue, offene und abgeschlossene Medaillen-Jagden verstaendlich', () => {
+    expect(getGalleryMedalHuntRecommendation({
+      bestMedal: null,
+      nextMedal: 'bronze',
+      hasStarted: false,
+      upgradeable: true,
+      nearUpgrade: false,
+      proximityScore: null,
+    })).toMatchObject({
+      label: 'Erste Medaille holen',
+      tone: 'new',
+    })
+
+    expect(getGalleryMedalHuntRecommendation({
+      bestMedal: 'silver',
+      nextMedal: 'gold',
+      hasStarted: true,
+      upgradeable: true,
+      nearUpgrade: false,
+      proximityScore: 0.35,
+    })).toMatchObject({
+      label: 'Upgrade in Reichweite',
+      tone: 'reachable',
+    })
+
+    expect(getGalleryMedalHuntRecommendation({
+      bestMedal: 'gold',
+      nextMedal: null,
+      hasStarted: true,
+      upgradeable: false,
+      nearUpgrade: false,
+      proximityScore: null,
+    })).toMatchObject({
+      label: 'Hoechste verfuegbare Stufe',
+      tone: 'complete',
+    })
   })
 
   it('markiert die beste Medaille und das naechste erreichbare Motiv-Ziel', () => {
