@@ -1,4 +1,4 @@
-import { type CSSProperties, type RefObject, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Activity,
   ArrowUp,
@@ -35,16 +35,33 @@ import AnimatedSwapPane from '../../motion/AnimatedSwapPane.tsx'
 import SpringNumber from '../../motion/SpringNumber.tsx'
 import { useReducedMotionPreference } from '../../motion/useReducedMotionPreference.ts'
 import { savePuzzleStatsExportFile } from '../../services/StatsService.ts'
-import { PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats, SolvedGallery } from '../../types/index'
-import { formatChallengeMedalLabel, getChallengeMedalEmoji } from '../../utils/galleryChallenge.ts'
+import {
+  ChallengeMedal,
+  ImageCollection,
+  PuzzleCompletionRecord,
+  PuzzleDifficultyStats,
+  PuzzleStats,
+  SolvedGallery,
+  SolvedGalleryEntry,
+} from '../../types/index'
+import { formatChallengeMedalLabel, getChallengeMedalEmoji, getChallengeMedalRank } from '../../utils/galleryChallenge.ts'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import UploadStatsComparisonMatrix from './UploadStatsComparisonMatrix.tsx'
 import UploadStatsDifficultyTable from './UploadStatsDifficultyTable.tsx'
 import UploadStatsHistorySection from './UploadStatsHistorySection.tsx'
 import UploadStatsRunComparison from './UploadStatsRunComparison.tsx'
+import UploadCollectionPickerDialog from './UploadCollectionPickerDialog.tsx'
+import UploadGalleryDetailDialog from './UploadGalleryDetailDialog.tsx'
 import {
+  buildGalleryDisplayEntries,
+  type GalleryDisplayEntry,
+  getSimilarGalleryEntries,
+} from './UploadGalleryDisplayUtils.ts'
+import UploadPageNavigation from './UploadPageNavigation.tsx'
+import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
+import {
+  buildGroupedMotifCards,
   buildMedalDistribution,
-  buildMedalTrend,
   MEDAL_STATS_COLORS,
   MEDAL_STATS_ORDER,
 } from './UploadMedalStatsUtils.ts'
@@ -67,13 +84,29 @@ import {
   getStatsDifficultyKey,
 } from './uploadUtils.ts'
 
-export type VisualStatsView = 'overview' | 'history' | 'raw'
+export type VisualStatsView = 'overview' | 'history' | 'medals' | 'raw'
 
 type TrendMetric = 'actions' | 'time'
 
 type HistoryRange = 'recent12' | 'recent30' | 'all'
 
 type RawStatsView = 'difficulties' | 'history' | 'matrix'
+
+type MedalFilter = ChallengeMedal | 'all'
+
+type MedalSort = 'recent' | 'best'
+
+const MEDAL_MOTIFS_PER_PAGE = 5
+
+function formatSeriesTimeDelta(delta: number): string {
+  if (delta === 0) return 'Gleich'
+  return `${formatTime(Math.abs(delta))} ${delta < 0 ? 'schneller' : 'langsamer'}`
+}
+
+function formatSeriesMovesDelta(delta: number): string {
+  if (delta === 0) return 'Gleich'
+  return `${Math.abs(delta)} Zuege ${delta < 0 ? 'weniger' : 'mehr'}`
+}
 
 interface AssistanceSummary {
   totalSolved: number
@@ -102,6 +135,15 @@ interface UploadStatsVisualReportProps {
   activeView: VisualStatsView
   onActiveViewChange: (view: VisualStatsView) => void
   primaryFocusRef?: RefObject<HTMLButtonElement>
+  collections?: ImageCollection[]
+  isLoadingCollections?: boolean
+  onReplayGalleryEntry?: GalleryReplayRequestHandler
+  onOpenGalleryTagFilter?: (tagLabel: string) => void
+  onFetchRandomImage?: (query?: string) => Promise<void> | void
+  onEditGalleryEntryTags?: (entryIds: string[], add?: string[], remove?: string[]) => Promise<void>
+  onRetryGalleryTagging?: (entryId: string) => Promise<void>
+  onCreateCollection?: (name: string, imageIds: string[], description?: string) => Promise<void>
+  onAddCollectionImages?: (collectionId: string, imageIds: string[]) => Promise<void>
 }
 
 interface KpiCard {
@@ -255,6 +297,7 @@ const VISUAL_STATS_VIEWS: Array<{
 }> = [
   { id: 'overview', label: 'Dashboard', description: 'KPI-Karten, Laufarten und aktuelle Bestwerte anzeigen.', icon: LayoutDashboard },
   { id: 'history', label: 'Verlauf & Trends', description: 'Zeit und Aktionen als Verlauf und Verteilung vergleichen.', icon: LineChartIcon },
+  { id: 'medals', label: 'Medaillen-Aufstiege', description: 'Challenge-Medaillen und echte Aufstiege pro Motiv anzeigen.', icon: Medal },
   { id: 'raw', label: 'Rohdaten & Details', description: 'Tabellen, Rohdatenansichten und Exporte oeffnen.', icon: Table2 },
 ]
 
@@ -1716,6 +1759,15 @@ export default function UploadStatsVisualReport({
   activeView,
   onActiveViewChange,
   primaryFocusRef,
+  collections = [],
+  isLoadingCollections = false,
+  onReplayGalleryEntry = () => undefined,
+  onOpenGalleryTagFilter = () => undefined,
+  onFetchRandomImage = async () => undefined,
+  onEditGalleryEntryTags = async () => undefined,
+  onRetryGalleryTagging = async () => undefined,
+  onCreateCollection = async () => undefined,
+  onAddCollectionImages = async () => undefined,
 }: UploadStatsVisualReportProps) {
   const shouldReduceMotion = useReducedMotionPreference()
   const reportRef = useRef<HTMLElement>(null)
@@ -1724,6 +1776,16 @@ export default function UploadStatsVisualReport({
   const [histogramMetric, setHistogramMetric] = useState<TrendMetric>('time')
   const [histogramRange, setHistogramRange] = useState<HistoryRange>('all')
   const [showMovingAverage, setShowMovingAverage] = useState(false)
+  const [medalFilter, setMedalFilter] = useState<MedalFilter>('all')
+  const [medalSort, setMedalSort] = useState<MedalSort>('recent')
+  const [medalPage, setMedalPage] = useState(1)
+  const [selectedMedalSeries, setSelectedMedalSeries] = useState<Record<string, string>>({})
+  const [selectedMedalDetail, setSelectedMedalDetail] = useState<GalleryDisplayEntry | null>(null)
+  const [collectingMedalEntry, setCollectingMedalEntry] = useState<GalleryDisplayEntry | null>(null)
+  const [isSavingMedalCollection, setIsSavingMedalCollection] = useState(false)
+  const [retryingMedalTagEntryId, setRetryingMedalTagEntryId] = useState<string | null>(null)
+  const [isEditingMedalTags, setIsEditingMedalTags] = useState(false)
+  const medalCardsRef = useRef<HTMLDivElement>(null)
   const [focusedTrendDifficultyKey, setFocusedTrendDifficultyKey] = useState<string | null>(null)
   const [hiddenTrendDifficultyKeys, setHiddenTrendDifficultyKeys] = useState<string[]>([])
   const [rawStatsView, setRawStatsView] = useState<RawStatsView>('difficulties')
@@ -1808,10 +1870,46 @@ export default function UploadStatsVisualReport({
   )
   const donutSegments = useMemo(() => buildDonutSegments(selectedAssistanceSummary), [selectedAssistanceSummary])
   const medalDistribution = useMemo(
-    () => buildMedalDistribution(gallery?.entries ?? []).filter((segment) => segment.value > 0),
+    () => buildMedalDistribution(gallery?.entries ?? []),
     [gallery]
   )
-  const medalTrend = useMemo(() => buildMedalTrend(gallery?.entries ?? []), [gallery])
+  const visibleMedalDistribution = useMemo(
+    () => medalDistribution.filter((segment) => segment.value > 0),
+    [medalDistribution]
+  )
+  const groupedMotifCards = useMemo(() => buildGroupedMotifCards(gallery?.entries ?? []), [gallery])
+  const filteredMotifCards = useMemo(() => {
+    const cards = medalFilter === 'all'
+      ? groupedMotifCards
+      : groupedMotifCards.filter((card) => card.bestMedal === medalFilter)
+
+    return [...cards].sort((left, right) => {
+      const dateDelta = Date.parse(right.latestAscentDate) - Date.parse(left.latestAscentDate)
+      if (medalSort === 'best') {
+        return getChallengeMedalRank(right.bestMedal) - getChallengeMedalRank(left.bestMedal) || dateDelta
+      }
+      return dateDelta
+    })
+  }, [groupedMotifCards, medalFilter, medalSort])
+  const medalPageCount = Math.max(1, Math.ceil(filteredMotifCards.length / MEDAL_MOTIFS_PER_PAGE))
+  const activeMedalPage = Math.min(medalPage, medalPageCount)
+  const pagedMotifCards = useMemo(() => {
+    const startIndex = (activeMedalPage - 1) * MEDAL_MOTIFS_PER_PAGE
+    return filteredMotifCards.slice(startIndex, startIndex + MEDAL_MOTIFS_PER_PAGE)
+  }, [activeMedalPage, filteredMotifCards])
+  const galleryDisplayEntries = useMemo(
+    () => buildGalleryDisplayEntries(gallery?.entries ?? [], { difficultyFilter: 'all', assistanceFilter: 'all' }),
+    [gallery]
+  )
+  const allGalleryTagLabels = useMemo(
+    () => Array.from(new Set((gallery?.entries ?? []).flatMap((entry) => (entry.tags ?? []).map((tag) => tag.label))))
+      .sort((left, right) => left.localeCompare(right, 'de')),
+    [gallery]
+  )
+  const similarMedalEntries = useMemo(
+    () => selectedMedalDetail ? getSimilarGalleryEntries(selectedMedalDetail, galleryDisplayEntries) : [],
+    [galleryDisplayEntries, selectedMedalDetail]
+  )
   const totalMedalMotifs = medalDistribution.reduce((sum, segment) => sum + segment.value, 0)
   const latestScoreBreakdown = useMemo(
     () => latestCompletion ? calculateQualityBreakdown(latestCompletion) : null,
@@ -2052,6 +2150,75 @@ export default function UploadStatsVisualReport({
     }
   }
   const scrollRawStatisticsToTop = () => scrollToStatisticsTop()
+  const medalListLabel = medalFilter === 'all'
+    ? `${filteredMotifCards.length} ${filteredMotifCards.length === 1 ? 'Motiv' : 'Motive'}`
+    : filteredMotifCards.length === 0
+      ? `Keine ${formatChallengeMedalLabel(medalFilter)}-Motive`
+      : `${filteredMotifCards.length} ${formatChallengeMedalLabel(medalFilter)}-${filteredMotifCards.length === 1 ? 'Motiv' : 'Motive'}`
+  const collectingMedalImageIds = collectingMedalEntry ? [collectingMedalEntry.representativeEntry.id] : []
+  const collectingMedalImageLabel = collectingMedalEntry
+    ? `${formatDifficultyLabel(collectingMedalEntry.representativeEntry.config)} vom ${formatDate(collectingMedalEntry.representativeEntry.completedAt)}`
+    : 'Dieses Motiv'
+
+  const handleOpenMedalDetail = useCallback((motifKey: string, bestEntryId: string) => {
+    const displayEntry = galleryDisplayEntries.find((entry) => entry.motifId === motifKey)
+    const bestEntry = displayEntry?.allEntries.find((entry) => entry.id === bestEntryId)
+    if (!displayEntry || !bestEntry) return
+
+    setSelectedMedalDetail({ ...displayEntry, representativeEntry: bestEntry })
+  }, [galleryDisplayEntries])
+
+  const handleMedalTagFilter = useCallback((tagLabel: string) => {
+    setSelectedMedalDetail(null)
+    onOpenGalleryTagFilter(tagLabel)
+  }, [onOpenGalleryTagFilter])
+
+  const handleMedalTagImageSearch = useCallback((tagLabel: string) => {
+    setSelectedMedalDetail(null)
+    void onFetchRandomImage(tagLabel)
+  }, [onFetchRandomImage])
+
+  const handleRetryMedalTagging = useCallback(async (entry: SolvedGalleryEntry) => {
+    setRetryingMedalTagEntryId(entry.id)
+    try {
+      await onRetryGalleryTagging(entry.id)
+    } finally {
+      setRetryingMedalTagEntryId((current) => current === entry.id ? null : current)
+    }
+  }, [onRetryGalleryTagging])
+
+  const handleEditMedalTags = useCallback(async (entryIds: string[], add: string[] = [], remove: string[] = []) => {
+    setIsEditingMedalTags(true)
+    try {
+      await onEditGalleryEntryTags(entryIds, add, remove)
+    } finally {
+      setIsEditingMedalTags(false)
+    }
+  }, [onEditGalleryEntryTags])
+
+  const handleCreateMedalCollection = useCallback(async (name: string, imageIds: string[]) => {
+    setIsSavingMedalCollection(true)
+    try {
+      await onCreateCollection(name, imageIds)
+      setCollectingMedalEntry(null)
+    } finally {
+      setIsSavingMedalCollection(false)
+    }
+  }, [onCreateCollection])
+
+  const handleAddMedalCollectionImages = useCallback(async (collectionId: string, imageIds: string[]) => {
+    setIsSavingMedalCollection(true)
+    try {
+      await onAddCollectionImages(collectionId, imageIds)
+      setCollectingMedalEntry(null)
+    } finally {
+      setIsSavingMedalCollection(false)
+    }
+  }, [onAddCollectionImages])
+
+  useEffect(() => {
+    setMedalPage(1)
+  }, [medalFilter, medalSort])
 
   return (
     <section ref={reportRef} className="stats-visual-report" aria-label="Statistik visualisieren">
@@ -2154,7 +2321,7 @@ export default function UploadStatsVisualReport({
                       Verteilung der besten Challenge-Medaille pro Motiv. Niedrigere bereits erreichte Stufen werden nicht doppelt gezaehlt.
                     </p>
                   </div>
-                  {medalDistribution.length === 0 ? (
+                  {visibleMedalDistribution.length === 0 ? (
                     <div className="stats-empty-state dashboard-empty-state">
                       <span className="empty-icon" aria-hidden="true"><Medal /></span>
                       <p>Noch keine Challenge-Medaillen vorhanden.</p>
@@ -2164,7 +2331,7 @@ export default function UploadStatsVisualReport({
                       <ResponsiveContainer width="100%" height={220}>
                         <PieChart>
                           <Pie
-                            data={medalDistribution}
+                            data={visibleMedalDistribution}
                             dataKey="value"
                             nameKey="label"
                             innerRadius="58%"
@@ -2172,7 +2339,7 @@ export default function UploadStatsVisualReport({
                             paddingAngle={3}
                             stroke="transparent"
                           >
-                            {medalDistribution.map((segment) => (
+                            {visibleMedalDistribution.map((segment) => (
                               <Cell key={segment.key} fill={segment.color} />
                             ))}
                           </Pie>
@@ -2637,8 +2804,11 @@ export default function UploadStatsVisualReport({
                   </AnimatedButton>
                 </div>
               </article>
+            </>
+          ) : null}
 
-              <article className="stats-report-card stats-visual-line-card stats-visual-medal-trend-card">
+          {activeView === 'medals' ? (
+            <article className="stats-report-card stats-visual-line-card stats-visual-medal-trend-card">
                 <div className="stats-visual-line-head">
                   <span>
                     <strong>Medaillen-Aufstiege</strong>
@@ -2651,13 +2821,29 @@ export default function UploadStatsVisualReport({
                 </div>
 
                 <div className="stats-medal-summary" aria-label="Aktuelle beste Medaillen pro Motiv">
+                  <AnimatedChipButton
+                    className={`stats-medal-summary-item is-all${medalFilter === 'all' ? ' is-filter-active' : ' is-inactive'}`}
+                    onClick={() => setMedalFilter('all')}
+                    aria-pressed={medalFilter === 'all'}
+                  >
+                    <span className="stats-medal-summary-emoji" aria-hidden="true">
+                      <Medal />
+                    </span>
+                    <span>
+                      <strong>Alle</strong>
+                      <small>{totalMedalMotifs} {totalMedalMotifs === 1 ? 'Motiv' : 'Motive'}</small>
+                    </span>
+                  </AnimatedChipButton>
                   {MEDAL_STATS_ORDER.map((medal) => {
                     const count = medalDistribution.find((segment) => segment.key === medal)?.value ?? 0
+                    const isActive = medalFilter === medal
                     return (
-                      <div
+                      <AnimatedChipButton
                         key={medal}
-                        className={`stats-medal-summary-item is-${medal}`}
+                        className={`stats-medal-summary-item is-${medal}${isActive ? ' is-filter-active' : ''}${medalFilter !== 'all' && !isActive ? ' is-inactive' : ''}`}
                         style={{ '--medal-color': MEDAL_STATS_COLORS[medal] } as CSSProperties}
+                        onClick={() => setMedalFilter(isActive ? 'all' : medal)}
+                        aria-pressed={isActive}
                       >
                         <span className="stats-medal-summary-emoji" aria-hidden="true">
                           {getChallengeMedalEmoji(medal)}
@@ -2666,53 +2852,210 @@ export default function UploadStatsVisualReport({
                           <strong>{formatChallengeMedalLabel(medal)}</strong>
                           <small>{count} {count === 1 ? 'Motiv' : 'Motive'}</small>
                         </span>
-                      </div>
+                      </AnimatedChipButton>
                     )
                   })}
                 </div>
 
-                {medalTrend.length === 0 ? (
+                <div className="stats-medal-toolbar">
+                  <span className="stats-medal-toolbar-label">Sortierung:</span>
+                  <div className="dashboard-filter-row" aria-label="Medaillen-Motive sortieren" onKeyDown={handleDirectionalFocusNavigation}>
+                    <AnimatedChipButton
+                      className={`dashboard-filter-chip${medalSort === 'recent' ? ' is-active' : ''}`}
+                      onClick={() => setMedalSort('recent')}
+                      aria-pressed={medalSort === 'recent'}
+                    >
+                      Neuester Aufstieg
+                    </AnimatedChipButton>
+                    <AnimatedChipButton
+                      className={`dashboard-filter-chip${medalSort === 'best' ? ' is-active' : ''}`}
+                      onClick={() => setMedalSort('best')}
+                      aria-pressed={medalSort === 'best'}
+                    >
+                      Beste Medaille
+                    </AnimatedChipButton>
+                  </div>
+                </div>
+
+                <div ref={medalCardsRef} className="stats-medal-list-head">
+                  <strong>{medalListLabel}</strong>
+                  {medalFilter !== 'all' ? <span>von {totalMedalMotifs} Motiven insgesamt</span> : null}
+                </div>
+
+                {groupedMotifCards.length === 0 ? (
                   <div className="stats-empty-state dashboard-empty-state">
                     <span className="empty-icon" aria-hidden="true"><Medal /></span>
                     <p>Noch keine Medaillen-Aufstiege vorhanden.</p>
-                    <p className="empty-hint">Schliesse eine Challenge ab, damit die Timeline beginnt.</p>
+                    <p className="empty-hint">Schliesse eine Challenge ab, damit die Motivkarten erscheinen.</p>
+                  </div>
+                ) : filteredMotifCards.length === 0 ? (
+                  <div className="stats-empty-state dashboard-empty-state">
+                    <span className="empty-icon" aria-hidden="true"><Medal /></span>
+                    <p>Keine Motive mit {formatChallengeMedalLabel(medalFilter as ChallengeMedal)} gefunden.</p>
+                    <AnimatedButton className="secondary" onClick={() => setMedalFilter('all')}>
+                      Filter zuruecksetzen
+                    </AnimatedButton>
                   </div>
                 ) : (
-                  <div className="stats-medal-timeline" aria-label="Medaillen-Aufstiege, neueste zuerst">
-                    {[...medalTrend].reverse().map((event) => (
+                  <>
+                    <div className="stats-medal-motif-cards" aria-label="Medaillen-Motive">
+                    {pagedMotifCards.map((card) => {
+                      const activeSeriesId = selectedMedalSeries[card.motifKey] ?? card.series[0]?.targetId
+                      const activeSeries = card.series.find((series) => series.targetId === activeSeriesId) ?? card.series[0]
+                      const activeSeriesIndex = activeSeries
+                        ? card.series.findIndex((series) => series.targetId === activeSeries.targetId)
+                        : -1
+                      const isSeriesTargetTie = activeSeries?.timeDeltaToTarget === 0 && activeSeries.movesDeltaToTarget === 0
+
+                      return (
                       <article
-                        key={event.id}
-                        className={`stats-medal-timeline-item is-${event.medal}`}
-                        style={{ '--medal-color': MEDAL_STATS_COLORS[event.medal] } as CSSProperties}
+                        key={card.motifKey}
+                        className={`stats-medal-motif-card is-${card.bestMedal} stats-series-tone-${Math.max(0, activeSeriesIndex) % 4}`}
+                        style={{ '--medal-color': MEDAL_STATS_COLORS[card.bestMedal] } as CSSProperties}
                       >
-                        <div className="stats-medal-timeline-preview" aria-hidden="true">
-                          {event.previewImage ? <img src={event.previewImage} alt="" /> : <Medal />}
-                        </div>
-                        <div className="stats-medal-timeline-main">
-                          <span className="saved-games-kicker">
-                            {event.previousMedal ? 'Medaillen-Upgrade' : 'Erste Medaille'}
-                          </span>
-                          <strong>
-                            {event.previousMedal
-                              ? `${getChallengeMedalEmoji(event.previousMedal)} ${formatChallengeMedalLabel(event.previousMedal)} \u2192 ${getChallengeMedalEmoji(event.medal)} ${event.medalLabel}`
-                              : `${getChallengeMedalEmoji(event.medal)} ${event.medalLabel} erreicht`}
-                          </strong>
-                          <small>{formatDate(event.date)}</small>
-                        </div>
-                        <div className="stats-medal-timeline-metrics">
-                          <span>{formatTime(event.time)}</span>
-                          <span>{event.moves} Netto-Zuege</span>
-                        </div>
+                        <button
+                          type="button"
+                          className="stats-medal-motif-preview"
+                          onClick={() => handleOpenMedalDetail(card.motifKey, card.bestEntryId)}
+                          aria-label={`Vollstaendige Detailkarte fuer das ${card.bestMedalLabel}-Motiv oeffnen`}
+                          data-app-tooltip="Vollstaendige Galerie-Detailkarte oeffnen."
+                          data-app-tooltip-position="top"
+                        >
+                          {card.previewImage ? <img src={card.previewImage} alt="" /> : <Medal />}
+                        </button>
+                        {activeSeries ? (
+                          <>
+                            <div className="stats-medal-series-comparison" aria-label="Vergleich der ausgewaehlten Challenge-Serie">
+                              <div className="stats-medal-series-metric is-target">
+                                <div className="stats-medal-series-primary">
+                                  <small>Vorlage</small>
+                                  <strong>{activeSeries.targetDifficultyLabel ?? 'Vorlage nicht vorhanden'}</strong>
+                                </div>
+                                <div className="stats-medal-series-values">
+                                  <span>
+                                    <small>Zeit</small>
+                                    <strong>{activeSeries.targetTime !== null ? formatTime(activeSeries.targetTime) : '--'}</strong>
+                                  </span>
+                                  <span>
+                                    <small>Netto</small>
+                                    <strong>{activeSeries.targetMoves !== null ? `${activeSeries.targetMoves} Zuege` : '--'}</strong>
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="stats-medal-series-metric is-best">
+                                <div className="stats-medal-series-primary">
+                                  <small>Bester Versuch</small>
+                                  <strong>{getChallengeMedalEmoji(activeSeries.bestMedal)} {formatChallengeMedalLabel(activeSeries.bestMedal)}</strong>
+                                </div>
+                                <div className="stats-medal-series-values">
+                                  <span>
+                                    <small>Zeit</small>
+                                    <strong>{formatTime(activeSeries.bestAttemptTime)}</strong>
+                                  </span>
+                                  <span>
+                                    <small>Netto</small>
+                                    <strong>{activeSeries.bestAttemptMoves} Zuege</strong>
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="stats-medal-series-metric is-gap">
+                                <div className="stats-medal-series-primary">
+                                  <small>Abstand zur Vorlage</small>
+                                  <strong>{isSeriesTargetTie ? 'Gleichstand' : 'Vergleich'}</strong>
+                                </div>
+                                <div className="stats-medal-series-values">
+                                  <span>
+                                    <small>Zeit</small>
+                                    <strong>{activeSeries.timeDeltaToTarget !== null ? formatSeriesTimeDelta(activeSeries.timeDeltaToTarget) : 'Nicht vergleichbar'}</strong>
+                                  </span>
+                                  <span>
+                                    <small>Netto</small>
+                                    <strong>{activeSeries.movesDeltaToTarget !== null ? formatSeriesMovesDelta(activeSeries.movesDeltaToTarget) : 'Nicht vergleichbar'}</strong>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="stats-medal-motif-facts">
+                              <div className="stats-medal-series-toolbar">
+                                <span>
+                                  Ausgewaehlte Serie {activeSeriesIndex + 1} von {card.series.length}
+                                </span>
+                                {card.series.length > 1 ? (
+                                  <div className="stats-medal-series-switcher" aria-label="Challenge-Serie dieses Motivs auswaehlen">
+                                    {card.series.map((series, index) => (
+                                      <button
+                                      key={series.targetId}
+                                      type="button"
+                                      className={`stats-series-tone-${index % 4}${series.targetId === activeSeries.targetId ? ' is-active' : ''}`}
+                                        aria-pressed={series.targetId === activeSeries.targetId}
+                                        onClick={() => setSelectedMedalSeries((current) => ({
+                                          ...current,
+                                          [card.motifKey]: series.targetId,
+                                        }))}
+                                      >
+                                        Serie {index + 1}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                              <div className="stats-medal-series-progress" aria-label="Entwicklung innerhalb der ausgewaehlten Serie">
+                                <strong>{activeSeries.attemptCount} {activeSeries.attemptCount === 1 ? 'Versuch' : 'Versuche'}</strong>
+                                <span>
+                                  Seit erstem Versuch:
+                                  {' '}
+                                  {activeSeries.timeImprovementSinceFirst > 0
+                                    ? `${formatTime(activeSeries.timeImprovementSinceFirst)} schneller`
+                                    : 'Zeit gehalten'}
+                                  {' · '}
+                                  {activeSeries.movesImprovementSinceFirst > 0
+                                    ? `${activeSeries.movesImprovementSinceFirst} Zuege gespart`
+                                    : 'Zuege gehalten'}
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        ) : null}
                       </article>
-                    ))}
-                  </div>
+                      )
+                    })}
+                    </div>
+                    <UploadPageNavigation
+                      activePage={activeMedalPage}
+                      ariaLabel="Medaillen-Motivseiten"
+                      onPageChange={setMedalPage}
+                      pageCount={medalPageCount}
+                      scrollTargetRef={medalCardsRef}
+                    />
+                  </>
                 )}
                 <div className="stats-visual-line-legend">
-                  <span>Neueste Erfolge stehen oben</span>
-                  <span>Wiederholte gleiche Medaillen werden nicht erneut angezeigt</span>
+                  <span>Pro Motiv eine Karte; jede Challenge-Serie vergleicht Vorlage, besten Versuch und Abstand</span>
+                  <span>Bei mehreren Serien kann die dargestellte Challenge direkt in der Karte gewechselt werden</span>
+                </div>
+                <div className="stats-chart-footer-navigation" onKeyDown={handleDirectionalFocusNavigation}>
+                  <AnimatedButton
+                    className="secondary stats-chart-footer-button"
+                    interaction="chip"
+                    onClick={(event) => scrollToStatisticsTop(event.currentTarget)}
+                    data-app-tooltip="Zum Anfang der Statistikseite springen."
+                    data-app-tooltip-position="top"
+                  >
+                    <ArrowUp size={16} aria-hidden="true" />
+                    Zum Seitenanfang
+                  </AnimatedButton>
+                  <AnimatedButton
+                    className="secondary stats-chart-footer-button"
+                    interaction="chip"
+                    onClick={onBackToStart}
+                    data-app-tooltip="Zur Auswahluebersicht zurueckkehren."
+                    data-app-tooltip-position="top"
+                  >
+                    <Home size={16} aria-hidden="true" />
+                    Zur Auswahl
+                  </AnimatedButton>
                 </div>
               </article>
-            </>
           ) : null}
 
           {activeView === 'raw' ? (
@@ -2840,6 +3183,43 @@ export default function UploadStatsVisualReport({
           <p>Noch keine Statistikwerte vorhanden.</p>
           <p className="empty-hint">Nach dem ersten Sieg erscheinen hier Diagramme, Rekorde und Verlauf.</p>
         </div>
+      ) : null}
+
+      {selectedMedalDetail ? (
+        <UploadGalleryDetailDialog
+          entry={selectedMedalDetail}
+          onReplayEntry={onReplayGalleryEntry}
+          onCollectEntry={(entry) => {
+            setSelectedMedalDetail(null)
+            setCollectingMedalEntry(entry)
+          }}
+          onTagFilter={handleMedalTagFilter}
+          onFetchRandomImage={handleMedalTagImageSearch}
+          onOpenSimilarEntry={setSelectedMedalDetail}
+          similarEntries={similarMedalEntries}
+          onRetryTagging={handleRetryMedalTagging}
+          isRetryingTagging={retryingMedalTagEntryId === selectedMedalDetail.representativeEntry.id}
+          allTagLabels={allGalleryTagLabels}
+          onEditTags={handleEditMedalTags}
+          isEditingTags={isEditingMedalTags}
+          onClose={() => setSelectedMedalDetail(null)}
+        />
+      ) : null}
+
+      {collectingMedalEntry ? (
+        <UploadCollectionPickerDialog
+          collections={collections}
+          imageIds={collectingMedalImageIds}
+          imageLabel={collectingMedalImageLabel}
+          isBusy={isSavingMedalCollection || isLoadingCollections}
+          onCreateCollection={handleCreateMedalCollection}
+          onAddToCollection={handleAddMedalCollectionImages}
+          onClose={() => {
+            if (!isSavingMedalCollection) {
+              setCollectingMedalEntry(null)
+            }
+          }}
+        />
       ) : null}
     </section>
   )

@@ -1,9 +1,10 @@
-import type { ChallengeMedal, SolvedGalleryEntry } from '../../types/index.ts'
+import type { ChallengeMedal, PuzzleConfig, SolvedGalleryEntry } from '../../types/index.ts'
 import {
   formatChallengeMedalLabel,
   getChallengeMedalRank,
 } from '../../utils/galleryChallenge.ts'
-import { getGalleryMotifKey } from './UploadGalleryDisplayUtils.ts'
+import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
+import { buildGalleryChallengeSeries, getGalleryMotifKey } from './UploadGalleryDisplayUtils.ts'
 
 export const MEDAL_STATS_ORDER: ChallengeMedal[] = ['diamond', 'gold', 'silver', 'bronze']
 
@@ -39,9 +40,73 @@ export interface MedalTrendPoint {
   bronze: number
 }
 
+export interface MotifAscent {
+  medal: ChallengeMedal
+  time: number
+  moves: number
+  date: string
+  config: PuzzleConfig
+}
+
+export interface MotifChallengeSeries {
+  targetId: string
+  targetTime: number | null
+  targetMoves: number | null
+  targetConfig: string | null
+  targetDifficultyLabel: string | null
+  bestAttemptId: string
+  bestAttemptTime: number
+  bestAttemptMoves: number
+  bestMedal: ChallengeMedal
+  attemptCount: number
+  firstAttemptTime: number
+  firstAttemptMoves: number
+  timeDeltaToTarget: number | null
+  movesDeltaToTarget: number | null
+  timeImprovementSinceFirst: number
+  movesImprovementSinceFirst: number
+}
+
+export interface GroupedMotifCard {
+  motifKey: string
+  previewImage: string | null
+  bestEntryId: string
+  bestMedal: ChallengeMedal
+  bestMedalLabel: string
+  ascents: MotifAscent[]
+  latestAscentDate: string
+  configs: string[]
+  series: MotifChallengeSeries[]
+}
+
 function getTimestamp(entry: Pick<SolvedGalleryEntry, 'completedAt'>): number {
   const parsed = Date.parse(entry.completedAt)
   return Number.isNaN(parsed) ? 0 : parsed
+}
+
+function formatConfig(config: PuzzleConfig): string {
+  return `${config.rows}\u00d7${config.cols}`
+}
+
+function compareConfigs(left: PuzzleConfig, right: PuzzleConfig): number {
+  return (
+    left.rows * left.cols - right.rows * right.cols
+    || left.rows - right.rows
+    || left.cols - right.cols
+  )
+}
+
+function getChronologicalChallengeEntries(
+  entries: SolvedGalleryEntry[]
+): Array<SolvedGalleryEntry & { challengeMedal: ChallengeMedal }> {
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .filter(
+      (item): item is { entry: SolvedGalleryEntry & { challengeMedal: ChallengeMedal }; index: number } =>
+        Boolean(item.entry.challengeMedal)
+    )
+    .sort((left, right) => getTimestamp(left.entry) - getTimestamp(right.entry) || left.index - right.index)
+    .map(({ entry }) => entry)
 }
 
 function formatShortDate(isoDate: string): string {
@@ -73,9 +138,7 @@ export function buildMedalDistribution(entries: SolvedGalleryEntry[]): MedalDist
 }
 
 export function buildMedalTrend(entries: SolvedGalleryEntry[]): MedalTrendPoint[] {
-  const challengeEntries = entries
-    .filter((entry): entry is SolvedGalleryEntry & { challengeMedal: ChallengeMedal } => Boolean(entry.challengeMedal))
-    .sort((left, right) => getTimestamp(left) - getTimestamp(right))
+  const challengeEntries = getChronologicalChallengeEntries(entries)
   const bestMedalByMotif = new Map<string, ChallengeMedal>()
   const counts: Record<ChallengeMedal, number> = {
     diamond: 0,
@@ -119,4 +182,89 @@ export function buildMedalTrend(entries: SolvedGalleryEntry[]): MedalTrendPoint[
   }
 
   return points
+}
+
+export function buildGroupedMotifCards(entries: SolvedGalleryEntry[]): GroupedMotifCard[] {
+  const challengeEntries = getChronologicalChallengeEntries(entries)
+  const challengeSeries = buildGalleryChallengeSeries(entries)
+  const entriesByMotif = new Map<string, Array<SolvedGalleryEntry & { challengeMedal: ChallengeMedal }>>()
+
+  for (const entry of challengeEntries) {
+    const motifKey = getGalleryMotifKey(entry)
+    const motifEntries = entriesByMotif.get(motifKey)
+    if (motifEntries) {
+      motifEntries.push(entry)
+    } else {
+      entriesByMotif.set(motifKey, [entry])
+    }
+  }
+
+  return Array.from(entriesByMotif.entries(), ([motifKey, motifEntries]) => {
+    const configs = Array.from(
+      motifEntries.reduce((configByKey, entry) => {
+        configByKey.set(`${entry.config.rows}x${entry.config.cols}`, entry.config)
+        return configByKey
+      }, new Map<string, PuzzleConfig>()).values()
+    ).sort(compareConfigs)
+
+    const ascents: MotifAscent[] = []
+    let bestEntry = motifEntries[0]
+
+    for (const entry of motifEntries) {
+      if (
+        ascents.length > 0
+        && getChallengeMedalRank(entry.challengeMedal) <= getChallengeMedalRank(ascents[ascents.length - 1].medal)
+      ) {
+        continue
+      }
+
+      bestEntry = entry
+      ascents.push({
+        medal: entry.challengeMedal,
+        time: entry.time,
+        moves: entry.moves,
+        date: entry.completedAt,
+        config: entry.config,
+      })
+    }
+    const motifSeries = challengeSeries
+      .filter((series) => getGalleryMotifKey(series.bestAttempt) === motifKey)
+      .map((series): MotifChallengeSeries => {
+        const chronologicalAttempts = [...series.attempts].sort(
+          (left, right) => getTimestamp(left) - getTimestamp(right)
+        )
+        const firstAttempt = chronologicalAttempts[0]
+
+        return {
+          targetId: series.targetId,
+          targetTime: series.targetEntry?.time ?? null,
+          targetMoves: series.targetEntry?.moves ?? null,
+          targetConfig: series.targetEntry ? formatConfig(series.targetEntry.config) : null,
+          targetDifficultyLabel: series.targetEntry ? formatDifficultyLabel(series.targetEntry.config) : null,
+          bestAttemptId: series.bestAttempt.id,
+          bestAttemptTime: series.bestAttempt.time,
+          bestAttemptMoves: series.bestAttempt.moves,
+          bestMedal: series.bestMedal,
+          attemptCount: series.attempts.length,
+          firstAttemptTime: firstAttempt.time,
+          firstAttemptMoves: firstAttempt.moves,
+          timeDeltaToTarget: series.targetEntry ? series.bestAttempt.time - series.targetEntry.time : null,
+          movesDeltaToTarget: series.targetEntry ? series.bestAttempt.moves - series.targetEntry.moves : null,
+          timeImprovementSinceFirst: Math.max(0, firstAttempt.time - series.bestAttempt.time),
+          movesImprovementSinceFirst: Math.max(0, firstAttempt.moves - series.bestAttempt.moves),
+        }
+      })
+
+    return {
+      motifKey,
+      previewImage: bestEntry.previewImage ?? bestEntry.sourceImage,
+      bestEntryId: motifSeries[0]?.bestAttemptId ?? bestEntry.id,
+      bestMedal: bestEntry.challengeMedal,
+      bestMedalLabel: formatChallengeMedalLabel(bestEntry.challengeMedal),
+      ascents,
+      latestAscentDate: bestEntry.completedAt,
+      configs: configs.map(formatConfig),
+      series: motifSeries,
+    }
+  })
 }

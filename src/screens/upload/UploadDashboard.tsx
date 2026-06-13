@@ -764,6 +764,15 @@ export default function UploadDashboard({
                       onBackToStart={handleReturnToStart}
                       activeVisualView={statsVisualView}
                       onActiveVisualViewChange={setStatsVisualView}
+                      collections={collections}
+                      isLoadingCollections={isLoadingCollections}
+                      onReplayGalleryEntry={onReplayGalleryEntry}
+                      onOpenGalleryTagFilter={handleOpenGalleryTagFilter}
+                      onFetchRandomImage={onFetchRandomImage}
+                      onEditGalleryEntryTags={handleEditGalleryEntryTags}
+                      onRetryGalleryTagging={onRetryGalleryTagging}
+                      onCreateCollection={onCreateImageCollection}
+                      onAddCollectionImages={onAddImageCollectionImages}
                     />
                   </motion.div>
                 </motion.div>
