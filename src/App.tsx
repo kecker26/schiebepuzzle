@@ -1832,7 +1832,7 @@ export default function App() {
         ...(challengeResult
           ? {
               challengeTargetId: challengeResult.targetId,
-              challengeMedal: challengeResult.medal,
+              ...(challengeResult.medal ? { challengeMedal: challengeResult.medal } : {}),
             }
           : {}),
       }

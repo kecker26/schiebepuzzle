@@ -1,5 +1,5 @@
 import { useCallback, useId, useMemo, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Medal, MousePointer2, Route, Sparkles, Timer, Trophy } from 'lucide-react'
+import { Medal, MousePointer2, Route, Sparkles, Target, Timer, Trophy } from 'lucide-react'
 import AnimatedButton from '../motion/AnimatedButton.tsx'
 import AnimatedDialog from '../motion/AnimatedDialog.tsx'
 import AnimatedReveal from '../motion/AnimatedReveal.tsx'
@@ -258,10 +258,10 @@ export default function WinDialog({
   const challengeMovesDelta = challengeTarget ? stats.moves - challengeTarget.moves : null
   const challengeTimeDelta = challengeTarget ? stats.time - challengeTarget.time : null
   const challengeMedalLabel = challengeMedal ? formatChallengeMedalLabel(challengeMedal) : null
-  const challengeExplanation = challengeTarget && challengeMedal
+  const challengeExplanation = challengeTarget
     ? getChallengeMedalExplanation(stats, challengeTarget, challengeMedal)
     : null
-  const nextChallengeMedalGoal = challengeTarget && challengeMedal
+  const nextChallengeMedalGoal = challengeTarget
     ? getNextChallengeMedalGoal(stats, challengeTarget, challengeMedal)
     : null
   const challengeUpgradeLabel = challengeMedal
@@ -270,7 +270,9 @@ export default function WinDialog({
       : getChallengeMedalRank(challengeMedal) > getChallengeMedalRank(challengePreviousBestMedal)
         ? `Aufstieg: ${formatChallengeMedalLabel(challengePreviousBestMedal)} zu ${challengeMedalLabel}`
         : `Medaille bestaetigt: ${challengeMedalLabel}`
-    : null
+    : challengeTarget
+      ? 'Challenge abgeschlossen: keine Medaille'
+      : null
   const timeComparison = compareLowerIsBetterMetric(currentRun.time, previousRun?.time ?? null)
   const movesComparison = compareLowerIsBetterMetric(currentRun.moves, previousRun?.moves ?? null)
   const timeGapComparison = compareGapToBest(
@@ -408,7 +410,7 @@ export default function WinDialog({
           <div className="win-hero-aura" aria-hidden="true" />
           <div className="win-hero-row">
             <div className="win-icon-shell" aria-hidden="true">
-              {hasAchievement || challengeMedal ? (
+              {hasAchievement || challengeTarget ? (
                 <Trophy className="win-icon-symbol" strokeWidth={2.4} absoluteStrokeWidth />
               ) : (
                 <Sparkles className="win-icon-symbol" strokeWidth={2.4} absoluteStrokeWidth />
@@ -447,18 +449,22 @@ export default function WinDialog({
           </div>
         </AnimatedReveal>
 
-        {challengeTarget && challengeMedal && challengeMedalLabel ? (
+        {challengeTarget ? (
           <AnimatedReveal
-            className={`win-challenge-summary is-${challengeMedal}`}
+            className={`win-challenge-summary is-${challengeMedal ?? 'none'}`}
             interaction="surface"
             level="medium"
           >
             <div className="win-challenge-medal" aria-hidden="true">
-              <Medal strokeWidth={2.2} absoluteStrokeWidth />
+              {challengeMedal ? (
+                <Medal strokeWidth={2.2} absoluteStrokeWidth />
+              ) : (
+                <Target strokeWidth={2.2} absoluteStrokeWidth />
+              )}
             </div>
             <div className="win-challenge-copy">
-              <span className="win-kicker">Herausforderung gemeistert</span>
-              <h3>{challengeMedalLabel}-Medaille</h3>
+              <span className="win-kicker">Challenge abgeschlossen</span>
+              <h3>{challengeMedalLabel ? `${challengeMedalLabel}-Medaille` : 'Keine Medaille'}</h3>
               <p>{challengeExplanation}</p>
               {challengeUpgradeLabel ? (
                 <span className="win-challenge-upgrade">{challengeUpgradeLabel}</span>

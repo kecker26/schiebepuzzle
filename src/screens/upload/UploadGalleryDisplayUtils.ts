@@ -214,7 +214,7 @@ export function getGalleryMedalHuntRecommendation(
   if (!status.hasStarted) {
     return {
       label: 'Erste Medaille holen',
-      detail: 'Schliesse eine Challenge ab, um Bronze zu sichern.',
+      detail: 'Unterbiete Zeit oder Zuege einer Vorlage strikt, um Bronze zu sichern.',
       tone: 'new',
     }
   }

@@ -19,8 +19,8 @@ interface GalleryChallengeStartDialogProps {
 }
 
 const MEDAL_RULES = [
-  { medal: 'bronze', rule: 'Challenge abschliessen' },
-  { medal: 'silver', rule: 'Zeit oder Zuege erreichen oder unterbieten' },
+  { medal: 'bronze', rule: 'Zeit oder Zuege strikt unterbieten' },
+  { medal: 'silver', rule: 'Zeit und Zuege erreichen oder unterbieten' },
   { medal: 'gold', rule: 'Beide Ziele strikt unterbieten und ohne Hilfe loesen' },
   { medal: 'diamond', rule: 'Ohne Hilfe, schneller und exakt solver-optimal loesen' },
 ] as const
