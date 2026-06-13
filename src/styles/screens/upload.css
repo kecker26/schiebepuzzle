@@ -8389,7 +8389,7 @@
 .stats-visual-dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  gap: 12px;
   align-items: stretch;
   overflow: visible;
 }
@@ -8406,21 +8406,28 @@
 }
 
 .stats-visual-donut-card {
-  min-height: 430px;
+  min-height: 0;
 }
 
 .stats-visual-dashboard-grid > .stats-report-card {
   min-width: 0;
-  min-height: 430px;
+  min-height: 0;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.stats-visual-dashboard-grid .stats-report-card-copy {
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .stats-visual-latest-card,
 .stats-visual-favorite-card,
 .stats-visual-quality-card {
   display: grid;
-  grid-template-rows: minmax(142px, auto) minmax(0, 1fr);
+  grid-template-rows: minmax(102px, auto) minmax(0, 1fr);
   align-content: stretch;
-  gap: 14px;
+  gap: 10px;
 }
 
 .stats-visual-latest-card,
@@ -8453,14 +8460,14 @@
 .stats-visual-card-head {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .stats-visual-card-visual {
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
-  gap: 14px;
+  gap: 10px;
   min-height: 0;
 }
 
@@ -8493,8 +8500,8 @@
 }
 
 .stats-recharts-donut-frame {
-  min-height: 220px;
-  padding: 6px;
+  min-height: 150px;
+  padding: 4px;
 }
 
 .stats-score-breakdown-frame {
@@ -8518,7 +8525,7 @@
   display: grid;
   grid-template-rows: repeat(5, 1fr);
   align-items: center;
-  height: 172px;
+  height: 112px;
   margin-top: 10px;
   color: var(--text-secondary);
   font-size: 13px;
@@ -10095,23 +10102,24 @@
 
 .stats-visual-donut-card .stats-visual-series-legend {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   align-items: stretch;
 }
 
 .stats-visual-donut-card .stats-visual-series-chip:first-child {
-  grid-column: 1 / -1;
-  justify-self: center;
-  width: calc((100% - 18px) / 4);
+  grid-column: span 2;
+  justify-self: stretch;
+  width: auto;
 }
 
 .stats-visual-donut-card .stats-visual-series-chip {
   justify-content: center;
   gap: 3px;
   min-width: 0;
-  min-height: 30px;
-  padding: 6px 3px;
+  width: 100%;
+  min-height: 26px;
+  padding: 4px 3px;
   font-size: 9.4px;
   line-height: 1.05;
   white-space: nowrap;

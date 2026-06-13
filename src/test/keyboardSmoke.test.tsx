@@ -3967,6 +3967,49 @@ describe('keyboard smoke tests', () => {
     expect(screen.getAllByRole('tab')).toHaveLength(4)
   })
 
+  it('filters only overview run types and average quality by one difficulty at a time', async () => {
+    const completionHistory = [
+      { ...createCompletionRecord('1', '2026-04-10T10:00:00.000Z'), config: { rows: 3, cols: 3 } },
+      { ...createCompletionRecord('2', '2026-04-11T10:00:00.000Z'), config: { rows: 4, cols: 4 } },
+    ]
+    const standardDifficultyStats = DIFFICULTY_OPTIONS.map((option) => ({ option, stats: null }))
+    const { container } = render(
+      <UploadStatsVisualReport
+        stats={null}
+        gallery={null}
+        latestCompletion={completionHistory[1]}
+        favoriteDifficulty={null}
+        fastestDifficulty={null}
+        completionHistory={completionHistory}
+        filteredHistory={completionHistory}
+        historyFilter="all"
+        historyFilterOptions={[{ id: 'all', label: 'Alle Siege' }]}
+        standardDifficultyStats={standardDifficultyStats}
+        activeView="overview"
+        onHistoryFilterChange={vi.fn()}
+        onReloadView={vi.fn()}
+        onBackToStart={vi.fn()}
+        onActiveViewChange={vi.fn()}
+      />
+    )
+
+    const runTypeCard = container.querySelector<HTMLElement>('.stats-visual-donut-card')
+    expect(runTypeCard).toBeTruthy()
+    const allButton = within(runTypeCard!).getByRole('button', { name: 'Alle' })
+    const normalButton = within(runTypeCard!).getByRole('button', { name: 'Normal' })
+    expect(allButton.getAttribute('aria-pressed')).toBe('true')
+    expect(normalButton.getAttribute('aria-pressed')).toBe('false')
+
+    fireEvent.click(normalButton)
+
+    const updatedRunTypeCard = container.querySelector<HTMLElement>('.stats-visual-donut-card')
+    expect(updatedRunTypeCard).toBeTruthy()
+    expect(within(updatedRunTypeCard!).getByRole('button', { name: 'Alle' }).getAttribute('aria-pressed')).toBe('false')
+    expect(within(updatedRunTypeCard!).getByRole('button', { name: 'Normal' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByText(/Durchschnittlicher Score fuer Normal/)).toBeTruthy()
+    expect(screen.getByText('Challenge-Erfolge')).toBeTruthy()
+  })
+
   it('shows the solve-time histogram with separate difficulty color legends', () => {
     const completionHistory = [
       { ...createCompletionRecord('1', '2026-04-10T10:00:00.000Z'), config: { rows: 3, cols: 3 }, time: 90 },

@@ -1485,7 +1485,7 @@ function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string) {
           })}
         </div>
         <div className="stats-score-breakdown-chart">
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={150}>
             <BarChart
               data={data}
               layout="vertical"
@@ -1557,7 +1557,7 @@ function renderFavoriteDifficultyChart(data: FavoriteDifficultyDatum[]) {
 
   return (
     <div className="stats-favorite-difficulty-frame" aria-label="Siege nach Lieblingsstufe">
-      <ResponsiveContainer width="100%" height={220}>
+      <ResponsiveContainer width="100%" height={150}>
         <BarChart
           data={data}
           layout="vertical"
@@ -1787,7 +1787,7 @@ export default function UploadStatsVisualReport({
   const [isEditingMedalTags, setIsEditingMedalTags] = useState(false)
   const medalCardsRef = useRef<HTMLDivElement>(null)
   const [focusedTrendDifficultyKey, setFocusedTrendDifficultyKey] = useState<string | null>(null)
-  const [hiddenTrendDifficultyKeys, setHiddenTrendDifficultyKeys] = useState<string[]>([])
+  const [overviewDifficultyKey, setOverviewDifficultyKey] = useState<string | null>(null)
   const [rawStatsView, setRawStatsView] = useState<RawStatsView>('difficulties')
   const [isSavingRawExport, setIsSavingRawExport] = useState(false)
   const [rawExportStatus, setRawExportStatus] = useState<string | null>(null)
@@ -1842,7 +1842,10 @@ export default function UploadStatsVisualReport({
     () => new Map(trendSeriesOptions.map((series) => [series.key, series.color])),
     [trendSeriesOptions]
   )
-  const visibleTrendSeries = trendSeriesOptions.filter((series) => !hiddenTrendDifficultyKeys.includes(series.key))
+  const effectiveOverviewDifficultyKey = trendSeriesOptions.some((series) => series.key === overviewDifficultyKey)
+    ? overviewDifficultyKey
+    : null
+  const visibleTrendSeries = trendSeriesOptions
   const effectiveFocusedTrendKey = visibleTrendSeries.some((series) => series.key === focusedTrendDifficultyKey)
     ? focusedTrendDifficultyKey
     : null
@@ -1853,13 +1856,13 @@ export default function UploadStatsVisualReport({
   )
   const isMovingAverageVisible = showMovingAverage && canShowMovingAverage
   const selectedDifficultyEntries = useMemo(() => {
-    if (trendSeriesOptions.length === 0 || visibleTrendSeries.length === trendSeriesOptions.length) {
+    if (effectiveOverviewDifficultyKey === null) {
       return completionHistory
     }
 
-    const visibleDifficultyKeys = new Set(visibleTrendSeries.map((series) => series.key))
-    return completionHistory.filter((entry) => visibleDifficultyKeys.has(getCompletionDifficultyKey(entry)))
-  }, [completionHistory, trendSeriesOptions, visibleTrendSeries])
+    return completionHistory.filter((entry) => getCompletionDifficultyKey(entry) === effectiveOverviewDifficultyKey)
+  }, [completionHistory, effectiveOverviewDifficultyKey])
+  const selectedOverviewDifficulty = trendSeriesOptions.find((series) => series.key === effectiveOverviewDifficultyKey) ?? null
   const selectedAssistanceSummary = useMemo(
     () => getDerivedAssistanceSummary(null, selectedDifficultyEntries),
     [selectedDifficultyEntries]
@@ -1952,48 +1955,32 @@ export default function UploadStatsVisualReport({
   const solveTimeHistogramTicks = solveTimeHistogram.data.map((bucket) => bucket.displayIndex)
   const solveTimeHistogramLastIndex = solveTimeHistogramTicks[solveTimeHistogramTicks.length - 1] ?? 0
 
-  const handleToggleTrendSeries = (seriesKey: string) => {
-    setHiddenTrendDifficultyKeys((current) => {
-      if (current.includes(seriesKey)) {
-        return current.filter((key) => key !== seriesKey)
-      }
-
-      const visibleSeries = trendSeriesOptions.filter((series) => !current.includes(series.key))
-      if (visibleSeries.length <= 1) {
-        return current
-      }
-
-      return [...current, seriesKey]
-    })
-  }
-
   const renderDifficultyFilterControls = () => {
     if (trendSeriesOptions.length === 0) return null
 
     return (
       <div className="stats-visual-series-legend" aria-label="Schwierigkeiten filtern" onKeyDown={handleDirectionalFocusNavigation}>
         <AnimatedChipButton
-          className={`dashboard-filter-chip stats-visual-series-chip${visibleTrendSeries.length === trendSeriesOptions.length ? ' is-active' : ''}`}
-          onClick={() => setHiddenTrendDifficultyKeys([])}
-          disabled={visibleTrendSeries.length === trendSeriesOptions.length}
-          aria-pressed={visibleTrendSeries.length === trendSeriesOptions.length}
-          data-app-tooltip="Alle Schwierigkeitsreihen wieder anzeigen."
+          className={`dashboard-filter-chip stats-visual-series-chip${effectiveOverviewDifficultyKey === null ? ' is-active' : ''}`}
+          onClick={() => setOverviewDifficultyKey(null)}
+          disabled={effectiveOverviewDifficultyKey === null}
+          aria-pressed={effectiveOverviewDifficultyKey === null}
+          data-app-tooltip="Alle Schwierigkeitsstufen anzeigen."
           data-app-tooltip-position="top"
         >
           Alle
         </AnimatedChipButton>
         {trendSeriesOptions.map((series) => {
-          const isVisible = !hiddenTrendDifficultyKeys.includes(series.key)
-          const isLastVisible = isVisible && visibleTrendSeries.length <= 1
+          const isSelected = effectiveOverviewDifficultyKey === series.key
           return (
             <AnimatedChipButton
               key={series.key}
-              className={`dashboard-filter-chip stats-visual-series-chip${isVisible ? ' is-active' : ''}`}
+              className={`dashboard-filter-chip stats-visual-series-chip${isSelected ? ' is-active' : ''}`}
               style={{ '--series-color': series.color } as CSSProperties}
-              onClick={() => handleToggleTrendSeries(series.key)}
-              disabled={isLastVisible}
-              aria-pressed={isVisible}
-              data-app-tooltip={`${series.label} ${isVisible ? 'ausblenden' : 'anzeigen'}.`}
+              onClick={() => setOverviewDifficultyKey(series.key)}
+              disabled={isSelected}
+              aria-pressed={isSelected}
+              data-app-tooltip={`Nur ${series.label} anzeigen.`}
               data-app-tooltip-position="top"
             >
               <i aria-hidden="true" />
@@ -2012,12 +1999,10 @@ export default function UploadStatsVisualReport({
       <div className="stats-chart-color-legend" aria-label={label}>
         <span className="stats-chart-color-legend-label">Schwierigkeiten</span>
         {trendSeriesOptions.map((series) => {
-          const isVisible = !hiddenTrendDifficultyKeys.includes(series.key)
-
           return (
             <span
               key={series.key}
-              className={`stats-chart-color-legend-item${isVisible ? '' : ' is-muted'}`}
+              className="stats-chart-color-legend-item"
               style={{ '--series-color': series.color } as CSSProperties}
             >
               <i aria-hidden="true" />
@@ -2282,7 +2267,7 @@ export default function UploadStatsVisualReport({
                     </div>
                   ) : (
                     <div className="stats-recharts-donut-frame">
-                      <ResponsiveContainer width="100%" height={220}>
+                      <ResponsiveContainer width="100%" height={150}>
                         <PieChart>
                           <Pie
                             data={donutSegments}
@@ -2328,7 +2313,7 @@ export default function UploadStatsVisualReport({
                     </div>
                   ) : (
                     <div className="stats-recharts-donut-frame">
-                      <ResponsiveContainer width="100%" height={220}>
+                      <ResponsiveContainer width="100%" height={150}>
                         <PieChart>
                           <Pie
                             data={visibleMedalDistribution}
@@ -2403,13 +2388,17 @@ export default function UploadStatsVisualReport({
                       />
                     </strong>
                     <p className="stats-report-card-copy">
-                      Durchschnittlicher Score mit sichtbaren Abzuegen. Niedrige Abzuege bedeuten sauberere Laeufe.
+                      {selectedOverviewDifficulty
+                        ? `Durchschnittlicher Score fuer ${selectedOverviewDifficulty.label} mit sichtbaren Abzuegen. Niedrige Abzuege bedeuten sauberere Laeufe.`
+                        : 'Durchschnittlicher Score ueber alle Schwierigkeitsstufen mit sichtbaren Abzuegen. Niedrige Abzuege bedeuten sauberere Laeufe.'}
                     </p>
                   </div>
                   <div className="stats-visual-card-visual">
                     {renderScoreBreakdownChart(
                       averageScoreBreakdownData,
-                      'Durchschnittliche Score-Aufschluesselung'
+                      selectedOverviewDifficulty
+                        ? `Durchschnittliche Score-Aufschluesselung fuer ${selectedOverviewDifficulty.label}`
+                        : 'Durchschnittliche Score-Aufschluesselung ueber alle Schwierigkeitsstufen'
                     )}
                   </div>
                 </article>
