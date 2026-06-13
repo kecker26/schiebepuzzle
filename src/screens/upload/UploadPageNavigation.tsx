@@ -1,5 +1,5 @@
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
-import type { MouseEvent as ReactMouseEvent } from 'react'
+import type { MouseEvent as ReactMouseEvent, RefObject } from 'react'
 
 interface UploadPageNavigationProps {
   activePage: number
@@ -7,6 +7,7 @@ interface UploadPageNavigationProps {
   isDisabled?: boolean
   onPageChange: (page: number) => void
   pageCount: number
+  scrollTargetRef?: RefObject<HTMLElement | null>
 }
 
 function scrollPaginationContextToTop(target: HTMLElement): void {
@@ -25,6 +26,7 @@ export default function UploadPageNavigation({
   isDisabled = false,
   onPageChange,
   pageCount,
+  scrollTargetRef,
 }: UploadPageNavigationProps) {
   if (pageCount <= 1) {
     return null
@@ -35,10 +37,18 @@ export default function UploadPageNavigation({
 
     const button = event.currentTarget
     window.requestAnimationFrame(() => {
-      scrollPaginationContextToTop(button)
+      if (scrollTargetRef?.current) {
+        scrollTargetRef.current.scrollIntoView({ block: 'start', behavior: 'auto' })
+      } else {
+        scrollPaginationContextToTop(button)
+      }
 
       window.requestAnimationFrame(() => {
-        scrollPaginationContextToTop(button)
+        if (scrollTargetRef?.current) {
+          scrollTargetRef.current.scrollIntoView({ block: 'start', behavior: 'auto' })
+        } else {
+          scrollPaginationContextToTop(button)
+        }
       })
     })
   }

@@ -2,9 +2,10 @@ import type { RefObject } from 'react'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
 import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
-import { PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats, SolvedGallery } from '../../types/index'
+import { ImageCollection, PuzzleCompletionRecord, PuzzleDifficultyStats, PuzzleStats, SolvedGallery } from '../../types/index'
 import UploadStatsVisualReport, { type VisualStatsView } from './UploadStatsVisualReport.tsx'
 import UploadStateNotice from './UploadStateNotice.tsx'
+import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 import {
   HistoryFilter,
   HistoryFilterDefinition,
@@ -29,6 +30,15 @@ interface UploadStatsReportProps {
   activeVisualView: VisualStatsView
   onActiveVisualViewChange: (view: VisualStatsView) => void
   primaryFocusRef?: RefObject<HTMLButtonElement>
+  collections?: ImageCollection[]
+  isLoadingCollections?: boolean
+  onReplayGalleryEntry: GalleryReplayRequestHandler
+  onOpenGalleryTagFilter: (tagLabel: string) => void
+  onFetchRandomImage?: (query?: string) => Promise<void> | void
+  onEditGalleryEntryTags?: (entryIds: string[], add?: string[], remove?: string[]) => Promise<void>
+  onRetryGalleryTagging?: (entryId: string) => Promise<void>
+  onCreateCollection?: (name: string, imageIds: string[], description?: string) => Promise<void>
+  onAddCollectionImages?: (collectionId: string, imageIds: string[]) => Promise<void>
 }
 
 export default function UploadStatsReport({
@@ -49,6 +59,15 @@ export default function UploadStatsReport({
   activeVisualView,
   onActiveVisualViewChange,
   primaryFocusRef,
+  collections,
+  isLoadingCollections,
+  onReplayGalleryEntry,
+  onOpenGalleryTagFilter,
+  onFetchRandomImage,
+  onEditGalleryEntryTags,
+  onRetryGalleryTagging,
+  onCreateCollection,
+  onAddCollectionImages,
 }: UploadStatsReportProps) {
   const reportStateKey = isLoadingStats
     ? 'loading'
@@ -96,6 +115,15 @@ export default function UploadStatsReport({
               onBackToStart={onBackToStart}
               activeView={activeVisualView}
               onActiveViewChange={onActiveVisualViewChange}
+              collections={collections}
+              isLoadingCollections={isLoadingCollections}
+              onReplayGalleryEntry={onReplayGalleryEntry}
+              onOpenGalleryTagFilter={onOpenGalleryTagFilter}
+              onFetchRandomImage={onFetchRandomImage}
+              onEditGalleryEntryTags={onEditGalleryEntryTags}
+              onRetryGalleryTagging={onRetryGalleryTagging}
+              onCreateCollection={onCreateCollection}
+              onAddCollectionImages={onAddCollectionImages}
             />
           </AnimatedReveal>
         </AnimatedStaggerGroup>

@@ -3951,11 +3951,20 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Challenge-Erfolge')).toBeTruthy()
     expect(screen.getByText('1 Motive')).toBeTruthy()
 
-    rerender(<UploadStatsVisualReport {...reportProps} activeView="history" />)
+    rerender(<UploadStatsVisualReport {...reportProps} activeView="medals" />)
 
-    expect(screen.getByLabelText('Medaillen-Aufstiege, neueste zuerst')).toBeTruthy()
-    expect(screen.getByText('Erste Medaille')).toBeTruthy()
-    expect(screen.getByText(/Silber erreicht/)).toBeTruthy()
+    const motifCards = screen.getByLabelText('Medaillen-Motive')
+    expect(motifCards).toBeTruthy()
+    expect(within(motifCards).getByText(/Silber/)).toBeTruthy()
+    expect(within(motifCards).getByText('Normal 4x4')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Vollstaendige Detailkarte fuer das Silber-Motiv oeffnen' })).toBeTruthy()
+    const medalSummary = screen.getByLabelText('Aktuelle beste Medaillen pro Motiv')
+    expect(within(medalSummary).getByRole('button', { name: /Alle/ }).getAttribute('aria-pressed')).toBe('true')
+    const medalCard = container.querySelector<HTMLElement>('.stats-visual-medal-trend-card')
+    expect(medalCard).toBeTruthy()
+    expect(within(medalCard!).getByRole('button', { name: 'Zum Seitenanfang' })).toBeTruthy()
+    expect(within(medalCard!).getByRole('button', { name: 'Zur Auswahl' })).toBeTruthy()
+    expect(screen.getAllByRole('tab')).toHaveLength(4)
   })
 
   it('shows the solve-time histogram with separate difficulty color legends', () => {
