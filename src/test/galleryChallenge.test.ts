@@ -54,12 +54,19 @@ describe('galleryChallenge', () => {
     })).toBe('gold')
   })
 
-  it('vergibt Gold strikt und Silber auch fuer einen Gleichstand', () => {
+  it('vergibt Gold strikt und Silber nur, wenn beide Ziele erreicht werden', () => {
     expect(deriveChallengeMedal(createStats(), target)).toBe('gold')
     expect(deriveChallengeMedal(createStats({ time: 60 }), target)).toBe('silver')
     expect(deriveChallengeMedal(createStats({ moves: 20 }), target)).toBe('silver')
     expect(deriveChallengeMedal(createStats({ moves: 20, time: 60 }), target)).toBe('silver')
-    expect(deriveChallengeMedal(createStats({ moves: 21, time: 61 }), target)).toBe('bronze')
+    expect(deriveChallengeMedal(createStats({ moves: 21, time: 61 }), target)).toBeNull()
+  })
+
+  it('vergibt Bronze nur, wenn mindestens ein Ziel strikt unterboten wird', () => {
+    expect(deriveChallengeMedal(createStats({ moves: 21, time: 59 }), target)).toBe('bronze')
+    expect(deriveChallengeMedal(createStats({ moves: 19, time: 61 }), target)).toBe('bronze')
+    expect(deriveChallengeMedal(createStats({ moves: 21, time: 60 }), target)).toBeNull()
+    expect(deriveChallengeMedal(createStats({ moves: 20, time: 61 }), target)).toBeNull()
   })
 
   it('begrenzt assistierte Laeufe trotz zweier unterbotener Ziele auf Silber', () => {
@@ -88,7 +95,8 @@ describe('galleryChallenge', () => {
       time: 40,
       assistanceMode: 'hinted',
     }), target).medal).toBe('silver')
-    expect(deriveLiveChallengeForecast(createStats({ moves: 21, time: 61 }), target).medal).toBe('bronze')
+    expect(deriveLiveChallengeForecast(createStats({ moves: 21, time: 59 }), target).medal).toBe('bronze')
+    expect(deriveLiveChallengeForecast(createStats({ moves: 21, time: 61 }), target).medal).toBeNull()
   })
 
   it('erklaert Assistance-Deckelung und das naechste Medaillenziel', () => {
@@ -98,8 +106,12 @@ describe('galleryChallenge', () => {
       medal: 'gold',
       label: 'ohne Hilfe',
     })
-    expect(getNextChallengeMedalGoal(createStats({ moves: 23, time: 64 }), target, 'bronze').label)
-      .toContain('Zeitgleichstand')
+    expect(getNextChallengeMedalGoal(createStats({ moves: 23, time: 64 }), target, null)).toEqual({
+      medal: 'bronze',
+      label: '5 Sek. schneller oder 4 Zuege weniger',
+    })
+    expect(getChallengeMedalExplanation(createStats({ moves: 23, time: 64 }), target, null))
+      .toContain('kein Ziel')
   })
 
   it('meldet Diamant nur bei einer exakten optimalen Zugzahl als verfuegbar', () => {

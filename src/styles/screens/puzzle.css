@@ -288,6 +288,10 @@
   --live-medal-color: #fb923c;
 }
 
+.puzzle-challenge-badge.is-none {
+  --live-medal-color: #94a3b8;
+}
+
 .puzzle-challenge-badge-label {
   display: inline-flex;
   align-items: center;

@@ -262,7 +262,7 @@ export type ChallengeMedal = 'bronze' | 'silver' | 'gold' | 'diamond'
 
 export interface ChallengeResult {
   targetId: string
-  medal: ChallengeMedal
+  medal: ChallengeMedal | null
   previousBestMedal?: ChallengeMedal | null
 }
 

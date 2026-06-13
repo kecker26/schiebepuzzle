@@ -20,7 +20,7 @@ export function getChallengeMedalRank(medal: ChallengeMedal): number {
 export function deriveChallengeMedal(
   stats: WinStats,
   target: GalleryChallengeTarget
-): ChallengeMedal {
+): ChallengeMedal | null {
   const isClean = stats.assistanceMode === 'clean'
   const beatTime = stats.time < target.time
   const beatMoves = stats.moves < target.moves
@@ -33,12 +33,13 @@ export function deriveChallengeMedal(
 
   if (isClean && beatTime && reachedExactOptimal) return 'diamond'
   if (isClean && beatTime && beatMoves) return 'gold'
-  if (reachedTime || reachedMoves) return 'silver'
-  return 'bronze'
+  if (reachedTime && reachedMoves) return 'silver'
+  if (beatTime || beatMoves) return 'bronze'
+  return null
 }
 
 export interface LiveChallengeForecast {
-  medal: ChallengeMedal
+  medal: ChallengeMedal | null
   diamondAvailable: boolean
   goldAvailable: boolean
   isClean: boolean
@@ -86,9 +87,11 @@ export function deriveLiveChallengeForecast(
       ? 'diamond'
       : goldAvailable && isClean && timeBeaten && movesBeaten
         ? 'gold'
-        : timeReached || movesReached
+        : timeReached && movesReached
           ? 'silver'
-          : 'bronze'
+          : timeBeaten || movesBeaten
+            ? 'bronze'
+            : null
 
   return {
     medal,
@@ -110,7 +113,7 @@ export interface ChallengeMedalGoal {
 export function getNextChallengeMedalGoal(
   stats: WinStats,
   target: GalleryChallengeTarget,
-  medal: ChallengeMedal
+  medal: ChallengeMedal | null
 ): ChallengeMedalGoal {
   const isClean = stats.assistanceMode === 'clean'
   const timeGapToBeat = Math.max(0, stats.time - target.time + 1)
@@ -119,6 +122,18 @@ export function getNextChallengeMedalGoal(
     typeof target.optimalStartMoveCount === 'number'
       ? Math.max(0, stats.moves - target.optimalStartMoveCount)
       : 0
+
+  if (medal === null) {
+    const bronzeRequirements = [
+      timeGapToBeat > 0 ? `${timeGapToBeat} Sek. schneller` : null,
+      movesGapToBeat > 0 ? `${movesGapToBeat} ${movesGapToBeat === 1 ? 'Zug' : 'Zuege'} weniger` : null,
+    ].filter((requirement): requirement is string => requirement !== null)
+
+    return {
+      medal: 'bronze',
+      label: bronzeRequirements.join(' oder ') || 'Mindestens ein Ziel der Vorlage strikt unterbieten.',
+    }
+  }
 
   if (medal === 'diamond') {
     return { medal: null, label: 'Hoechste Medaillenstufe erreicht.' }
@@ -179,15 +194,16 @@ export function getNextChallengeMedalGoal(
 
   return {
     medal: 'silver',
-    label: silverRequirements.join(' oder ') || 'Mindestens ein Ziel der Vorlage erreichen.',
+    label: silverRequirements.join(' + ') || 'Beide Ziele der Vorlage erreichen.',
   }
 }
 
 export function getChallengeMedalExplanation(
   stats: WinStats,
   target: GalleryChallengeTarget,
-  medal: ChallengeMedal
+  medal: ChallengeMedal | null
 ): string {
+  if (medal === null) return 'Challenge abgeschlossen, aber kein Ziel der Vorlage strikt unterboten.'
   if (medal === 'diamond') return 'Clean, schneller als die Vorlage und exakt solver-optimal.'
   if (medal === 'gold') return 'Clean geloest und beide Ziele strikt unterboten.'
   if (medal === 'silver') {
@@ -195,9 +211,9 @@ export function getChallengeMedalExplanation(
     if (beatBoth && stats.assistanceMode !== 'clean') {
       return 'Beide Ziele unterboten, aber Gold erfordert einen sauberen Lauf ohne Hinweise.'
     }
-    return 'Mindestens ein Ziel der Vorlage erreicht oder unterboten.'
+    return 'Beide Ziele der Vorlage erreicht oder unterboten.'
   }
-  return 'Challenge abgeschlossen. Die Vorlage bleibt dein naechstes Ziel.'
+  return 'Mindestens ein Ziel der Vorlage strikt unterboten.'
 }
 
 export function getBestChallengeMedal(
@@ -289,7 +305,7 @@ export function getChallengeMedalProgress(
         medal,
         status: medal === 'bronze' ? 'next' : 'locked',
       })),
-      label: 'Noch keine Challenge-Medaille. Erstes Ziel: Bronze durch das Abschliessen einer Challenge.',
+      label: 'Noch keine Challenge-Medaille. Erstes Ziel: Bronze durch das strikte Unterbieten eines Zielwerts.',
     }
   }
 

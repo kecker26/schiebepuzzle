@@ -330,6 +330,10 @@
   --challenge-medal-color: #fb923c;
 }
 
+.win-challenge-summary.is-none {
+  --challenge-medal-color: #94a3b8;
+}
+
 .win-challenge-summary {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) minmax(230px, 0.8fr);

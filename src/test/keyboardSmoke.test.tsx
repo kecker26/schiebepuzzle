@@ -3429,6 +3429,51 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText(/Stufen-Bestzeit/)).toBeTruthy()
   })
 
+  it('zeigt einen abgeschlossenen Challenge-Lauf ohne Medaille und das Bronze-Ziel', () => {
+    render(
+      <WinDialog
+        stats={{
+          moves: 22,
+          time: 65,
+          actionMoves: 24,
+          undoCount: 0,
+          redoCount: 0,
+          hintCount: 0,
+          suggestedMoveCount: 0,
+          assistanceMode: 'clean',
+        }}
+        config={{ rows: 4, cols: 4 }}
+        nextDifficultyLabel={null}
+        completionResult={createCompletionResult()}
+        completionStatsError={null}
+        isRecordingStats={false}
+        challengeTarget={{
+          entryId: 'challenge-target',
+          completedAt: '2026-04-10T09:00:00.000Z',
+          time: 60,
+          moves: 20,
+          actionMoves: 21,
+          assistanceMode: 'clean',
+          optimalStartMoveCount: 18,
+          optimalStartMoveCountKind: 'exact',
+        }}
+        challengeMedal={null}
+        challengePreviousBestMedal={null}
+        onRetryStats={vi.fn()}
+        onReplaySameImage={vi.fn()}
+        onGoToSelectionScreen={vi.fn()}
+        onChooseNewImage={vi.fn()}
+        onNextDifficulty={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Keine Medaille')).toBeTruthy()
+    expect(screen.getByText('Challenge abgeschlossen: keine Medaille')).toBeTruthy()
+    expect(screen.getByText(/kein Ziel der Vorlage strikt unterboten/)).toBeTruthy()
+    expect(screen.getByText('Fuer Bronze')).toBeTruthy()
+    expect(screen.getByText('6 Sek. schneller oder 3 Zuege weniger')).toBeTruthy()
+  })
+
   it('weist bei einer optimalen Challenge-Vorlage auf das Ueberspringen von Gold hin', () => {
     render(
       <WinDialog

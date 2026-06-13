@@ -172,6 +172,9 @@ export default function PuzzleLeftPanel({
   const challengeForecast = challengeTarget
     ? deriveLiveChallengeForecast({ moves: moveCount, time: elapsedTime, assistanceMode }, challengeTarget)
     : null
+  const challengeForecastLabel = challengeForecast?.medal
+    ? formatChallengeMedalLabel(challengeForecast.medal)
+    : 'Keine Medaille'
 
   return (
     <AnimatedStaggerGroup
@@ -225,20 +228,20 @@ export default function PuzzleLeftPanel({
           </div>
           {challengeTarget && (
             <div
-              className={`puzzle-challenge-badge is-${challengeForecast?.medal ?? 'bronze'}`}
-              aria-label={`Challenge aktiv. Beste noch erreichbare Medaille: ${formatChallengeMedalLabel(challengeForecast?.medal ?? 'bronze')}.`}
+              className={`puzzle-challenge-badge is-${challengeForecast?.medal ?? 'none'}`}
+              aria-label={`Challenge aktiv. Beste noch erreichbare Medaille: ${challengeForecastLabel}.`}
             >
               <span className="puzzle-challenge-badge-label">
                 <Trophy aria-hidden="true" size={14} strokeWidth={2.3} />
                 Live-Zielvergleich
               </span>
               <AnimatedStateSwap
-                stateKey={challengeForecast?.medal ?? 'bronze'}
+                stateKey={challengeForecast?.medal ?? 'none'}
                 className="puzzle-challenge-forecast-swap"
               >
                 <span className="puzzle-challenge-badge-status">
                   <Medal aria-hidden="true" size={18} strokeWidth={2.4} />
-                  Beste noch erreichbar: {formatChallengeMedalLabel(challengeForecast?.medal ?? 'bronze')}
+                  Beste noch erreichbar: {challengeForecastLabel}
                 </span>
               </AnimatedStateSwap>
               <span className={`puzzle-challenge-badge-detail${challengeForecast?.movesReached ? ' is-positive' : ' is-negative'}`}>
