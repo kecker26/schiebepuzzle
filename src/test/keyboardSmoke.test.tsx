@@ -965,12 +965,14 @@ describe('keyboard smoke tests', () => {
     const savedGamesButton = screen.getByRole('button', { name: /Spielstaende/i })
     const statsButton = screen.getByRole('button', { name: /Statistik/i })
     const galleryButton = screen.getByRole('button', { name: /Galerie/i })
+    const collectionsButton = screen.getByRole('button', { name: /Sammlungen/i })
 
     mockElementRect(uploadButton, { left: 0, top: 0, width: 220, height: 180 })
     mockElementRect(randomButton, { left: 260, top: 0, width: 220, height: 180 })
     mockElementRect(savedGamesButton, { left: 0, top: 260, width: 220, height: 180 })
     mockElementRect(statsButton, { left: 260, top: 260, width: 220, height: 180 })
     mockElementRect(galleryButton, { left: 520, top: 260, width: 220, height: 180 })
+    mockElementRect(collectionsButton, { left: 780, top: 260, width: 220, height: 180 })
 
     uploadButton.focus()
     fireEvent.keyDown(uploadButton, { key: 'ArrowRight' })
@@ -981,9 +983,9 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(statsButton)
 
     fireEvent.keyDown(statsButton, { key: 'End' })
-    expect(document.activeElement).toBe(galleryButton)
+    expect(document.activeElement).toBe(collectionsButton)
 
-    fireEvent.keyDown(galleryButton, { key: 'Home' })
+    fireEvent.keyDown(collectionsButton, { key: 'Home' })
     expect(document.activeElement).toBe(savedGamesButton)
   })
 
@@ -1134,7 +1136,7 @@ describe('keyboard smoke tests', () => {
     expect(workspaceNavigation.getAttribute('aria-keyshortcuts')).toBe('V')
 
     fireEvent.keyDown(window, { key: 'v' })
-    expect(document.activeElement).toBe(within(workspaceNavigation).getByRole('button', { name: /Spielstaende/i }))
+    expect(document.activeElement).toBe(within(workspaceNavigation).getByRole('button', { name: /Auswahl/i }))
   })
 
   it('moves through workspace header actions with arrows, Pos1 and Ende', async () => {
@@ -3301,6 +3303,47 @@ describe('keyboard smoke tests', () => {
     })
   })
 
+  it('moves through similar motif detail cards and focuses the newly selected motif action', async () => {
+    const firstEntry = createGalleryDisplayEntry('61', '2026-04-11T12:00:00.000Z')
+    const secondEntry = createGalleryDisplayEntry('62', '2026-04-10T12:00:00.000Z')
+    const thirdEntry = createGalleryDisplayEntry('63', '2026-04-09T12:00:00.000Z')
+    const entries = [firstEntry, secondEntry, thirdEntry]
+
+    function SimilarMotifHarness() {
+      const [selectedEntry, setSelectedEntry] = React.useState(firstEntry)
+
+      return (
+        <UploadGalleryDetailDialog
+          entry={selectedEntry}
+          onReplayEntry={vi.fn()}
+          onOpenSimilarEntry={setSelectedEntry}
+          similarEntries={entries.filter((entry) => entry.id !== selectedEntry.id)}
+          onClose={vi.fn()}
+        />
+      )
+    }
+
+    render(<SimilarMotifHarness />)
+
+    const similarButtons = screen.getAllByRole('button', { name: /Aehnliches Motiv/i })
+    mockElementRect(similarButtons[0]!, { left: 0, top: 0, width: 180, height: 120 })
+    mockElementRect(similarButtons[1]!, { left: 220, top: 0, width: 180, height: 120 })
+
+    similarButtons[0]!.focus()
+    fireEvent.keyDown(similarButtons[0]!, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(similarButtons[1])
+
+    fireEvent.keyDown(similarButtons[1]!, { key: 'Home' })
+    expect(document.activeElement).toBe(similarButtons[0])
+
+    fireEvent.click(similarButtons[0]!)
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole('button', {
+        name: /Motiv Normal 4x4 vom 10\.04\.2026.*komplett neu spielen/i,
+      }))
+    })
+  })
+
   it('groups repeated challenges against the same run in a duel card', () => {
     const onReplayEntry = vi.fn()
     const detailEntry = createGalleryDisplayEntry('20', '2026-04-11T12:00:00.000Z')
@@ -3375,6 +3418,64 @@ describe('keyboard smoke tests', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Challenge starten' }))
     expect(onReplayEntry).toHaveBeenCalledWith(target, 'run')
     expect(screen.queryByRole('button', { name: /versuch.*herausfordern/i })).toBeNull()
+  })
+
+  it('moves between challenge-series actions in gallery details', () => {
+    const detailEntry = createGalleryDisplayEntry('70', '2026-04-11T12:00:00.000Z')
+    const firstTarget = {
+      ...createSolvedGalleryEntry('71', '2026-04-10T09:00:00.000Z'),
+      replaySetup: {
+        version: 1 as const,
+        startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+        emptyIndex: 15,
+        shuffleMoves: ['tile-15'],
+      },
+    }
+    const secondTarget = {
+      ...createSolvedGalleryEntry('72', '2026-04-09T09:00:00.000Z'),
+      replaySetup: {
+        version: 1 as const,
+        startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+        emptyIndex: 15,
+        shuffleMoves: ['tile-15'],
+      },
+    }
+    const firstAttempt = {
+      ...createSolvedGalleryEntry('73', '2026-04-11T09:00:00.000Z'),
+      challengeTargetId: firstTarget.id,
+      challengeMedal: 'silver' as const,
+    }
+    const secondAttempt = {
+      ...createSolvedGalleryEntry('74', '2026-04-11T10:00:00.000Z'),
+      challengeTargetId: secondTarget.id,
+      challengeMedal: 'gold' as const,
+    }
+
+    detailEntry.motifReplaySummary = {
+      ...detailEntry.motifReplaySummary,
+      allEntries: [detailEntry.representativeEntry, firstTarget, firstAttempt, secondTarget, secondAttempt],
+    }
+
+    render(
+      <UploadGalleryDetailDialog
+        entry={detailEntry}
+        onReplayEntry={vi.fn()}
+        onClose={vi.fn()}
+      />
+    )
+
+    const challengeButtons = screen.getAllByRole('button', { name: 'Vorlage herausfordern' })
+    expect(challengeButtons).toHaveLength(2)
+
+    challengeButtons[0]!.focus()
+    fireEvent.keyDown(challengeButtons[0]!, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(challengeButtons[1])
+
+    fireEvent.keyDown(challengeButtons[1]!, { key: 'Home' })
+    expect(document.activeElement).toBe(challengeButtons[0])
+
+    fireEvent.keyDown(challengeButtons[0]!, { key: 'End' })
+    expect(document.activeElement).toBe(challengeButtons[1])
   })
 
   it('erklaert eine assistierte Silber-Challenge und zeigt das naechste Ziel', () => {
@@ -4010,6 +4111,101 @@ describe('keyboard smoke tests', () => {
     expect(within(medalCard!).getByRole('button', { name: 'Zum Seitenanfang' })).toBeTruthy()
     expect(within(medalCard!).getByRole('button', { name: 'Zur Auswahl' })).toBeTruthy()
     expect(screen.getAllByRole('tab')).toHaveLength(4)
+  })
+
+  it('moves consistently through medal filters, motif cards and series switches', () => {
+    const firstTarget = {
+      ...createSolvedGalleryEntry('81', '2026-04-08T10:00:00.000Z'),
+      sourceImage: 'data:image/png;base64,motif-a',
+      previewImage: 'data:image/png;base64,motif-a-preview',
+    }
+    const secondTarget = {
+      ...createSolvedGalleryEntry('82', '2026-04-09T10:00:00.000Z'),
+      sourceImage: firstTarget.sourceImage,
+      previewImage: firstTarget.previewImage,
+    }
+    const firstAttempt = {
+      ...createSolvedGalleryEntry('83', '2026-04-10T10:00:00.000Z'),
+      sourceImage: firstTarget.sourceImage,
+      previewImage: firstTarget.previewImage,
+      challengeTargetId: firstTarget.id,
+      challengeMedal: 'silver' as const,
+    }
+    const secondAttempt = {
+      ...createSolvedGalleryEntry('84', '2026-04-11T10:00:00.000Z'),
+      sourceImage: firstTarget.sourceImage,
+      previewImage: firstTarget.previewImage,
+      challengeTargetId: secondTarget.id,
+      challengeMedal: 'gold' as const,
+    }
+    const thirdTarget = {
+      ...createSolvedGalleryEntry('85', '2026-04-08T09:00:00.000Z'),
+      sourceImage: 'data:image/png;base64,motif-b',
+      previewImage: 'data:image/png;base64,motif-b-preview',
+    }
+    const thirdAttempt = {
+      ...createSolvedGalleryEntry('86', '2026-04-10T09:00:00.000Z'),
+      sourceImage: thirdTarget.sourceImage,
+      previewImage: thirdTarget.previewImage,
+      challengeTargetId: thirdTarget.id,
+      challengeMedal: 'bronze' as const,
+    }
+    const galleryEntries = [firstTarget, secondTarget, firstAttempt, secondAttempt, thirdTarget, thirdAttempt]
+
+    render(
+      <UploadStatsVisualReport
+        stats={null}
+        gallery={{
+          entries: galleryEntries,
+          totalEntries: galleryEntries.length,
+          lastCompletedAt: secondAttempt.completedAt,
+          lastUpdatedAt: secondAttempt.completedAt,
+        }}
+        latestCompletion={null}
+        favoriteDifficulty={null}
+        fastestDifficulty={null}
+        completionHistory={[]}
+        filteredHistory={[]}
+        historyFilter="all"
+        historyFilterOptions={[{ id: 'all', label: 'Alle Siege' }]}
+        standardDifficultyStats={DIFFICULTY_OPTIONS.map((option) => ({ option, stats: null }))}
+        activeView="medals"
+        onHistoryFilterChange={vi.fn()}
+        onReloadView={vi.fn()}
+        onBackToStart={vi.fn()}
+        onActiveViewChange={vi.fn()}
+      />
+    )
+
+    const medalSummary = screen.getByLabelText('Aktuelle beste Medaillen pro Motiv')
+    const summaryButtons = within(medalSummary).getAllByRole('button')
+    summaryButtons.forEach((button, index) => {
+      mockElementRect(button, { left: index * 180, top: 0, width: 160, height: 72 })
+    })
+    summaryButtons[0]!.focus()
+    fireEvent.keyDown(summaryButtons[0]!, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(summaryButtons[1])
+    fireEvent.keyDown(summaryButtons[1]!, { key: 'End' })
+    expect(document.activeElement).toBe(summaryButtons[summaryButtons.length - 1])
+
+    const previewButtons = screen.getAllByRole('button', { name: /Vollstaendige Detailkarte/i })
+    expect(previewButtons).toHaveLength(2)
+    mockElementRect(previewButtons[0]!, { left: 0, top: 0, width: 220, height: 160 })
+    mockElementRect(previewButtons[1]!, { left: 0, top: 240, width: 220, height: 160 })
+    previewButtons[0]!.focus()
+    fireEvent.keyDown(previewButtons[0]!, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(previewButtons[1])
+
+    const seriesSwitcher = screen.getByLabelText('Challenge-Serie dieses Motivs auswaehlen')
+    const seriesButtons = within(seriesSwitcher).getAllByRole('button')
+    expect(seriesButtons).toHaveLength(2)
+    mockElementRect(seriesButtons[0]!, { left: 0, top: 0, width: 90, height: 36 })
+    mockElementRect(seriesButtons[1]!, { left: 110, top: 0, width: 90, height: 36 })
+    seriesButtons[0]!.focus()
+    fireEvent.keyDown(seriesButtons[0]!, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(seriesButtons[1])
+    fireEvent.keyDown(seriesButtons[1]!, { key: 'Home' })
+    expect(document.activeElement).toBe(seriesButtons[0])
   })
 
   it('filters only overview run types and average quality by one difficulty at a time', async () => {

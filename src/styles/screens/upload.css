@@ -3029,14 +3029,36 @@
 }
 
 .workspace-window-nav-button.is-return {
-  margin-top: 4px;
-  border-style: dashed;
+  margin-bottom: 4px;
+  border-color: color-mix(in srgb, var(--primary-color) 58%, var(--image-radiance-border));
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 80%, transparent), color-mix(in srgb, var(--secondary-bg) 80%, transparent));
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--image-glow) 38%, transparent) 0%, transparent 46%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--primary-color) 18%, var(--glass-panel-bg-hover)),
+      color-mix(in srgb, var(--image-accent-soft) 68%, var(--glass-panel-bg))
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 1px color-mix(in srgb, var(--primary-color) 16%, transparent),
+    0 10px 24px color-mix(in srgb, var(--image-radiance) 16%, transparent);
+}
+
+.workspace-window-nav-button.is-return:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--primary-color) 78%, var(--image-radiance-border));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 1px color-mix(in srgb, var(--primary-color) 24%, transparent),
+    0 12px 28px color-mix(in srgb, var(--image-radiance) 24%, transparent);
 }
 
 .workspace-window-nav-button.is-return .workspace-window-nav-label {
   color: var(--text-main);
+}
+
+.workspace-window-nav-button.is-return .workspace-window-nav-icon {
+  color: color-mix(in srgb, var(--primary-color) 88%, var(--text-main));
+  filter: drop-shadow(0 3px 8px color-mix(in srgb, var(--primary-color) 30%, transparent));
 }
 
 .workspace-window-nav-label {
