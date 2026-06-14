@@ -21,6 +21,7 @@ interface UploadWorkspaceSideNavProps {
   statsTotalSolved: number
   galleryCardCount: number
   collectionsCount: number
+  startNavButtonRef: RefObject<HTMLButtonElement>
   savedGamesNavButtonRef: RefObject<HTMLButtonElement>
   statsNavButtonRef: RefObject<HTMLButtonElement>
   collectionsNavButtonRef: RefObject<HTMLButtonElement>
@@ -36,6 +37,7 @@ export default function UploadWorkspaceSideNav({
   statsTotalSolved,
   galleryCardCount,
   collectionsCount,
+  startNavButtonRef,
   savedGamesNavButtonRef,
   statsNavButtonRef,
   collectionsNavButtonRef,
@@ -45,6 +47,14 @@ export default function UploadWorkspaceSideNav({
   onKeyDown,
 }: UploadWorkspaceSideNavProps) {
   const items: WorkspaceNavItem[] = [
+    {
+      window: 'start',
+      label: 'Auswahl',
+      iconName: 'home',
+      copy: 'Zur Auswahlseite',
+      buttonRef: startNavButtonRef,
+      isReturn: true,
+    },
     {
       window: 'savedGames',
       label: 'Spielstaende',
@@ -60,13 +70,6 @@ export default function UploadWorkspaceSideNav({
       buttonRef: statsNavButtonRef,
     },
     {
-      window: 'collections',
-      label: 'Sammlungen',
-      iconName: 'folderHeart',
-      copy: `${collectionsCount} Kollektionen`,
-      buttonRef: collectionsNavButtonRef,
-    },
-    {
       window: 'gallery',
       label: 'Galerie',
       iconName: 'gallery',
@@ -74,11 +77,11 @@ export default function UploadWorkspaceSideNav({
       buttonRef: galleryNavButtonRef,
     },
     {
-      window: 'start',
-      label: 'Auswahl',
-      iconName: 'home',
-      copy: 'Zur Auswahlseite',
-      isReturn: true,
+      window: 'collections',
+      label: 'Sammlungen',
+      iconName: 'folderHeart',
+      copy: `${collectionsCount} Kollektionen`,
+      buttonRef: collectionsNavButtonRef,
     },
   ]
 

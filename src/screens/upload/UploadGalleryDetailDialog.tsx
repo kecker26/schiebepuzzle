@@ -212,18 +212,18 @@ export default function UploadGalleryDetailDialog({
   }, [])
 
   useEffect(() => {
-    if (!canReplayMotif || typeof window === 'undefined') {
+    if (typeof window === 'undefined') {
       return
     }
 
     const frameId = window.requestAnimationFrame(() => {
-      replayButtonRef.current?.focus({ preventScroll: true })
+      initialFocusRef.current?.focus({ preventScroll: true })
     })
 
     return () => {
       window.cancelAnimationFrame(frameId)
     }
-  }, [canReplayMotif])
+  }, [entry.id, initialFocusRef])
 
   return (
     <AnimatedDialog
@@ -295,7 +295,11 @@ export default function UploadGalleryDetailDialog({
                 </p>
               </div>
 
-              <div className="gallery-detail-similar-strip" aria-label="Aehnliche Galerie-Motive">
+              <div
+                className="gallery-detail-similar-strip"
+                aria-label="Aehnliche Galerie-Motive"
+                onKeyDown={handleDirectionalFocusNavigation}
+              >
                 {similarEntries.map((similarEntry) => {
                   const similarRepresentativeEntry = similarEntry.representativeEntry
                   const similarImage = similarRepresentativeEntry.previewImage ?? similarRepresentativeEntry.sourceImage
@@ -508,7 +512,10 @@ export default function UploadGalleryDetailDialog({
                 </p>
               </div>
 
-              <div className="gallery-detail-challenge-series-list">
+              <div
+                className="gallery-detail-challenge-series-list"
+                data-gallery-detail-action-group="true"
+              >
                 {challengeSeries.map((series, seriesIndex) => {
                   const target = series.targetEntry
                   const bestAttempt = series.bestAttempt

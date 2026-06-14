@@ -2809,7 +2809,11 @@ export default function UploadStatsVisualReport({
                   </span>
                 </div>
 
-                <div className="stats-medal-summary" aria-label="Aktuelle beste Medaillen pro Motiv">
+                <div
+                  className="stats-medal-summary"
+                  aria-label="Aktuelle beste Medaillen pro Motiv"
+                  onKeyDown={handleDirectionalFocusNavigation}
+                >
                   <AnimatedChipButton
                     className={`stats-medal-summary-item is-all${medalFilter === 'all' ? ' is-filter-active' : ' is-inactive'}`}
                     onClick={() => setMedalFilter('all')}
@@ -2887,7 +2891,11 @@ export default function UploadStatsVisualReport({
                   </div>
                 ) : (
                   <>
-                    <div className="stats-medal-motif-cards" aria-label="Medaillen-Motive">
+                    <div
+                      className="stats-medal-motif-cards"
+                      aria-label="Medaillen-Motive"
+                      onKeyDown={handleDirectionalFocusNavigation}
+                    >
                     {pagedMotifCards.map((card) => {
                       const activeSeriesId = selectedMedalSeries[card.motifKey] ?? card.series[0]?.targetId
                       const activeSeries = card.series.find((series) => series.targetId === activeSeriesId) ?? card.series[0]
@@ -2970,7 +2978,11 @@ export default function UploadStatsVisualReport({
                                   Ausgewaehlte Serie {activeSeriesIndex + 1} von {card.series.length}
                                 </span>
                                 {card.series.length > 1 ? (
-                                  <div className="stats-medal-series-switcher" aria-label="Challenge-Serie dieses Motivs auswaehlen">
+                                  <div
+                                    className="stats-medal-series-switcher"
+                                    aria-label="Challenge-Serie dieses Motivs auswaehlen"
+                                    onKeyDown={handleDirectionalFocusNavigation}
+                                  >
                                     {card.series.map((series, index) => (
                                       <button
                                       key={series.targetId}

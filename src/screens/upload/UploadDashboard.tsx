@@ -168,6 +168,7 @@ export default function UploadDashboard({
   const [statsViewReloadKey, setStatsViewReloadKey] = useState(0)
   const [statsVisualView, setStatsVisualView] = useState<VisualStatsView>('overview')
   const [requestedGalleryTagFilterLabel, setRequestedGalleryTagFilterLabel] = useState<string | null>(null)
+  const startNavButtonRef = useRef<HTMLButtonElement>(null)
   const savedGamesNavButtonRef = useRef<HTMLButtonElement>(null)
   const statsNavButtonRef = useRef<HTMLButtonElement>(null)
   const galleryNavButtonRef = useRef<HTMLButtonElement>(null)
@@ -470,7 +471,7 @@ export default function UploadDashboard({
         return
       }
 
-      const firstNavButton = savedGamesNavButtonRef.current
+      const firstNavButton = startNavButtonRef.current
       if (!firstNavButton?.isConnected) {
         return
       }
@@ -567,6 +568,7 @@ export default function UploadDashboard({
       statsTotalSolved={stats?.totalSolved ?? 0}
       galleryCardCount={galleryCardCount}
       collectionsCount={collectionsCount}
+      startNavButtonRef={startNavButtonRef}
       savedGamesNavButtonRef={savedGamesNavButtonRef}
       statsNavButtonRef={statsNavButtonRef}
       collectionsNavButtonRef={collectionsNavButtonRef}

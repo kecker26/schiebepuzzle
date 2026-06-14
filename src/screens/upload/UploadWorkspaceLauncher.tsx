@@ -158,41 +158,6 @@ export default function UploadWorkspaceLauncher({
         </AnimatedCardButton>
 
         <AnimatedCardButton
-          ref={collectionsActionRef}
-          className="workspace-launcher-link menu-card"
-          onClick={onOpenCollections}
-          disabled={isLoadingCollections}
-          reveal
-          revealLevel="medium"
-        >
-          <span className="menu-card-glow" aria-hidden="true" />
-          <span className="menu-card-eyebrow">Kollektionen</span>
-          <span className="menu-card-icon" aria-hidden="true">
-            <UploadScreenIcon name="folderHeart" className="menu-card-icon-symbol" />
-          </span>
-          <span className="menu-card-title">Sammlungen</span>
-          <strong className="workspace-launcher-value">
-            <SpringNumber value={isLoadingCollections ? null : collectionsCount} from={0} durationMs={1700} fallback="Lade ..." />
-            {!isLoadingCollections ? ' aktiv' : null}
-          </strong>
-          <span className="menu-card-desc">Lieblingsmotive gruppieren, wiederfinden und direkt neu starten.</span>
-          <div className="workspace-launcher-meta">
-            <span className="saved-game-chip">
-              <UploadScreenIcon name="folderHeart" className="saved-game-chip-icon" />
-              {isLoadingCollections ? <BusyIndicator label="Wird geladen ..." /> : collectionsMeta}
-            </span>
-            <span className="saved-game-chip">
-              <UploadScreenIcon name="image" className="saved-game-chip-icon" />
-              Aus geloesten Motiven
-            </span>
-          </div>
-          <span className="menu-card-arrow">
-            <UploadScreenIcon name="folderHeart" className="menu-card-arrow-icon" />
-            Sammlungen oeffnen
-          </span>
-        </AnimatedCardButton>
-
-        <AnimatedCardButton
           ref={galleryActionRef}
           className="workspace-launcher-link menu-card"
           onClick={onOpenGallery}
@@ -224,6 +189,41 @@ export default function UploadWorkspaceLauncher({
           <span className="menu-card-arrow">
             <UploadScreenIcon name="gallery" className="menu-card-arrow-icon" />
             Galerie oeffnen
+          </span>
+        </AnimatedCardButton>
+
+        <AnimatedCardButton
+          ref={collectionsActionRef}
+          className="workspace-launcher-link menu-card"
+          onClick={onOpenCollections}
+          disabled={isLoadingCollections}
+          reveal
+          revealLevel="medium"
+        >
+          <span className="menu-card-glow" aria-hidden="true" />
+          <span className="menu-card-eyebrow">Kollektionen</span>
+          <span className="menu-card-icon" aria-hidden="true">
+            <UploadScreenIcon name="folderHeart" className="menu-card-icon-symbol" />
+          </span>
+          <span className="menu-card-title">Sammlungen</span>
+          <strong className="workspace-launcher-value">
+            <SpringNumber value={isLoadingCollections ? null : collectionsCount} from={0} durationMs={1700} fallback="Lade ..." />
+            {!isLoadingCollections ? ' aktiv' : null}
+          </strong>
+          <span className="menu-card-desc">Lieblingsmotive gruppieren, wiederfinden und direkt neu starten.</span>
+          <div className="workspace-launcher-meta">
+            <span className="saved-game-chip">
+              <UploadScreenIcon name="folderHeart" className="saved-game-chip-icon" />
+              {isLoadingCollections ? <BusyIndicator label="Wird geladen ..." /> : collectionsMeta}
+            </span>
+            <span className="saved-game-chip">
+              <UploadScreenIcon name="image" className="saved-game-chip-icon" />
+              Aus geloesten Motiven
+            </span>
+          </div>
+          <span className="menu-card-arrow">
+            <UploadScreenIcon name="folderHeart" className="menu-card-arrow-icon" />
+            Sammlungen oeffnen
           </span>
         </AnimatedCardButton>
       </AnimatedStaggerGroup>
