@@ -5,6 +5,8 @@ const CANVAS_FONT_FAMILY = "'Puzzle UI', 'Segoe UI', sans-serif"
 export interface HintOverlay {
   tileId: string
   direction: 'up' | 'down' | 'left' | 'right'
+  finalTargetRow: number
+  finalTargetCol: number
 }
 
 export interface CorrectTilePulseAnimation {
@@ -1475,6 +1477,8 @@ export default class PuzzleRenderer {
     const y = tile.row * this.tileHeight
     const targetSlotX = state.emptyCol * this.tileWidth
     const targetSlotY = state.emptyRow * this.tileHeight
+    const finalTargetSlotX = hintOverlay.finalTargetCol * this.tileWidth
+    const finalTargetSlotY = hintOverlay.finalTargetRow * this.tileHeight
     const centerX = x + this.tileWidth / 2
     const centerY = y + this.tileHeight / 2
     const targetX = targetSlotX + this.tileWidth / 2
@@ -1490,6 +1494,26 @@ export default class PuzzleRenderer {
     const arrowSize = Math.max(11, Math.round(shortEdge * 0.13))
 
     this.ctx.save()
+    if (finalTargetSlotX !== targetSlotX || finalTargetSlotY !== targetSlotY) {
+      this.ctx.fillStyle = 'rgba(245, 158, 11, 0.12)'
+      this.ctx.fillRect(
+        finalTargetSlotX + innerInset,
+        finalTargetSlotY + innerInset,
+        this.tileWidth - innerInset * 2,
+        this.tileHeight - innerInset * 2
+      )
+      this.ctx.strokeStyle = 'rgba(251, 191, 36, 0.92)'
+      this.ctx.lineWidth = Math.max(3, Math.round(shortEdge * 0.028))
+      this.ctx.setLineDash([Math.max(5, Math.round(shortEdge * 0.06)), Math.max(5, Math.round(shortEdge * 0.06))])
+      this.ctx.strokeRect(
+        finalTargetSlotX + innerInset,
+        finalTargetSlotY + innerInset,
+        this.tileWidth - innerInset * 2,
+        this.tileHeight - innerInset * 2
+      )
+      this.ctx.setLineDash([])
+    }
+
     this.ctx.fillStyle = 'rgba(14, 165, 233, 0.18)'
     this.ctx.fillRect(
       targetSlotX + innerInset,

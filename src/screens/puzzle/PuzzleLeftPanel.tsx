@@ -115,6 +115,45 @@ function HintDirectionIcon({ direction }: { direction: HintDirection }) {
   )
 }
 
+function HintPositionGrid({
+  config,
+  hintPreview,
+}: {
+  config: { rows: number; cols: number }
+  hintPreview: SuggestedHintPreview
+}) {
+  const cells = Array.from({ length: config.rows * config.cols }, (_, index) => index)
+
+  return (
+    <div
+      className="puzzle-hint-position-grid"
+      style={{
+        gridTemplateColumns: `repeat(${config.cols}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${config.rows}, minmax(0, 1fr))`,
+      }}
+      aria-hidden="true"
+    >
+      {cells.map((index) => {
+        const row = Math.floor(index / config.cols)
+        const col = index % config.cols
+        const isCurrent = row === hintPreview.currentRow && col === hintPreview.currentCol
+        const isTarget = row === hintPreview.targetRow && col === hintPreview.targetCol
+
+        return (
+          <span
+            key={index}
+            className={
+              'puzzle-hint-position-cell'
+              + (isCurrent ? ' is-current' : '')
+              + (isTarget ? ' is-target' : '')
+            }
+          />
+        )
+      })}
+    </div>
+  )
+}
+
 function formatSignedDelta(delta: number, suffix: string = ''): string {
   if (delta === 0) return `±0${suffix}`
   return `${delta > 0 ? '+' : '-'}${Math.abs(delta)}${suffix}`
@@ -359,8 +398,12 @@ export default function PuzzleLeftPanel({
               <span className="puzzle-hint-kicker">Naechster Hinweis</span>
             </span>
             {hintPreview && (
-              <span className={`puzzle-hint-confidence puzzle-hint-confidence--${hintPreview.confidenceTone}`}>
-                Sicherheit {hintPreview.confidenceLabel}
+              <span
+                className="puzzle-hint-details"
+                data-app-tooltip={`${hintPreview.sourceLabel}. Sicherheit ${hintPreview.confidenceLabel}.`}
+                data-app-tooltip-align="start"
+              >
+                Hinweisdetails
               </span>
             )}
           </div>
@@ -372,18 +415,28 @@ export default function PuzzleLeftPanel({
                   <HintDirectionIcon direction={hintPreview.direction} />
                 </span>
                 <div className="puzzle-hint-copy">
-                  <strong>{hintPreview.tileLabel}</strong>
+                  <strong>{hintPreview.actionLabel}</strong>
                   <span>{hintPreview.description}</span>
+                  <span className="puzzle-hint-strategy-label">{hintPreview.strategyLabel}</span>
                 </div>
               </div>
-              <div className="puzzle-hint-route" aria-hidden="true">
-                <span>{hintPreview.tileLabel}</span>
-                <span className="puzzle-hint-route-line" />
-                <span>{hintPreview.directionLabel}</span>
-              </div>
-              <div className="puzzle-hint-meta">
-                <span className="puzzle-hint-chip">Bewege {hintPreview.directionLabel}</span>
-                <span className="puzzle-hint-chip">{hintPreview.sourceLabel}</span>
+              {hintPreview.objectiveLabel && (
+                <div className="puzzle-hint-objective">
+                  <span className="puzzle-hint-objective-kicker">Teilziel</span>
+                  <strong>{hintPreview.objectiveLabel}</strong>
+                  {hintPreview.objectiveDetail && <span>{hintPreview.objectiveDetail}</span>}
+                </div>
+              )}
+              <div className="puzzle-hint-position-card">
+                <HintPositionGrid config={config} hintPreview={hintPreview} />
+                <div className="puzzle-hint-position-copy">
+                  <span><strong>Aktuell:</strong> {hintPreview.currentPositionLabel}</span>
+                  <span><strong>Ziel:</strong> {hintPreview.targetPositionLabel}</span>
+                  <span>
+                    <strong>Entfernung:</strong>{' '}
+                    {hintPreview.distance} {hintPreview.distance === 1 ? 'Feld' : 'Felder'}
+                  </span>
+                </div>
               </div>
             </>
           ) : isComputingSuggestion ? (
