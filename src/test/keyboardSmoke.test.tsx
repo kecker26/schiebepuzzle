@@ -4103,6 +4103,8 @@ describe('keyboard smoke tests', () => {
     expect(motifCards).toBeTruthy()
     expect(within(motifCards).getByText(/Silber/)).toBeTruthy()
     expect(within(motifCards).getByText('Normal 4x4')).toBeTruthy()
+    expect(within(motifCards).getByText('1 Versuch gegen diese Vorlage')).toBeTruthy()
+    expect(within(motifCards).getByText(/Bester Versuch zur Vorlage:/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Vollstaendige Detailkarte fuer das Silber-Motiv oeffnen' })).toBeTruthy()
     const medalSummary = screen.getByLabelText('Aktuelle beste Medaillen pro Motiv')
     expect(within(medalSummary).getByRole('button', { name: /Alle/ }).getAttribute('aria-pressed')).toBe('true')

@@ -59,12 +59,8 @@ export interface MotifChallengeSeries {
   bestAttemptMoves: number
   bestMedal: ChallengeMedal
   attemptCount: number
-  firstAttemptTime: number
-  firstAttemptMoves: number
   timeDeltaToTarget: number | null
   movesDeltaToTarget: number | null
-  timeImprovementSinceFirst: number
-  movesImprovementSinceFirst: number
 }
 
 export interface GroupedMotifCard {
@@ -229,31 +225,20 @@ export function buildGroupedMotifCards(entries: SolvedGalleryEntry[]): GroupedMo
     }
     const motifSeries = challengeSeries
       .filter((series) => getGalleryMotifKey(series.bestAttempt) === motifKey)
-      .map((series): MotifChallengeSeries => {
-        const chronologicalAttempts = [...series.attempts].sort(
-          (left, right) => getTimestamp(left) - getTimestamp(right)
-        )
-        const firstAttempt = chronologicalAttempts[0]
-
-        return {
-          targetId: series.targetId,
-          targetTime: series.targetEntry?.time ?? null,
-          targetMoves: series.targetEntry?.moves ?? null,
-          targetConfig: series.targetEntry ? formatConfig(series.targetEntry.config) : null,
-          targetDifficultyLabel: series.targetEntry ? formatDifficultyLabel(series.targetEntry.config) : null,
-          bestAttemptId: series.bestAttempt.id,
-          bestAttemptTime: series.bestAttempt.time,
-          bestAttemptMoves: series.bestAttempt.moves,
-          bestMedal: series.bestMedal,
-          attemptCount: series.attempts.length,
-          firstAttemptTime: firstAttempt.time,
-          firstAttemptMoves: firstAttempt.moves,
-          timeDeltaToTarget: series.targetEntry ? series.bestAttempt.time - series.targetEntry.time : null,
-          movesDeltaToTarget: series.targetEntry ? series.bestAttempt.moves - series.targetEntry.moves : null,
-          timeImprovementSinceFirst: Math.max(0, firstAttempt.time - series.bestAttempt.time),
-          movesImprovementSinceFirst: Math.max(0, firstAttempt.moves - series.bestAttempt.moves),
-        }
-      })
+      .map((series): MotifChallengeSeries => ({
+        targetId: series.targetId,
+        targetTime: series.targetEntry?.time ?? null,
+        targetMoves: series.targetEntry?.moves ?? null,
+        targetConfig: series.targetEntry ? formatConfig(series.targetEntry.config) : null,
+        targetDifficultyLabel: series.targetEntry ? formatDifficultyLabel(series.targetEntry.config) : null,
+        bestAttemptId: series.bestAttempt.id,
+        bestAttemptTime: series.bestAttempt.time,
+        bestAttemptMoves: series.bestAttempt.moves,
+        bestMedal: series.bestMedal,
+        attemptCount: series.attempts.length,
+        timeDeltaToTarget: series.targetEntry ? series.bestAttempt.time - series.targetEntry.time : null,
+        movesDeltaToTarget: series.targetEntry ? series.bestAttempt.moves - series.targetEntry.moves : null,
+      }))
 
     return {
       motifKey,
