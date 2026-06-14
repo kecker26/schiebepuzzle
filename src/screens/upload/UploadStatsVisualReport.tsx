@@ -3000,18 +3000,20 @@ export default function UploadStatsVisualReport({
                                   </div>
                                 ) : null}
                               </div>
-                              <div className="stats-medal-series-progress" aria-label="Entwicklung innerhalb der ausgewaehlten Serie">
-                                <strong>{activeSeries.attemptCount} {activeSeries.attemptCount === 1 ? 'Versuch' : 'Versuche'}</strong>
+                              <div className="stats-medal-series-progress" aria-label="Vergleich der Versuche mit der ausgewaehlten Vorlage">
+                                <strong>
+                                  {activeSeries.attemptCount} {activeSeries.attemptCount === 1 ? 'Versuch' : 'Versuche'} gegen diese Vorlage
+                                </strong>
                                 <span>
-                                  Seit erstem Versuch:
+                                  Bester Versuch zur Vorlage:
                                   {' '}
-                                  {activeSeries.timeImprovementSinceFirst > 0
-                                    ? `${formatTime(activeSeries.timeImprovementSinceFirst)} schneller`
-                                    : 'Zeit gehalten'}
+                                  {activeSeries.timeDeltaToTarget !== null
+                                    ? formatSeriesTimeDelta(activeSeries.timeDeltaToTarget)
+                                    : 'Zeit nicht vergleichbar'}
                                   {' · '}
-                                  {activeSeries.movesImprovementSinceFirst > 0
-                                    ? `${activeSeries.movesImprovementSinceFirst} Zuege gespart`
-                                    : 'Zuege gehalten'}
+                                  {activeSeries.movesDeltaToTarget !== null
+                                    ? formatSeriesMovesDelta(activeSeries.movesDeltaToTarget)
+                                    : 'Zuege nicht vergleichbar'}
                                 </span>
                               </div>
                             </div>
