@@ -43,7 +43,9 @@ import PuzzlePauseOverlay from './puzzle/PuzzlePauseOverlay.tsx'
 import PuzzleRestartConfirmDialog from './puzzle/PuzzleRestartConfirmDialog.tsx'
 import PuzzleRightPanel from './puzzle/PuzzleRightPanel.tsx'
 import {
+  buildHintPathObjective,
   buildHintPreview,
+  buildPuzzleMoveFeedback,
   CORRECT_TILE_PULSE_DURATION_MS,
   createMoveRecordForStates,
   EXACT_SOLUTION_NODE_LIMIT,
@@ -55,6 +57,7 @@ import {
   INVALID_TILE_FEEDBACK_DURATION_MS,
   MOVE_ANIMATION_DURATION_MS,
   normalizeGhostPreviewMode,
+  registerHintForState,
   START_APPROXIMATE_SOLUTION_NODE_LIMIT,
   START_APPROXIMATE_SOLUTION_TIME_LIMIT_5X5_MS,
   START_APPROXIMATE_SOLUTION_TIME_LIMIT_6X6_MS,
@@ -63,6 +66,7 @@ import {
   START_OPTIMAL_SOLUTION_NODE_LIMIT,
   normalizeGhostPreviewWeight,
   PERSISTED_HISTORY_LIMIT,
+  type PuzzleMoveFeedback,
   SuggestedHintPreview,
   TILE_NUMBER_PREVIEW_MS,
 } from './puzzle/puzzleScreenUtils.ts'
@@ -108,6 +112,7 @@ type BoardToolHelpTopic =
 
 const DEFAULT_BOARD_CAPTION = 'Das markierte Leerfeld ist dein Anker fuer schnelle, saubere Zugfolgen.'
 const BOARD_INTRO_ANIMATION_MS = 1180
+const MOVE_FEEDBACK_DURATION_MS = 2600
 
 const BOARD_TOOL_HELP_MESSAGES: Record<BoardToolHelpTopic, string> = {
   hint: 'Der Hinweis markiert dir die beste naechste Kachel direkt auf dem Brett, ohne den Zug selbst auszufuehren.',
@@ -282,6 +287,7 @@ export default function PuzzleScreen({
   const boardIntroTimeoutRef = useRef<number | null>(null)
   const winSequenceStartedRef = useRef(false)
   const solutionQueueRef = useRef<string[]>([])
+  const hintedStateHashesRef = useRef<Set<string>>(new Set())
   const lastSuggestionMoveRef = useRef<string | null>(null)
   const shuffleMovesRef = useRef<string[]>([])
   const runStartStateRef = useRef<PuzzleState | null>(null)
@@ -296,6 +302,7 @@ export default function PuzzleScreen({
   const isComputingSuggestionRef = useRef(false)
   const tileNumbersTimeoutRef = useRef<number | null>(null)
   const hintAutoHideTimerRef = useRef<number | null>(null)
+  const moveFeedbackTimerRef = useRef<number | null>(null)
   const hasInitialCanvasFocusRef = useRef(false)
   const restartConfirmButtonRef = useRef<HTMLButtonElement | null>(null)
   const hintButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -343,6 +350,8 @@ export default function PuzzleScreen({
   const [isBoardIntroActive, setIsBoardIntroActive] = useState(false)
   const [isComputingSuggestion, setIsComputingSuggestion] = useState(false)
   const [hintPreview, setHintPreview] = useState<SuggestedHintPreview | null>(null)
+  const [activeFocusRow, setActiveFocusRow] = useState<number | null>(null)
+  const [moveFeedback, setMoveFeedback] = useState<PuzzleMoveFeedback | null>(null)
   const [isRestartConfirmOpen, setIsRestartConfirmOpen] = useState(false)
   const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null)
   const [boardCaption, setBoardCaption] = useState(DEFAULT_BOARD_CAPTION)
@@ -418,6 +427,17 @@ export default function PuzzleScreen({
       setHintPreview(null)
     }, durationMs)
   }, [clearHintAutoHideTimeout])
+
+  const showMoveFeedback = useCallback((feedback: PuzzleMoveFeedback) => {
+    if (moveFeedbackTimerRef.current !== null) {
+      window.clearTimeout(moveFeedbackTimerRef.current)
+    }
+    setMoveFeedback(feedback)
+    moveFeedbackTimerRef.current = window.setTimeout(() => {
+      moveFeedbackTimerRef.current = null
+      setMoveFeedback(null)
+    }, MOVE_FEEDBACK_DURATION_MS)
+  }, [])
 
   useEffect(() => {
     if (hasInitialCanvasFocusRef.current || isHelpOpen || isRestartConfirmOpen || isPaused) {
@@ -875,6 +895,10 @@ export default function PuzzleScreen({
       clearTileNumbersTimeout()
       stopTileNumberCorrectnessPulse()
       clearHintAutoHideTimeout()
+      if (moveFeedbackTimerRef.current !== null) {
+        window.clearTimeout(moveFeedbackTimerRef.current)
+        moveFeedbackTimerRef.current = null
+      }
       stopAnimationFrame()
       stopCelebrationFrame()
       stopCorrectTilePulse()
@@ -1283,8 +1307,14 @@ export default function PuzzleScreen({
     }
 
     const hintOverlay: HintOverlay | null = hintPreview
-      ? { tileId: hintPreview.tileId, direction: hintPreview.direction }
+      ? {
+          tileId: hintPreview.tileId,
+          direction: hintPreview.direction,
+          finalTargetRow: hintPreview.targetRow,
+          finalTargetCol: hintPreview.targetCol,
+        }
       : null
+    const isConcreteHintVisible = hintPreview !== null
     const tileSearchOverlay: TileSearchOverlay | null =
       hoveredSearchTileId && getPlayableTileById(puzzleState, hoveredSearchTileId)
         ? { tileId: hoveredSearchTileId }
@@ -1297,10 +1327,10 @@ export default function PuzzleScreen({
       hintOverlay,
       areTileNumbersVisible,
       tileNumberCorrectnessPulseProgress,
-      isGhostPreviewVisible,
+      isGhostPreviewVisible && !isConcreteHintVisible,
       ghostPreviewWeight / 100,
       ghostPreviewMode,
-      isHeatmapOverlayVisible,
+      isHeatmapOverlayVisible && !isConcreteHintVisible,
       invalidTileFeedback,
       hoveredSearchTileId
     )
@@ -1538,6 +1568,10 @@ export default function PuzzleScreen({
     }
 
     const normalizedNextState = normalizePuzzleState(nextState, config)
+    const previousFocus = engineRef.current.getContextHint(currentState, activeFocusRow)
+    const nextFocus = engineRef.current.getContextHint(normalizedNextState, previousFocus.focusRow)
+    const heuristicBefore = engineRef.current.getHeuristicScore(currentState)
+    const heuristicAfter = engineRef.current.getHeuristicScore(normalizedNextState)
     const movedTileBefore = currentState.tiles.find((tile) => tile.id === tileId)
     const movedTileAfter = normalizedNextState.tiles.find((tile) => tile.id === tileId)
     const reachedCorrectPlace = Boolean(
@@ -1547,6 +1581,13 @@ export default function PuzzleScreen({
         movedTileAfter.row === movedTileAfter.correctRow &&
         movedTileAfter.col === movedTileAfter.correctCol
     )
+
+    const tileDistanceBefore = movedTileBefore
+      ? Math.abs(movedTileBefore.correctRow - movedTileBefore.row) + Math.abs(movedTileBefore.correctCol - movedTileBefore.col)
+      : 0
+    const tileDistanceAfter = movedTileAfter
+      ? Math.abs(movedTileAfter.correctRow - movedTileAfter.row) + Math.abs(movedTileAfter.correctCol - movedTileAfter.col)
+      : 0
 
     recordTrackedMove(normalizedNextState, tileId)
     setHintPreview(null)
@@ -1559,6 +1600,24 @@ export default function PuzzleScreen({
       suggestedMoveCount: moveSource === 'suggested' ? prev.suggestedMoveCount + 1 : prev.suggestedMoveCount,
     }))
     setPuzzleState(normalizedNextState)
+    const feedback = buildPuzzleMoveFeedback({
+      previousFocusTitle: previousFocus.title,
+      nextFocusTitle: nextFocus.title,
+      previousFocusRow: previousFocus.focusRow,
+      nextFocusRow: nextFocus.focusRow,
+      previousFocusProgress: previousFocus.progressCurrent,
+      nextFocusProgress: nextFocus.progressCurrent,
+      nextFocusTotal: nextFocus.progressTotal,
+      tileLabel: movedTileAfter ? `Kachel ${movedTileAfter.correctIndex + 1}` : 'Die Kachel',
+      tileDistanceBefore,
+      tileDistanceAfter,
+      heuristicBefore,
+      heuristicAfter,
+      isSuggested: moveSource === 'suggested',
+    })
+    if (feedback) {
+      showMoveFeedback(feedback)
+    }
     if (reachedCorrectPlace) {
       startCorrectTilePulse(tileId)
     }
@@ -1908,8 +1967,23 @@ export default function PuzzleScreen({
         }
 
         solutionQueueRef.current = resolution.queue
-        const nextHintPreview = buildHintPreview(puzzleSnapshot, resolution.queue[0], resolution.source)
-        if (!autoPlay && nextHintPreview) {
+        const suggestionFocusRow = engineRef.current?.getContextHint(puzzleSnapshot, activeFocusRow).focusRow ?? null
+        const objective = engineRef.current
+          ? buildHintPathObjective(
+              puzzleSnapshot,
+              resolution.queue,
+              suggestionFocusRow,
+              (state, tileId) => engineRef.current?.makeMove(state, tileId) ?? state
+            )
+          : null
+        const nextHintPreview = buildHintPreview(
+          puzzleSnapshot,
+          resolution.queue[0],
+          resolution.source,
+          suggestionFocusRow,
+          objective
+        )
+        if (!autoPlay && nextHintPreview && registerHintForState(hintedStateHashesRef.current, snapshotHash)) {
           setRunMetrics((prev) => ({
             ...prev,
             hintCount: prev.hintCount + 1,
@@ -1938,13 +2012,13 @@ export default function PuzzleScreen({
 
   const handleShowHint = () => {
     showBoardToolHelp('hint')
-    endActiveBoardHelp()
+    hideTileNumbers()
     runSuggestionResolution(false)
   }
 
   const handleShowHintFromHotkey = () => {
     showBoardToolHelp('hint')
-    endActiveBoardHelp()
+    hideTileNumbers()
     runSuggestionResolution(false, HOTKEY_HINT_PREVIEW_MS)
     focusHotkeyFeedbackTarget(hintButtonRef)
   }
@@ -1960,7 +2034,7 @@ export default function PuzzleScreen({
         ? suggestedMoveFromPreview
         : solutionQueueRef.current[0]
 
-    endActiveBoardHelp()
+    hideTileNumbers()
     if (suggestedMove && engineRef.current.canMoveTile(puzzleState, suggestedMove)) {
       startAnimatedMove(suggestedMove, true)
       return
@@ -2039,10 +2113,12 @@ export default function PuzzleScreen({
     const moveRecord = createMoveRecordForStates(previousState, currentState, currentState.moveCount)
 
     const commitUndoMove = () => {
+      const recalibratedFocus = engineRef.current?.getContextHint(previousState, null) ?? null
       syncTrackedPathToState(previousState)
       setMoveHistory((prev) => prev.slice(0, -1))
       setRedoHistory((prev) => [...prev.slice(-(HISTORY_LIMIT - 1)), currentState])
       setPuzzleState(previousState)
+      setActiveFocusRow(recalibratedFocus?.focusRow ?? null)
       setMoveCount(previousState.moveCount)
       setRunMetrics((prev) => ({
         ...prev,
@@ -2050,6 +2126,12 @@ export default function PuzzleScreen({
       }))
       if (moveRecord && didTileReachCorrectPlace(currentState, previousState, moveRecord.tileId)) {
         startCorrectTilePulse(moveRecord.tileId)
+      }
+      if (recalibratedFocus?.focusRow !== activeFocusRow) {
+        showMoveFeedback({
+          message: `Fokus nach Rueckgaengig neu gesetzt: ${recalibratedFocus?.title ?? 'Zielbild vollstaendig'}.`,
+          tone: 'neutral',
+        })
       }
     }
 
@@ -2072,6 +2154,7 @@ export default function PuzzleScreen({
     const moveRecord = createMoveRecordForStates(currentState, nextState, nextState.moveCount)
 
     const commitRedoMove = () => {
+      const recalibratedFocus = engineRef.current?.getContextHint(nextState, null) ?? null
       if (moveRecord) {
         recordTrackedMove(nextState, moveRecord.tileId)
       } else {
@@ -2081,6 +2164,7 @@ export default function PuzzleScreen({
       setRedoHistory((prev) => prev.slice(0, -1))
       setMoveHistory((prev) => [...prev.slice(-(HISTORY_LIMIT - 1)), currentState])
       setPuzzleState(nextState)
+      setActiveFocusRow(recalibratedFocus?.focusRow ?? null)
       setMoveCount(nextState.moveCount)
       setRunMetrics((prev) => ({
         ...prev,
@@ -2089,6 +2173,12 @@ export default function PuzzleScreen({
       }))
       if (moveRecord && didTileReachCorrectPlace(currentState, nextState, moveRecord.tileId)) {
         startCorrectTilePulse(moveRecord.tileId)
+      }
+      if (recalibratedFocus?.focusRow !== activeFocusRow) {
+        showMoveFeedback({
+          message: `Fokus nach Wiederholen neu gesetzt: ${recalibratedFocus?.title ?? 'Zielbild vollstaendig'}.`,
+          tone: 'neutral',
+        })
       }
     }
 
@@ -2212,8 +2302,12 @@ export default function PuzzleScreen({
       : null
   const contextHint: PuzzleContextHint | null =
     puzzleState && engineRef.current
-      ? engineRef.current.getContextHint(puzzleState, hintPreview?.tileId ?? null)
+      ? engineRef.current.getContextHint(puzzleState, activeFocusRow)
       : null
+  useEffect(() => {
+    if (contextHint?.focusRow === activeFocusRow) return
+    setActiveFocusRow(contextHint?.focusRow ?? null)
+  }, [activeFocusRow, contextHint])
   const difficultyLabel = formatDifficultyLabel(config)
   const playableTileCount = Math.max(0, config.rows * config.cols - 1)
   const activeSearchTile = puzzleState
@@ -2319,6 +2413,24 @@ export default function PuzzleScreen({
                       aria-roledescription="Schiebepuzzle-Brett"
                       aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight W A S D B H Enter Space G M N P Control+Z Control+Y Control+Shift+Z R Escape"
                     />
+                    {hintPreview && (
+                      <div className="puzzle-hint-board-legend" aria-hidden="true">
+                        <span><i className="is-move" /> Naechster Zug</span>
+                        <span><i className="is-target" /> Zielposition</span>
+                      </div>
+                    )}
+                    <AnimatePresence initial={false}>
+                      {moveFeedback && (
+                        <div
+                          key={moveFeedback.message}
+                          className={`puzzle-move-feedback is-${moveFeedback.tone}`}
+                          role="status"
+                          aria-live="polite"
+                        >
+                          {moveFeedback.message}
+                        </div>
+                      )}
+                    </AnimatePresence>
                     <canvas
                       ref={celebrationCanvasRef}
                       className={`puzzle-celebration-canvas${isCelebratingWin ? ' is-visible' : ''}`}
@@ -2354,6 +2466,9 @@ export default function PuzzleScreen({
             progressMetrics={progressMetrics}
             contextHint={contextHint}
             highlightedReferenceIndex={highlightedReferenceIndex}
+            hintTargetIndex={hintPreview?.targetIndex ?? null}
+            objectiveLabel={hintPreview?.objectiveLabel ?? null}
+            objectiveDetail={hintPreview?.objectiveDetail ?? null}
             onReferenceTileHover={handleReferenceTileHover}
           />
         </div>

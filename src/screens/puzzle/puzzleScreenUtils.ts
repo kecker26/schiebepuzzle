@@ -31,10 +31,51 @@ export interface SuggestedHintPreview {
   tileLabel: string
   direction: HintDirection
   directionLabel: string
+  actionLabel: string
   sourceLabel: string
   confidenceLabel: string
   confidenceTone: HintConfidenceTone
   description: string
+  currentRow: number
+  currentCol: number
+  targetRow: number
+  targetCol: number
+  targetIndex: number
+  currentPositionLabel: string
+  targetPositionLabel: string
+  distance: number
+  strategyLabel: string
+  objectiveLabel: string | null
+  objectiveDetail: string | null
+}
+
+export interface HintPathObjective {
+  tileId: string
+  tileLabel: string
+  preparationMoveCount: number
+  label: string
+  detail: string
+}
+
+export interface PuzzleMoveFeedback {
+  message: string
+  tone: 'positive' | 'neutral' | 'caution'
+}
+
+export interface PuzzleMoveFeedbackInput {
+  previousFocusTitle: string
+  nextFocusTitle: string
+  previousFocusRow: number | null
+  nextFocusRow: number | null
+  previousFocusProgress: number
+  nextFocusProgress: number
+  nextFocusTotal: number
+  tileLabel: string
+  tileDistanceBefore: number
+  tileDistanceAfter: number
+  heuristicBefore: number
+  heuristicAfter: number
+  isSuggested: boolean
 }
 
 const MOVE_DIRECTION_LABELS: Record<PuzzleMoveDirection, string> = {
@@ -68,6 +109,26 @@ export function normalizeGhostPreviewMode(value: unknown): GhostPreviewMode {
 
 export function getMoveDirectionLabel(direction: PuzzleMoveDirection): string {
   return MOVE_DIRECTION_LABELS[direction]
+}
+
+function getGridPositionLabel(row: number, col: number, rows: number, cols: number): string {
+  const vertical =
+    row === 0
+      ? 'oben'
+      : row === rows - 1
+        ? 'unten'
+        : 'mittig'
+  const horizontal =
+    col === 0
+      ? 'links'
+      : col === cols - 1
+        ? 'rechts'
+        : 'mittig'
+
+  if (vertical === 'mittig' && horizontal === 'mittig') return 'in der Mitte'
+  if (horizontal === 'mittig') return vertical === 'oben' ? 'oben mittig' : vertical === 'unten' ? 'unten mittig' : 'in der Mitte'
+  if (vertical === 'mittig') return `mittig ${horizontal}`
+  return `${vertical} ${horizontal}`
 }
 
 function getDirectionFromDelta(deltaRow: number, deltaCol: number): PuzzleMoveDirection | null {
@@ -178,7 +239,9 @@ export function getKeyboardMoveDirection(key: string): PuzzleMoveDirection | nul
 export function buildHintPreview(
   state: PuzzleState,
   tileId: string,
-  source: HintResolutionSource
+  source: HintResolutionSource,
+  focusRow: number | null = null,
+  objective: HintPathObjective | null = null
 ): SuggestedHintPreview | null {
   const tile = state.tiles.find((entry) => entry.id === tileId)
   if (!tile || tile.isEmpty) return null
@@ -207,21 +270,153 @@ export function buildHintPreview(
         ? 'Pfad aus deinem Verlauf'
         : 'Lokale Heuristik'
   const tileLabel = `Kachel ${tile.correctIndex + 1}`
+  const rows = state.tiles.reduce((max, entry) => Math.max(max, entry.row, entry.correctRow), 0) + 1
+  const cols = state.tiles.reduce((max, entry) => Math.max(max, entry.col, entry.correctCol), 0) + 1
+  const distance = Math.abs(tile.correctRow - tile.row) + Math.abs(tile.correctCol - tile.col)
+  const distanceAfterMove =
+    Math.abs(tile.correctRow - state.emptyRow) + Math.abs(tile.correctCol - state.emptyCol)
   const description =
-    source === 'greedy'
-      ? `${tileLabel} ${directionLabel}. Bester lokaler Zug.`
-      : `${tileLabel} ${directionLabel}. Liegt auf dem Loesungspfad.`
+    distanceAfterMove === 0
+      ? 'Damit sitzt die Kachel direkt an ihrer Zielposition.'
+      : distanceAfterMove < distance
+        ? 'Dadurch kommt sie ihrer Zielposition einen Schritt naeher.'
+        : distanceAfterMove > distance
+          ? 'Dieser Zwischenschritt oeffnet den weiteren Loesungsweg.'
+          : 'Dieser Zug haelt den weiteren Loesungsweg offen.'
 
   return {
     tileId,
     tileLabel,
     direction,
     directionLabel,
+    actionLabel: `Schiebe ${tileLabel} ${directionLabel}.`,
     sourceLabel,
     confidenceLabel,
     confidenceTone,
     description,
+    currentRow: tile.row,
+    currentCol: tile.col,
+    targetRow: tile.correctRow,
+    targetCol: tile.correctCol,
+    targetIndex: tile.correctIndex,
+    currentPositionLabel: getGridPositionLabel(tile.row, tile.col, rows, cols),
+    targetPositionLabel: getGridPositionLabel(tile.correctRow, tile.correctCol, rows, cols),
+    distance,
+    strategyLabel:
+      objective && objective.preparationMoveCount > 0
+        ? `Dieser Zwischenschritt bereitet ${objective.tileLabel} vor.`
+        : focusRow === null || tile.correctRow === focusRow
+          ? 'Dieser Zug arbeitet direkt am aktuellen Fokusbereich.'
+          : 'Dieser Zwischenschritt bereitet den aktuellen Fokusbereich vor.',
+    objectiveLabel: objective?.label ?? null,
+    objectiveDetail: objective?.detail ?? null,
   }
+}
+
+export function buildHintPathObjective(
+  initialState: PuzzleState,
+  queue: string[],
+  focusRow: number | null,
+  applyMove: (state: PuzzleState, tileId: string) => PuzzleState
+): HintPathObjective | null {
+  if (queue.length === 0) return null
+
+  let simulatedState = initialState
+  const searchLimit = Math.min(queue.length, 12)
+
+  for (let index = 0; index < searchLimit; index++) {
+    const tileId = queue[index]
+    const tileBefore = simulatedState.tiles.find((tile) => tile.id === tileId)
+    if (!tileBefore || tileBefore.isEmpty) return null
+
+    const nextState = applyMove(simulatedState, tileId)
+    if (nextState === simulatedState) return null
+
+    const tileAfter = nextState.tiles.find((tile) => tile.id === tileId)
+    if (!tileAfter || tileAfter.isEmpty) return null
+
+    const reachedTarget =
+      (tileBefore.row !== tileBefore.correctRow || tileBefore.col !== tileBefore.correctCol)
+      && tileAfter.row === tileAfter.correctRow
+      && tileAfter.col === tileAfter.correctCol
+    const reachesFocusTarget = reachedTarget && (focusRow === null || tileAfter.correctRow === focusRow)
+
+    if (reachesFocusTarget) {
+      const tileLabel = `Kachel ${tileAfter.correctIndex + 1}`
+      const preparationMoveCount = index
+      return {
+        tileId,
+        tileLabel,
+        preparationMoveCount,
+        label: preparationMoveCount === 0
+          ? `${tileLabel} an die Zielposition setzen`
+          : `Platz fuer ${tileLabel} schaffen`,
+        detail: preparationMoveCount === 0
+          ? `${tileLabel} kann mit dem naechsten Zug richtig eingesetzt werden.`
+          : `Noch ${preparationMoveCount} ${preparationMoveCount === 1 ? 'vorbereitender Zug' : 'vorbereitende Zuege'}, dann kann ${tileLabel} richtig eingesetzt werden.`,
+      }
+    }
+
+    simulatedState = nextState
+  }
+
+  return null
+}
+
+export function buildPuzzleMoveFeedback(input: PuzzleMoveFeedbackInput): PuzzleMoveFeedback | null {
+  if (input.nextFocusRow !== input.previousFocusRow) {
+    return {
+      message: input.nextFocusRow === null
+        ? 'Alle Zielbereiche sind vollstaendig.'
+        : `${input.previousFocusTitle} abgeschlossen. Weiter mit ${input.nextFocusTitle.toLowerCase()}.`,
+      tone: 'positive',
+    }
+  }
+
+  if (input.nextFocusProgress > input.previousFocusProgress) {
+    return {
+      message: `Bereichsfortschritt: ${input.nextFocusProgress}/${input.nextFocusTotal} Positionen stimmen.`,
+      tone: 'positive',
+    }
+  }
+
+  if (input.tileDistanceAfter < input.tileDistanceBefore) {
+    return {
+      message: `${input.tileLabel} ist jetzt naeher an ihrer Zielposition.`,
+      tone: 'positive',
+    }
+  }
+
+  if (input.heuristicAfter < input.heuristicBefore) {
+    return {
+      message: 'Der Zug verbessert die Loesungsnaehe des gesamten Bretts.',
+      tone: 'positive',
+    }
+  }
+
+  if (input.nextFocusProgress < input.previousFocusProgress) {
+    return {
+      message: input.isSuggested
+        ? 'Vorbereitender Zug: Der Loesungsweg bleibt auf den Fokusbereich ausgerichtet.'
+        : 'Der aktuelle Fokusbereich wurde wieder geoeffnet.',
+      tone: input.isSuggested ? 'neutral' : 'caution',
+    }
+  }
+
+  if (input.isSuggested) {
+    return {
+      message: 'Vorbereitender Zug fuer das aktuelle Teilziel.',
+      tone: 'neutral',
+    }
+  }
+
+  return null
+}
+
+export function registerHintForState(hintedStateHashes: Set<string>, stateHash: string): boolean {
+  if (hintedStateHashes.has(stateHash)) return false
+  hintedStateHashes.add(stateHash)
+  return true
 }
 
 export function getProgressStatusLabel(progressPercent: number | null | undefined): string {

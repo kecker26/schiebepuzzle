@@ -25,6 +25,9 @@ interface PuzzleRightPanelProps {
   progressMetrics: PuzzleProgressMetrics | null
   contextHint: PuzzleContextHint | null
   highlightedReferenceIndex: number | null
+  hintTargetIndex: number | null
+  objectiveLabel: string | null
+  objectiveDetail: string | null
   onReferenceTileHover: (correctIndex: number | null) => void
 }
 
@@ -81,8 +84,12 @@ export default function PuzzleRightPanel({
   progressMetrics,
   contextHint,
   highlightedReferenceIndex,
+  hintTargetIndex,
+  objectiveLabel,
+  objectiveDetail,
   onReferenceTileHover,
 }: PuzzleRightPanelProps) {
+  const [isStrategicFocusVisible, setIsStrategicFocusVisible] = useState(true)
   const isMusicMuted = useMusicMuted()
   const musicAttribution = useMusicAttribution()
   const musicPlaybackStatus = useMusicPlaybackStatus()
@@ -97,6 +104,11 @@ export default function PuzzleRightPanel({
   const previewRatioStyle = {
     '--preview-ratio': String(previewAspectRatio),
   } as CSSProperties
+  const focusTargetIndexSet = new Set(contextHint?.focusTargetIndexes ?? [])
+  const correctTargetIndexSet = new Set(contextHint?.correctTargetIndexes ?? [])
+  const focusProgressPercent = contextHint && contextHint.progressTotal > 0
+    ? Math.round((contextHint.progressCurrent / contextHint.progressTotal) * 100)
+    : 0
 
   const handleToggleMusic = () => {
     audioService.setMusicMuted(!isMusicMuted)
@@ -158,7 +170,10 @@ export default function PuzzleRightPanel({
                       key={index}
                       className={
                         'puzzle-preview-grid-tile'
-                        + (highlightedReferenceIndex === index ? ' is-active' : '')
+                        + (highlightedReferenceIndex === index ? ' is-hover-active' : '')
+                        + (isStrategicFocusVisible && hintTargetIndex === index ? ' is-hint-target' : '')
+                        + (isStrategicFocusVisible && focusTargetIndexSet.has(index) ? ' is-focus-target' : '')
+                        + (isStrategicFocusVisible && correctTargetIndexSet.has(index) ? ' is-correct-target' : '')
                         + (isEmptyTile ? ' is-empty' : '')
                       }
                       style={{
@@ -190,37 +205,58 @@ export default function PuzzleRightPanel({
           <AnimatePresence initial={false}>
             {contextHint && !isPaused && (
               <AnimatedReveal
-                key={`${contextHint.title}-${contextHint.reason}-${contextHint.anchorLabel}`}
+                key={contextHint.title}
                 className={'puzzle-preview-insight' + (isPreviewVisible && !isPaused ? '' : ' puzzle-preview-insight--promoted')}
                 aria-live="polite"
                 interaction="surface"
                 level="medium"
               >
-                <span className="puzzle-panel-kicker">
-                  <span className="puzzle-panel-kicker-icon-shell" aria-hidden="true">
-                    <PuzzleScreenIcon name="brain" className="puzzle-panel-kicker-icon" />
+                <div className="puzzle-focus-card-header">
+                  <span className="puzzle-panel-kicker">
+                    <span className="puzzle-panel-kicker-icon-shell" aria-hidden="true">
+                      <PuzzleScreenIcon name="brain" className="puzzle-panel-kicker-icon" />
+                    </span>
+                    <span className="puzzle-preview-insight-kicker">Strategischer Fokus</span>
                   </span>
-                  <span className="puzzle-preview-insight-kicker">Strategischer Fokus</span>
-                </span>
-                <div className="puzzle-panel-title-row puzzle-panel-title-row--compact">
-                  <strong>{contextHint.title}</strong>
+                  <AnimatedButton
+                    className={`puzzle-focus-toggle${isStrategicFocusVisible ? ' is-active' : ''}`}
+                    onClick={() => setIsStrategicFocusVisible((current) => !current)}
+                    aria-label={isStrategicFocusVisible ? 'Strategischen Fokus ausschalten' : 'Strategischen Fokus einschalten'}
+                    aria-pressed={isStrategicFocusVisible}
+                    data-app-tooltip={isStrategicFocusVisible
+                      ? 'Strategischen Fokus und Markierungen im Zielbild ausblenden.'
+                      : 'Strategischen Fokus und Markierungen im Zielbild einblenden.'}
+                    data-app-tooltip-align="end"
+                  >
+                    <PuzzleScreenIcon name="eye" className="puzzle-focus-toggle-icon" />
+                    <span>{isStrategicFocusVisible ? 'An' : 'Aus'}</span>
+                  </AnimatedButton>
                 </div>
-                <p>{contextHint.body}</p>
-                <div
-                  className="puzzle-preview-insight-reason"
-                  role="note"
-                  aria-label={`Warum diese Strategie? ${contextHint.reason}`}
-                  data-app-tooltip="Begruendet, warum dieser Fokus gerade nuetzlich ist."
-                  data-app-tooltip-align="end"
-                >
-                  <span className="puzzle-preview-insight-reason-chip">Warum?</span>
-                  <span className="puzzle-preview-insight-reason-copy">{contextHint.reason}</span>
-                </div>
-                <div className="puzzle-preview-meta">
-                  <span className="puzzle-preview-chip">{contextHint.focusLabel}</span>
-                  <span className="puzzle-preview-chip">{contextHint.anchorLabel}</span>
-                  <span className="puzzle-preview-chip">{contextHint.stabilityLabel}</span>
-                </div>
+                {isStrategicFocusVisible ? (
+                  <>
+                    <div className="puzzle-panel-title-row puzzle-panel-title-row--compact">
+                      <strong>{objectiveLabel ?? contextHint.title}</strong>
+                    </div>
+                    <p>{objectiveDetail ?? contextHint.body}</p>
+                    <div className="puzzle-focus-progress" aria-label={`${contextHint.progressCurrent} von ${contextHint.progressTotal} Zielpositionen stimmen`}>
+                      <div className="puzzle-focus-progress-copy">
+                        <span>Bereichsfortschritt</span>
+                        <strong>{contextHint.progressCurrent}/{contextHint.progressTotal}</strong>
+                      </div>
+                      <div className="puzzle-focus-progress-track" aria-hidden="true">
+                        <span style={{ width: `${focusProgressPercent}%` }} />
+                      </div>
+                    </div>
+                    <div className="puzzle-focus-legend" aria-label="Legende fuer den Strategiefokus">
+                      <span><i className="is-focus" aria-hidden="true" /> Aktueller Bereich</span>
+                      <span><i className="is-correct" aria-hidden="true" /> Position stimmt</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="puzzle-focus-disabled-copy">
+                    Fokus und Kachelmarkierungen sind ausgeblendet. Die Hover-Verknuepfung zum Puzzle bleibt aktiv.
+                  </p>
+                )}
               </AnimatedReveal>
             )}
           </AnimatePresence>
