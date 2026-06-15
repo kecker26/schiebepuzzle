@@ -1313,10 +1313,6 @@
   line-height: 1.45;
 }
 
-.puzzle-heatmap-controls .puzzle-ghost-mode-selector {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .puzzle-heatmap-distance-toggle {
   min-height: 36px;
   padding: 8px 10px;
@@ -1972,6 +1968,25 @@
   font-size: 15px;
   line-height: 1;
   text-shadow: 0 0 7px rgba(239, 68, 68, 0.72);
+}
+
+.puzzle-heatmap-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+}
+
+.puzzle-heatmap-legend-dot.is-improved {
+  background: #22c55e;
+}
+
+.puzzle-heatmap-legend-dot.is-worsened {
+  background: #ef4444;
+}
+
+.puzzle-heatmap-legend-dot.is-unchanged {
+  background: #94a3b8;
 }
 
 .puzzle-move-feedback {

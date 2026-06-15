@@ -47,6 +47,7 @@ import PuzzleRightPanel from './puzzle/PuzzleRightPanel.tsx'
 import {
   buildHintPathObjective,
   buildHintPreview,
+  buildHeatmapDeltaAnalysis,
   buildPuzzleMoveFeedback,
   CORRECT_TILE_PULSE_DURATION_MS,
   createMoveRecordForStates,
@@ -64,6 +65,7 @@ import {
   normalizeHeatmapIntensity,
   normalizeHeatmapMode,
   registerHintForState,
+  selectHeatmapMode,
   START_APPROXIMATE_SOLUTION_NODE_LIMIT,
   START_APPROXIMATE_SOLUTION_TIME_LIMIT_5X5_MS,
   START_APPROXIMATE_SOLUTION_TIME_LIMIT_6X6_MS,
@@ -75,6 +77,7 @@ import {
   type PuzzleMoveFeedback,
   SuggestedHintPreview,
   TILE_NUMBER_PREVIEW_MS,
+  toggleHeatmapDistances,
 } from './puzzle/puzzleScreenUtils.ts'
 import { useExactPuzzleSolverWorker } from './puzzle/useExactPuzzleSolverWorker.ts'
 import { usePuzzleKeyboardShortcuts } from './puzzle/usePuzzleKeyboardShortcuts.ts'
@@ -1127,9 +1130,14 @@ export default function PuzzleScreen({
         setIsHeatmapOverlayVisible(restoredHeatmapOverlayVisible)
         setGhostPreviewMode(normalizeGhostPreviewMode(restoredProgress.ghostPreviewMode))
         setGhostPreviewWeight(normalizeGhostPreviewWeight(restoredProgress.ghostPreviewWeight))
-        setHeatmapMode(normalizeHeatmapMode(restoredProgress.heatmapMode))
+        const restoredHeatmapMode = normalizeHeatmapMode(restoredProgress.heatmapMode)
+        const restoredHeatmapDistancesVisible = restoredProgress.heatmapDistancesVisible ?? false
+        const restoredHeatmapSelection = restoredHeatmapDistancesVisible
+          ? toggleHeatmapDistances(restoredHeatmapMode, false)
+          : { mode: restoredHeatmapMode, distancesVisible: false }
+        setHeatmapMode(restoredHeatmapSelection.mode)
         setHeatmapIntensity(normalizeHeatmapIntensity(restoredProgress.heatmapIntensity))
-        setAreHeatmapDistancesVisible(restoredProgress.heatmapDistancesVisible ?? false)
+        setAreHeatmapDistancesVisible(restoredHeatmapSelection.distancesVisible)
         setKnownStartSolutionMoveCount(
           restoredProgress.solverProgress?.shuffleMoves.length
             ? restoredProgress.solverProgress.shuffleMoves.length
@@ -1345,7 +1353,10 @@ export default function PuzzleScreen({
         ? {
             mode: heatmapMode,
             intensity: heatmapIntensity / 100,
-            showDistances: areHeatmapDistancesVisible,
+            showDistances: heatmapMode === 'classic' && areHeatmapDistancesVisible,
+            tileDeltas: heatmapMode === 'delta'
+              ? buildHeatmapDeltaAnalysis(puzzleState, moveHistory).tileDeltas
+              : undefined,
           }
         : null
     rendererRef.current.render(
@@ -1379,6 +1390,7 @@ export default function PuzzleScreen({
     isHeatmapOverlayVisible,
     isGhostPreviewVisible,
     moveAnimation,
+    moveHistory,
     puzzleState,
     tileNumberCorrectnessPulseProgress,
     getPlayableTileById,
@@ -2127,13 +2139,17 @@ export default function PuzzleScreen({
 
   const handleHeatmapModeChange = useCallback((mode: HeatmapMode) => {
     if (isPaused) return
-    setHeatmapMode(mode)
-  }, [isPaused])
+    const selection = selectHeatmapMode(mode, areHeatmapDistancesVisible)
+    setHeatmapMode(selection.mode)
+    setAreHeatmapDistancesVisible(selection.distancesVisible)
+  }, [areHeatmapDistancesVisible, isPaused])
 
   const toggleHeatmapDistancesVisibility = useCallback(() => {
     if (isPaused) return
-    setAreHeatmapDistancesVisible((current) => !current)
-  }, [isPaused])
+    const selection = toggleHeatmapDistances(heatmapMode, areHeatmapDistancesVisible)
+    setHeatmapMode(selection.mode)
+    setAreHeatmapDistancesVisible(selection.distancesVisible)
+  }, [areHeatmapDistancesVisible, heatmapMode, isPaused])
 
   const closeRestartConfirm = useCallback(() => {
     setIsRestartConfirmOpen(false)
@@ -2355,6 +2371,9 @@ export default function PuzzleScreen({
     puzzleState && engineRef.current
       ? engineRef.current.getProgressMetrics(puzzleState, progressReferenceHeuristicRef.current)
       : null
+  const heatmapDeltaAnalysis = puzzleState
+    ? buildHeatmapDeltaAnalysis(puzzleState, moveHistory)
+    : null
   const contextHint: PuzzleContextHint | null =
     puzzleState && engineRef.current
       ? engineRef.current.getContextHint(puzzleState, activeFocusRow)
@@ -2482,11 +2501,28 @@ export default function PuzzleScreen({
                     )}
                     {isHeatmapOverlayVisible && !hintPreview && (
                       <div className="puzzle-heatmap-board-legend" aria-hidden="true">
-                        <strong>{heatmapMode === 'arrows' ? 'Zielrichtung' : 'Entfernung'}</strong>
+                        <strong>
+                          {heatmapMode === 'arrows'
+                            ? 'Zielrichtung'
+                            : heatmapMode === 'delta'
+                              ? heatmapDeltaAnalysis?.lookback
+                                ? `Letzte ${heatmapDeltaAnalysis.lookback} Zuege`
+                                : 'Noch kein Vergleich'
+                              : 'Entfernung'}
+                        </strong>
                         {heatmapMode === 'arrows' ? (
                           <>
                             <span className="puzzle-heatmap-legend-arrow">{'->'}</span>
                             <span>Pfeil zeigt zum Ziel</span>
+                          </>
+                        ) : heatmapMode === 'delta' ? (
+                          <>
+                            <span className="puzzle-heatmap-legend-dot is-improved" />
+                            <span>{heatmapDeltaAnalysis?.improvedTiles ?? 0} besser</span>
+                            <span className="puzzle-heatmap-legend-dot is-worsened" />
+                            <span>{heatmapDeltaAnalysis?.worsenedTiles ?? 0} schlechter</span>
+                            <span className="puzzle-heatmap-legend-dot is-unchanged" />
+                            <span>{heatmapDeltaAnalysis?.unchangedTiles ?? 0} gleich</span>
                           </>
                         ) : (
                           <>

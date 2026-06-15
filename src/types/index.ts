@@ -97,7 +97,7 @@ export interface SolverProgress {
 
 export type PuzzleMoveDirection = 'up' | 'down' | 'left' | 'right'
 export type GhostPreviewMode = 'image' | 'contours' | 'edges'
-export type HeatmapMode = 'classic' | 'arrows'
+export type HeatmapMode = 'classic' | 'arrows' | 'delta'
 
 export type OptimalStartMoveCountKind = 'exact' | 'lower-bound' | 'unavailable'
 

@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   buildHintPathObjective,
   buildHintPreview,
+  buildHeatmapDeltaAnalysis,
   buildPuzzleMoveFeedback,
   normalizeHeatmapIntensity,
   normalizeHeatmapMode,
   registerHintForState,
+  selectHeatmapMode,
+  toggleHeatmapDistances,
 } from '../screens/puzzle/puzzleScreenUtils.ts'
 import { buildPuzzleContextHint } from '../services/PuzzleEngine.ts'
 import type { PuzzleState, Tile } from '../types/index.ts'
@@ -177,10 +180,67 @@ describe('puzzle hints', () => {
 
   it('normalizes persisted heatmap settings defensively', () => {
     expect(normalizeHeatmapMode('arrows')).toBe('arrows')
+    expect(normalizeHeatmapMode('delta')).toBe('delta')
     expect(normalizeHeatmapMode('unknown')).toBe('classic')
     expect(normalizeHeatmapIntensity(12)).toBe(25)
     expect(normalizeHeatmapIntensity(140)).toBe(100)
     expect(normalizeHeatmapIntensity(undefined)).toBe(100)
+  })
+
+  it('keeps heatmap distance numbers exclusive to the classic mode', () => {
+    expect(toggleHeatmapDistances('arrows', false)).toEqual({
+      mode: 'classic',
+      distancesVisible: true,
+    })
+    expect(toggleHeatmapDistances('classic', true)).toEqual({
+      mode: 'classic',
+      distancesVisible: false,
+    })
+    expect(selectHeatmapMode('delta', true)).toEqual({
+      mode: 'delta',
+      distancesVisible: false,
+    })
+    expect(selectHeatmapMode('classic', true)).toEqual({
+      mode: 'classic',
+      distancesVisible: true,
+    })
+  })
+
+  it('compares heatmap progress against the requested recent move window', () => {
+    const referenceState = createState([
+      createTile(0, 0, 0),
+      createTile(1, 2, 2),
+      createTile(2, 0, 2),
+      createTile(3, 1, 0),
+      createTile(4, 1, 1),
+      createTile(5, 1, 2),
+      createTile(6, 2, 0),
+      createTile(7, 2, 1),
+      createTile(8, 2, 1, true),
+    ], 2, 1)
+    const currentState = createState([
+      createTile(0, 0, 0),
+      createTile(1, 1, 1),
+      createTile(2, 0, 2),
+      createTile(3, 1, 0),
+      createTile(4, 1, 2),
+      createTile(5, 1, 2),
+      createTile(6, 2, 0),
+      createTile(7, 0, 1),
+      createTile(8, 2, 1, true),
+    ], 2, 1)
+
+    expect(buildHeatmapDeltaAnalysis(currentState, [referenceState], 5)).toMatchObject({
+      lookback: 1,
+      improvedTiles: 1,
+      worsenedTiles: 2,
+      unchangedTiles: 5,
+      tileDeltas: {
+        'tile-1': 2,
+        'tile-4': -1,
+        'tile-7': -2,
+      },
+    })
   })
 
   it('keeps routine manual moves quiet but reports meaningful improvements', () => {

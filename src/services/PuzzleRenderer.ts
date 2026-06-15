@@ -27,6 +27,7 @@ export interface HeatmapOverlayOptions {
   mode: HeatmapMode
   intensity: number
   showDistances: boolean
+  tileDeltas?: Readonly<Record<string, number>>
 }
 
 export default class PuzzleRenderer {
@@ -973,10 +974,11 @@ export default class PuzzleRenderer {
     moveAnimation: TileMoveAnimation | null,
     options: HeatmapOverlayOptions
   ): void {
-    const incorrectTiles = state.tiles.filter(
-      (tile) => !tile.isEmpty && (tile.row !== tile.correctRow || tile.col !== tile.correctCol)
-    )
-    if (incorrectTiles.length === 0) return
+    const overlayTiles = state.tiles.filter((tile) => (
+      !tile.isEmpty
+      && (options.mode === 'delta' || tile.row !== tile.correctRow || tile.col !== tile.correctCol)
+    ))
+    if (overlayTiles.length === 0) return
 
     const boardRows = state.tiles.reduce((maxRow, tile) => Math.max(maxRow, tile.row, tile.correctRow), state.emptyRow) + 1
     const boardCols = state.tiles.reduce((maxCol, tile) => Math.max(maxCol, tile.col, tile.correctCol), state.emptyCol) + 1
@@ -984,9 +986,9 @@ export default class PuzzleRenderer {
     const maxDistance = Math.max(1, boardRows + boardCols - 2)
     const animatedTileId = moveAnimation?.tileId ?? null
 
-    incorrectTiles.forEach((tile) => {
+    overlayTiles.forEach((tile) => {
       const distance = Math.abs(tile.row - tile.correctRow) + Math.abs(tile.col - tile.correctCol)
-      if (distance <= 0) return
+      if (distance <= 0 && options.mode !== 'delta') return
 
       let x = tile.col * this.tileWidth
       let y = tile.row * this.tileHeight
@@ -1001,16 +1003,83 @@ export default class PuzzleRenderer {
         y = startY + (targetY - startY) * easedProgress
       }
 
-      if (options.mode === 'arrows') {
+      if (options.mode === 'delta') {
+        this.renderHeatmapDeltaOverlayAt(x, y, options.tileDeltas?.[tile.id] ?? 0, options.intensity)
+      } else if (options.mode === 'arrows') {
         this.renderHeatmapDirectionArrowAt(x, y, tile, options.intensity)
       } else {
         this.renderHeatmapTileOverlayAt(x, y, distance, boardSize, maxDistance, options.intensity)
       }
 
       if (options.showDistances) {
-        this.renderHeatmapDistanceBadgeAt(x, y, distance, options.intensity)
+        this.renderHeatmapDistanceBadgeAt(x, y, tile, options.intensity)
       }
     })
+  }
+
+  private renderHeatmapDeltaOverlayAt(x: number, y: number, delta: number, intensity: number): void {
+    const alpha = Math.max(0.25, Math.min(1, intensity))
+    const shortEdge = Math.min(this.tileWidth, this.tileHeight)
+    const inset = Math.max(4, Math.round(shortEdge * 0.05))
+    const lineWidth = Math.max(2, Math.round(shortEdge * 0.035))
+    const magnitude = Math.min(1, Math.abs(delta) / 3)
+    const isImproved = delta > 0
+    const isWorsened = delta < 0
+    const color = isImproved
+      ? { red: 34, green: 197, blue: 94 }
+      : isWorsened
+        ? { red: 239, green: 68, blue: 68 }
+        : { red: 148, green: 163, blue: 184 }
+    const label = isImproved ? `-${delta}` : isWorsened ? `+${Math.abs(delta)}` : '0'
+    const fillAlpha = (isImproved || isWorsened ? 0.2 + magnitude * 0.2 : 0.11) * alpha
+    const strokeAlpha = (isImproved || isWorsened ? 0.76 + magnitude * 0.2 : 0.42) * alpha
+
+    this.ctx.save()
+    this.ctx.fillStyle = `rgba(${color.red}, ${color.green}, ${color.blue}, ${fillAlpha})`
+    this.ctx.fillRect(x + inset, y + inset, this.tileWidth - inset * 2, this.tileHeight - inset * 2)
+    this.ctx.shadowColor = `rgba(${color.red}, ${color.green}, ${color.blue}, ${0.58 * alpha})`
+    this.ctx.shadowBlur = isImproved || isWorsened ? Math.max(8, shortEdge * 0.16) : 0
+    this.ctx.strokeStyle = `rgba(${color.red}, ${color.green}, ${color.blue}, ${strokeAlpha})`
+    this.ctx.lineWidth = lineWidth
+    this.ctx.strokeRect(
+      x + inset + lineWidth / 2,
+      y + inset + lineWidth / 2,
+      this.tileWidth - inset * 2 - lineWidth,
+      this.tileHeight - inset * 2 - lineWidth
+    )
+    this.ctx.shadowBlur = 0
+    this.renderHeatmapDeltaLabelAt(x, y, label, color, alpha)
+    this.ctx.restore()
+  }
+
+  private renderHeatmapDeltaLabelAt(
+    x: number,
+    y: number,
+    label: string,
+    color: { red: number; green: number; blue: number },
+    alpha: number
+  ): void {
+    const shortEdge = Math.min(this.tileWidth, this.tileHeight)
+    const fontSize = Math.max(11, Math.min(24, Math.round(shortEdge * 0.2)))
+    const paddingX = Math.max(7, shortEdge * 0.07)
+    const paddingY = Math.max(4, shortEdge * 0.04)
+    this.ctx.font = `800 ${fontSize}px ${CANVAS_FONT_FAMILY}`
+    const width = this.ctx.measureText(label).width + paddingX * 2
+    const height = fontSize + paddingY * 2
+    const badgeX = x + (this.tileWidth - width) / 2
+    const badgeY = y + (this.tileHeight - height) / 2
+
+    this.ctx.fillStyle = `rgba(7, 12, 24, ${0.82 * alpha})`
+    this.ctx.strokeStyle = `rgba(${color.red}, ${color.green}, ${color.blue}, ${0.9 * alpha})`
+    this.ctx.lineWidth = Math.max(1.5, shortEdge * 0.018)
+    this.ctx.beginPath()
+    this.ctx.roundRect(badgeX, badgeY, width, height, Math.max(7, height * 0.34))
+    this.ctx.fill()
+    this.ctx.stroke()
+    this.ctx.fillStyle = `rgba(255, 255, 255, ${0.98 * alpha})`
+    this.ctx.textAlign = 'center'
+    this.ctx.textBaseline = 'middle'
+    this.ctx.fillText(label, x + this.tileWidth / 2, y + this.tileHeight / 2 + 0.5)
   }
 
   private renderHeatmapTileOverlayAt(
@@ -1159,12 +1228,27 @@ export default class PuzzleRenderer {
     this.ctx.stroke()
   }
 
-  private renderHeatmapDistanceBadgeAt(x: number, y: number, distance: number, intensity: number): void {
+  private renderHeatmapDistanceBadgeAt(x: number, y: number, tile: Tile, intensity: number): void {
     const alpha = Math.max(0.35, Math.min(1, intensity))
     const shortEdge = Math.min(this.tileWidth, this.tileHeight)
-    const radius = Math.max(11, Math.min(20, shortEdge * 0.16))
-    const centerX = x + this.tileWidth - radius - Math.max(5, shortEdge * 0.05)
-    const centerY = y + radius + Math.max(5, shortEdge * 0.05)
+    const deltaX = tile.correctCol - tile.col
+    const deltaY = tile.row - tile.correctRow
+    const formatAxisDelta = (axis: 'X' | 'Y', value: number) => `${axis} ${value >= 0 ? '+' : ''}${value}`
+    const xLabel = formatAxisDelta('X', deltaX)
+    const yLabel = formatAxisDelta('Y', deltaY)
+    const fontSize = Math.max(8, Math.min(12, Math.round(shortEdge * 0.095)))
+    const lineHeight = fontSize + Math.max(2, Math.round(shortEdge * 0.018))
+    const paddingX = Math.max(5, Math.round(shortEdge * 0.045))
+    const paddingY = Math.max(3, Math.round(shortEdge * 0.028))
+    this.ctx.font = `800 ${fontSize}px ${CANVAS_FONT_FAMILY}`
+    const badgeWidth = Math.max(
+      this.ctx.measureText(xLabel).width,
+      this.ctx.measureText(yLabel).width
+    ) + paddingX * 2
+    const badgeHeight = lineHeight * 2 + paddingY * 2
+    const inset = Math.max(5, shortEdge * 0.05)
+    const badgeX = x + this.tileWidth - badgeWidth - inset
+    const badgeY = y + inset
 
     this.ctx.save()
     this.ctx.shadowColor = `rgba(2, 6, 23, ${0.54 * alpha})`
@@ -1173,15 +1257,17 @@ export default class PuzzleRenderer {
     this.ctx.strokeStyle = `rgba(255, 255, 255, ${0.78 * alpha})`
     this.ctx.lineWidth = Math.max(1.5, shortEdge * 0.018)
     this.ctx.beginPath()
-    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+    this.ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, Math.max(5, badgeHeight * 0.24))
     this.ctx.fill()
     this.ctx.shadowBlur = 0
     this.ctx.stroke()
     this.ctx.fillStyle = `rgba(255, 255, 255, ${0.98 * alpha})`
-    this.ctx.font = `800 ${Math.max(10, Math.round(radius * 0.95))}px ${CANVAS_FONT_FAMILY}`
+    this.ctx.font = `800 ${fontSize}px ${CANVAS_FONT_FAMILY}`
     this.ctx.textAlign = 'center'
     this.ctx.textBaseline = 'middle'
-    this.ctx.fillText(String(distance), centerX, centerY + 0.5)
+    const centerX = badgeX + badgeWidth / 2
+    this.ctx.fillText(xLabel, centerX, badgeY + paddingY + lineHeight * 0.5)
+    this.ctx.fillText(yLabel, centerX, badgeY + paddingY + lineHeight * 1.5)
     this.ctx.restore()
   }
 

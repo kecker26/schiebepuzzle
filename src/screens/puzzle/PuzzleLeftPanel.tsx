@@ -114,12 +114,17 @@ const HEATMAP_MODE_OPTIONS: Array<{
   {
     value: 'classic',
     label: 'Farbflaechen',
-    description: 'Faerbt falsch platzierte Kacheln entsprechend ihrer Entfernung zum Ziel.',
+    description: 'Faerbt falsch platzierte Kacheln entsprechend ihrer Entfernung zum Ziel. X+ zeigt rechts, Y+ zeigt oben.',
   },
   {
     value: 'arrows',
     label: 'Pfeile',
     description: 'Zeigt auf jeder falsch platzierten Kachel die direkte Richtung zur Zielposition.',
+  },
+  {
+    value: 'delta',
+    label: 'Verlauf',
+    description: 'Vergleicht die Zieldistanz jeder Kachel mit den letzten bis zu fuenf Zuegen.',
   },
 ]
 
@@ -746,7 +751,7 @@ export default function PuzzleLeftPanel({
               onClick={onToggleHeatmapDistances}
               aria-pressed={areHeatmapDistancesVisible}
             >
-              Distanzzahlen {areHeatmapDistancesVisible ? 'ausblenden' : 'anzeigen'}
+              X/Y-Distanzen {areHeatmapDistancesVisible ? 'ausblenden' : 'anzeigen'}
             </button>
             <p className="puzzle-ghost-mode-copy">{activeHeatmapMode.description}</p>
           </AnimatedReveal>

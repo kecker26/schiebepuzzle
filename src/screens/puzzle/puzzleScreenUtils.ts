@@ -24,6 +24,7 @@ export const GHOST_PREVIEW_MODE_DEFAULT: GhostPreviewMode = 'image'
 export const GHOST_PREVIEW_WEIGHT_DEFAULT = 56
 export const HEATMAP_MODE_DEFAULT: HeatmapMode = 'classic'
 export const HEATMAP_INTENSITY_DEFAULT = 100
+export const HEATMAP_DELTA_LOOKBACK = 5
 
 export type HintResolutionSource = 'exact' | 'tracked' | 'greedy'
 export type HintDirection = PuzzleMoveDirection
@@ -81,6 +82,14 @@ export interface PuzzleMoveFeedbackInput {
   isSuggested: boolean
 }
 
+export interface HeatmapDeltaAnalysis {
+  tileDeltas: Record<string, number>
+  lookback: number
+  improvedTiles: number
+  worsenedTiles: number
+  unchangedTiles: number
+}
+
 const MOVE_DIRECTION_LABELS: Record<PuzzleMoveDirection, string> = {
   up: 'oben',
   down: 'unten',
@@ -110,8 +119,13 @@ export function normalizeGhostPreviewMode(value: unknown): GhostPreviewMode {
     : GHOST_PREVIEW_MODE_DEFAULT
 }
 
+export interface HeatmapDisplaySelection {
+  mode: HeatmapMode
+  distancesVisible: boolean
+}
+
 export function normalizeHeatmapMode(value: unknown): HeatmapMode {
-  return value === 'arrows' || value === 'classic'
+  return value === 'arrows' || value === 'classic' || value === 'delta'
     ? value
     : HEATMAP_MODE_DEFAULT
 }
@@ -119,6 +133,63 @@ export function normalizeHeatmapMode(value: unknown): HeatmapMode {
 export function normalizeHeatmapIntensity(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return HEATMAP_INTENSITY_DEFAULT
   return Math.max(25, Math.min(100, Math.round(value)))
+}
+
+export function selectHeatmapMode(
+  mode: HeatmapMode,
+  distancesVisible: boolean
+): HeatmapDisplaySelection {
+  return {
+    mode,
+    distancesVisible: mode === 'classic' ? distancesVisible : false,
+  }
+}
+
+export function toggleHeatmapDistances(
+  mode: HeatmapMode,
+  distancesVisible: boolean
+): HeatmapDisplaySelection {
+  return distancesVisible
+    ? { mode, distancesVisible: false }
+    : { mode: 'classic', distancesVisible: true }
+}
+
+function getTileTargetDistance(tile: PuzzleState['tiles'][number]): number {
+  return Math.abs(tile.correctRow - tile.row) + Math.abs(tile.correctCol - tile.col)
+}
+
+export function buildHeatmapDeltaAnalysis(
+  currentState: PuzzleState,
+  moveHistory: PuzzleState[],
+  requestedLookback: number = HEATMAP_DELTA_LOOKBACK
+): HeatmapDeltaAnalysis {
+  const lookback = Math.min(Math.max(0, Math.round(requestedLookback)), moveHistory.length)
+  const referenceState = lookback > 0 ? moveHistory[moveHistory.length - lookback] : currentState
+  const referenceTiles = new Map(referenceState.tiles.map((tile) => [tile.id, tile]))
+  const tileDeltas: Record<string, number> = {}
+  let improvedTiles = 0
+  let worsenedTiles = 0
+  let unchangedTiles = 0
+
+  currentState.tiles.forEach((tile) => {
+    if (tile.isEmpty) return
+    const referenceTile = referenceTiles.get(tile.id)
+    const delta = referenceTile
+      ? getTileTargetDistance(referenceTile) - getTileTargetDistance(tile)
+      : 0
+    tileDeltas[tile.id] = delta
+    if (delta > 0) improvedTiles += 1
+    else if (delta < 0) worsenedTiles += 1
+    else unchangedTiles += 1
+  })
+
+  return {
+    tileDeltas,
+    lookback,
+    improvedTiles,
+    worsenedTiles,
+    unchangedTiles,
+  }
 }
 
 export function getMoveDirectionLabel(direction: PuzzleMoveDirection): string {
