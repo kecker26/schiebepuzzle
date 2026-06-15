@@ -635,7 +635,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           {
             keys: ['M'],
             label: 'Heatmap umschalten',
-            detail: 'Zeigt Entfernung als Farbflaechen, Zielrichtung als Pfeile oder den Fortschritt der letzten fuenf Zuege. X/Y-Distanzen wechseln automatisch zu Farbflaechen; X+ zeigt rechts und Y+ zeigt oben.',
+            detail: 'Zeigt Entfernung, Zielrichtung oder den Verlauf und bewertet gleichzeitig alle beweglichen Kacheln: Gruen verbessert, Gelb bereitet vor, Rot verschlechtert. Die beste Option traegt eine 1. X/Y-Distanzen wechseln automatisch zu Farbflaechen; X+ zeigt rechts und Y+ zeigt oben.',
           },
           {
             keys: ['N'],

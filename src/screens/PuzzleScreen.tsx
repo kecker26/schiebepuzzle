@@ -48,6 +48,7 @@ import {
   buildHintPathObjective,
   buildHintPreview,
   buildHeatmapDeltaAnalysis,
+  buildHeatmapMovePotentialAnalysis,
   buildPuzzleMoveFeedback,
   CORRECT_TILE_PULSE_DURATION_MS,
   createMoveRecordForStates,
@@ -128,7 +129,7 @@ const BOARD_TOOL_HELP_MESSAGES: Record<BoardToolHelpTopic, string> = {
   'suggested-move': 'Zug spielen fuehrt den empfohlenen Schritt direkt aus oder berechnet ihn neu, wenn noch kein Vorschlag bereitsteht.',
   preview: 'Die Vorschau blendet das Zielbild rechts ein oder aus, damit du Bildbereiche schneller mit dem Brett vergleichen kannst.',
   'ghost-preview': 'Die Geisteransicht legt je nach Modus Vollbild, Konturen oder Kanten ueber das Brett, damit du Formen und Positionen leichter abgleichen kannst.',
-  heatmap: 'Die Heatmap hebt Kacheln hervor, die noch deutlich von ihrer Zielposition entfernt sind.',
+  heatmap: 'Die Heatmap bewertet bewegliche Kacheln und markiert die beste naechste Option direkt auf dem Brett.',
   'tile-numbers': 'Nummern zeigt fuer 5 Sekunden die Soll-Reihenfolge und animiert korrekte Kacheln gruen, falsche rot.',
 }
 
@@ -288,6 +289,7 @@ export default function PuzzleScreen({
   const celebrationRendererRef = useRef<PuzzleCelebrationRenderer | null>(null)
   const latestPuzzleHashRef = useRef<string | null>(null)
   const suggestionSequenceRef = useRef(0)
+  const heatmapSuggestionSequenceRef = useRef(0)
   const animationFrameRef = useRef<number | null>(null)
   const celebrationFrameRef = useRef<number | null>(null)
   const correctTilePulseFrameRef = useRef<number | null>(null)
@@ -362,6 +364,7 @@ export default function PuzzleScreen({
   const [isBoardIntroActive, setIsBoardIntroActive] = useState(false)
   const [isComputingSuggestion, setIsComputingSuggestion] = useState(false)
   const [hintPreview, setHintPreview] = useState<SuggestedHintPreview | null>(null)
+  const [heatmapSuggestedTileId, setHeatmapSuggestedTileId] = useState<string | null>(null)
   const [activeFocusRow, setActiveFocusRow] = useState<number | null>(null)
   const [moveFeedback, setMoveFeedback] = useState<PuzzleMoveFeedback | null>(null)
   const [isRestartConfirmOpen, setIsRestartConfirmOpen] = useState(false)
@@ -734,7 +737,7 @@ export default function PuzzleScreen({
     trimTrackedPathToIndex(existingIndex)
   }
 
-  const getTrackedSolutionMoves = (state: PuzzleState): string[] => {
+  const getTrackedSolutionMoves = useCallback((state: PuzzleState): string[] => {
     const activeEngine = engineRef.current
     if (!activeEngine) return []
 
@@ -755,7 +758,7 @@ export default function PuzzleScreen({
     }
 
     return []
-  }
+  }, [])
 
   const stopAnimationFrame = () => {
     if (animationFrameRef.current !== null) {
@@ -1245,6 +1248,7 @@ export default function PuzzleScreen({
     clearHintAutoHideTimeout,
     clearTileNumbersTimeout,
     config,
+    getTrackedSolutionMoves,
     hideTileNumbers,
     image,
     initializeTrackedPath,
@@ -1350,14 +1354,23 @@ export default function PuzzleScreen({
         : null
     const heatmapOverlay: HeatmapOverlayOptions | null =
       isHeatmapOverlayVisible && !isConcreteHintVisible
-        ? {
+        ? (() => {
+          const potentialAnalysis = buildHeatmapMovePotentialAnalysis(
+            puzzleState,
+            activeFocusRow,
+            heatmapSuggestedTileId
+          )
+          return {
             mode: heatmapMode,
             intensity: heatmapIntensity / 100,
             showDistances: heatmapMode === 'classic' && areHeatmapDistancesVisible,
             tileDeltas: heatmapMode === 'delta'
               ? buildHeatmapDeltaAnalysis(puzzleState, moveHistory).tileDeltas
               : undefined,
+            tilePotentials: potentialAnalysis.tilePotentials,
+            bestPotentialTileId: potentialAnalysis.bestMove?.tileId,
           }
+        })()
         : null
     rendererRef.current.render(
       puzzleState,
@@ -1377,6 +1390,7 @@ export default function PuzzleScreen({
   }, [
     areTileNumbersVisible,
     areHeatmapDistancesVisible,
+    activeFocusRow,
     canvasDisplaySize,
     config,
     correctTilePulse,
@@ -1384,6 +1398,7 @@ export default function PuzzleScreen({
     ghostPreviewMode,
     heatmapIntensity,
     heatmapMode,
+    heatmapSuggestedTileId,
     hintPreview,
     hoveredSearchTileId,
     invalidTileFeedback,
@@ -1579,7 +1594,7 @@ export default function PuzzleScreen({
       : optimalStartMoveCountState.status === 'loading'
         ? 'Optimal wird berechnet ...'
         : 'Optimal momentan nicht verfuegbar'
-  const resolveSuggestedQueue = async (
+  const resolveSuggestedQueue = useCallback(async (
     puzzleSnapshot: PuzzleState
   ): Promise<{ queue: string[]; source: 'exact' | 'tracked' | 'greedy' } | null> => {
     const activeEngine = engineRef.current
@@ -1606,7 +1621,31 @@ export default function PuzzleScreen({
 
     const fallbackMove = activeEngine.getGreedySuggestedMove(puzzleSnapshot, lastSuggestionMoveRef.current)
     return fallbackMove ? { queue: [fallbackMove], source: 'greedy' } : null
-  }
+  }, [getTrackedSolutionMoves, requestExactSolutionMoves, useFastSuggestionOnly])
+
+  useEffect(() => {
+    if (!isHeatmapOverlayVisible || !puzzleState || puzzleState.isSolved || isPaused) {
+      heatmapSuggestionSequenceRef.current += 1
+      setHeatmapSuggestedTileId(null)
+      return
+    }
+
+    const puzzleSnapshot = normalizePuzzleState(puzzleState, config)
+    const snapshotHash = engineRef.current?.getStateHash(puzzleSnapshot) ?? null
+    const requestSequence = heatmapSuggestionSequenceRef.current + 1
+    heatmapSuggestionSequenceRef.current = requestSequence
+    setHeatmapSuggestedTileId(null)
+
+    void resolveSuggestedQueue(puzzleSnapshot).then((resolution) => {
+      if (
+        heatmapSuggestionSequenceRef.current !== requestSequence
+        || latestPuzzleHashRef.current !== snapshotHash
+      ) {
+        return
+      }
+      setHeatmapSuggestedTileId(resolution?.queue[0] ?? null)
+    })
+  }, [config, isHeatmapOverlayVisible, isPaused, puzzleState, resolveSuggestedQueue])
 
   const applyMove = (tileId: string, moveSource: 'manual' | 'suggested' = 'manual'): boolean => {
     if (!puzzleState || !engineRef.current) return false
@@ -2033,6 +2072,7 @@ export default function PuzzleScreen({
           suggestionFocusRow,
           objective
         )
+        setHeatmapSuggestedTileId(nextHintPreview?.tileId ?? null)
         if (!autoPlay && nextHintPreview && registerHintForState(hintedStateHashesRef.current, snapshotHash)) {
           setRunMetrics((prev) => ({
             ...prev,
@@ -2371,13 +2411,17 @@ export default function PuzzleScreen({
     puzzleState && engineRef.current
       ? engineRef.current.getProgressMetrics(puzzleState, progressReferenceHeuristicRef.current)
       : null
-  const heatmapDeltaAnalysis = puzzleState
-    ? buildHeatmapDeltaAnalysis(puzzleState, moveHistory)
-    : null
   const contextHint: PuzzleContextHint | null =
     puzzleState && engineRef.current
       ? engineRef.current.getContextHint(puzzleState, activeFocusRow)
       : null
+  const heatmapMovePotential = puzzleState
+    ? buildHeatmapMovePotentialAnalysis(
+        puzzleState,
+        contextHint?.focusRow ?? null,
+        heatmapSuggestedTileId
+      )
+    : null
   useEffect(() => {
     if (contextHint?.focusRow === activeFocusRow) return
     setActiveFocusRow(contextHint?.focusRow ?? null)
@@ -2432,6 +2476,7 @@ export default function PuzzleScreen({
             heatmapMode={heatmapMode}
             heatmapIntensity={heatmapIntensity}
             areHeatmapDistancesVisible={areHeatmapDistancesVisible}
+            heatmapMovePotential={heatmapMovePotential}
             moveHistoryLength={moveHistory.length}
             redoHistoryLength={redoHistory.length}
             onShowHint={handleShowHint}
@@ -2500,38 +2545,17 @@ export default function PuzzleScreen({
                       </div>
                     )}
                     {isHeatmapOverlayVisible && !hintPreview && (
-                      <div className="puzzle-heatmap-board-legend" aria-hidden="true">
-                        <strong>
-                          {heatmapMode === 'arrows'
-                            ? 'Zielrichtung'
-                            : heatmapMode === 'delta'
-                              ? heatmapDeltaAnalysis?.lookback
-                                ? `Letzte ${heatmapDeltaAnalysis.lookback} Zuege`
-                                : 'Noch kein Vergleich'
-                              : 'Entfernung'}
-                        </strong>
-                        {heatmapMode === 'arrows' ? (
-                          <>
-                            <span className="puzzle-heatmap-legend-arrow">{'->'}</span>
-                            <span>Pfeil zeigt zum Ziel</span>
-                          </>
-                        ) : heatmapMode === 'delta' ? (
-                          <>
-                            <span className="puzzle-heatmap-legend-dot is-improved" />
-                            <span>{heatmapDeltaAnalysis?.improvedTiles ?? 0} besser</span>
-                            <span className="puzzle-heatmap-legend-dot is-worsened" />
-                            <span>{heatmapDeltaAnalysis?.worsenedTiles ?? 0} schlechter</span>
-                            <span className="puzzle-heatmap-legend-dot is-unchanged" />
-                            <span>{heatmapDeltaAnalysis?.unchangedTiles ?? 0} gleich</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="puzzle-heatmap-legend-scale" />
-                            <span>nah</span>
-                            <span>fern</span>
-                          </>
-                        )}
-                      </div>
+                        <div className="puzzle-heatmap-board-legend" aria-hidden="true">
+                          <strong>
+                            Zugpotenzial
+                          </strong>
+                          <span className="puzzle-heatmap-legend-dot is-improved" />
+                          <span>besser</span>
+                          <span className="puzzle-heatmap-legend-dot is-unchanged" />
+                          <span>vorbereitend</span>
+                          <span className="puzzle-heatmap-legend-dot is-worsened" />
+                          <span>schlechter</span>
+                        </div>
                     )}
                     <AnimatePresence initial={false}>
                       {moveFeedback && (

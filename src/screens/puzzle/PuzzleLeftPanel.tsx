@@ -20,6 +20,7 @@ import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import {
   formatElapsedTime,
   getProgressStatusLabel,
+  type HeatmapMovePotentialAnalysis,
   type HintDirection,
   type SuggestedHintPreview,
 } from './puzzleScreenUtils.ts'
@@ -47,6 +48,7 @@ interface PuzzleLeftPanelProps {
   heatmapMode: HeatmapMode
   heatmapIntensity: number
   areHeatmapDistancesVisible: boolean
+  heatmapMovePotential: HeatmapMovePotentialAnalysis | null
   moveHistoryLength: number
   redoHistoryLength: number
   onShowHint: () => void
@@ -215,6 +217,7 @@ export default function PuzzleLeftPanel({
   heatmapMode,
   heatmapIntensity,
   areHeatmapDistancesVisible,
+  heatmapMovePotential,
   moveHistoryLength,
   redoHistoryLength,
   onShowHint,
@@ -585,7 +588,7 @@ export default function PuzzleLeftPanel({
             aria-pressed={isHeatmapOverlayVisible}
             aria-keyshortcuts="M"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip={isHeatmapOverlayVisible ? 'Heatmap fuer falsch platzierte Kacheln ausblenden.' : 'Falsch platzierte Kacheln farblich hervorheben.'}
+            data-app-tooltip={isHeatmapOverlayVisible ? 'Zugpotenzial und Heatmap ausblenden.' : 'Bewegliche Kacheln nach ihrem Zugpotenzial bewerten.'}
             data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
@@ -753,6 +756,40 @@ export default function PuzzleLeftPanel({
             >
               X/Y-Distanzen {areHeatmapDistancesVisible ? 'ausblenden' : 'anzeigen'}
             </button>
+            {heatmapMovePotential?.bestMove && (
+              <div className={`puzzle-heatmap-potential-card is-${heatmapMovePotential.bestMove.tone}`}>
+                <span className="puzzle-heatmap-potential-rank" aria-hidden="true">1</span>
+                <div className="puzzle-heatmap-potential-copy">
+                  <span className="puzzle-heatmap-potential-kicker">Beste Option</span>
+                  <strong>
+                    {heatmapMovePotential.bestMove.tileLabel} {heatmapMovePotential.bestMove.directionLabel}
+                  </strong>
+                  <span>
+                    {heatmapMovePotential.bestMove.distanceChange > 0
+                      ? `Gesamtdistanz -${heatmapMovePotential.bestMove.distanceChange}`
+                      : heatmapMovePotential.bestMove.distanceChange < 0
+                        ? `Vorbereitender Zug · Gesamtdistanz +${Math.abs(heatmapMovePotential.bestMove.distanceChange)}`
+                        : 'Vorbereitender Zug · Gesamtdistanz bleibt gleich'}
+                    {heatmapMovePotential.bestMove.worksOnFocus ? ' · arbeitet am Fokus' : ''}
+                  </span>
+                </div>
+                <div className="puzzle-heatmap-potential-legend" aria-label="Bewertung beweglicher Kacheln">
+                  <span><i className="is-positive" /> verbessert</span>
+                  <span><i className="is-neutral" /> vorbereitet</span>
+                  <span><i className="is-negative" /> verschlechtert</span>
+                </div>
+              </div>
+            )}
+            {heatmapMovePotential && !heatmapMovePotential.bestMove && (
+              <div className="puzzle-heatmap-potential-card is-loading" role="status">
+                <span className="puzzle-heatmap-potential-rank" aria-hidden="true">...</span>
+                <div className="puzzle-heatmap-potential-copy">
+                  <span className="puzzle-heatmap-potential-kicker">Beste Option</span>
+                  <strong>Wird mit dem Hinweis abgeglichen</strong>
+                  <span>Die lokale Zugbewertung ist bereits am Brett sichtbar.</span>
+                </div>
+              </div>
+            )}
             <p className="puzzle-ghost-mode-copy">{activeHeatmapMode.description}</p>
           </AnimatedReveal>
         )}
