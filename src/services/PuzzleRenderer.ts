@@ -1,4 +1,4 @@
-import { type GhostPreviewMode, PuzzleConfig, PuzzleState, Tile, TileMoveAnimation } from '../types/index'
+import { type GhostPreviewMode, type HeatmapMode, PuzzleConfig, PuzzleState, Tile, TileMoveAnimation } from '../types/index'
 
 const CANVAS_FONT_FAMILY = "'Puzzle UI', 'Segoe UI', sans-serif"
 
@@ -21,6 +21,12 @@ export interface TileSearchOverlay {
 export interface InvalidTileFeedbackAnimation {
   tileId: string
   progress: number
+}
+
+export interface HeatmapOverlayOptions {
+  mode: HeatmapMode
+  intensity: number
+  showDistances: boolean
 }
 
 export default class PuzzleRenderer {
@@ -96,7 +102,7 @@ export default class PuzzleRenderer {
     showGhostPreview: boolean = false,
     ghostPreviewWeight: number = 0.56,
     ghostPreviewMode: GhostPreviewMode = 'image',
-    showHeatmapOverlay: boolean = false,
+    heatmapOverlay: HeatmapOverlayOptions | null = null,
     invalidTileFeedback: InvalidTileFeedbackAnimation | null = null,
     hoveredTileId: string | null = null
   ): void {
@@ -126,8 +132,8 @@ export default class PuzzleRenderer {
 
     if (showGhostPreview) {
       this.renderGhostPreviewOverlay(state, ghostPreviewWeight, ghostPreviewMode)
-    } else if (showHeatmapOverlay) {
-      this.renderHeatmapOverlay(state, moveAnimation)
+    } else if (heatmapOverlay) {
+      this.renderHeatmapOverlay(state, moveAnimation, heatmapOverlay)
     }
 
     if (invalidFeedbackTile) {
@@ -163,7 +169,7 @@ export default class PuzzleRenderer {
 
     const shouldHideCorrectTileCheckmarks =
       showGhostPreview
-      || showHeatmapOverlay
+      || heatmapOverlay !== null
       || showTileNumbers
 
     const blockedCheckmarkTileIds = new Set<string>()
@@ -962,7 +968,11 @@ export default class PuzzleRenderer {
     return outputCanvas
   }
 
-  private renderHeatmapOverlay(state: PuzzleState, moveAnimation: TileMoveAnimation | null): void {
+  private renderHeatmapOverlay(
+    state: PuzzleState,
+    moveAnimation: TileMoveAnimation | null,
+    options: HeatmapOverlayOptions
+  ): void {
     const incorrectTiles = state.tiles.filter(
       (tile) => !tile.isEmpty && (tile.row !== tile.correctRow || tile.col !== tile.correctCol)
     )
@@ -991,7 +1001,15 @@ export default class PuzzleRenderer {
         y = startY + (targetY - startY) * easedProgress
       }
 
-      this.renderHeatmapTileOverlayAt(x, y, distance, boardSize, maxDistance)
+      if (options.mode === 'arrows') {
+        this.renderHeatmapDirectionArrowAt(x, y, tile, options.intensity)
+      } else {
+        this.renderHeatmapTileOverlayAt(x, y, distance, boardSize, maxDistance, options.intensity)
+      }
+
+      if (options.showDistances) {
+        this.renderHeatmapDistanceBadgeAt(x, y, distance, options.intensity)
+      }
     })
   }
 
@@ -1000,12 +1018,13 @@ export default class PuzzleRenderer {
     y: number,
     distance: number,
     boardSize: 3 | 4 | 5 | 6,
-    maxDistance: number
+    maxDistance: number,
+    intensity: number
   ): void {
     const shortEdge = Math.min(this.tileWidth, this.tileHeight)
     const heatmapIntensity = this.getHeatmapIntensity(distance, boardSize, maxDistance)
     const palette = this.getHeatmapPalette(heatmapIntensity.bandIndex, heatmapIntensity.bandProgress)
-    const alphaBoost = this.getHeatmapAlphaBoost(boardSize)
+    const alphaBoost = this.getHeatmapAlphaBoost(boardSize) * Math.max(0.25, Math.min(1, intensity))
     const hue = this.lerp(palette.hueStart, palette.hueEnd, heatmapIntensity.bandProgress)
     const highlightHue = Math.max(0, Math.min(62, hue + palette.highlightHueShift))
     const shadowHue = Math.max(0, hue - palette.shadowHueShift)
@@ -1075,6 +1094,94 @@ export default class PuzzleRenderer {
       this.tileWidth - innerInset * 2,
       accentHeight
     )
+    this.ctx.restore()
+  }
+
+  private renderHeatmapDirectionArrowAt(x: number, y: number, tile: Tile, intensity: number): void {
+    const deltaCol = tile.correctCol - tile.col
+    const deltaRow = tile.correctRow - tile.row
+    const length = Math.hypot(deltaCol, deltaRow)
+    if (length <= 0) return
+
+    const alpha = Math.max(0.25, Math.min(1, intensity))
+    const shortEdge = Math.min(this.tileWidth, this.tileHeight)
+    const unitX = deltaCol / length
+    const unitY = deltaRow / length
+    const arrowLength = shortEdge * 0.42
+    const centerX = x + this.tileWidth / 2
+    const centerY = y + this.tileHeight / 2
+    const startX = centerX - unitX * arrowLength * 0.34
+    const startY = centerY - unitY * arrowLength * 0.34
+    const endX = centerX + unitX * arrowLength * 0.46
+    const endY = centerY + unitY * arrowLength * 0.46
+    const headLength = Math.max(7, shortEdge * 0.13)
+    const headAngle = Math.PI / 6
+    const angle = Math.atan2(unitY, unitX)
+    const lineWidth = Math.max(3, shortEdge * 0.045)
+
+    this.ctx.save()
+    this.ctx.lineCap = 'round'
+    this.ctx.lineJoin = 'round'
+    this.ctx.shadowColor = `rgba(239, 68, 68, ${0.72 * alpha})`
+    this.ctx.shadowBlur = Math.max(10, shortEdge * 0.18)
+    this.ctx.strokeStyle = `rgba(255, 255, 255, ${0.96 * alpha})`
+    this.ctx.lineWidth = lineWidth + Math.max(2, shortEdge * 0.025)
+    this.drawHeatmapArrowPath(startX, startY, endX, endY, angle, headAngle, headLength)
+    this.ctx.shadowBlur = 0
+    this.ctx.strokeStyle = `rgba(220, 38, 38, ${0.98 * alpha})`
+    this.ctx.lineWidth = lineWidth
+    this.drawHeatmapArrowPath(startX, startY, endX, endY, angle, headAngle, headLength)
+    this.ctx.restore()
+  }
+
+  private drawHeatmapArrowPath(
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    angle: number,
+    headAngle: number,
+    headLength: number
+  ): void {
+    this.ctx.beginPath()
+    this.ctx.moveTo(startX, startY)
+    this.ctx.lineTo(endX, endY)
+    this.ctx.moveTo(endX, endY)
+    this.ctx.lineTo(
+      endX - Math.cos(angle - headAngle) * headLength,
+      endY - Math.sin(angle - headAngle) * headLength
+    )
+    this.ctx.moveTo(endX, endY)
+    this.ctx.lineTo(
+      endX - Math.cos(angle + headAngle) * headLength,
+      endY - Math.sin(angle + headAngle) * headLength
+    )
+    this.ctx.stroke()
+  }
+
+  private renderHeatmapDistanceBadgeAt(x: number, y: number, distance: number, intensity: number): void {
+    const alpha = Math.max(0.35, Math.min(1, intensity))
+    const shortEdge = Math.min(this.tileWidth, this.tileHeight)
+    const radius = Math.max(11, Math.min(20, shortEdge * 0.16))
+    const centerX = x + this.tileWidth - radius - Math.max(5, shortEdge * 0.05)
+    const centerY = y + radius + Math.max(5, shortEdge * 0.05)
+
+    this.ctx.save()
+    this.ctx.shadowColor = `rgba(2, 6, 23, ${0.54 * alpha})`
+    this.ctx.shadowBlur = Math.max(5, shortEdge * 0.08)
+    this.ctx.fillStyle = `rgba(7, 12, 24, ${0.9 * alpha})`
+    this.ctx.strokeStyle = `rgba(255, 255, 255, ${0.78 * alpha})`
+    this.ctx.lineWidth = Math.max(1.5, shortEdge * 0.018)
+    this.ctx.beginPath()
+    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+    this.ctx.fill()
+    this.ctx.shadowBlur = 0
+    this.ctx.stroke()
+    this.ctx.fillStyle = `rgba(255, 255, 255, ${0.98 * alpha})`
+    this.ctx.font = `800 ${Math.max(10, Math.round(radius * 0.95))}px ${CANVAS_FONT_FAMILY}`
+    this.ctx.textAlign = 'center'
+    this.ctx.textBaseline = 'middle'
+    this.ctx.fillText(String(distance), centerX, centerY + 0.5)
     this.ctx.restore()
   }
 

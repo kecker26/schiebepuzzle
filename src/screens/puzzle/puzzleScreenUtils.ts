@@ -1,5 +1,6 @@
 import {
   type GhostPreviewMode,
+  type HeatmapMode,
   PuzzleMoveDirection,
   PuzzleMoveRecord,
   PuzzleState,
@@ -21,6 +22,8 @@ export const START_APPROXIMATE_SOLUTION_TIME_LIMIT_5X5_MS = 10000
 export const START_APPROXIMATE_SOLUTION_TIME_LIMIT_6X6_MS = 15000
 export const GHOST_PREVIEW_MODE_DEFAULT: GhostPreviewMode = 'image'
 export const GHOST_PREVIEW_WEIGHT_DEFAULT = 56
+export const HEATMAP_MODE_DEFAULT: HeatmapMode = 'classic'
+export const HEATMAP_INTENSITY_DEFAULT = 100
 
 export type HintResolutionSource = 'exact' | 'tracked' | 'greedy'
 export type HintDirection = PuzzleMoveDirection
@@ -105,6 +108,17 @@ export function normalizeGhostPreviewMode(value: unknown): GhostPreviewMode {
   return value === 'contours' || value === 'edges' || value === 'image'
     ? value
     : GHOST_PREVIEW_MODE_DEFAULT
+}
+
+export function normalizeHeatmapMode(value: unknown): HeatmapMode {
+  return value === 'arrows' || value === 'classic'
+    ? value
+    : HEATMAP_MODE_DEFAULT
+}
+
+export function normalizeHeatmapIntensity(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return HEATMAP_INTENSITY_DEFAULT
+  return Math.max(25, Math.min(100, Math.round(value)))
 }
 
 export function getMoveDirectionLabel(direction: PuzzleMoveDirection): string {

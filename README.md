@@ -11,6 +11,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 - Schiebepuzzle mit Canvas-Rendering, Drag-/Keyboard-Interaktion und visuellen Hervorhebungen.
 - Manuelle Pause per Schaltflaeche oder `P` sowie automatische Pause bei verstecktem Browser-Tab; Timer stoppt und Brett sowie Zielbild werden verdeckt.
 - Loesbare Shuffle-Logik, konkrete Klartext-Hinweise mit Ist-/Sollposition und priorisierten Canvas-Markierungen, ein abschaltbarer visueller Bereichsfokus im Zielbild sowie direktes Fortschrittsfeedback nach Zuegen.
+- Konfigurierbare Heatmap mit klassischen Entfernungs-Farbflaechen oder Richtungspfeilen, optionalen Distanzzahlen, Intensitaetsregler und kompakter Legende direkt am Puzzlebrett.
 - Exakter Solver ueber separaten Worker fuer passende Puzzle-Groessen.
 - Autosave, kreative KI-Titel fuer neue Spielstaende, motivbasierte Titel-Wiederverwendung, maximal 30 aktive Spielstaende mit 5er-Seitennavigation, Resume-Flow, Recovery-Dialog und Last-Session-Wiederaufnahme.
 - Sentiment-basiertes Bild-Theme: hochgeladene, generierte oder wiederverwendete Motive praegen standardmaessig die komplette UI-Farbwelt; Stimmung und Palette werden rein lokal aus Farbe, Helligkeit, Kontrast und Waerme berechnet und zentral im Menue ein- oder ausgeschaltet.

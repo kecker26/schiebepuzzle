@@ -3,6 +3,8 @@ import {
   buildHintPathObjective,
   buildHintPreview,
   buildPuzzleMoveFeedback,
+  normalizeHeatmapIntensity,
+  normalizeHeatmapMode,
   registerHintForState,
 } from '../screens/puzzle/puzzleScreenUtils.ts'
 import { buildPuzzleContextHint } from '../services/PuzzleEngine.ts'
@@ -171,6 +173,14 @@ describe('puzzle hints', () => {
     expect(registerHintForState(hashes, 'state-a')).toBe(true)
     expect(registerHintForState(hashes, 'state-a')).toBe(false)
     expect(registerHintForState(hashes, 'state-b')).toBe(true)
+  })
+
+  it('normalizes persisted heatmap settings defensively', () => {
+    expect(normalizeHeatmapMode('arrows')).toBe('arrows')
+    expect(normalizeHeatmapMode('unknown')).toBe('classic')
+    expect(normalizeHeatmapIntensity(12)).toBe(25)
+    expect(normalizeHeatmapIntensity(140)).toBe(100)
+    expect(normalizeHeatmapIntensity(undefined)).toBe(100)
   })
 
   it('keeps routine manual moves quiet but reports meaningful improvements', () => {

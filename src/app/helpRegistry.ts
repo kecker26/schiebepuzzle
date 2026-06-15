@@ -184,7 +184,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
             label: 'Hinweise und automatische Zuege helfen dir, wenn du festhaengst.',
           },
           {
-            label: 'Geisterbild, Heatmap und Nummern-Overlay zeigen visuelle Hilfen auf dem Brett.',
+            label: 'Geisterbild, konfigurierbare Heatmap und Nummern-Overlay zeigen visuelle Hilfen auf dem Brett.',
           },
           {
             label: 'Statistik, Galerie und Spielstaende behalten deinen Fortschritt im Blick.',
@@ -635,7 +635,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           {
             keys: ['M'],
             label: 'Heatmap umschalten',
-            detail: 'Faerbt Kacheln nach ihrer Entfernung zum Ziel ein: Je roeter, desto weiter weg.',
+            detail: 'Zeigt Entfernung als Farbflaechen oder Zielrichtung als Pfeile. Intensitaet und Distanzzahlen lassen sich im linken Panel anpassen.',
           },
           {
             keys: ['N'],

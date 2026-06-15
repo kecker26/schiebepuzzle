@@ -77,9 +77,15 @@ describe('puzzle pause', () => {
       ghostPreviewWeight: 35,
       ghostPreviewMode: 'image',
       heatmapOverlayVisible: false,
+      heatmapMode: 'arrows',
+      heatmapIntensity: 64,
+      heatmapDistancesVisible: true,
     })
 
     expect(progress.isPaused).toBe(true)
     expect(progress.elapsedTime).toBe(125)
+    expect(progress.heatmapMode).toBe('arrows')
+    expect(progress.heatmapIntensity).toBe(64)
+    expect(progress.heatmapDistancesVisible).toBe(true)
   })
 })
