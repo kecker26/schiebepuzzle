@@ -1313,7 +1313,8 @@
   line-height: 1.45;
 }
 
-.puzzle-heatmap-distance-toggle {
+.puzzle-heatmap-distance-toggle,
+.puzzle-heatmap-path-toggle {
   min-height: 36px;
   padding: 8px 10px;
   border-radius: 12px;
@@ -1333,15 +1334,24 @@
 
 .puzzle-heatmap-distance-toggle:hover,
 .puzzle-heatmap-distance-toggle:focus-visible,
-.puzzle-heatmap-distance-toggle.is-active {
+.puzzle-heatmap-distance-toggle.is-active,
+.puzzle-heatmap-path-toggle:hover,
+.puzzle-heatmap-path-toggle:focus-visible,
+.puzzle-heatmap-path-toggle.is-active {
   border-color: color-mix(in srgb, var(--image-accent-solid) 68%, rgba(248, 250, 252, 0.24));
   background: color-mix(in srgb, var(--image-accent-solid) 18%, rgba(10, 19, 35, 0.82));
   color: var(--text-main);
   outline: none;
 }
 
-.puzzle-heatmap-distance-toggle:focus-visible {
+.puzzle-heatmap-distance-toggle:focus-visible,
+.puzzle-heatmap-path-toggle:focus-visible {
   box-shadow: var(--focus-ring);
+}
+
+.puzzle-heatmap-path-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .puzzle-side-footer {
@@ -2107,6 +2117,84 @@
 
 .puzzle-heatmap-potential-legend .is-negative {
   background: #ef4444;
+}
+
+.puzzle-heatmap-path-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(56, 189, 248, 0.34);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.2) 58%);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.puzzle-heatmap-path-card strong {
+  color: var(--text-main);
+  font-size: 12px;
+}
+
+.puzzle-heatmap-path-card ol {
+  display: grid;
+  gap: 5px;
+  margin: 4px 0 0;
+  padding: 7px 0 0;
+  border-top: 1px solid rgba(56, 189, 248, 0.16);
+  list-style: none;
+}
+
+.puzzle-heatmap-path-card li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.puzzle-heatmap-path-card li b {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #0ea5e9;
+  color: #fff;
+  font-size: 9px;
+}
+
+.puzzle-heatmap-path-step-copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.puzzle-heatmap-path-step-copy strong {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+}
+
+.puzzle-heatmap-path-step-copy small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 750;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.puzzle-heatmap-path-step-copy small.is-positive {
+  color: #4ade80;
+}
+
+.puzzle-heatmap-path-step-copy small.is-neutral {
+  color: #fbbf24;
 }
 
 .puzzle-move-feedback {

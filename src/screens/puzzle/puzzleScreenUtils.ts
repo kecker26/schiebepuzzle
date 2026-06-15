@@ -144,6 +144,23 @@ export interface HeatmapMovePotentialAnalysis {
   tilePotentials: Readonly<Record<string, number>>
 }
 
+export interface HeatmapTargetPathStep {
+  step: number
+  tileId: string
+  tileLabel: string
+  compactTileLabel: string
+  directionLabel: string
+  directionSymbol: string
+  reasonLabel: string
+  reasonTone: HeatmapMovePotentialTone
+}
+
+export interface HeatmapTargetPath {
+  steps: HeatmapTargetPathStep[]
+  objective: HintPathObjective | null
+  targetTileId: string | null
+}
+
 export function normalizeHeatmapMode(value: unknown): HeatmapMode {
   return value === 'arrows' || value === 'classic' || value === 'delta'
     ? value
@@ -278,6 +295,79 @@ export function buildHeatmapMovePotentialAnalysis(
       move.tileId,
       move.tone === 'positive' ? 1 : move.tone === 'negative' ? -1 : 0,
     ])),
+  }
+}
+
+export function buildHeatmapTargetPath(
+  initialState: PuzzleState,
+  queue: string[],
+  focusRow: number | null,
+  applyMove: (state: PuzzleState, tileId: string) => PuzzleState,
+  maxSteps: number = 4
+): HeatmapTargetPath {
+  const objective = buildHintPathObjective(initialState, queue, focusRow, applyMove)
+  const pathLength = Math.min(
+    queue.length,
+    objective ? objective.preparationMoveCount + 1 : Math.max(1, maxSteps),
+    Math.max(1, maxSteps)
+  )
+  const steps: HeatmapTargetPathStep[] = []
+  const visibleTileIds = new Set<string>()
+  let simulatedState = initialState
+
+  for (let index = 0; index < pathLength; index += 1) {
+    const tileId = queue[index]
+    if (visibleTileIds.has(tileId)) break
+    const preview = buildHintPreview(simulatedState, tileId, 'tracked', focusRow, objective)
+    if (!preview) break
+    const tileBefore = simulatedState.tiles.find((tile) => tile.id === tileId)
+    if (!tileBefore) break
+    const nextState = applyMove(simulatedState, tileId)
+    if (nextState === simulatedState) break
+    const tileAfter = nextState.tiles.find((tile) => tile.id === tileId)
+    if (!tileAfter) break
+    const distanceBefore = getTileTargetDistance(tileBefore)
+    const distanceAfter = getTileTargetDistance(tileAfter)
+    const distanceChange = distanceBefore - distanceAfter
+    const reachesTarget = distanceBefore > 0 && distanceAfter === 0
+    const worksOnFocus = focusRow !== null && tileBefore.correctRow === focusRow
+    const reasonLabel =
+      reachesTarget
+        ? 'Zielposition'
+        : distanceChange > 0
+          ? `Abstand -${distanceChange}`
+          : worksOnFocus
+            ? 'Fokus vorbereiten'
+            : 'Weg oeffnen'
+    const reasonTone: HeatmapMovePotentialTone =
+      reachesTarget || distanceChange > 0 ? 'positive' : 'neutral'
+    const directionSymbol =
+      preview.direction === 'up'
+        ? '↑'
+        : preview.direction === 'down'
+          ? '↓'
+          : preview.direction === 'left'
+            ? '←'
+            : '→'
+
+    visibleTileIds.add(tileId)
+    steps.push({
+      step: index + 1,
+      tileId,
+      tileLabel: preview.tileLabel,
+      compactTileLabel: `K${tileBefore.correctIndex + 1}`,
+      directionLabel: preview.directionLabel,
+      directionSymbol,
+      reasonLabel,
+      reasonTone,
+    })
+    simulatedState = nextState
+  }
+
+  return {
+    steps,
+    objective,
+    targetTileId: objective?.tileId ?? null,
   }
 }
 
