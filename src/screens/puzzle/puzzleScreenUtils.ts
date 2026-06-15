@@ -124,6 +124,26 @@ export interface HeatmapDisplaySelection {
   distancesVisible: boolean
 }
 
+export type HeatmapMovePotentialTone = 'positive' | 'neutral' | 'negative'
+
+export interface HeatmapMovePotential {
+  tileId: string
+  tileLabel: string
+  direction: HintDirection
+  directionLabel: string
+  distanceChange: number
+  strategicScore: number
+  tone: HeatmapMovePotentialTone
+  worksOnFocus: boolean
+  isBest: boolean
+}
+
+export interface HeatmapMovePotentialAnalysis {
+  moves: HeatmapMovePotential[]
+  bestMove: HeatmapMovePotential | null
+  tilePotentials: Readonly<Record<string, number>>
+}
+
 export function normalizeHeatmapMode(value: unknown): HeatmapMode {
   return value === 'arrows' || value === 'classic' || value === 'delta'
     ? value
@@ -189,6 +209,75 @@ export function buildHeatmapDeltaAnalysis(
     improvedTiles,
     worsenedTiles,
     unchangedTiles,
+  }
+}
+
+export function buildHeatmapMovePotentialAnalysis(
+  state: PuzzleState,
+  focusRow: number | null,
+  preferredBestTileId?: string | null
+): HeatmapMovePotentialAnalysis {
+  const moves = state.tiles
+    .filter((tile) => (
+      !tile.isEmpty
+      && Math.abs(tile.row - state.emptyRow) + Math.abs(tile.col - state.emptyCol) === 1
+    ))
+    .map((tile): HeatmapMovePotential => {
+      const distanceBefore = Math.abs(tile.row - tile.correctRow) + Math.abs(tile.col - tile.correctCol)
+      const distanceAfter =
+        Math.abs(state.emptyRow - tile.correctRow) + Math.abs(state.emptyCol - tile.correctCol)
+      const distanceChange = distanceBefore - distanceAfter
+      const worksOnFocus = focusRow !== null && tile.correctRow === focusRow
+      const strategicScore = distanceChange * 10 + (worksOnFocus ? distanceChange * 3 + 1 : 0)
+      const direction =
+        state.emptyRow < tile.row
+          ? 'up'
+          : state.emptyRow > tile.row
+            ? 'down'
+            : state.emptyCol < tile.col
+              ? 'left'
+              : 'right'
+
+      return {
+        tileId: tile.id,
+        tileLabel: `Kachel ${tile.correctIndex + 1}`,
+        direction,
+        directionLabel: HINT_DIRECTION_LABELS[direction],
+        distanceChange,
+        strategicScore,
+        tone: distanceChange > 0 ? 'positive' : distanceChange < 0 ? 'negative' : 'neutral',
+        worksOnFocus,
+        isBest: false,
+      }
+    })
+    .sort((left, right) => (
+      right.strategicScore - left.strategicScore
+      || left.tileLabel.localeCompare(right.tileLabel, 'de')
+    ))
+  const selectedBestMove =
+    preferredBestTileId === null
+      ? null
+      : preferredBestTileId === undefined
+        ? moves[0] ?? null
+        : moves.find((move) => move.tileId === preferredBestTileId) ?? null
+  const bestMove = selectedBestMove
+    ? {
+        ...selectedBestMove,
+        tone: selectedBestMove.tone === 'negative' ? 'neutral' as const : selectedBestMove.tone,
+        isBest: true,
+      }
+    : null
+  const rankedMoves = moves.map((move) => (
+    bestMove && move.tileId === bestMove.tileId ? bestMove : move
+  ))
+
+  return {
+    moves: rankedMoves,
+    bestMove,
+    tilePotentials: Object.fromEntries(rankedMoves.map((move) => [
+      move.tileId,
+      move.tone === 'positive' ? 1 : move.tone === 'negative' ? -1 : 0,
+    ])),
   }
 }
 

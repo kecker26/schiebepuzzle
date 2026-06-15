@@ -3,6 +3,7 @@ import {
   buildHintPathObjective,
   buildHintPreview,
   buildHeatmapDeltaAnalysis,
+  buildHeatmapMovePotentialAnalysis,
   buildPuzzleMoveFeedback,
   normalizeHeatmapIntensity,
   normalizeHeatmapMode,
@@ -240,6 +241,105 @@ describe('puzzle hints', () => {
         'tile-4': -1,
         'tile-7': -2,
       },
+    })
+  })
+
+  it('ranks movable heatmap tiles by immediate distance gain and focus', () => {
+    const state = createState([
+      createTile(0, 0, 0),
+      createTile(1, 0, 1),
+      createTile(2, 0, 2),
+      createTile(3, 1, 0),
+      createTile(4, 2, 2),
+      createTile(5, 1, 2),
+      createTile(6, 2, 0),
+      createTile(7, 1, 1),
+      createTile(8, 2, 1, true),
+    ], 2, 1)
+    const analysis = buildHeatmapMovePotentialAnalysis(state, 1)
+
+    expect(analysis.bestMove).toMatchObject({
+      tileId: 'tile-4',
+      tileLabel: 'Kachel 5',
+      direction: 'left',
+      distanceChange: 1,
+      tone: 'positive',
+      worksOnFocus: true,
+      isBest: true,
+    })
+    expect(analysis.tilePotentials).toEqual({
+      'tile-4': 1,
+      'tile-7': 1,
+      'tile-6': -1,
+    })
+  })
+
+  it('prefers a focus-row improvement when movable options improve equally', () => {
+    const state = createState([
+      createTile(0, 0, 0),
+      createTile(1, 0, 1),
+      createTile(2, 0, 2),
+      createTile(3, 2, 1),
+      createTile(4, 1, 2),
+      createTile(5, 2, 2),
+      createTile(6, 2, 0),
+      createTile(7, 1, 0),
+      createTile(8, 1, 1, true),
+    ], 1, 1)
+
+    expect(buildHeatmapMovePotentialAnalysis(state, 1).bestMove).toMatchObject({
+      tileId: 'tile-3',
+      distanceChange: 1,
+      worksOnFocus: true,
+      isBest: true,
+    })
+  })
+
+  it('uses the resolved hint move as the heatmap best option', () => {
+    const state = createState([
+      createTile(0, 0, 0),
+      createTile(1, 0, 1),
+      createTile(2, 0, 2),
+      createTile(3, 1, 0),
+      createTile(4, 2, 2),
+      createTile(5, 1, 2),
+      createTile(6, 2, 0),
+      createTile(7, 1, 1),
+      createTile(8, 2, 1, true),
+    ], 2, 1)
+
+    expect(buildHeatmapMovePotentialAnalysis(state, 1, 'tile-6').bestMove).toMatchObject({
+      tileId: 'tile-6',
+      distanceChange: -1,
+      tone: 'neutral',
+      isBest: true,
+    })
+    expect(buildHeatmapMovePotentialAnalysis(state, 1, null).bestMove).toBeNull()
+  })
+
+  it('marks the least harmful move as a yellow preparation when every move worsens distance', () => {
+    const state = createState([
+      createTile(0, 0, 0),
+      createTile(1, 0, 1),
+      createTile(2, 0, 2),
+      createTile(3, 1, 0),
+      createTile(4, 1, 1),
+      createTile(5, 1, 2),
+      createTile(6, 2, 0),
+      createTile(7, 2, 1),
+      createTile(8, 2, 2, true),
+    ], 2, 2)
+    const analysis = buildHeatmapMovePotentialAnalysis(state, 2)
+
+    expect(analysis.bestMove).toMatchObject({
+      tileId: 'tile-5',
+      distanceChange: -1,
+      tone: 'neutral',
+      isBest: true,
+    })
+    expect(analysis.tilePotentials).toEqual({
+      'tile-5': 0,
+      'tile-7': -1,
     })
   })
 

@@ -28,6 +28,8 @@ export interface HeatmapOverlayOptions {
   intensity: number
   showDistances: boolean
   tileDeltas?: Readonly<Record<string, number>>
+  tilePotentials?: Readonly<Record<string, number>>
+  bestPotentialTileId?: string
 }
 
 export default class PuzzleRenderer {
@@ -976,7 +978,12 @@ export default class PuzzleRenderer {
   ): void {
     const overlayTiles = state.tiles.filter((tile) => (
       !tile.isEmpty
-      && (options.mode === 'delta' || tile.row !== tile.correctRow || tile.col !== tile.correctCol)
+      && (
+        options.mode === 'delta'
+        || tile.row !== tile.correctRow
+        || tile.col !== tile.correctCol
+        || options.tilePotentials?.[tile.id] !== undefined
+      )
     ))
     if (overlayTiles.length === 0) return
 
@@ -1014,7 +1021,65 @@ export default class PuzzleRenderer {
       if (options.showDistances) {
         this.renderHeatmapDistanceBadgeAt(x, y, tile, options.intensity)
       }
+
+      const potential = options.tilePotentials?.[tile.id]
+      if (potential !== undefined) {
+        this.renderHeatmapMovePotentialAt(
+          x,
+          y,
+          potential,
+          tile.id === options.bestPotentialTileId,
+          options.intensity
+        )
+      }
     })
+  }
+
+  private renderHeatmapMovePotentialAt(
+    x: number,
+    y: number,
+    potential: number,
+    isBest: boolean,
+    intensity: number
+  ): void {
+    const alpha = Math.max(0.35, Math.min(1, intensity))
+    const shortEdge = Math.min(this.tileWidth, this.tileHeight)
+    const inset = Math.max(3, Math.round(shortEdge * 0.035))
+    const lineWidth = Math.max(isBest ? 3 : 2, Math.round(shortEdge * (isBest ? 0.045 : 0.028)))
+    const color = potential > 0
+      ? { red: 34, green: 197, blue: 94 }
+      : potential < 0
+        ? { red: 239, green: 68, blue: 68 }
+        : { red: 245, green: 158, blue: 11 }
+
+    this.ctx.save()
+    this.ctx.shadowColor = `rgba(${color.red}, ${color.green}, ${color.blue}, ${isBest ? 0.9 * alpha : 0.42 * alpha})`
+    this.ctx.shadowBlur = isBest ? Math.max(12, shortEdge * 0.22) : Math.max(5, shortEdge * 0.08)
+    this.ctx.strokeStyle = `rgba(${color.red}, ${color.green}, ${color.blue}, ${0.9 * alpha})`
+    this.ctx.lineWidth = lineWidth
+    this.ctx.strokeRect(
+      x + inset + lineWidth / 2,
+      y + inset + lineWidth / 2,
+      this.tileWidth - inset * 2 - lineWidth,
+      this.tileHeight - inset * 2 - lineWidth
+    )
+    this.ctx.shadowBlur = 0
+
+    if (isBest) {
+      const badgeSize = Math.max(16, Math.min(28, Math.round(shortEdge * 0.22)))
+      const badgeX = x + inset
+      const badgeY = y + inset
+      this.ctx.fillStyle = `rgba(${color.red}, ${color.green}, ${color.blue}, ${0.94 * alpha})`
+      this.ctx.beginPath()
+      this.ctx.arc(badgeX + badgeSize / 2, badgeY + badgeSize / 2, badgeSize / 2, 0, Math.PI * 2)
+      this.ctx.fill()
+      this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`
+      this.ctx.font = `900 ${Math.max(10, Math.round(badgeSize * 0.56))}px ${CANVAS_FONT_FAMILY}`
+      this.ctx.textAlign = 'center'
+      this.ctx.textBaseline = 'middle'
+      this.ctx.fillText('1', badgeX + badgeSize / 2, badgeY + badgeSize / 2)
+    }
+    this.ctx.restore()
   }
 
   private renderHeatmapDeltaOverlayAt(x: number, y: number, delta: number, intensity: number): void {

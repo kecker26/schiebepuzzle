@@ -1989,6 +1989,126 @@
   background: #94a3b8;
 }
 
+.puzzle-heatmap-potential-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px 11px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.puzzle-heatmap-potential-card.is-positive {
+  border-color: rgba(34, 197, 94, 0.42);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(15, 23, 42, 0.2) 58%);
+}
+
+.puzzle-heatmap-potential-card.is-neutral {
+  border-color: rgba(245, 158, 11, 0.42);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(15, 23, 42, 0.2) 58%);
+}
+
+.puzzle-heatmap-potential-card.is-negative {
+  border-color: rgba(239, 68, 68, 0.36);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(15, 23, 42, 0.2) 58%);
+}
+
+.puzzle-heatmap-potential-card.is-loading {
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.puzzle-heatmap-potential-card.is-loading .puzzle-heatmap-potential-rank {
+  background: rgba(100, 116, 139, 0.78);
+  box-shadow: none;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.puzzle-heatmap-potential-rank {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  color: #fff;
+  background: #16a34a;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.34);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.puzzle-heatmap-potential-card.is-neutral .puzzle-heatmap-potential-rank {
+  background: #d97706;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.3);
+}
+
+.puzzle-heatmap-potential-card.is-negative .puzzle-heatmap-potential-rank {
+  background: #dc2626;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.28);
+}
+
+.puzzle-heatmap-potential-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.puzzle-heatmap-potential-kicker {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.puzzle-heatmap-potential-copy strong {
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.puzzle-heatmap-potential-legend {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.puzzle-heatmap-potential-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.puzzle-heatmap-potential-legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.puzzle-heatmap-potential-legend .is-positive {
+  background: #22c55e;
+}
+
+.puzzle-heatmap-potential-legend .is-neutral {
+  background: #f59e0b;
+}
+
+.puzzle-heatmap-potential-legend .is-negative {
+  background: #ef4444;
+}
+
 .puzzle-move-feedback {
   position: absolute;
   left: 50%;
@@ -2722,6 +2842,10 @@
 }
 
 @media (max-width: 560px) {
+  .puzzle-heatmap-potential-card {
+    padding: 9px 10px;
+  }
+
   .puzzle-stats {
     grid-template-columns: 1fr;
   }
