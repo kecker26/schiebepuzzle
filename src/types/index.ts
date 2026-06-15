@@ -97,6 +97,7 @@ export interface SolverProgress {
 
 export type PuzzleMoveDirection = 'up' | 'down' | 'left' | 'right'
 export type GhostPreviewMode = 'image' | 'contours' | 'edges'
+export type HeatmapMode = 'classic' | 'arrows' | 'delta'
 
 export type OptimalStartMoveCountKind = 'exact' | 'lower-bound' | 'unavailable'
 
@@ -124,6 +125,9 @@ export interface PersistedPuzzleProgress {
   ghostPreviewWeight?: number
   ghostPreviewMode?: GhostPreviewMode
   heatmapOverlayVisible?: boolean
+  heatmapMode?: HeatmapMode
+  heatmapIntensity?: number
+  heatmapDistancesVisible?: boolean
   solverProgress?: SolverProgress
   challengeTarget?: GalleryChallengeTarget | null
 }

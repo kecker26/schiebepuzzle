@@ -9,7 +9,12 @@ import AnimatedStaggerGroup from '../../motion/AnimatedStaggerGroup.tsx'
 import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import SpringNumber from '../../motion/SpringNumber.tsx'
 import { type PuzzleProgressMetrics } from '../../services/PuzzleSolver.ts'
-import { type GalleryChallengeTarget, type GhostPreviewMode, type PuzzleAssistanceMode } from '../../types/index'
+import {
+  type GalleryChallengeTarget,
+  type GhostPreviewMode,
+  type HeatmapMode,
+  type PuzzleAssistanceMode,
+} from '../../types/index'
 import { deriveLiveChallengeForecast, formatChallengeMedalLabel } from '../../utils/galleryChallenge.ts'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import {
@@ -39,6 +44,9 @@ interface PuzzleLeftPanelProps {
   areTileNumbersVisible: boolean
   ghostPreviewMode: GhostPreviewMode
   ghostPreviewWeight: number
+  heatmapMode: HeatmapMode
+  heatmapIntensity: number
+  areHeatmapDistancesVisible: boolean
   moveHistoryLength: number
   redoHistoryLength: number
   onShowHint: () => void
@@ -50,6 +58,9 @@ interface PuzzleLeftPanelProps {
   onShowTileNumbers: () => void
   onGhostPreviewModeChange: (mode: GhostPreviewMode) => void
   onGhostPreviewWeightChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onHeatmapModeChange: (mode: HeatmapMode) => void
+  onHeatmapIntensityChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onToggleHeatmapDistances: () => void
   onUndo: () => void
   onRedo: () => void
   onQuit: () => void
@@ -92,6 +103,28 @@ const GHOST_PREVIEW_MODE_OPTIONS: Array<{
     label: 'Kanten',
     sliderLabel: 'Kanten',
     description: 'Reduziert die Hilfe auf harte Linien und markante Umrisse fuer eine sparsame Orientierung.',
+  },
+]
+
+const HEATMAP_MODE_OPTIONS: Array<{
+  value: HeatmapMode
+  label: string
+  description: string
+}> = [
+  {
+    value: 'classic',
+    label: 'Farbflaechen',
+    description: 'Faerbt falsch platzierte Kacheln entsprechend ihrer Entfernung zum Ziel. X+ zeigt rechts, Y+ zeigt oben.',
+  },
+  {
+    value: 'arrows',
+    label: 'Pfeile',
+    description: 'Zeigt auf jeder falsch platzierten Kachel die direkte Richtung zur Zielposition.',
+  },
+  {
+    value: 'delta',
+    label: 'Verlauf',
+    description: 'Vergleicht die Zieldistanz jeder Kachel mit den letzten bis zu fuenf Zuegen.',
   },
 ]
 
@@ -179,6 +212,9 @@ export default function PuzzleLeftPanel({
   areTileNumbersVisible,
   ghostPreviewMode,
   ghostPreviewWeight,
+  heatmapMode,
+  heatmapIntensity,
+  areHeatmapDistancesVisible,
   moveHistoryLength,
   redoHistoryLength,
   onShowHint,
@@ -190,6 +226,9 @@ export default function PuzzleLeftPanel({
   onShowTileNumbers,
   onGhostPreviewModeChange,
   onGhostPreviewWeightChange,
+  onHeatmapModeChange,
+  onHeatmapIntensityChange,
+  onToggleHeatmapDistances,
   onUndo,
   onRedo,
   onQuit,
@@ -206,6 +245,8 @@ export default function PuzzleLeftPanel({
   const canTriggerSuggestion = canUseBoardTools && !isInteractionLocked
   const activeGhostPreviewMode =
     GHOST_PREVIEW_MODE_OPTIONS.find((option) => option.value === ghostPreviewMode) ?? GHOST_PREVIEW_MODE_OPTIONS[0]
+  const activeHeatmapMode =
+    HEATMAP_MODE_OPTIONS.find((option) => option.value === heatmapMode) ?? HEATMAP_MODE_OPTIONS[0]
   const challengeMovesDelta = challengeTarget ? moveCount - challengeTarget.moves : 0
   const challengeTimeDelta = challengeTarget ? elapsedTime - challengeTarget.time : 0
   const challengeForecast = challengeTarget
@@ -651,6 +692,68 @@ export default function PuzzleLeftPanel({
               <span>{activeGhostPreviewMode.sliderLabel} {ghostPreviewWeight}%</span>
             </div>
             <p className="puzzle-ghost-mode-copy">{activeGhostPreviewMode.description}</p>
+          </AnimatedReveal>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence initial={false}>
+        {isHeatmapOverlayVisible && (
+          <AnimatedReveal
+            key="puzzle-heatmap-controls"
+            className="puzzle-ghost-slider puzzle-heatmap-controls"
+            interaction="surface"
+            level="medium"
+            aria-live="polite"
+            data-app-tooltip={`Heatmap-Intensitaet: ${heatmapIntensity}%.`}
+            data-app-tooltip-align="start"
+          >
+            <div className="puzzle-ghost-slider-header">
+              <span className="puzzle-panel-kicker">
+                <span className="puzzle-panel-kicker-icon-shell" aria-hidden="true">
+                  <PuzzleScreenIcon name="activity" className="puzzle-panel-kicker-icon" />
+                </span>
+                <span className="puzzle-ghost-slider-kicker">Heatmap</span>
+              </span>
+              <strong>{activeHeatmapMode.label} {heatmapIntensity}%</strong>
+            </div>
+            <div className="puzzle-ghost-mode-selector" role="group" aria-label="Darstellung der Heatmap">
+              {HEATMAP_MODE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`puzzle-ghost-mode-button${heatmapMode === option.value ? ' is-active' : ''}`}
+                  onClick={() => onHeatmapModeChange(option.value)}
+                  aria-pressed={heatmapMode === option.value}
+                  data-app-tooltip={option.description}
+                  data-app-tooltip-position="top"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <input
+              type="range"
+              min="25"
+              max="100"
+              step="1"
+              value={heatmapIntensity}
+              onChange={onHeatmapIntensityChange}
+              className="puzzle-ghost-slider-input"
+              aria-label="Intensitaet der Heatmap"
+            />
+            <div className="puzzle-ghost-slider-scale" aria-hidden="true">
+              <span>Dezent</span>
+              <span>Intensiv</span>
+            </div>
+            <button
+              type="button"
+              className={`puzzle-heatmap-distance-toggle${areHeatmapDistancesVisible ? ' is-active' : ''}`}
+              onClick={onToggleHeatmapDistances}
+              aria-pressed={areHeatmapDistancesVisible}
+            >
+              X/Y-Distanzen {areHeatmapDistancesVisible ? 'ausblenden' : 'anzeigen'}
+            </button>
+            <p className="puzzle-ghost-mode-copy">{activeHeatmapMode.description}</p>
           </AnimatedReveal>
         )}
       </AnimatePresence>

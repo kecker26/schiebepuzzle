@@ -1,5 +1,6 @@
 import {
   type GhostPreviewMode,
+  type HeatmapMode,
   GalleryChallengeTarget,
   OptimalStartMoveCountKind,
   PersistedPuzzleProgress,
@@ -87,6 +88,9 @@ export function createPersistedPuzzleProgress({
   ghostPreviewWeight,
   ghostPreviewMode,
   heatmapOverlayVisible,
+  heatmapMode = 'classic',
+  heatmapIntensity = 100,
+  heatmapDistancesVisible = false,
   solverProgress,
   challengeTarget,
   historyLimit = DEFAULT_PERSISTED_HISTORY_LIMIT,
@@ -107,6 +111,9 @@ export function createPersistedPuzzleProgress({
   ghostPreviewWeight: number
   ghostPreviewMode: GhostPreviewMode
   heatmapOverlayVisible: boolean
+  heatmapMode?: HeatmapMode
+  heatmapIntensity?: number
+  heatmapDistancesVisible?: boolean
   solverProgress?: SolverProgress
   challengeTarget?: GalleryChallengeTarget | null
   historyLimit?: number
@@ -130,6 +137,9 @@ export function createPersistedPuzzleProgress({
     ghostPreviewWeight,
     ghostPreviewMode,
     heatmapOverlayVisible,
+    heatmapMode,
+    heatmapIntensity,
+    heatmapDistancesVisible,
     solverProgress: solverProgress
       ? {
           shuffleMoves: [...solverProgress.shuffleMoves],
