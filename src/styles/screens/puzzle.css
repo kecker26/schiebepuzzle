@@ -2137,6 +2137,54 @@
   font-size: 12px;
 }
 
+.puzzle-heatmap-path-progress {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 8px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.2);
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.puzzle-heatmap-path-progress > strong {
+  overflow: hidden;
+  font-size: 9px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.puzzle-heatmap-path-progress.has-progress > strong {
+  color: #4ade80;
+}
+
+.puzzle-heatmap-path-progress.is-recalculating > strong {
+  color: #fbbf24;
+}
+
+.puzzle-heatmap-path-progress > i {
+  grid-column: 1 / -1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.puzzle-heatmap-path-progress > i > b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #22c55e;
+  transition: width 0.25s ease;
+}
+
+.puzzle-heatmap-path-progress.is-recalculating > i > b {
+  width: 100% !important;
+  background: #f59e0b;
+}
+
 .puzzle-heatmap-path-card ol {
   display: grid;
   gap: 5px;
@@ -2144,6 +2192,24 @@
   padding: 7px 0 0;
   border-top: 1px solid rgba(56, 189, 248, 0.16);
   list-style: none;
+}
+
+.puzzle-heatmap-path-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.42);
+  background: rgba(120, 53, 15, 0.22);
+  color: #fde68a;
+  font-size: 9px;
+}
+
+.puzzle-heatmap-path-warning strong {
+  color: #fbbf24;
+  font-size: 9px;
 }
 
 .puzzle-heatmap-path-card li {

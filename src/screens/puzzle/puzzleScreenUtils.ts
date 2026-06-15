@@ -161,6 +161,13 @@ export interface HeatmapTargetPath {
   targetTileId: string | null
 }
 
+export interface HeatmapPathNavigationProgress {
+  completedSteps: number
+  totalSteps: number
+  status: 'active' | 'completed' | 'recalculating'
+  message: string
+}
+
 export function normalizeHeatmapMode(value: unknown): HeatmapMode {
   return value === 'arrows' || value === 'classic' || value === 'delta'
     ? value
@@ -368,6 +375,31 @@ export function buildHeatmapTargetPath(
     steps,
     objective,
     targetTileId: objective?.tileId ?? null,
+  }
+}
+
+export function advanceHeatmapPathNavigation(
+  progress: HeatmapPathNavigationProgress,
+  expectedTileId: string,
+  movedTileId: string
+): HeatmapPathNavigationProgress {
+  if (movedTileId !== expectedTileId) {
+    return {
+      ...progress,
+      status: 'recalculating',
+      message: 'Pfad verlassen. Neue Route wird berechnet.',
+    }
+  }
+
+  const completedSteps = Math.min(progress.totalSteps, progress.completedSteps + 1)
+  const isCompleted = completedSteps >= progress.totalSteps
+  return {
+    completedSteps,
+    totalSteps: progress.totalSteps,
+    status: isCompleted ? 'completed' : 'active',
+    message: isCompleted
+      ? 'Zwischenziel erreicht.'
+      : `Schritt ${completedSteps} von ${progress.totalSteps} erledigt.`,
   }
 }
 

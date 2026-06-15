@@ -22,6 +22,7 @@ import {
   getProgressStatusLabel,
   type HeatmapMovePotentialAnalysis,
   type HeatmapTargetPath,
+  type HeatmapPathNavigationProgress,
   type HintDirection,
   type SuggestedHintPreview,
 } from './puzzleScreenUtils.ts'
@@ -52,6 +53,8 @@ interface PuzzleLeftPanelProps {
   heatmapMovePotential: HeatmapMovePotentialAnalysis | null
   heatmapTargetPath: HeatmapTargetPath | null
   isHeatmapTargetPathVisible: boolean
+  heatmapPathProgress: HeatmapPathNavigationProgress | null
+  isHeatmapPathDeviationVisible: boolean
   moveHistoryLength: number
   redoHistoryLength: number
   onShowHint: () => void
@@ -224,6 +227,8 @@ export default function PuzzleLeftPanel({
   heatmapMovePotential,
   heatmapTargetPath,
   isHeatmapTargetPathVisible,
+  heatmapPathProgress,
+  isHeatmapPathDeviationVisible,
   moveHistoryLength,
   redoHistoryLength,
   onShowHint,
@@ -800,10 +805,38 @@ export default function PuzzleLeftPanel({
               <div className="puzzle-heatmap-path-card">
                 <span className="puzzle-heatmap-potential-kicker">Warum dieser Zug?</span>
                 <strong>{heatmapTargetPath.objective?.label ?? 'Naechste Zugfolge vorbereiten'}</strong>
+                {heatmapPathProgress && (
+                  <div
+                    className={
+                      `puzzle-heatmap-path-progress is-${heatmapPathProgress.status}`
+                      + (heatmapPathProgress.completedSteps > 0 ? ' has-progress' : '')
+                    }
+                    role="status"
+                  >
+                    <span>
+                      {heatmapPathProgress.status === 'recalculating'
+                        ? 'Neue Route'
+                        : `Schritt ${Math.min(heatmapPathProgress.completedSteps + 1, heatmapPathProgress.totalSteps)} von ${heatmapPathProgress.totalSteps}`}
+                    </span>
+                    <strong>
+                      {heatmapPathProgress.completedSteps > 0 && heatmapPathProgress.status !== 'recalculating' ? '✓ ' : ''}
+                      {heatmapPathProgress.message}
+                    </strong>
+                    <i>
+                      <b style={{ width: `${Math.round((heatmapPathProgress.completedSteps / Math.max(1, heatmapPathProgress.totalSteps)) * 100)}%` }} />
+                    </i>
+                  </div>
+                )}
                 <span>
                   {heatmapTargetPath.objective?.detail
                     ?? `Die naechsten ${heatmapTargetPath.steps.length} Solver-Zuege sind am Brett nummeriert.`}
                 </span>
+                {isHeatmapPathDeviationVisible && (
+                  <div className="puzzle-heatmap-path-warning" role="alert">
+                    <strong>Pfad verlassen</strong>
+                    <span>Neue Route wird berechnet.</span>
+                  </div>
+                )}
                 <ol>
                   {heatmapTargetPath.steps.map((step) => (
                     <li key={`${step.step}-${step.tileId}`}>

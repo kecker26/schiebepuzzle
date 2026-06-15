@@ -635,7 +635,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           {
             keys: ['M'],
             label: 'Heatmap umschalten',
-            detail: 'Zeigt Entfernung, Zielrichtung oder den Verlauf und bewertet gleichzeitig alle beweglichen Kacheln: Gruen verbessert, Gelb bereitet vor, Rot verschlechtert. Die beste Option traegt eine 1; der optionale Zielpfad erklaert bis zu vier folgende Solver-Zuege. X/Y-Distanzen wechseln automatisch zu Farbflaechen; X+ zeigt rechts und Y+ zeigt oben.',
+            detail: 'Zeigt Entfernung, Zielrichtung oder den Verlauf und bewertet gleichzeitig alle beweglichen Kacheln: Gruen verbessert, Gelb bereitet vor, Rot verschlechtert. Die beste Option traegt eine 1; der interaktive Zielpfad erklaert bis zu vier Solver-Zuege, zaehlt erledigte Schritte und berechnet Abweichungen neu. X/Y-Distanzen wechseln automatisch zu Farbflaechen; X+ zeigt rechts und Y+ zeigt oben.',
           },
           {
             keys: ['N'],
