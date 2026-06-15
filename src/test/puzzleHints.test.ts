@@ -4,6 +4,7 @@ import {
   buildHintPreview,
   buildHeatmapDeltaAnalysis,
   buildHeatmapMovePotentialAnalysis,
+  buildHeatmapTargetPath,
   buildPuzzleMoveFeedback,
   normalizeHeatmapIntensity,
   normalizeHeatmapMode,
@@ -340,6 +341,95 @@ describe('puzzle hints', () => {
     expect(analysis.tilePotentials).toEqual({
       'tile-5': 0,
       'tile-7': -1,
+    })
+  })
+
+  it('builds a short numbered heatmap target path from a solver queue', () => {
+    const state = createState([
+      createTile(0, 1, 0),
+      createTile(1, 0, 1),
+      createTile(2, 0, 2),
+      createTile(3, 0, 0),
+      createTile(4, 1, 1),
+      createTile(5, 1, 2),
+      createTile(6, 2, 0),
+      createTile(7, 2, 1),
+      createTile(8, 2, 2, true),
+    ], 2, 2)
+    const applyMove = (current: PuzzleState, tileId: string) => {
+      const tile = current.tiles.find((entry) => entry.id === tileId)
+      if (!tile) return current
+      const nextTiles = current.tiles.map((entry) => {
+        if (entry.id === tileId) return { ...entry, row: current.emptyRow, col: current.emptyCol }
+        if (entry.isEmpty) return { ...entry, row: tile.row, col: tile.col }
+        return entry
+      })
+      return createState(nextTiles, tile.row, tile.col)
+    }
+    const path = buildHeatmapTargetPath(state, ['tile-5', 'tile-2', 'tile-0'], 0, applyMove)
+
+    expect(path.steps.map((step) => step.step)).toEqual([1, 2, 3])
+    expect(path.steps.map((step) => step.tileId)).toEqual(['tile-5', 'tile-2', 'tile-0'])
+    expect(path.steps.map((step) => ({
+      move: `${step.compactTileLabel} ${step.directionSymbol}`,
+      reason: step.reasonLabel,
+    }))).toEqual([
+      { move: 'K6 ↓', reason: 'Weg oeffnen' },
+      { move: 'K3 ↓', reason: 'Fokus vorbereiten' },
+      { move: 'K1 ↑', reason: 'Fokus vorbereiten' },
+    ])
+    expect(path.objective).toBeNull()
+    expect(path.targetTileId).toBeNull()
+  })
+
+  it('stops the visible heatmap path before a tile would receive two numbers', () => {
+    const state = createState([
+      createTile(0, 0, 0),
+      createTile(1, 0, 1),
+      createTile(2, 0, 2),
+      createTile(3, 1, 0),
+      createTile(4, 1, 1),
+      createTile(5, 1, 2),
+      createTile(6, 2, 0),
+      createTile(7, 2, 1),
+      createTile(8, 2, 2, true),
+    ], 2, 2)
+
+    const path = buildHeatmapTargetPath(state, ['tile-5', 'tile-2', 'tile-5'], null, (current) => ({
+      ...current,
+      tiles: [...current.tiles],
+    }))
+
+    expect(path.steps.map((step) => step.tileId)).toEqual(['tile-5', 'tile-2'])
+  })
+
+  it('labels a target-path step that places a tile correctly', () => {
+    const state = createState([
+      createTile(0, 0, 0),
+      createTile(1, 1, 1),
+      createTile(2, 0, 2),
+      createTile(3, 1, 0),
+      createTile(4, 1, 2),
+      createTile(5, 2, 0),
+      createTile(6, 2, 1),
+      createTile(7, 2, 2),
+      createTile(8, 0, 1, true),
+    ], 0, 1)
+    const path = buildHeatmapTargetPath(state, ['tile-1'], 0, (current, tileId) => {
+      const movedTile = current.tiles.find((tile) => tile.id === tileId)
+      if (!movedTile) return current
+      return createState(current.tiles.map((tile) => {
+        if (tile.id === tileId) return { ...tile, row: current.emptyRow, col: current.emptyCol }
+        if (tile.isEmpty) return { ...tile, row: movedTile.row, col: movedTile.col }
+        return tile
+      }), movedTile.row, movedTile.col)
+    })
+
+    expect(path.steps[0]).toMatchObject({
+      compactTileLabel: 'K2',
+      directionSymbol: '↑',
+      reasonLabel: 'Zielposition',
+      reasonTone: 'positive',
     })
   })
 

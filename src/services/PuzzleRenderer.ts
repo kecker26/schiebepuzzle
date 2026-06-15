@@ -30,6 +30,8 @@ export interface HeatmapOverlayOptions {
   tileDeltas?: Readonly<Record<string, number>>
   tilePotentials?: Readonly<Record<string, number>>
   bestPotentialTileId?: string
+  pathStepByTileId?: Readonly<Record<string, number>>
+  pathTargetTileId?: string
 }
 
 export default class PuzzleRenderer {
@@ -983,6 +985,8 @@ export default class PuzzleRenderer {
         || tile.row !== tile.correctRow
         || tile.col !== tile.correctCol
         || options.tilePotentials?.[tile.id] !== undefined
+        || options.pathStepByTileId?.[tile.id] !== undefined
+        || tile.id === options.pathTargetTileId
       )
     ))
     if (overlayTiles.length === 0) return
@@ -995,7 +999,12 @@ export default class PuzzleRenderer {
 
     overlayTiles.forEach((tile) => {
       const distance = Math.abs(tile.row - tile.correctRow) + Math.abs(tile.col - tile.correctCol)
-      if (distance <= 0 && options.mode !== 'delta') return
+      if (
+        distance <= 0
+        && options.mode !== 'delta'
+        && options.pathStepByTileId?.[tile.id] === undefined
+        && tile.id !== options.pathTargetTileId
+      ) return
 
       let x = tile.col * this.tileWidth
       let y = tile.row * this.tileHeight
@@ -1012,9 +1021,9 @@ export default class PuzzleRenderer {
 
       if (options.mode === 'delta') {
         this.renderHeatmapDeltaOverlayAt(x, y, options.tileDeltas?.[tile.id] ?? 0, options.intensity)
-      } else if (options.mode === 'arrows') {
+      } else if (distance > 0 && options.mode === 'arrows') {
         this.renderHeatmapDirectionArrowAt(x, y, tile, options.intensity)
-      } else {
+      } else if (distance > 0) {
         this.renderHeatmapTileOverlayAt(x, y, distance, boardSize, maxDistance, options.intensity)
       }
 
@@ -1032,7 +1041,59 @@ export default class PuzzleRenderer {
           options.intensity
         )
       }
+
+      const pathStep = options.pathStepByTileId?.[tile.id]
+      if (pathStep !== undefined && pathStep > 1) {
+        this.renderHeatmapPathStepAt(x, y, pathStep, options.intensity)
+      }
+      if (tile.id === options.pathTargetTileId) {
+        this.renderHeatmapPathTargetAt(x, y, options.intensity)
+      }
     })
+  }
+
+  private renderHeatmapPathStepAt(x: number, y: number, step: number, intensity: number): void {
+    const alpha = Math.max(0.4, Math.min(1, intensity))
+    const shortEdge = Math.min(this.tileWidth, this.tileHeight)
+    const inset = Math.max(3, Math.round(shortEdge * 0.035))
+    const badgeSize = Math.max(15, Math.min(25, Math.round(shortEdge * 0.2)))
+    const badgeX = x + inset
+    const badgeY = y + inset
+
+    this.ctx.save()
+    this.ctx.fillStyle = `rgba(14, 165, 233, ${0.92 * alpha})`
+    this.ctx.shadowColor = `rgba(14, 165, 233, ${0.62 * alpha})`
+    this.ctx.shadowBlur = Math.max(7, shortEdge * 0.12)
+    this.ctx.beginPath()
+    this.ctx.arc(badgeX + badgeSize / 2, badgeY + badgeSize / 2, badgeSize / 2, 0, Math.PI * 2)
+    this.ctx.fill()
+    this.ctx.shadowBlur = 0
+    this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`
+    this.ctx.font = `900 ${Math.max(9, Math.round(badgeSize * 0.54))}px ${CANVAS_FONT_FAMILY}`
+    this.ctx.textAlign = 'center'
+    this.ctx.textBaseline = 'middle'
+    this.ctx.fillText(String(step), badgeX + badgeSize / 2, badgeY + badgeSize / 2)
+    this.ctx.restore()
+  }
+
+  private renderHeatmapPathTargetAt(x: number, y: number, intensity: number): void {
+    const alpha = Math.max(0.4, Math.min(1, intensity))
+    const shortEdge = Math.min(this.tileWidth, this.tileHeight)
+    const radius = Math.max(5, shortEdge * 0.065)
+    const centerX = x + this.tileWidth - Math.max(9, shortEdge * 0.11)
+    const centerY = y + this.tileHeight - Math.max(9, shortEdge * 0.11)
+
+    this.ctx.save()
+    this.ctx.strokeStyle = `rgba(56, 189, 248, ${0.92 * alpha})`
+    this.ctx.lineWidth = Math.max(2, shortEdge * 0.025)
+    this.ctx.beginPath()
+    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+    this.ctx.stroke()
+    this.ctx.beginPath()
+    this.ctx.arc(centerX, centerY, radius * 0.35, 0, Math.PI * 2)
+    this.ctx.fillStyle = `rgba(56, 189, 248, ${0.92 * alpha})`
+    this.ctx.fill()
+    this.ctx.restore()
   }
 
   private renderHeatmapMovePotentialAt(

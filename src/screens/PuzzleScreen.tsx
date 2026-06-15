@@ -49,6 +49,7 @@ import {
   buildHintPreview,
   buildHeatmapDeltaAnalysis,
   buildHeatmapMovePotentialAnalysis,
+  buildHeatmapTargetPath,
   buildPuzzleMoveFeedback,
   CORRECT_TILE_PULSE_DURATION_MS,
   createMoveRecordForStates,
@@ -365,6 +366,8 @@ export default function PuzzleScreen({
   const [isComputingSuggestion, setIsComputingSuggestion] = useState(false)
   const [hintPreview, setHintPreview] = useState<SuggestedHintPreview | null>(null)
   const [heatmapSuggestedTileId, setHeatmapSuggestedTileId] = useState<string | null>(null)
+  const [heatmapSuggestedQueue, setHeatmapSuggestedQueue] = useState<string[]>([])
+  const [isHeatmapTargetPathVisible, setIsHeatmapTargetPathVisible] = useState(false)
   const [activeFocusRow, setActiveFocusRow] = useState<number | null>(null)
   const [moveFeedback, setMoveFeedback] = useState<PuzzleMoveFeedback | null>(null)
   const [isRestartConfirmOpen, setIsRestartConfirmOpen] = useState(false)
@@ -1360,6 +1363,20 @@ export default function PuzzleScreen({
             activeFocusRow,
             heatmapSuggestedTileId
           )
+          const targetPath = isHeatmapTargetPathVisible && engineRef.current
+            ? buildHeatmapTargetPath(
+                puzzleState,
+                heatmapSuggestedQueue,
+                activeFocusRow,
+                (state, tileId) => engineRef.current?.makeMove(state, tileId) ?? state
+              )
+            : null
+          const pathStepByTileId = targetPath?.steps.reduce<Record<string, number>>((steps, step) => {
+            if (steps[step.tileId] === undefined) {
+              steps[step.tileId] = step.step
+            }
+            return steps
+          }, {})
           return {
             mode: heatmapMode,
             intensity: heatmapIntensity / 100,
@@ -1369,6 +1386,8 @@ export default function PuzzleScreen({
               : undefined,
             tilePotentials: potentialAnalysis.tilePotentials,
             bestPotentialTileId: potentialAnalysis.bestMove?.tileId,
+            pathStepByTileId,
+            pathTargetTileId: targetPath?.targetTileId ?? undefined,
           }
         })()
         : null
@@ -1399,11 +1418,13 @@ export default function PuzzleScreen({
     heatmapIntensity,
     heatmapMode,
     heatmapSuggestedTileId,
+    heatmapSuggestedQueue,
     hintPreview,
     hoveredSearchTileId,
     invalidTileFeedback,
     isHeatmapOverlayVisible,
     isGhostPreviewVisible,
+    isHeatmapTargetPathVisible,
     moveAnimation,
     moveHistory,
     puzzleState,
@@ -1627,6 +1648,8 @@ export default function PuzzleScreen({
     if (!isHeatmapOverlayVisible || !puzzleState || puzzleState.isSolved || isPaused) {
       heatmapSuggestionSequenceRef.current += 1
       setHeatmapSuggestedTileId(null)
+      setHeatmapSuggestedQueue([])
+      setIsHeatmapTargetPathVisible(false)
       return
     }
 
@@ -1635,6 +1658,7 @@ export default function PuzzleScreen({
     const requestSequence = heatmapSuggestionSequenceRef.current + 1
     heatmapSuggestionSequenceRef.current = requestSequence
     setHeatmapSuggestedTileId(null)
+    setHeatmapSuggestedQueue([])
 
     void resolveSuggestedQueue(puzzleSnapshot).then((resolution) => {
       if (
@@ -1644,6 +1668,7 @@ export default function PuzzleScreen({
         return
       }
       setHeatmapSuggestedTileId(resolution?.queue[0] ?? null)
+      setHeatmapSuggestedQueue(resolution?.queue ?? [])
     })
   }, [config, isHeatmapOverlayVisible, isPaused, puzzleState, resolveSuggestedQueue])
 
@@ -2073,6 +2098,7 @@ export default function PuzzleScreen({
           objective
         )
         setHeatmapSuggestedTileId(nextHintPreview?.tileId ?? null)
+        setHeatmapSuggestedQueue(resolution.queue)
         if (!autoPlay && nextHintPreview && registerHintForState(hintedStateHashesRef.current, snapshotHash)) {
           setRunMetrics((prev) => ({
             ...prev,
@@ -2190,6 +2216,11 @@ export default function PuzzleScreen({
     setHeatmapMode(selection.mode)
     setAreHeatmapDistancesVisible(selection.distancesVisible)
   }, [areHeatmapDistancesVisible, heatmapMode, isPaused])
+
+  const toggleHeatmapTargetPathVisibility = useCallback(() => {
+    if (isPaused || heatmapSuggestedQueue.length < 2) return
+    setIsHeatmapTargetPathVisible((visible) => !visible)
+  }, [heatmapSuggestedQueue.length, isPaused])
 
   const closeRestartConfirm = useCallback(() => {
     setIsRestartConfirmOpen(false)
@@ -2422,6 +2453,14 @@ export default function PuzzleScreen({
         heatmapSuggestedTileId
       )
     : null
+  const heatmapTargetPath = puzzleState && engineRef.current && heatmapSuggestedQueue.length > 0
+    ? buildHeatmapTargetPath(
+        puzzleState,
+        heatmapSuggestedQueue,
+        contextHint?.focusRow ?? null,
+        (state, tileId) => engineRef.current?.makeMove(state, tileId) ?? state
+      )
+    : null
   useEffect(() => {
     if (contextHint?.focusRow === activeFocusRow) return
     setActiveFocusRow(contextHint?.focusRow ?? null)
@@ -2477,6 +2516,8 @@ export default function PuzzleScreen({
             heatmapIntensity={heatmapIntensity}
             areHeatmapDistancesVisible={areHeatmapDistancesVisible}
             heatmapMovePotential={heatmapMovePotential}
+            heatmapTargetPath={heatmapTargetPath}
+            isHeatmapTargetPathVisible={isHeatmapTargetPathVisible}
             moveHistoryLength={moveHistory.length}
             redoHistoryLength={redoHistory.length}
             onShowHint={handleShowHint}
@@ -2491,6 +2532,7 @@ export default function PuzzleScreen({
               onHeatmapModeChange={handleHeatmapModeChange}
               onHeatmapIntensityChange={handleHeatmapIntensityChange}
               onToggleHeatmapDistances={toggleHeatmapDistancesVisibility}
+              onToggleHeatmapTargetPath={toggleHeatmapTargetPathVisibility}
               onUndo={handleUndoMove}
               onRedo={handleRedoMove}
               onQuit={onQuit}

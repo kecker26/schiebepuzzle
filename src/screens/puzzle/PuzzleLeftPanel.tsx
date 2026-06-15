@@ -21,6 +21,7 @@ import {
   formatElapsedTime,
   getProgressStatusLabel,
   type HeatmapMovePotentialAnalysis,
+  type HeatmapTargetPath,
   type HintDirection,
   type SuggestedHintPreview,
 } from './puzzleScreenUtils.ts'
@@ -49,6 +50,8 @@ interface PuzzleLeftPanelProps {
   heatmapIntensity: number
   areHeatmapDistancesVisible: boolean
   heatmapMovePotential: HeatmapMovePotentialAnalysis | null
+  heatmapTargetPath: HeatmapTargetPath | null
+  isHeatmapTargetPathVisible: boolean
   moveHistoryLength: number
   redoHistoryLength: number
   onShowHint: () => void
@@ -63,6 +66,7 @@ interface PuzzleLeftPanelProps {
   onHeatmapModeChange: (mode: HeatmapMode) => void
   onHeatmapIntensityChange: (event: ChangeEvent<HTMLInputElement>) => void
   onToggleHeatmapDistances: () => void
+  onToggleHeatmapTargetPath: () => void
   onUndo: () => void
   onRedo: () => void
   onQuit: () => void
@@ -218,6 +222,8 @@ export default function PuzzleLeftPanel({
   heatmapIntensity,
   areHeatmapDistancesVisible,
   heatmapMovePotential,
+  heatmapTargetPath,
+  isHeatmapTargetPathVisible,
   moveHistoryLength,
   redoHistoryLength,
   onShowHint,
@@ -232,6 +238,7 @@ export default function PuzzleLeftPanel({
   onHeatmapModeChange,
   onHeatmapIntensityChange,
   onToggleHeatmapDistances,
+  onToggleHeatmapTargetPath,
   onUndo,
   onRedo,
   onQuit,
@@ -778,6 +785,36 @@ export default function PuzzleLeftPanel({
                   <span><i className="is-neutral" /> vorbereitet</span>
                   <span><i className="is-negative" /> verschlechtert</span>
                 </div>
+              </div>
+            )}
+            <button
+              type="button"
+              className={`puzzle-heatmap-path-toggle${isHeatmapTargetPathVisible ? ' is-active' : ''}`}
+              onClick={onToggleHeatmapTargetPath}
+              aria-pressed={isHeatmapTargetPathVisible}
+              disabled={!heatmapTargetPath || heatmapTargetPath.steps.length < 2}
+            >
+              Zielpfad {isHeatmapTargetPathVisible ? 'ausblenden' : 'anzeigen'}
+            </button>
+            {isHeatmapTargetPathVisible && heatmapTargetPath && (
+              <div className="puzzle-heatmap-path-card">
+                <span className="puzzle-heatmap-potential-kicker">Warum dieser Zug?</span>
+                <strong>{heatmapTargetPath.objective?.label ?? 'Naechste Zugfolge vorbereiten'}</strong>
+                <span>
+                  {heatmapTargetPath.objective?.detail
+                    ?? `Die naechsten ${heatmapTargetPath.steps.length} Solver-Zuege sind am Brett nummeriert.`}
+                </span>
+                <ol>
+                  {heatmapTargetPath.steps.map((step) => (
+                    <li key={`${step.step}-${step.tileId}`}>
+                      <b>{step.step}</b>
+                      <span className="puzzle-heatmap-path-step-copy">
+                        <strong>{step.compactTileLabel} {step.directionSymbol}</strong>
+                        <small className={`is-${step.reasonTone}`}>{step.reasonLabel}</small>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
             {heatmapMovePotential && !heatmapMovePotential.bestMove && (
