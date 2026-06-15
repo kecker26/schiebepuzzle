@@ -47,6 +47,7 @@ import PuzzleRightPanel from './puzzle/PuzzleRightPanel.tsx'
 import {
   buildHintPathObjective,
   buildHintPreview,
+  advanceHeatmapPathNavigation,
   buildHeatmapDeltaAnalysis,
   buildHeatmapMovePotentialAnalysis,
   buildHeatmapTargetPath,
@@ -77,6 +78,7 @@ import {
   normalizeGhostPreviewWeight,
   PERSISTED_HISTORY_LIMIT,
   type PuzzleMoveFeedback,
+  type HeatmapPathNavigationProgress,
   SuggestedHintPreview,
   TILE_NUMBER_PREVIEW_MS,
   toggleHeatmapDistances,
@@ -315,6 +317,9 @@ export default function PuzzleScreen({
   const tileNumbersTimeoutRef = useRef<number | null>(null)
   const hintAutoHideTimerRef = useRef<number | null>(null)
   const moveFeedbackTimerRef = useRef<number | null>(null)
+  const heatmapPathDeviationTimerRef = useRef<number | null>(null)
+  const heatmapPathExpectedTileIdRef = useRef<string | null>(null)
+  const heatmapPathNeedsResetRef = useRef(false)
   const hasInitialCanvasFocusRef = useRef(false)
   const restartConfirmButtonRef = useRef<HTMLButtonElement | null>(null)
   const hintButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -368,6 +373,8 @@ export default function PuzzleScreen({
   const [heatmapSuggestedTileId, setHeatmapSuggestedTileId] = useState<string | null>(null)
   const [heatmapSuggestedQueue, setHeatmapSuggestedQueue] = useState<string[]>([])
   const [isHeatmapTargetPathVisible, setIsHeatmapTargetPathVisible] = useState(false)
+  const [heatmapPathProgress, setHeatmapPathProgress] = useState<HeatmapPathNavigationProgress | null>(null)
+  const [isHeatmapPathDeviationVisible, setIsHeatmapPathDeviationVisible] = useState(false)
   const [activeFocusRow, setActiveFocusRow] = useState<number | null>(null)
   const [moveFeedback, setMoveFeedback] = useState<PuzzleMoveFeedback | null>(null)
   const [isRestartConfirmOpen, setIsRestartConfirmOpen] = useState(false)
@@ -446,7 +453,10 @@ export default function PuzzleScreen({
     }, durationMs)
   }, [clearHintAutoHideTimeout])
 
-  const showMoveFeedback = useCallback((feedback: PuzzleMoveFeedback) => {
+  const showMoveFeedback = useCallback((
+    feedback: PuzzleMoveFeedback,
+    durationMs: number = MOVE_FEEDBACK_DURATION_MS
+  ) => {
     if (moveFeedbackTimerRef.current !== null) {
       window.clearTimeout(moveFeedbackTimerRef.current)
     }
@@ -454,7 +464,7 @@ export default function PuzzleScreen({
     moveFeedbackTimerRef.current = window.setTimeout(() => {
       moveFeedbackTimerRef.current = null
       setMoveFeedback(null)
-    }, MOVE_FEEDBACK_DURATION_MS)
+    }, durationMs)
   }, [])
 
   useEffect(() => {
@@ -916,6 +926,10 @@ export default function PuzzleScreen({
       if (moveFeedbackTimerRef.current !== null) {
         window.clearTimeout(moveFeedbackTimerRef.current)
         moveFeedbackTimerRef.current = null
+      }
+      if (heatmapPathDeviationTimerRef.current !== null) {
+        window.clearTimeout(heatmapPathDeviationTimerRef.current)
+        heatmapPathDeviationTimerRef.current = null
       }
       stopAnimationFrame()
       stopCelebrationFrame()
@@ -1714,6 +1728,33 @@ export default function PuzzleScreen({
       suggestedMoveCount: moveSource === 'suggested' ? prev.suggestedMoveCount + 1 : prev.suggestedMoveCount,
     }))
     setPuzzleState(normalizedNextState)
+    let heatmapPathFeedback: PuzzleMoveFeedback | null = null
+    const expectedHeatmapPathTileId = heatmapPathExpectedTileIdRef.current
+    if (isHeatmapTargetPathVisible && expectedHeatmapPathTileId && heatmapPathProgress) {
+      const nextPathProgress = advanceHeatmapPathNavigation(
+        heatmapPathProgress,
+        expectedHeatmapPathTileId,
+        tileId
+      )
+      heatmapPathExpectedTileIdRef.current = null
+      heatmapPathNeedsResetRef.current = nextPathProgress.status === 'recalculating'
+      setHeatmapPathProgress(nextPathProgress)
+      if (nextPathProgress.status === 'recalculating') {
+        if (heatmapPathDeviationTimerRef.current !== null) {
+          window.clearTimeout(heatmapPathDeviationTimerRef.current)
+        }
+        setIsHeatmapPathDeviationVisible(true)
+        heatmapPathDeviationTimerRef.current = window.setTimeout(() => {
+          heatmapPathDeviationTimerRef.current = null
+          setIsHeatmapPathDeviationVisible(false)
+        }, MOVE_FEEDBACK_DURATION_MS)
+      } else {
+        heatmapPathFeedback = {
+          message: nextPathProgress.message,
+          tone: 'positive',
+        }
+      }
+    }
     const feedback = buildPuzzleMoveFeedback({
       previousFocusTitle: previousFocus.title,
       nextFocusTitle: nextFocus.title,
@@ -1729,8 +1770,8 @@ export default function PuzzleScreen({
       heuristicAfter,
       isSuggested: moveSource === 'suggested',
     })
-    if (feedback) {
-      showMoveFeedback(feedback)
+    if (heatmapPathFeedback || feedback) {
+      showMoveFeedback(heatmapPathFeedback ?? feedback!)
     }
     if (reachedCorrectPlace) {
       startCorrectTilePulse(tileId)
@@ -2461,6 +2502,32 @@ export default function PuzzleScreen({
         (state, tileId) => engineRef.current?.makeMove(state, tileId) ?? state
       )
     : null
+  const heatmapTargetPathFirstTileId = heatmapTargetPath?.steps[0]?.tileId ?? null
+  const heatmapTargetPathStepCount = heatmapTargetPath?.steps.length ?? 0
+  useEffect(() => {
+    if (!isHeatmapTargetPathVisible) {
+      heatmapPathExpectedTileIdRef.current = null
+      heatmapPathNeedsResetRef.current = false
+      setHeatmapPathProgress(null)
+      setIsHeatmapPathDeviationVisible(false)
+      return
+    }
+    if (!heatmapTargetPathFirstTileId || heatmapTargetPathStepCount === 0) return
+
+    heatmapPathExpectedTileIdRef.current = heatmapTargetPathFirstTileId
+    setHeatmapPathProgress((current) => {
+      if (heatmapPathNeedsResetRef.current || !current || current.status === 'completed') {
+        heatmapPathNeedsResetRef.current = false
+        return {
+          completedSteps: 0,
+          totalSteps: heatmapTargetPathStepCount,
+          status: 'active',
+          message: `Schritt 1 von ${heatmapTargetPathStepCount} ist bereit.`,
+        }
+      }
+      return current
+    })
+  }, [heatmapTargetPathFirstTileId, heatmapTargetPathStepCount, isHeatmapTargetPathVisible])
   useEffect(() => {
     if (contextHint?.focusRow === activeFocusRow) return
     setActiveFocusRow(contextHint?.focusRow ?? null)
@@ -2518,6 +2585,8 @@ export default function PuzzleScreen({
             heatmapMovePotential={heatmapMovePotential}
             heatmapTargetPath={heatmapTargetPath}
             isHeatmapTargetPathVisible={isHeatmapTargetPathVisible}
+            heatmapPathProgress={heatmapPathProgress}
+            isHeatmapPathDeviationVisible={isHeatmapPathDeviationVisible}
             moveHistoryLength={moveHistory.length}
             redoHistoryLength={redoHistory.length}
             onShowHint={handleShowHint}

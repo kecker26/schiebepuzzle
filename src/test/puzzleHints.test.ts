@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildHintPathObjective,
   buildHintPreview,
+  advanceHeatmapPathNavigation,
   buildHeatmapDeltaAnalysis,
   buildHeatmapMovePotentialAnalysis,
   buildHeatmapTargetPath,
@@ -430,6 +431,28 @@ describe('puzzle hints', () => {
       directionSymbol: '↑',
       reasonLabel: 'Zielposition',
       reasonTone: 'positive',
+    })
+  })
+
+  it('advances or recalculates interactive heatmap path navigation', () => {
+    const initial = {
+      completedSteps: 0,
+      totalSteps: 3,
+      status: 'active' as const,
+      message: 'Schritt 1 von 3 ist bereit.',
+    }
+
+    expect(advanceHeatmapPathNavigation(initial, 'tile-1', 'tile-1')).toEqual({
+      completedSteps: 1,
+      totalSteps: 3,
+      status: 'active',
+      message: 'Schritt 1 von 3 erledigt.',
+    })
+    expect(advanceHeatmapPathNavigation(initial, 'tile-1', 'tile-2')).toEqual({
+      completedSteps: 0,
+      totalSteps: 3,
+      status: 'recalculating',
+      message: 'Pfad verlassen. Neue Route wird berechnet.',
     })
   })
 
