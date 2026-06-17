@@ -13,6 +13,8 @@ interface UsePuzzleKeyboardShortcutsOptions {
   onQuit: () => void
   onTogglePreview: () => void
   onToggleGhostPreview: () => void
+  onCycleGhostPreviewMode: () => void
+  onAdjustGhostPreviewWeight: (delta: number) => void
   onToggleHeatmapOverlay: () => void
   onShowTileNumbers: () => void
   onSuggestedMove: () => void
@@ -33,6 +35,8 @@ export function usePuzzleKeyboardShortcuts({
   onQuit,
   onTogglePreview,
   onToggleGhostPreview,
+  onCycleGhostPreviewMode,
+  onAdjustGhostPreviewWeight,
   onToggleHeatmapOverlay,
   onShowTileNumbers,
   onSuggestedMove,
@@ -126,7 +130,23 @@ export function usePuzzleKeyboardShortcuts({
         event.preventDefault()
         if (event.repeat) return
 
-        onToggleGhostPreview()
+        if (event.shiftKey) {
+          onCycleGhostPreviewMode()
+        } else {
+          onToggleGhostPreview()
+        }
+        return
+      }
+
+      if (key === '+' || key === '=') {
+        event.preventDefault()
+        onAdjustGhostPreviewWeight(5)
+        return
+      }
+
+      if (key === '-' || key === '_') {
+        event.preventDefault()
+        onAdjustGhostPreviewWeight(-5)
         return
       }
 
@@ -183,6 +203,8 @@ export function usePuzzleKeyboardShortcuts({
     onSuggestedMove,
     onToggleHeatmapOverlay,
     onToggleGhostPreview,
+    onCycleGhostPreviewMode,
+    onAdjustGhostPreviewWeight,
     onTogglePause,
     onTogglePreview,
     onUndo,

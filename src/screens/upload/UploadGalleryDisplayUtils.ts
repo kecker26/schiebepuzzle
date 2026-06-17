@@ -4,6 +4,7 @@ import {
   getChallengeMedalProgress,
   getChallengeMedalRank,
 } from '../../utils/galleryChallenge.ts'
+import { isGalleryChallengeTargetEligible } from '../../utils/galleryReplaySetup.ts'
 import {
   GalleryAssistanceFilter,
   GalleryDifficultyFilter,
@@ -262,6 +263,7 @@ export interface GalleryChallengeSeries {
   targetId: string
   targetEntry: SolvedGalleryEntry | null
   attempts: SolvedGalleryEntry[]
+  relatedStartStateEntries: SolvedGalleryEntry[]
   medalHistory: GalleryChallengeMedalHistoryItem[]
   bestAttempt: SolvedGalleryEntry
   bestMedal: ChallengeMedal
@@ -284,6 +286,27 @@ export interface GalleryTimelineChallengeRelation {
 export interface GalleryTimelineRelations {
   attemptsByEntryId: Map<string, GalleryTimelineChallengeRelation>
   targetsByEntryId: Map<string, GalleryTimelineChallengeRelation>
+}
+
+export interface GalleryStartStateSeries {
+  seriesId: string
+  startStateKey: string
+  entries: SolvedGalleryEntry[]
+  chronologicalEntries: SolvedGalleryEntry[]
+  originEntry: SolvedGalleryEntry
+  latestEntry: SolvedGalleryEntry
+  cleanAnchorEntry: SolvedGalleryEntry | null
+}
+
+export interface GalleryTimelineStartStateRelation {
+  seriesNumber: number
+  series: GalleryStartStateSeries
+  entryNumber: number
+  isOrigin: boolean
+}
+
+export interface GalleryStartStateRelations {
+  entriesByEntryId: Map<string, GalleryTimelineStartStateRelation>
 }
 
 function parseTimestamp(timestamp: string | null | undefined): number {
@@ -309,6 +332,126 @@ function compareChallengeAttempts(a: SolvedGalleryEntry, b: SolvedGalleryEntry):
   if (a.time !== b.time) return a.time - b.time
   if (a.moves !== b.moves) return a.moves - b.moves
   return parseTimestamp(b.completedAt) - parseTimestamp(a.completedAt)
+}
+
+function getCropTransformKey(entry: SolvedGalleryEntry): string {
+  const transform = entry.cropTransform
+  if (!transform) return 'no-crop'
+
+  return [
+    `z:${transform.zoom}`,
+    `r:${transform.rotationDeg}`,
+    `x:${transform.offsetX}`,
+    `y:${transform.offsetY}`,
+  ].join(',')
+}
+
+function getGalleryStartStateKey(entry: SolvedGalleryEntry): string | null {
+  const setup = entry.replaySetup
+  if (
+    !setup
+    || !Array.isArray(setup.startBoard)
+    || setup.startBoard.length !== entry.config.rows * entry.config.cols
+  ) {
+    return null
+  }
+
+  return [
+    getGalleryMotifKey(entry),
+    getPuzzleConfigKey(entry.config),
+    entry.useFullImage ? 'full' : 'crop',
+    getCropTransformKey(entry),
+    `empty:${setup.emptyIndex}`,
+    `board:${setup.startBoard.join(',')}`,
+  ].join('|')
+}
+
+function getRelatedStartStateEntries(
+  entries: SolvedGalleryEntry[],
+  targetEntry: SolvedGalleryEntry | null,
+  excludedEntryIds: ReadonlySet<string>
+): SolvedGalleryEntry[] {
+  if (!targetEntry) return []
+
+  const targetStartStateKey = getGalleryStartStateKey(targetEntry)
+  if (!targetStartStateKey) return []
+
+  return sortEntriesByLatest(
+    entries.filter((entry) => {
+      if (excludedEntryIds.has(entry.id)) return false
+      return getGalleryStartStateKey(entry) === targetStartStateKey
+    })
+  )
+}
+
+export function buildGalleryStartStateSeries(
+  entries: SolvedGalleryEntry[],
+  excludedEntryIds: ReadonlySet<string> = new Set()
+): GalleryStartStateSeries[] {
+  const entriesByStartState = new Map<string, SolvedGalleryEntry[]>()
+
+  for (const entry of entries) {
+    if (excludedEntryIds.has(entry.id)) continue
+
+    const startStateKey = getGalleryStartStateKey(entry)
+    if (!startStateKey) continue
+
+    const startStateEntries = entriesByStartState.get(startStateKey)
+    if (startStateEntries) {
+      startStateEntries.push(entry)
+    } else {
+      entriesByStartState.set(startStateKey, [entry])
+    }
+  }
+
+  return Array.from(entriesByStartState.entries())
+    .flatMap(([startStateKey, startStateEntries]): GalleryStartStateSeries[] => {
+      if (startStateEntries.length < 2) return []
+
+      const chronologicalEntries = [...startStateEntries].sort(
+        (a, b) => parseTimestamp(a.completedAt) - parseTimestamp(b.completedAt)
+      )
+      const entriesByLatest = sortEntriesByLatest(startStateEntries)
+      const cleanAnchorEntry = entriesByLatest.find(isGalleryChallengeTargetEligible) ?? null
+      const displayEntries = cleanAnchorEntry
+        ? [
+            cleanAnchorEntry,
+            ...entriesByLatest.filter((entry) => entry.id !== cleanAnchorEntry.id),
+          ]
+        : entriesByLatest
+
+      return [{
+        seriesId: startStateKey,
+        startStateKey,
+        entries: displayEntries,
+        chronologicalEntries,
+        originEntry: chronologicalEntries[0],
+        latestEntry: entriesByLatest[0],
+        cleanAnchorEntry,
+      }]
+    })
+    .sort((a, b) => parseTimestamp(b.latestEntry.completedAt) - parseTimestamp(a.latestEntry.completedAt))
+}
+
+export function buildGalleryStartStateRelations(
+  series: GalleryStartStateSeries[]
+): GalleryStartStateRelations {
+  const entriesByEntryId = new Map<string, GalleryTimelineStartStateRelation>()
+
+  series.forEach((startStateSeries, index) => {
+    const seriesNumber = index + 1
+
+    startStateSeries.chronologicalEntries.forEach((entry, entryIndex) => {
+      entriesByEntryId.set(entry.id, {
+        seriesNumber,
+        series: startStateSeries,
+        entryNumber: entryIndex + 1,
+        isOrigin: entry.id === startStateSeries.originEntry.id,
+      })
+    })
+  })
+
+  return { entriesByEntryId }
 }
 
 export function buildGalleryChallengeMedalHistory(
@@ -353,6 +496,12 @@ export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): Gall
     }
   }
 
+  const allChallengeEntryIds = new Set<string>()
+  attemptsByTarget.forEach((attempts, targetId) => {
+    allChallengeEntryIds.add(targetId)
+    attempts.forEach((attempt) => allChallengeEntryIds.add(attempt.id))
+  })
+
   return Array.from(attemptsByTarget.entries(), ([targetId, attempts]) => {
     const sortedAttempts = [...attempts].sort(compareChallengeAttempts)
     const targetEntry = entriesById.get(targetId) ?? null
@@ -361,6 +510,7 @@ export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): Gall
       targetId,
       targetEntry,
       attempts: sortedAttempts,
+      relatedStartStateEntries: getRelatedStartStateEntries(entries, targetEntry, allChallengeEntryIds),
       medalHistory: buildGalleryChallengeMedalHistory(attempts),
       bestAttempt: sortedAttempts[0],
       bestMedal: sortedAttempts[0].challengeMedal ?? 'bronze',

@@ -6,13 +6,19 @@ import AnimatedDialog from '../../motion/AnimatedDialog.tsx'
 import AsyncStatusPanel from '../../motion/AsyncStatusPanel.tsx'
 import BusyIndicator from '../../motion/BusyIndicator.tsx'
 import { type AiMetadataProvider, type ImageThemePalette, type SolvedGalleryEntry } from '../../types/index'
-import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
+import {
+  hasGalleryChallengeSetup,
+  isGalleryChallengeTargetEligible,
+} from '../../utils/galleryReplaySetup.ts'
 import { formatChallengeMedalLabel, getChallengeMedalEmoji } from '../../utils/galleryChallenge.ts'
 import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
 import {
   buildGalleryChallengeSeries,
+  buildGalleryStartStateRelations,
+  buildGalleryStartStateSeries,
   buildGalleryTimelineRelations,
-  GalleryDisplayEntry,
+  type GalleryDisplayEntry,
+  type GalleryStartStateSeries,
   formatGallerySolveCount,
 } from './UploadGalleryDisplayUtils.ts'
 import { getGalleryTimelineComparisonHints } from './galleryComparisonHints.ts'
@@ -68,6 +74,11 @@ function formatChallengeDelta(value: number, unit: string): string {
   return `${Math.abs(value)} ${unit} ${value < 0 ? 'weniger' : 'mehr'}`
 }
 
+function getCompletedAtTimestamp(entry: SolvedGalleryEntry): number {
+  const timestamp = Date.parse(entry.completedAt)
+  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp
+}
+
 export default function UploadGalleryDetailDialog({
   entry,
   onReplayEntry,
@@ -88,6 +99,7 @@ export default function UploadGalleryDetailDialog({
   const collectButtonRef = useRef<HTMLButtonElement>(null)
   const [manualTagInput, setManualTagInput] = useState('')
   const [pendingChallengeTarget, setPendingChallengeTarget] = useState<SolvedGalleryEntry | null>(null)
+  const [expandedStartStateSeriesIds, setExpandedStartStateSeriesIds] = useState<Set<string>>(() => new Set())
   const representativeEntry = entry.representativeEntry
   const detailImage = representativeEntry.sourceImage ?? representativeEntry.previewImage
   const storedPalette = useMemo(() => findStoredDetailPalette(entry), [entry])
@@ -128,13 +140,32 @@ export default function UploadGalleryDetailDialog({
     () => buildGalleryTimelineRelations(timelineEntries),
     [timelineEntries]
   )
+  const challengeRelatedStartStateEntryIds = useMemo(
+    () => new Set(challengeSeries.flatMap((series) => series.relatedStartStateEntries.map((relatedEntry) => relatedEntry.id))),
+    [challengeSeries]
+  )
+  const startStateSeries = useMemo(() => {
+    const challengeEntryIds = new Set([
+      ...Array.from(timelineRelations.attemptsByEntryId.keys()),
+      ...Array.from(timelineRelations.targetsByEntryId.keys()),
+      ...Array.from(challengeRelatedStartStateEntryIds),
+    ])
+
+    return buildGalleryStartStateSeries(timelineEntries, challengeEntryIds)
+  }, [timelineEntries, timelineRelations, challengeRelatedStartStateEntryIds])
+  const startStateRelations = useMemo(
+    () => buildGalleryStartStateRelations(startStateSeries),
+    [startStateSeries]
+  )
   const standaloneTimelineEntries = useMemo(
     () => timelineEntries.filter(
       (timelineEntry) =>
         !timelineRelations.attemptsByEntryId.has(timelineEntry.id)
         && !timelineRelations.targetsByEntryId.has(timelineEntry.id)
+        && !challengeRelatedStartStateEntryIds.has(timelineEntry.id)
+        && !startStateRelations.entriesByEntryId.has(timelineEntry.id)
     ),
-    [timelineEntries, timelineRelations]
+    [timelineEntries, timelineRelations, challengeRelatedStartStateEntryIds, startStateRelations]
   )
   const motifReplayEntry = representativeEntry.sourceImage || representativeEntry.previewImage
     ? representativeEntry
@@ -156,6 +187,18 @@ export default function UploadGalleryDetailDialog({
     normalizedManualTagInput &&
     !aiTags.some((tag) => tag.label.localeCompare(normalizedManualTagInput, 'de', { sensitivity: 'accent' }) === 0)
   )
+
+  const toggleStartStateSeries = useCallback((seriesId: string) => {
+    setExpandedStartStateSeriesIds((currentIds) => {
+      const nextIds = new Set(currentIds)
+      if (nextIds.has(seriesId)) {
+        nextIds.delete(seriesId)
+      } else {
+        nextIds.add(seriesId)
+      }
+      return nextIds
+    })
+  }, [])
 
   const handleAddManualTag = useCallback(async () => {
     if (!canAddManualTag || !onEditTags) return
@@ -210,6 +253,226 @@ export default function UploadGalleryDetailDialog({
         return
     }
   }, [])
+
+  const renderTimelineEntry = (timelineEntry: SolvedGalleryEntry) => {
+    const startStateRelation = startStateRelations.entriesByEntryId.get(timelineEntry.id) ?? null
+    const isCurrentEntry = timelineEntry.id === representativeEntry.id
+    const isDifferentDifficulty = getConfigKey(timelineEntry) !== getConfigKey(representativeEntry)
+    const hasChallengeSetup = hasGalleryChallengeSetup(timelineEntry)
+    const canStartChallenge = isGalleryChallengeTargetEligible(timelineEntry)
+    const startStateRunCount = startStateRelation?.series.entries.length ?? 0
+    const hasStartStateCleanAnchor = Boolean(startStateRelation?.series.cleanAnchorEntry)
+    const isStartStateCleanAnchor = startStateRelation?.series.cleanAnchorEntry?.id === timelineEntry.id
+    const timelineMarkers = [
+      isCurrentEntry ? 'Aktuell' : null,
+      startStateRelation ? `Serie ${startStateRelation.seriesNumber}` : null,
+      startStateRelation
+        ? isStartStateCleanAnchor
+          ? 'Medaillen-Vorlage'
+          : startStateRelation.isOrigin
+            ? 'Ursprung'
+            : 'Uebungslauf'
+        : null,
+      motifReplaySummary.bestTimeEntry?.id === timelineEntry.id ? 'Bestzeit' : null,
+      motifReplaySummary.bestMovesEntry?.id === timelineEntry.id ? 'Bestweg' : null,
+      motifReplaySummary.bestCleanTimeEntry?.id === timelineEntry.id ? 'Clean' : null,
+      isDifferentDifficulty ? 'Andere Stufe' : null,
+      timelineEntry.sourceImage || timelineEntry.previewImage ? null : 'Archiv',
+    ].filter((marker): marker is string => Boolean(marker))
+    const canReplayTimelineEntry = Boolean(timelineEntry.sourceImage ?? timelineEntry.previewImage)
+    const profileLabel = timelineEntry.hasDetailedProfile
+      ? formatAssistanceModeLabel(timelineEntry.assistanceMode)
+      : formatProfileSourceLabel(timelineEntry.hasDetailedProfile)
+    const comparisonHints = getGalleryTimelineComparisonHints(
+      timelineEntry,
+      timelineEntries,
+      motifReplaySummary,
+      representativeEntry
+    )
+    const roleLabel = startStateRelation
+      ? `Startzustand-Serie ${startStateRelation.seriesNumber}`
+      : 'Eigenstaendiger Lauf'
+    const roleDetail = startStateRelation
+      ? hasStartStateCleanAnchor
+        ? `${startStateRunCount} ${startStateRunCount === 1 ? 'Lauf' : 'Laeufe'} mit gleichem Startbrett; cleane Vorlage ist markiert.`
+        : `${startStateRunCount} ${startStateRunCount === 1 ? 'Lauf' : 'Laeufe'} mit gleichem Startbrett; Medaillen nur bei cleanen Vorlagen.`
+      : 'Komplett neuer Lauf ohne Challenge-Bezug.'
+    const mainKicker = startStateRelation
+      ? isStartStateCleanAnchor
+        ? 'Medaillen-Vorlage'
+        : startStateRelation.isOrigin
+        ? 'Ursprung'
+        : `Uebung ${startStateRelation.entryNumber}`
+      : isCurrentEntry ? 'Angezeigt' : 'Lauf'
+
+    return (
+      <article
+        key={timelineEntry.id}
+        className={`gallery-detail-timeline-item ${startStateRelation ? 'is-start-state-series' : 'is-standalone'}${isCurrentEntry ? ' is-current' : ''}${isStartStateCleanAnchor ? ' is-clean-anchor' : ''}`}
+      >
+        <div className="gallery-detail-timeline-content">
+          <div className="gallery-detail-timeline-role">
+            <span>
+              {startStateRelation
+                ? <GitBranch aria-hidden="true" size={13} strokeWidth={2.5} />
+                : <Sparkles aria-hidden="true" size={13} strokeWidth={2.5} />}
+              {' '}
+              {roleLabel}
+            </span>
+            <small>{roleDetail}</small>
+          </div>
+
+          <div className="gallery-detail-timeline-main">
+            <span>{mainKicker}</span>
+            <strong>{formatDifficultyLabel(timelineEntry.config)}</strong>
+            <small>{formatDate(timelineEntry.completedAt)}</small>
+          </div>
+
+          <div className="gallery-detail-timeline-meta" aria-label="Laufwerte">
+            <span>{formatTime(timelineEntry.time)}</span>
+            <span>{timelineEntry.moves} Netto</span>
+            <span>{profileLabel}</span>
+          </div>
+
+          {timelineMarkers.length > 0 ? (
+            <div className="gallery-detail-timeline-chip-section">
+              <span className="gallery-detail-timeline-chip-label">Status</span>
+              <div className="gallery-detail-timeline-markers" aria-label="Laufmarkierungen">
+                {timelineMarkers.map((marker) => (
+                  <span
+                    key={marker}
+                    data-app-tooltip={
+                      marker === 'Aktuell'
+                        ? 'Dieser Lauf ist gerade im Detaildialog ausgewaehlt.'
+                        : marker.startsWith('Serie ')
+                          ? `${startStateRunCount} Laeufe teilen dieses gespeicherte Startbrett.`
+                          : marker === 'Medaillen-Vorlage'
+                            ? 'Clean geloester Lauf dieser Startzustand-Serie; nur solche Laeufe duerfen Medaillen-Vorlage sein.'
+                          : marker === 'Ursprung'
+                            ? 'Erster gespeicherter Lauf dieser Startzustand-Serie.'
+                            : marker === 'Uebungslauf'
+                              ? 'Weiterer Lauf mit demselben gespeicherten Startbrett.'
+                              : marker === 'Bestzeit'
+                                ? 'Schnellster gespeicherter Lauf fuer dieses Motiv.'
+                                : marker === 'Bestweg'
+                                  ? 'Wenigste Netto-Zuege fuer dieses Motiv.'
+                                  : marker === 'Clean'
+                                    ? 'Bester Lauf ohne Hilfen (Hinweise, Ghost, Heatmap, Auto-Zuege oder Solver).'
+                                    : marker === 'Archiv'
+                                      ? 'Bilddaten sind nicht mehr fuer Replay verfuegbar.'
+                                      : 'Dieser Lauf liegt auf einer anderen Schwierigkeit.'
+                    }
+                    data-app-tooltip-position="top"
+                  >
+                    {marker}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {comparisonHints.length > 0 ? (
+            <div className="gallery-detail-timeline-chip-section">
+              <span className="gallery-detail-timeline-chip-label">Vergleich</span>
+              <div className="gallery-detail-timeline-insights" aria-label="Laufvergleich">
+                {comparisonHints.map((hint) => (
+                  <span
+                    key={hint.label}
+                    className={`is-${hint.tone}`}
+                    data-app-tooltip={hint.label}
+                    data-app-tooltip-position="top"
+                  >
+                    {hint.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="gallery-detail-timeline-action-stack">
+          <GalleryStartBoardPreview
+            entry={timelineEntry}
+            className="gallery-detail-timeline-preview"
+          />
+
+          <div className="gallery-detail-timeline-action-buttons">
+            <button
+              type="button"
+              className="gallery-detail-timeline-action"
+              disabled={!canReplayTimelineEntry}
+              onClick={() => {
+                if (canStartChallenge) {
+                  setPendingChallengeTarget(timelineEntry)
+                } else {
+                  onReplayEntry(timelineEntry, 'run')
+                }
+              }}
+              onKeyDown={handleActionKeyDown}
+              aria-label={`Lauf ${formatDifficultyLabel(timelineEntry.config)} vom ${formatDate(timelineEntry.completedAt)} spielen`}
+              data-app-tooltip={
+                canReplayTimelineEntry
+                  ? canStartChallenge
+                    ? 'Cleanen gespeicherten Startzustand als Medaillen-Challenge wiederholen.'
+                    : hasChallengeSetup
+                      ? 'Dieser Lauf wurde nicht clean geloest und startet deshalb nur als Uebung ohne Medaille.'
+                      : (timelineEntry.cropTransform ? 'Gespeicherten Ausschnitt erneut spielen.' : 'Motiv neu laden und spielen.')
+                  : 'Archivierter Lauf ohne verfuegbare Bilddaten.'
+              }
+              data-app-tooltip-position="top"
+            >
+              {canReplayTimelineEntry
+                ? canStartChallenge
+                  ? 'Challenge starten'
+                  : hasChallengeSetup
+                    ? 'Startzustand ueben'
+                    : (timelineEntry.cropTransform ? 'Ausschnitt spielen' : 'Motiv spielen')
+                : 'Archiv'}
+            </button>
+          </div>
+        </div>
+      </article>
+    )
+  }
+
+  const renderStartStateSeries = (series: GalleryStartStateSeries) => {
+    const isExpanded = expandedStartStateSeriesIds.has(series.seriesId)
+    const primaryEntries = series.cleanAnchorEntry
+      ? series.entries.filter(isGalleryChallengeTargetEligible)
+      : series.entries
+    const hiddenPracticeEntries = series.cleanAnchorEntry
+      ? series.entries.filter((seriesEntry) => !isGalleryChallengeTargetEligible(seriesEntry))
+      : []
+    const visibleEntries = isExpanded
+      ? [...primaryEntries, ...hiddenPracticeEntries]
+      : primaryEntries
+    const hiddenPracticeCount = hiddenPracticeEntries.length
+    const hiddenPracticeLabel = `${hiddenPracticeCount} ${hiddenPracticeCount === 1 ? 'Uebungslauf' : 'Uebungslaeufe'}`
+
+    return (
+      <div key={series.seriesId} className="gallery-detail-start-state-group">
+        {visibleEntries.map(renderTimelineEntry)}
+
+        {hiddenPracticeCount > 0 ? (
+          <div className="gallery-detail-start-state-tools">
+            <button
+              type="button"
+              className="gallery-detail-start-state-toggle"
+              aria-expanded={isExpanded}
+              onClick={() => toggleStartStateSeries(series.seriesId)}
+              onKeyDown={handleActionKeyDown}
+              data-app-tooltip="Assistierte Laeufe dieser Serie nur visuell ein- oder ausblenden; Daten bleiben erhalten."
+              data-app-tooltip-position="top"
+            >
+              {isExpanded
+                ? `${hiddenPracticeLabel} ausblenden`
+                : `${hiddenPracticeLabel} anzeigen`}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -520,9 +783,14 @@ export default function UploadGalleryDetailDialog({
                   const target = series.targetEntry
                   const bestAttempt = series.bestAttempt
                   const targetOrigin = timelineRelations.attemptsByEntryId.get(series.targetId) ?? null
-                  const canChallengeAgain = Boolean(
+                  const canReplayTargetStart = Boolean(
                     target
                     && hasGalleryChallengeSetup(target)
+                    && (target.sourceImage ?? target.previewImage)
+                  )
+                  const canChallengeAgain = Boolean(
+                    target
+                    && isGalleryChallengeTargetEligible(target)
                     && (target.sourceImage ?? target.previewImage)
                   )
                   const bestTimeDelta = target ? bestAttempt.time - target.time : null
@@ -530,6 +798,11 @@ export default function UploadGalleryDetailDialog({
                   const chronologicalAttempts = [...series.attempts].sort(
                     (a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt)
                   )
+                  const startStateFamilyOriginId = target
+                    ? [target, ...series.relatedStartStateEntries].sort(
+                        (a, b) => getCompletedAtTimestamp(a) - getCompletedAtTimestamp(b)
+                      )[0]?.id ?? target.id
+                    : null
 
                   return (
                     <article
@@ -593,19 +866,28 @@ export default function UploadGalleryDetailDialog({
                           <button
                             type="button"
                             className="gallery-detail-challenge-replay"
-                            disabled={!canChallengeAgain || !target}
+                            disabled={!canReplayTargetStart || !target}
                             onClick={() => {
-                              if (target) {
+                              if (!target) return
+                              if (canChallengeAgain) {
                                 setPendingChallengeTarget(target)
+                              } else {
+                                onReplayEntry(target, 'run')
                               }
                             }}
                             onKeyDown={handleActionKeyDown}
                             data-app-tooltip={canChallengeAgain
-                              ? 'Nur diese Vorlage mit demselben gespeicherten Startzustand erneut herausfordern.'
-                              : 'Die Vorlage kann nicht erneut als Challenge gestartet werden.'}
+                              ? 'Nur diese cleane Vorlage mit demselben gespeicherten Startzustand erneut herausfordern.'
+                              : canReplayTargetStart
+                                ? 'Dieser Lauf wurde nicht clean geloest und startet deshalb nur als Uebung ohne Medaille.'
+                                : 'Die Vorlage kann nicht erneut als Challenge gestartet werden.'}
                             data-app-tooltip-position="top"
                           >
-                            Vorlage herausfordern
+                            {canChallengeAgain
+                              ? 'Vorlage herausfordern'
+                              : canReplayTargetStart
+                                ? 'Startzustand ueben'
+                                : 'Vorlage nicht verfuegbar'}
                           </button>
                         </div>
                       </div>
@@ -703,9 +985,96 @@ export default function UploadGalleryDetailDialog({
                             })}
                         </div>
                       </div>
+
+                      {series.relatedStartStateEntries.length > 0 ? (
+                        <div className="gallery-detail-challenge-related-start-state">
+                          <div className="gallery-detail-challenge-related-head">
+                            <GitBranch aria-hidden="true" size={16} strokeWidth={2.4} />
+                            <span>Verwandte Startzustandslaeufe</span>
+                            <strong>
+                              {series.relatedStartStateEntries.length} {series.relatedStartStateEntries.length === 1 ? 'Lauf' : 'Laeufe'}
+                            </strong>
+                          </div>
+                          <p>
+                            Gleiches Startbrett wie die Vorlage, aber nicht Teil der Medaillenwertung.
+                          </p>
+                          <div className="gallery-detail-challenge-related-list">
+                            {series.relatedStartStateEntries.map((relatedEntry) => {
+                              const canReplayRelatedEntry = Boolean(relatedEntry.sourceImage ?? relatedEntry.previewImage)
+                              const canStartRelatedChallenge = isGalleryChallengeTargetEligible(relatedEntry)
+                              const relatedHasChallengeSetup = hasGalleryChallengeSetup(relatedEntry)
+                              const relatedRole = relatedEntry.id === startStateFamilyOriginId
+                                ? 'Verwandter Ursprung'
+                                : canStartRelatedChallenge
+                                  ? 'Alternative cleane Vorlage'
+                                  : 'Verwandter Uebungslauf'
+
+                              return (
+                                <div key={relatedEntry.id} className="gallery-detail-challenge-related-row">
+                                  <span className="gallery-detail-challenge-related-node" aria-hidden="true">
+                                    <GitBranch size={13} strokeWidth={2.5} />
+                                  </span>
+                                  <div>
+                                    <span>{relatedRole}</span>
+                                    <strong>{formatTime(relatedEntry.time)} - {relatedEntry.moves} Netto</strong>
+                                    <small>
+                                      {formatDate(relatedEntry.completedAt)} - {formatAssistanceModeLabel(relatedEntry.assistanceMode)}
+                                    </small>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="gallery-detail-challenge-related-action"
+                                    disabled={!canReplayRelatedEntry}
+                                    onClick={() => {
+                                      if (canStartRelatedChallenge) {
+                                        setPendingChallengeTarget(relatedEntry)
+                                      } else {
+                                        onReplayEntry(relatedEntry, 'run')
+                                      }
+                                    }}
+                                    onKeyDown={handleActionKeyDown}
+                                    aria-label={`Verwandten Startzustandslauf ${formatDifficultyLabel(relatedEntry.config)} vom ${formatDate(relatedEntry.completedAt)} spielen`}
+                                    data-app-tooltip={canReplayRelatedEntry
+                                      ? canStartRelatedChallenge
+                                        ? 'Cleanen verwandten Startzustandslauf als eigene Medaillen-Vorlage starten.'
+                                        : relatedHasChallengeSetup
+                                          ? 'Verwandten Startzustand als Uebung ohne Medaille spielen.'
+                                          : 'Verwandten Lauf erneut spielen.'
+                                      : 'Archivierter Lauf ohne verfuegbare Bilddaten.'}
+                                    data-app-tooltip-position="top"
+                                  >
+                                    {canReplayRelatedEntry
+                                      ? canStartRelatedChallenge
+                                        ? 'Challenge starten'
+                                        : relatedHasChallengeSetup
+                                          ? 'Startzustand ueben'
+                                          : 'Lauf spielen'
+                                      : 'Archiv'}
+                                  </button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
                     </article>
                   )
                 })}
+              </div>
+            </section>
+          ) : null}
+
+          {startStateSeries.length > 0 ? (
+            <section className="gallery-detail-timeline" aria-labelledby="gallery-detail-start-state-title">
+              <div className="gallery-detail-replay-header">
+                <span id="gallery-detail-start-state-title" className="saved-games-kicker">Startzustand-Serien</span>
+                <p className="gallery-detail-replay-copy">
+                  Laeufe mit gleichem gespeichertem Startbrett, aber ohne gespeicherten Challenge-Serienbezug; cleane Vorlagen stehen zuerst.
+                </p>
+              </div>
+
+              <div className="gallery-detail-timeline-list" data-gallery-detail-action-group="true">
+                {startStateSeries.map(renderStartStateSeries)}
               </div>
             </section>
           ) : null}
@@ -715,144 +1084,12 @@ export default function UploadGalleryDetailDialog({
               <div className="gallery-detail-replay-header">
                 <span id="gallery-detail-timeline-title" className="saved-games-kicker">Eigenstaendige Laeufe</span>
                 <p className="gallery-detail-replay-copy">
-                  Eigene Startzustaende ohne Verbindung zu einer bestehenden Challenge-Serie.
+                  Eigene Startzustaende ohne Verbindung zu einer bestehenden Challenge- oder Startzustand-Serie.
                 </p>
               </div>
 
               <div className="gallery-detail-timeline-list" data-gallery-detail-action-group="true">
-                {standaloneTimelineEntries.map((timelineEntry) => {
-                  const isCurrentEntry = timelineEntry.id === representativeEntry.id
-                  const isDifferentDifficulty = getConfigKey(timelineEntry) !== getConfigKey(representativeEntry)
-                  const hasChallengeSetup = hasGalleryChallengeSetup(timelineEntry)
-                  const timelineMarkers = [
-                    isCurrentEntry ? 'Aktuell' : null,
-                    motifReplaySummary.bestTimeEntry?.id === timelineEntry.id ? 'Bestzeit' : null,
-                    motifReplaySummary.bestMovesEntry?.id === timelineEntry.id ? 'Bestweg' : null,
-                    motifReplaySummary.bestCleanTimeEntry?.id === timelineEntry.id ? 'Clean' : null,
-                    isDifferentDifficulty ? 'Andere Stufe' : null,
-                    timelineEntry.sourceImage || timelineEntry.previewImage ? null : 'Archiv',
-                  ].filter((marker): marker is string => Boolean(marker))
-                  const canReplayTimelineEntry = Boolean(timelineEntry.sourceImage ?? timelineEntry.previewImage)
-                  const profileLabel = timelineEntry.hasDetailedProfile
-                    ? formatAssistanceModeLabel(timelineEntry.assistanceMode)
-                    : formatProfileSourceLabel(timelineEntry.hasDetailedProfile)
-                  const comparisonHints = getGalleryTimelineComparisonHints(
-                    timelineEntry,
-                    timelineEntries,
-                    motifReplaySummary,
-                    representativeEntry
-                  )
-                  return (
-                    <article
-                      key={timelineEntry.id}
-                      className={`gallery-detail-timeline-item is-standalone${isCurrentEntry ? ' is-current' : ''}`}
-                    >
-                      <div className="gallery-detail-timeline-content">
-                        <div className="gallery-detail-timeline-role">
-                          <span><Sparkles aria-hidden="true" size={13} strokeWidth={2.5} /> Eigenstaendiger Lauf</span>
-                          <small>Komplett neuer Lauf ohne Challenge-Bezug.</small>
-                        </div>
-
-                        <div className="gallery-detail-timeline-main">
-                          <span>{isCurrentEntry ? 'Angezeigt' : 'Lauf'}</span>
-                          <strong>{formatDifficultyLabel(timelineEntry.config)}</strong>
-                          <small>{formatDate(timelineEntry.completedAt)}</small>
-                        </div>
-
-                        <div className="gallery-detail-timeline-meta" aria-label="Laufwerte">
-                          <span>{formatTime(timelineEntry.time)}</span>
-                          <span>{timelineEntry.moves} Netto</span>
-                          <span>{profileLabel}</span>
-                        </div>
-
-                        {timelineMarkers.length > 0 ? (
-                          <div className="gallery-detail-timeline-chip-section">
-                            <span className="gallery-detail-timeline-chip-label">Status</span>
-                            <div className="gallery-detail-timeline-markers" aria-label="Laufmarkierungen">
-                              {timelineMarkers.map((marker) => (
-                                <span
-                                  key={marker}
-                                  data-app-tooltip={
-                                    marker === 'Aktuell'
-                                      ? 'Dieser Lauf ist gerade im Detaildialog ausgewaehlt.'
-                                      : marker === 'Bestzeit'
-                                        ? 'Schnellster gespeicherter Lauf fuer dieses Motiv.'
-                                        : marker === 'Bestweg'
-                                          ? 'Wenigste Netto-Zuege fuer dieses Motiv.'
-                                          : marker === 'Clean'
-                                            ? 'Bester Lauf ohne Hinweise, Auto-Zuege oder Solver.'
-                                            : marker === 'Archiv'
-                                              ? 'Bilddaten sind nicht mehr fuer Replay verfuegbar.'
-                                              : 'Dieser Lauf liegt auf einer anderen Schwierigkeit.'
-                                  }
-                                  data-app-tooltip-position="top"
-                                >
-                                  {marker}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {comparisonHints.length > 0 ? (
-                          <div className="gallery-detail-timeline-chip-section">
-                            <span className="gallery-detail-timeline-chip-label">Vergleich</span>
-                            <div className="gallery-detail-timeline-insights" aria-label="Laufvergleich">
-                              {comparisonHints.map((hint) => (
-                                <span
-                                  key={hint.label}
-                                  className={`is-${hint.tone}`}
-                                  data-app-tooltip={hint.label}
-                                  data-app-tooltip-position="top"
-                                >
-                                  {hint.label}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div className="gallery-detail-timeline-action-stack">
-                        <GalleryStartBoardPreview
-                          entry={timelineEntry}
-                          className="gallery-detail-timeline-preview"
-                        />
-
-                        <div className="gallery-detail-timeline-action-buttons">
-                          <button
-                            type="button"
-                            className="gallery-detail-timeline-action"
-                            disabled={!canReplayTimelineEntry}
-                            onClick={() => {
-                              if (hasChallengeSetup) {
-                                setPendingChallengeTarget(timelineEntry)
-                              } else {
-                                onReplayEntry(timelineEntry, 'run')
-                              }
-                            }}
-                            onKeyDown={handleActionKeyDown}
-                            aria-label={`Lauf ${formatDifficultyLabel(timelineEntry.config)} vom ${formatDate(timelineEntry.completedAt)} spielen`}
-                            data-app-tooltip={
-                              canReplayTimelineEntry
-                                ? hasChallengeSetup
-                                  ? 'Diesen Lauf mit seinem gespeicherten Startzustand wiederholen.'
-                                  : (timelineEntry.cropTransform ? 'Gespeicherten Ausschnitt erneut spielen.' : 'Motiv neu laden und spielen.')
-                                : 'Archivierter Lauf ohne verfuegbare Bilddaten.'
-                            }
-                            data-app-tooltip-position="top"
-                          >
-                            {canReplayTimelineEntry
-                              ? hasChallengeSetup
-                                ? 'Challenge starten'
-                                : (timelineEntry.cropTransform ? 'Ausschnitt spielen' : 'Motiv spielen')
-                              : 'Archiv'}
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  )
-                })}
+                {standaloneTimelineEntries.map(renderTimelineEntry)}
               </div>
             </section>
           ) : null}

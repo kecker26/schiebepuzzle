@@ -71,6 +71,8 @@ describe('galleryChallenge', () => {
 
   it('begrenzt assistierte Laeufe trotz zweier unterbotener Ziele auf Silber', () => {
     expect(deriveChallengeMedal(createStats({ assistanceMode: 'auto-assisted' }), target)).toBe('silver')
+    expect(deriveChallengeMedal(createStats({ ghostUsageCount: 1 }), target)).toBe('silver')
+    expect(deriveChallengeMedal(createStats({ heatmapUsageCount: 1 }), target)).toBe('silver')
   })
 
   it('ermittelt die beste gespeicherte Medaille', () => {
@@ -101,7 +103,7 @@ describe('galleryChallenge', () => {
 
   it('erklaert Assistance-Deckelung und das naechste Medaillenziel', () => {
     const assistedStats = createStats({ assistanceMode: 'hinted' })
-    expect(getChallengeMedalExplanation(assistedStats, target, 'silver')).toContain('ohne Hinweise')
+    expect(getChallengeMedalExplanation(assistedStats, target, 'silver')).toContain('ohne Hilfe')
     expect(getNextChallengeMedalGoal(assistedStats, target, 'silver')).toEqual({
       medal: 'gold',
       label: 'ohne Hilfe',

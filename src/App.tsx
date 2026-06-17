@@ -122,6 +122,7 @@ import { deriveChallengeMedal, getPreviousBestChallengeMedalForMotif } from './u
 import { DEFAULT_PUZZLE_CONFIG, getNextDifficultyOption } from './utils/puzzleDifficulty.ts'
 import {
   createGalleryChallengeTarget,
+  isGalleryChallengeTargetEligible,
   isGalleryReplaySetupCompatible,
 } from './utils/galleryReplaySetup.ts'
 
@@ -134,6 +135,12 @@ function waitFor(ms: number): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms)
   })
+}
+
+function isCleanPersistedChallengeTarget(
+  target: GalleryChallengeTarget | null | undefined
+): target is GalleryChallengeTarget {
+  return Boolean(target && target.assistanceMode === 'clean')
 }
 
 async function generateSavedGameTitleWithRetry(saveId: string): Promise<SavedGameSummary> {
@@ -1391,7 +1398,11 @@ export default function App() {
       setCroppedImage(loaded.croppedImage)
       setConfig(loaded.config)
       setSavedProgress(loaded.progress)
-      setActiveGalleryChallengeTarget(loaded.progress.challengeTarget ?? null)
+      setActiveGalleryChallengeTarget(
+        isCleanPersistedChallengeTarget(loaded.progress.challengeTarget)
+          ? loaded.progress.challengeTarget
+          : null
+      )
       setIsRandomImage(false)
       setRandomImageSource(null)
       setRandomImageQuery('')
@@ -1751,6 +1762,7 @@ export default function App() {
     const canStartGalleryChallenge = Boolean(
       pendingGalleryReplaySetup
       && pendingGalleryChallengeTarget
+      && isCleanPersistedChallengeTarget(pendingGalleryChallengeTarget)
       && isGalleryReplaySetupCompatible(pendingGalleryReplaySetup, config)
       && pendingGalleryReplayConfig?.rows === config.rows
       && pendingGalleryReplayConfig?.cols === config.cols
@@ -1802,6 +1814,12 @@ export default function App() {
       redoCount: stats.redoCount,
       hintCount: stats.hintCount,
       suggestedMoveCount: stats.suggestedMoveCount,
+      ghostUsageCount: stats.ghostUsageCount,
+      ghostUsageDurationMs: stats.ghostUsageDurationMs,
+      ghostUsageByMode: stats.ghostUsageByMode,
+      heatmapUsageCount: stats.heatmapUsageCount,
+      heatmapUsageDurationMs: stats.heatmapUsageDurationMs,
+      heatmapUsageByMode: stats.heatmapUsageByMode,
       previewImage: croppedImage ? await createCompletionPreviewImage(croppedImage) : null,
     }),
     [croppedImage]
@@ -2042,6 +2060,7 @@ export default function App() {
     const replaySetup = isGalleryReplaySetupCompatible(entry.replaySetup, entry.config)
       ? entry.replaySetup
       : null
+    const canStartGalleryChallenge = isGalleryChallengeTargetEligible(entry)
 
     if (mode === 'run' && replaySetup) {
       scrollViewportToTop()
@@ -2081,7 +2100,7 @@ export default function App() {
           setPendingGalleryReplaySetup(null)
           setPendingGalleryChallengeTarget(null)
           setActiveGalleryReplaySetup(replaySetup)
-          setActiveGalleryChallengeTarget(createGalleryChallengeTarget(entry))
+          setActiveGalleryChallengeTarget(canStartGalleryChallenge ? createGalleryChallengeTarget(entry) : null)
           setWinEffectTags(entry.tags ?? [])
           setConfig(entry.config)
           setImagePalette(entry.imageTheme ?? null)
@@ -2124,7 +2143,7 @@ export default function App() {
     setPendingGalleryReplayConfig(mode === 'run' ? entry.config : null)
     setPendingGalleryReplayUseFullImage(mode === 'run' ? (entry.useFullImage ?? false) : null)
     setPendingGalleryReplaySetup(mode === 'run' ? replaySetup : null)
-    setPendingGalleryChallengeTarget(mode === 'run' && replaySetup ? createGalleryChallengeTarget(entry) : null)
+    setPendingGalleryChallengeTarget(mode === 'run' && replaySetup && canStartGalleryChallenge ? createGalleryChallengeTarget(entry) : null)
     setActiveGalleryReplaySetup(null)
     setActiveGalleryChallengeTarget(null)
     setWinEffectTags(entry.tags ?? [])

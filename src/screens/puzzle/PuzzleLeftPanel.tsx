@@ -12,6 +12,8 @@ import { type PuzzleProgressMetrics } from '../../services/PuzzleSolver.ts'
 import {
   type GalleryChallengeTarget,
   type GhostPreviewMode,
+  type GhostPreviewMotion,
+  type GhostPreviewScope,
   type HeatmapMode,
   type PuzzleAssistanceMode,
 } from '../../types/index'
@@ -46,7 +48,12 @@ interface PuzzleLeftPanelProps {
   isHeatmapOverlayVisible: boolean
   areTileNumbersVisible: boolean
   ghostPreviewMode: GhostPreviewMode
+  ghostPreviewScope: GhostPreviewScope
+  ghostPreviewMotion: GhostPreviewMotion
+  isGhostPreviewProgressive: boolean
   ghostPreviewWeight: number
+  ghostUsageCount: number
+  ghostUsageDurationMs: number
   heatmapMode: HeatmapMode
   heatmapIntensity: number
   areHeatmapDistancesVisible: boolean
@@ -65,6 +72,9 @@ interface PuzzleLeftPanelProps {
   onToggleHeatmapOverlay: () => void
   onShowTileNumbers: () => void
   onGhostPreviewModeChange: (mode: GhostPreviewMode) => void
+  onGhostPreviewScopeChange: (scope: GhostPreviewScope) => void
+  onGhostPreviewMotionChange: (motion: GhostPreviewMotion) => void
+  onToggleGhostPreviewProgressive: () => void
   onGhostPreviewWeightChange: (event: ChangeEvent<HTMLInputElement>) => void
   onHeatmapModeChange: (mode: HeatmapMode) => void
   onHeatmapIntensityChange: (event: ChangeEvent<HTMLInputElement>) => void
@@ -220,7 +230,12 @@ export default function PuzzleLeftPanel({
   isHeatmapOverlayVisible,
   areTileNumbersVisible,
   ghostPreviewMode,
+  ghostPreviewScope,
+  ghostPreviewMotion,
+  isGhostPreviewProgressive,
   ghostPreviewWeight,
+  ghostUsageCount,
+  ghostUsageDurationMs,
   heatmapMode,
   heatmapIntensity,
   areHeatmapDistancesVisible,
@@ -239,6 +254,9 @@ export default function PuzzleLeftPanel({
   onToggleHeatmapOverlay,
   onShowTileNumbers,
   onGhostPreviewModeChange,
+  onGhostPreviewScopeChange,
+  onGhostPreviewMotionChange,
+  onToggleGhostPreviewProgressive,
   onGhostPreviewWeightChange,
   onHeatmapModeChange,
   onHeatmapIntensityChange,
@@ -692,6 +710,46 @@ export default function PuzzleLeftPanel({
                 </button>
               ))}
             </div>
+            <div className="puzzle-ghost-mode-selector puzzle-ghost-mode-selector--two" role="group" aria-label="Bereich der Geisteransicht">
+              <button
+                type="button"
+                className={`puzzle-ghost-mode-button${ghostPreviewScope === 'misplaced' ? ' is-active' : ''}`}
+                onClick={() => onGhostPreviewScopeChange('misplaced')}
+                aria-pressed={ghostPreviewScope === 'misplaced'}
+                data-app-tooltip="Zeigt das Zielbild auf allen noch falsch platzierten Kacheln."
+              >
+                Falsche Kacheln
+              </button>
+              <button
+                type="button"
+                className={`puzzle-ghost-mode-button${ghostPreviewScope === 'focus' ? ' is-active' : ''}`}
+                onClick={() => onGhostPreviewScopeChange('focus')}
+                aria-pressed={ghostPreviewScope === 'focus'}
+                data-app-tooltip="Zeigt das Zielbild gezielt auf der Kachel unter Mauszeiger oder Referenzfokus."
+              >
+                Fokus-Kachel
+              </button>
+            </div>
+            <div className="puzzle-ghost-mode-selector puzzle-ghost-mode-selector--two" role="group" aria-label="Verhalten der Geisteransicht">
+              <button
+                type="button"
+                className={`puzzle-ghost-mode-button${ghostPreviewMotion === 'pulse' ? ' is-active' : ''}`}
+                onClick={() => onGhostPreviewMotionChange(ghostPreviewMotion === 'pulse' ? 'static' : 'pulse')}
+                aria-pressed={ghostPreviewMotion === 'pulse'}
+                data-app-tooltip="Laesst das Zielbild sanft pulsieren. Bei reduzierter Bewegung bleibt es statisch."
+              >
+                Pulsieren
+              </button>
+              <button
+                type="button"
+                className={`puzzle-ghost-mode-button${isGhostPreviewProgressive ? ' is-active' : ''}`}
+                onClick={onToggleGhostPreviewProgressive}
+                aria-pressed={isGhostPreviewProgressive}
+                data-app-tooltip="Schwaecht das Geisterbild mit dem hoechsten erreichten Spielfortschritt ab."
+              >
+                Progressiv
+              </button>
+            </div>
             <input
               type="range"
               min="0"
@@ -707,6 +765,10 @@ export default function PuzzleLeftPanel({
               <span>{activeGhostPreviewMode.sliderLabel} {ghostPreviewWeight}%</span>
             </div>
             <p className="puzzle-ghost-mode-copy">{activeGhostPreviewMode.description}</p>
+            <p className="puzzle-ghost-mode-copy">
+              Diese Runde: {ghostUsageCount} Aktivierungen, {Math.round(ghostUsageDurationMs / 1000)}s sichtbar.
+              Shift+G wechselt die Darstellung, + / - aendert die Staerke.
+            </p>
           </AnimatedReveal>
         )}
       </AnimatePresence>

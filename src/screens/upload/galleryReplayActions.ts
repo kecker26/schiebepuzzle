@@ -1,5 +1,8 @@
 import { SolvedGalleryEntry } from '../../types/index'
-import { hasGalleryChallengeSetup } from '../../utils/galleryReplaySetup.ts'
+import {
+  hasGalleryChallengeSetup,
+  isGalleryChallengeTargetEligible,
+} from '../../utils/galleryReplaySetup.ts'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import type { GalleryDisplayEntry } from './UploadGalleryDisplayUtils.ts'
 import { formatDate, formatTime } from './uploadUtils.ts'
@@ -18,6 +21,14 @@ function isReplayableEntry(entry: SolvedGalleryEntry | null | undefined): entry 
 
 function createReplaySummary(entry: SolvedGalleryEntry): string {
   return `${formatDifficultyLabel(entry.config)}, ${formatTime(entry.time)}, ${entry.moves} Netto`
+}
+
+function createReplayDescription(entry: SolvedGalleryEntry, fallback: string): string {
+  if (!hasGalleryChallengeSetup(entry)) return fallback
+
+  return isGalleryChallengeTargetEligible(entry)
+    ? `Startet die cleane Medaillen-Vorlage vom ${formatDate(entry.completedAt)} erneut.`
+    : `Wiederholt den gespeicherten Startzustand vom ${formatDate(entry.completedAt)} als Uebung ohne Medaille.`
 }
 
 export function getGalleryReplayActions(entry: GalleryDisplayEntry): GalleryReplayAction[] {
@@ -51,9 +62,10 @@ export function getGalleryReplayActions(entry: GalleryDisplayEntry): GalleryRepl
       'current',
       'Spielen',
       representativeEntry,
-      hasGalleryChallengeSetup(representativeEntry)
-        ? `Startet den gespeicherten Startzustand vom ${formatDate(representativeEntry.completedAt)} erneut.`
-        : `Startet das Motiv vom ${formatDate(representativeEntry.completedAt)} mit gespeicherter Stufe${representativeEntry.cropTransform ? ' und gespeichertem Ausschnitt' : ''} neu.`
+      createReplayDescription(
+        representativeEntry,
+        `Startet das Motiv vom ${formatDate(representativeEntry.completedAt)} mit gespeicherter Stufe${representativeEntry.cropTransform ? ' und gespeichertem Ausschnitt' : ''} neu.`
+      )
     )
   } else {
     pushAction(
@@ -61,9 +73,10 @@ export function getGalleryReplayActions(entry: GalleryDisplayEntry): GalleryRepl
       'Spielen',
       motifReplaySummary.lastReplayableEntry,
       motifReplaySummary.lastReplayableEntry
-        ? hasGalleryChallengeSetup(motifReplaySummary.lastReplayableEntry)
-          ? `Startet den juengsten gespeicherten Startzustand vom ${formatDate(motifReplaySummary.lastReplayableEntry.completedAt)} erneut.`
-          : `Startet den juengsten noch spielbaren Galerie-Eintrag vom ${formatDate(motifReplaySummary.lastReplayableEntry.completedAt)} neu.`
+        ? createReplayDescription(
+          motifReplaySummary.lastReplayableEntry,
+          `Startet den juengsten noch spielbaren Galerie-Eintrag vom ${formatDate(motifReplaySummary.lastReplayableEntry.completedAt)} neu.`
+        )
         : ''
     )
   }

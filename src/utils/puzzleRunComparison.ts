@@ -18,11 +18,24 @@ type ComparableRunInput =
       | 'assistanceMode'
       | 'hintCount'
       | 'suggestedMoveCount'
+      | 'ghostUsageCount'
+      | 'ghostUsageDurationMs'
+      | 'heatmapUsageCount'
+      | 'heatmapUsageDurationMs'
       | 'hasDetailedProfile'
     >
   | Pick<
       WinStats,
-      'moves' | 'time' | 'actionMoves' | 'assistanceMode' | 'hintCount' | 'suggestedMoveCount'
+      | 'moves'
+      | 'time'
+      | 'actionMoves'
+      | 'assistanceMode'
+      | 'hintCount'
+      | 'suggestedMoveCount'
+      | 'ghostUsageCount'
+      | 'ghostUsageDurationMs'
+      | 'heatmapUsageCount'
+      | 'heatmapUsageDurationMs'
     >
 
 export interface ComparablePuzzleRun {
@@ -32,6 +45,10 @@ export interface ComparablePuzzleRun {
   assistanceMode: PuzzleAssistanceMode
   hintCount: number
   suggestedMoveCount: number
+  ghostUsageCount: number
+  ghostUsageDurationMs: number
+  heatmapUsageCount: number
+  heatmapUsageDurationMs: number
   hasDetailedProfile: boolean
 }
 
@@ -54,6 +71,8 @@ export interface AssistanceComparison {
   previousMode: PuzzleAssistanceMode | null
   hintDelta: number | null
   suggestedMoveDelta: number | null
+  ghostUsageDelta: number | null
+  heatmapUsageDelta: number | null
   trend: ComparisonTrend
 }
 
@@ -65,6 +84,10 @@ export function toComparableRun(run: ComparableRunInput): ComparablePuzzleRun {
     assistanceMode: run.assistanceMode,
     hintCount: run.hintCount,
     suggestedMoveCount: run.suggestedMoveCount,
+    ghostUsageCount: run.ghostUsageCount ?? 0,
+    ghostUsageDurationMs: run.ghostUsageDurationMs ?? 0,
+    heatmapUsageCount: run.heatmapUsageCount ?? 0,
+    heatmapUsageDurationMs: run.heatmapUsageDurationMs ?? 0,
     hasDetailedProfile: 'hasDetailedProfile' in run ? run.hasDetailedProfile : true,
   }
 }
@@ -136,6 +159,8 @@ export function compareAssistance(
       previousMode: previous?.assistanceMode ?? null,
       hintDelta: null,
       suggestedMoveDelta: null,
+      ghostUsageDelta: null,
+      heatmapUsageDelta: null,
       trend: 'unknown',
     }
   }
@@ -145,6 +170,8 @@ export function compareAssistance(
   const rankDelta = currentRank - previousRank
   const hintDelta = current.hintCount - previous.hintCount
   const suggestedMoveDelta = current.suggestedMoveCount - previous.suggestedMoveCount
+  const ghostUsageDelta = current.ghostUsageCount - previous.ghostUsageCount
+  const heatmapUsageDelta = current.heatmapUsageCount - previous.heatmapUsageCount
 
   let trend: ComparisonTrend = resolveLowerIsBetterTrend(rankDelta)
 
@@ -156,10 +183,20 @@ export function compareAssistance(
     trend = resolveLowerIsBetterTrend(hintDelta)
   }
 
+  if (trend === 'same') {
+    trend = resolveLowerIsBetterTrend(ghostUsageDelta)
+  }
+
+  if (trend === 'same') {
+    trend = resolveLowerIsBetterTrend(heatmapUsageDelta)
+  }
+
   return {
     previousMode: previous.assistanceMode,
     hintDelta,
     suggestedMoveDelta,
+    ghostUsageDelta,
+    heatmapUsageDelta,
     trend,
   }
 }

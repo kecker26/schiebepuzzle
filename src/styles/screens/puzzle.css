@@ -1268,6 +1268,10 @@
   gap: 8px;
 }
 
+.puzzle-ghost-mode-selector--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .puzzle-ghost-mode-button {
   min-height: 36px;
   padding: 7px 8px;

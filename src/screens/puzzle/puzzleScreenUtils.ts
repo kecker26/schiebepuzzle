@@ -1,5 +1,7 @@
 import {
   type GhostPreviewMode,
+  type GhostPreviewMotion,
+  type GhostPreviewScope,
   type HeatmapMode,
   PuzzleMoveDirection,
   PuzzleMoveRecord,
@@ -21,6 +23,8 @@ export const START_APPROXIMATE_SOLUTION_NODE_LIMIT = 900000
 export const START_APPROXIMATE_SOLUTION_TIME_LIMIT_5X5_MS = 10000
 export const START_APPROXIMATE_SOLUTION_TIME_LIMIT_6X6_MS = 15000
 export const GHOST_PREVIEW_MODE_DEFAULT: GhostPreviewMode = 'image'
+export const GHOST_PREVIEW_SCOPE_DEFAULT: GhostPreviewScope = 'misplaced'
+export const GHOST_PREVIEW_MOTION_DEFAULT: GhostPreviewMotion = 'static'
 export const GHOST_PREVIEW_WEIGHT_DEFAULT = 56
 export const HEATMAP_MODE_DEFAULT: HeatmapMode = 'classic'
 export const HEATMAP_INTENSITY_DEFAULT = 100
@@ -117,6 +121,23 @@ export function normalizeGhostPreviewMode(value: unknown): GhostPreviewMode {
   return value === 'contours' || value === 'edges' || value === 'image'
     ? value
     : GHOST_PREVIEW_MODE_DEFAULT
+}
+
+export function normalizeGhostPreviewScope(value: unknown): GhostPreviewScope {
+  return value === 'focus' || value === 'misplaced'
+    ? value
+    : GHOST_PREVIEW_SCOPE_DEFAULT
+}
+
+export function normalizeGhostPreviewMotion(value: unknown): GhostPreviewMotion {
+  return value === 'pulse' || value === 'static'
+    ? value
+    : GHOST_PREVIEW_MOTION_DEFAULT
+}
+
+export function normalizeGhostPreviewProgressPeak(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0
+  return Math.max(0, Math.min(100, Math.round(value)))
 }
 
 export interface HeatmapDisplaySelection {

@@ -200,15 +200,22 @@ function getAssistanceBadgeMeta(entry: PuzzleCompletionRecord): AssistanceBadgeM
   const details = [
     entry.hintCount > 0 ? formatCountLabel(entry.hintCount, 'Hinweis', 'Hinweise') : null,
     entry.suggestedMoveCount > 0 ? `${entry.suggestedMoveCount} Auto` : null,
+    (entry.ghostUsageCount ?? 0) > 0
+      ? `${entry.ghostUsageCount}x Ghost / ${Math.round((entry.ghostUsageDurationMs ?? 0) / 1000)}s`
+      : null,
+    (entry.heatmapUsageCount ?? 0) > 0
+      ? `${entry.heatmapUsageCount}x Heatmap / ${Math.round((entry.heatmapUsageDurationMs ?? 0) / 1000)}s`
+      : null,
   ].filter((detail): detail is string => detail !== null)
 
   if (entry.assistanceMode === 'clean') {
+    const detail = details.join(', ')
     return {
       label: formatAssistanceModeLabel('clean'),
       tone: 'clean',
       icon: 'C',
-      detail: null,
-      title: 'Clean: ohne Hilfen',
+      detail: detail || null,
+      title: detail ? `Clean, Ghost separat: ${detail}` : 'Clean: ohne Hilfen',
     }
   }
 

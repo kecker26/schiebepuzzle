@@ -65,7 +65,7 @@ function formatAssistanceLabel(mode: PuzzleAssistanceMode): string {
     case 'clean':
       return 'Sauber'
     case 'hinted':
-      return 'Mit Hinweisen'
+      return 'Mit Hilfen'
     case 'auto-assisted':
       return 'Mit Auto-Zuegen'
   }
@@ -96,12 +96,24 @@ function formatShortDuration(seconds: number): string {
   return formatTime(seconds)
 }
 
-function formatAssistanceBreakdown(hintCount: number, suggestedMoveCount: number): string {
-  return `${formatCount(hintCount, 'Hinweis', 'Hinweise')}, ${formatCount(
-    suggestedMoveCount,
-    'Auto-Zug',
-    'Auto-Zuege'
-  )}`
+function formatUsageDuration(durationMs: number): string {
+  return `${Math.round(durationMs / 1000)}s`
+}
+
+function formatAssistanceBreakdown(run: {
+  hintCount: number
+  suggestedMoveCount: number
+  ghostUsageCount: number
+  ghostUsageDurationMs: number
+  heatmapUsageCount: number
+  heatmapUsageDurationMs: number
+}): string {
+  return [
+    formatCount(run.hintCount, 'Hinweis', 'Hinweise'),
+    formatCount(run.suggestedMoveCount, 'Auto-Zug', 'Auto-Zuege'),
+    `${run.ghostUsageCount}x Ghost (${formatUsageDuration(run.ghostUsageDurationMs)})`,
+    `${run.heatmapUsageCount}x Heatmap (${formatUsageDuration(run.heatmapUsageDurationMs)})`,
+  ].join(', ')
 }
 
 function getToneClass(tone: ComparisonTone): string {
@@ -286,10 +298,18 @@ export default function WinDialog({
     difficultyStats?.bestMoves ?? null
   )
   const assistanceComparison = compareAssistance(currentRun, previousRun)
+  const visualAidBadges = [
+    currentRun.ghostUsageCount > 0
+      ? `Ghost ${currentRun.ghostUsageCount}x / ${formatUsageDuration(currentRun.ghostUsageDurationMs)}`
+      : null,
+    currentRun.heatmapUsageCount > 0
+      ? `Heatmap ${currentRun.heatmapUsageCount}x / ${formatUsageDuration(currentRun.heatmapUsageDurationMs)}`
+      : null,
+  ].filter((badge): badge is string => badge !== null)
   const comparisonCards: WinComparisonCard[] = completionResult
     ? [
         {
-          label: 'Aktueller Lauf · Zeit',
+          label: 'Aktueller Lauf - Zeit',
           value: formatTime(currentRun.time),
           copy: previousRun
             ? `Letzter abgeschlossener ${difficultyLabel}-Lauf: ${formatTime(previousRun.time)}.`
@@ -310,7 +330,7 @@ export default function WinDialog({
           ].filter((badge): badge is WinComparisonBadge => badge !== null),
         },
         {
-          label: 'Aktueller Lauf · Netto-Zuege',
+          label: 'Aktueller Lauf - Netto-Zuege',
           value: `${currentRun.moves}`,
           copy: `${currentRun.actionMoves} Aktionen, ${extraMoves} Korrekturen in diesem Lauf.`,
           tone: resolveComparisonTone(movesComparison.trend, movesGapComparison.trend),
@@ -328,11 +348,11 @@ export default function WinDialog({
           ].filter((badge): badge is WinComparisonBadge => badge !== null),
         },
         {
-          label: 'Aktueller Lauf · Laufart',
+          label: 'Aktueller Lauf - Laufart',
           value: formatAssistanceLabel(currentRun.assistanceMode),
           copy: previousRun?.hasDetailedProfile
-            ? `Aktueller Lauf: ${formatAssistanceBreakdown(currentRun.hintCount, currentRun.suggestedMoveCount)}. Letzter ${difficultyLabel}-Lauf: ${formatAssistanceBreakdown(previousRun.hintCount, previousRun.suggestedMoveCount)}.`
-            : `Aktueller Lauf: ${formatAssistanceBreakdown(currentRun.hintCount, currentRun.suggestedMoveCount)}. Kein vergleichbares Detailprofil vom letzten ${difficultyLabel}-Lauf.`,
+            ? `Aktueller Lauf: ${formatAssistanceBreakdown(currentRun)}. Letzter ${difficultyLabel}-Lauf: ${formatAssistanceBreakdown(previousRun)}.`
+            : `Aktueller Lauf: ${formatAssistanceBreakdown(currentRun)}. Kein vergleichbares Detailprofil vom letzten ${difficultyLabel}-Lauf.`,
           tone: resolveComparisonTone(assistanceComparison.trend),
           badges: [
             createAssistanceBadge(assistanceComparison.trend, difficultyLabel),
@@ -425,6 +445,11 @@ export default function WinDialog({
               <div className="win-hero-tags">
                 <span className="win-tag win-tag-accent">{difficultyLabel}</span>
                 <span className="win-tag">{formatAssistanceLabel(stats.assistanceMode)}</span>
+                {visualAidBadges.map((badge) => (
+                  <span key={badge} className="win-tag">
+                    {badge}
+                  </span>
+                ))}
                 {achievementBadges.map((badge) => (
                   <span key={badge} className="win-tag win-tag-success">
                     {badge}

@@ -297,7 +297,7 @@ export function formatAssistanceModeLabel(mode: PuzzleAssistanceMode | null | un
     case 'clean':
       return 'Clean'
     case 'hinted':
-      return 'Hinweise'
+      return 'Hilfen'
     case 'auto-assisted':
       return 'Auto-Zug'
     default:
@@ -502,7 +502,7 @@ export const GALLERY_ASSISTANCE_FILTER_OPTIONS: GallerySelectOption<GalleryAssis
   { id: 'all', label: 'Alle Laufarten' },
   { id: 'clean', label: 'Nur clean' },
   { id: 'assisted', label: 'Nur unterstuetzt' },
-  { id: 'hinted', label: 'Nur mit Hinweisen' },
+  { id: 'hinted', label: 'Nur mit Hilfen' },
   { id: 'auto-assisted', label: 'Nur mit Auto-Zug' },
   { id: 'legacy', label: 'Nur Legacy-Daten' },
 ]

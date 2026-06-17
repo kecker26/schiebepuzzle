@@ -5,7 +5,7 @@
 - Halte Aenderungen klein, nachvollziehbar und kompatibel mit dem bestehenden React-, TypeScript- und Vite-Setup.
 
 ## Projektueberblick
-- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Pause mit verdecktem Board, Hinweisen, Solver, Statistik, Galerie, Live-Challenge-Zielvergleich, dauerhaften Challenge-Medaillen, interaktivem KI-Tag-System, manuellen und dauerhaft abgelehnten KI-Tags, tag-basierten Partikeleffekten beim Gewinn, Gemini-Tagging, Gemini-Spielstandstiteln, sentiment-basiertem Bild-Theme, Sammlungen, Backup und Musik.
+- App-Typ: Schiebepuzzle-Web-App mit Startscreen, Bild-Upload, Zufallsbild, KI-generiertem Prompt-Bild, Crop, Spielansicht, Pause mit verdecktem Board, Hinweisen, adaptiver Geisteransicht, Solver, Statistik, Galerie, Live-Challenge-Zielvergleich, dauerhaften Challenge-Medaillen, interaktivem KI-Tag-System, manuellen und dauerhaft abgelehnten KI-Tags, tag-basierten Partikeleffekten beim Gewinn, Gemini-Tagging, Gemini-Spielstandstiteln, sentiment-basiertem Bild-Theme, Sammlungen, Backup und Musik.
 - Frontend: React 18 + TypeScript.
 - Animationen: `motion` / `motion/react` plus `@react-spring/web` fuer federnde Zahlen- und Karten-Mikrointeraktionen.
 - Statistik-Charts: `recharts` fuer responsive Donut- und Line-Charts.
@@ -94,7 +94,10 @@
 - Autosave, Recovery und Last-Session greifen ineinander; vor Aenderungen die Snapshots in `src/app/recoverySession.ts`, `lastSession.ts` und `cropDraftSession.ts` pruefen.
 - Persistierte Daten muessen rueckwaertskompatibel behandelt werden, wenn bestehende Dateien in `spielstaende/` und `backups/` weiter lesbar bleiben sollen. Das gilt auch fuer den Tag-Kategorie-Cache `__tag_category_cache.json` und eigene Kategorien in `__custom_tag_categories.json`.
 - Challenge-Spielstaende speichern das aktive `challengeTarget`; Galerie-Laeufe speichern optional `challengeTargetId` und `challengeMedal`. Fehlende Ziellaeufe duerfen historische Medaillen nicht invalidieren.
+- Neue Medaillen-Vorlagen duerfen nur aus cleanen Galerie-Laeufen mit Detailprofil entstehen; assistierte Startzustaende bleiben als Replay/Uebung moeglich, duerfen aber kein `challengeTarget` setzen.
+- Laeufe mit gleichem gespeicherten Startbrett, aber ohne Challenge-Bezug, werden im Galerie-Detail als neutrale Startzustand-Serien gruppiert statt als eigenstaendige Laeufe. Wenn eine cleane Vorlage in der Serie existiert, wird sie als Medaillen-Vorlage priorisiert; assistierte Uebungslaeufe bleiben erhalten und duerfen nur visuell ein-/ausgeklappt werden. Teilt ein solcher Lauf das Startbrett einer Challenge-Vorlage, wird er als verwandter Startzustandslauf an dieser Challenge-Serie angezeigt, bleibt aber ausserhalb der Medaillenwertung.
 - Sammlungen referenzieren Galerie-Eintraege ueber IDs; beim Laden fehlende Galerie-Referenzen defensiv ausfiltern statt die UI zu blockieren.
 - Wenn neue Features neue Felder in Save- oder Stats-Dateien brauchen, defensiv parsen und sinnvolle Defaults vorsehen.
+- Geisterbild- und Heatmap-Nutzungsfelder (`ghostUsageCount`, `ghostUsageDurationMs`, `ghostUsageByMode`, `heatmapUsageCount`, `heatmapUsageDurationMs`, `heatmapUsageByMode`) werden als separate Laufmetriken behandelt und zaehlen zugleich als Hilfe fuer Clean-/Hint-/Auto-Assistance-Auswertungen sowie Gold-/Diamant-Challenges.
 - Externe Provider duerfen die App nicht blockieren; bei Netzwerk-/API-Fehlern muss ein nutzbarer Fallback oder eine klare Fehlermeldung erhalten bleiben.
 - `localApi.ts` ist gross und traegt mehrere Verantwortungen; neue Endpunkte moeglichst nahe an den bestehenden Handlern und Validierungsfunktionen ergaenzen.

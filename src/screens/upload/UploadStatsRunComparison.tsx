@@ -38,6 +38,10 @@ function formatCount(value: number, singular: string, plural: string): string {
   return `${value} ${value === 1 ? singular : plural}`
 }
 
+function formatUsageDuration(durationMs: number): string {
+  return `${Math.round(durationMs / 1000)}s`
+}
+
 function formatShortDuration(seconds: number): string {
   if (seconds < 60) {
     return formatCount(seconds, 'Sek.', 'Sek.')
@@ -154,12 +158,20 @@ function createAssistanceBadge(
   }
 }
 
-function formatAssistanceBreakdown(hintCount: number, suggestedMoveCount: number): string {
-  return `${formatCount(hintCount, 'Hinweis', 'Hinweise')}, ${formatCount(
-    suggestedMoveCount,
-    'Auto-Zug',
-    'Auto-Zuege'
-  )}`
+function formatAssistanceBreakdown(run: {
+  hintCount: number
+  suggestedMoveCount: number
+  ghostUsageCount: number
+  ghostUsageDurationMs: number
+  heatmapUsageCount: number
+  heatmapUsageDurationMs: number
+}): string {
+  return [
+    formatCount(run.hintCount, 'Hinweis', 'Hinweise'),
+    formatCount(run.suggestedMoveCount, 'Auto-Zug', 'Auto-Zuege'),
+    `${run.ghostUsageCount}x Ghost (${formatUsageDuration(run.ghostUsageDurationMs)})`,
+    `${run.heatmapUsageCount}x Heatmap (${formatUsageDuration(run.heatmapUsageDurationMs)})`,
+  ].join(', ')
 }
 
 export default function UploadStatsRunComparison({
@@ -387,8 +399,8 @@ export default function UploadStatsRunComparison({
           ) : null}
           <p className="stats-report-card-copy">
             {currentRun.hasDetailedProfile
-              ? `Jetzt ${formatAssistanceBreakdown(currentRun.hintCount, currentRun.suggestedMoveCount)}.${previousRun?.hasDetailedProfile
-                ? ` Davor ${formatAssistanceBreakdown(previousRun.hintCount, previousRun.suggestedMoveCount)}.`
+              ? `Jetzt ${formatAssistanceBreakdown(currentRun)}.${previousRun?.hasDetailedProfile
+                ? ` Davor ${formatAssistanceBreakdown(previousRun)}.`
                 : ''}`
               : 'Der neueste Lauf enthaelt kein volles Hilfsprofil.'}
           </p>

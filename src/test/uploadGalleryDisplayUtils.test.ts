@@ -5,6 +5,8 @@ import {
   buildGalleryChallengeSeries,
   buildGalleryChallengeMedalHistory,
   buildGalleryMedalCollection,
+  buildGalleryStartStateRelations,
+  buildGalleryStartStateSeries,
   buildGalleryTimelineRelations,
   getGalleryMedalHuntStatus,
   getGalleryMedalHuntRecommendation,
@@ -428,6 +430,39 @@ describe('UploadGalleryDisplayUtils', () => {
     ])
   })
 
+  it('ordnet verwandte Startzustandslaeufe der passenden Challenge-Serie zu', () => {
+    const replaySetup = {
+      version: 1,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    } satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
+    const target = createGalleryEntry('target', {
+      replaySetup,
+      assistanceMode: 'clean',
+    })
+    const challengeAttempt = createGalleryEntry('challenge-attempt', {
+      replaySetup,
+      challengeTargetId: target.id,
+      challengeMedal: 'silver',
+    })
+    const origin = createGalleryEntry('origin', {
+      completedAt: '2026-04-20T12:00:00.000Z',
+      replaySetup,
+      assistanceMode: 'auto-assisted',
+    })
+    const unrelated = createGalleryEntry('unrelated', {
+      replaySetup: {
+        ...replaySetup,
+        startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0, 14, 15],
+      },
+    })
+
+    const [series] = buildGalleryChallengeSeries([unrelated, challengeAttempt, origin, target])
+
+    expect(series.relatedStartStateEntries.map((entry) => entry.id)).toEqual(['origin'])
+  })
+
   it('erkennt bestaetigte Medaillen und Aufstiege chronologisch', () => {
     const history = buildGalleryChallengeMedalHistory([
       createGalleryEntry('silver-later', {
@@ -510,6 +545,106 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(relations.attemptsByEntryId.has(firstAttempt.id)).toBe(true)
     expect(relations.targetsByEntryId.has(firstAttempt.id)).toBe(true)
     expect(relations.attemptsByEntryId.get(followUpAttempt.id)?.series.targetId).toBe(firstAttempt.id)
+  })
+
+  it('gruppiert nicht-medaillebezogene Laeufe mit gleichem Startzustand separat', () => {
+    const replaySetup = {
+      version: 1,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    } satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
+    const origin = createGalleryEntry('origin', {
+      completedAt: '2026-04-20T12:00:00.000Z',
+      replaySetup,
+    })
+    const practice = createGalleryEntry('practice', {
+      completedAt: '2026-04-24T12:00:00.000Z',
+      replaySetup,
+    })
+    const unrelated = createGalleryEntry('unrelated', {
+      replaySetup: {
+        ...replaySetup,
+        startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0, 14, 15],
+      },
+    })
+
+    const [series] = buildGalleryStartStateSeries([practice, unrelated, origin])
+    const relations = buildGalleryStartStateRelations([series])
+
+    expect(series).toMatchObject({
+      originEntry: { id: 'origin' },
+      latestEntry: { id: 'practice' },
+    })
+    expect(series.entries.map((entry) => entry.id)).toEqual(['practice', 'origin'])
+    expect(relations.entriesByEntryId.get(origin.id)).toMatchObject({
+      seriesNumber: 1,
+      entryNumber: 1,
+      isOrigin: true,
+    })
+    expect(relations.entriesByEntryId.get(practice.id)).toMatchObject({
+      seriesNumber: 1,
+      entryNumber: 2,
+      isOrigin: false,
+    })
+    expect(relations.entriesByEntryId.has(unrelated.id)).toBe(false)
+  })
+
+  it('zieht eine cleane Vorlage in Startzustand-Serien nach vorne', () => {
+    const replaySetup = {
+      version: 1,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    } satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
+    const origin = createGalleryEntry('origin', {
+      completedAt: '2026-04-20T12:00:00.000Z',
+      replaySetup,
+      assistanceMode: 'auto-assisted',
+    })
+    const cleanPractice = createGalleryEntry('clean-practice', {
+      completedAt: '2026-04-21T12:00:00.000Z',
+      replaySetup,
+      assistanceMode: 'clean',
+    })
+    const hintedPractice = createGalleryEntry('hinted-practice', {
+      completedAt: '2026-04-24T12:00:00.000Z',
+      replaySetup,
+      assistanceMode: 'hinted',
+    })
+
+    const [series] = buildGalleryStartStateSeries([origin, cleanPractice, hintedPractice])
+
+    expect(series.cleanAnchorEntry?.id).toBe(cleanPractice.id)
+    expect(series.latestEntry.id).toBe(hintedPractice.id)
+    expect(series.entries.map((entry) => entry.id)).toEqual([
+      cleanPractice.id,
+      hintedPractice.id,
+      origin.id,
+    ])
+  })
+
+  it('laesst Challenge-Relationen aus Startzustand-Serien heraus', () => {
+    const replaySetup = {
+      version: 1,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    } satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
+    const target = createGalleryEntry('target', { replaySetup })
+    const challengeAttempt = createGalleryEntry('challenge-attempt', {
+      replaySetup,
+      challengeTargetId: target.id,
+      challengeMedal: 'silver',
+    })
+
+    const relations = buildGalleryTimelineRelations([target, challengeAttempt])
+    const excluded = new Set([
+      ...Array.from(relations.attemptsByEntryId.keys()),
+      ...Array.from(relations.targetsByEntryId.keys()),
+    ])
+
+    expect(buildGalleryStartStateSeries([target, challengeAttempt], excluded)).toEqual([])
   })
 
   it('markiert Motive ohne gespeichertes Bild defensiv als nicht replaybar', () => {
