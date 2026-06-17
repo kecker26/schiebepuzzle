@@ -1,4 +1,12 @@
-import { type GhostPreviewMode, type HeatmapMode, PuzzleConfig, PuzzleState, Tile, TileMoveAnimation } from '../types/index'
+import {
+  type GhostPreviewMode,
+  type GhostPreviewScope,
+  type HeatmapMode,
+  PuzzleConfig,
+  PuzzleState,
+  Tile,
+  TileMoveAnimation,
+} from '../types/index'
 
 const CANVAS_FONT_FAMILY = "'Puzzle UI', 'Segoe UI', sans-serif"
 
@@ -32,6 +40,13 @@ export interface HeatmapOverlayOptions {
   bestPotentialTileId?: string
   pathStepByTileId?: Readonly<Record<string, number>>
   pathTargetTileId?: string
+}
+
+export interface GhostPreviewOptions {
+  mode: GhostPreviewMode
+  scope: GhostPreviewScope
+  weight: number
+  focusedTileId?: string | null
 }
 
 export default class PuzzleRenderer {
@@ -104,9 +119,7 @@ export default class PuzzleRenderer {
     hintOverlay: HintOverlay | null = null,
     showTileNumbers: boolean = false,
     tileNumberCorrectnessPulseProgress: number | null = null,
-    showGhostPreview: boolean = false,
-    ghostPreviewWeight: number = 0.56,
-    ghostPreviewMode: GhostPreviewMode = 'image',
+    ghostPreview: GhostPreviewOptions | null = null,
     heatmapOverlay: HeatmapOverlayOptions | null = null,
     invalidTileFeedback: InvalidTileFeedbackAnimation | null = null,
     hoveredTileId: string | null = null
@@ -135,8 +148,8 @@ export default class PuzzleRenderer {
       this.renderAnimatedTile(state, moveAnimation, showTileNumbers, tileNumberCorrectnessPulseProgress)
     }
 
-    if (showGhostPreview) {
-      this.renderGhostPreviewOverlay(state, ghostPreviewWeight, ghostPreviewMode)
+    if (ghostPreview) {
+      this.renderGhostPreviewOverlay(state, ghostPreview)
     } else if (heatmapOverlay) {
       this.renderHeatmapOverlay(state, moveAnimation, heatmapOverlay)
     }
@@ -173,7 +186,7 @@ export default class PuzzleRenderer {
     }
 
     const shouldHideCorrectTileCheckmarks =
-      showGhostPreview
+      ghostPreview !== null
       || heatmapOverlay !== null
       || showTileNumbers
 
@@ -658,16 +671,21 @@ export default class PuzzleRenderer {
 
   private renderGhostPreviewOverlay(
     state: PuzzleState,
-    ghostPreviewWeight: number,
-    ghostPreviewMode: GhostPreviewMode
+    options: GhostPreviewOptions
   ): void {
     const emptyX = state.emptyCol * this.tileWidth
     const emptyY = state.emptyRow * this.tileHeight
     const shortEdge = Math.min(this.tileWidth, this.tileHeight)
     const inset = Math.max(4, Math.round(shortEdge * 0.05))
-    const ghostTiles = state.tiles.filter(
+    const misplacedTiles = state.tiles.filter(
       (tile) => tile.isEmpty || tile.row !== tile.correctRow || tile.col !== tile.correctCol
     )
+    const focusedTile = options.focusedTileId
+      ? state.tiles.find((tile) => tile.id === options.focusedTileId && !tile.isEmpty) ?? null
+      : null
+    const ghostTiles = options.scope === 'focus' && focusedTile
+      ? [focusedTile]
+      : misplacedTiles
 
     if (ghostTiles.length === 0) {
       this.renderSolvedTileGhostBadges(state)
@@ -683,11 +701,11 @@ export default class PuzzleRenderer {
     })
     this.ctx.clip()
     const didRenderOverlay =
-      ghostPreviewMode === 'image'
-        ? this.renderGhostPreviewImageLayer(ghostPreviewWeight)
-        : ghostPreviewMode === 'contours'
-          ? this.renderGhostPreviewContourLayer(ghostPreviewWeight)
-          : this.renderGhostPreviewEdgeLayer(ghostPreviewWeight)
+      options.mode === 'image'
+        ? this.renderGhostPreviewImageLayer(options.weight)
+        : options.mode === 'contours'
+          ? this.renderGhostPreviewContourLayer(options.weight)
+          : this.renderGhostPreviewEdgeLayer(options.weight)
     this.ctx.restore()
 
     if (!didRenderOverlay) return

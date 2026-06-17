@@ -79,6 +79,12 @@ export interface PuzzleRunMetrics {
   redoCount: number
   hintCount: number
   suggestedMoveCount: number
+  ghostUsageCount?: number
+  ghostUsageDurationMs?: number
+  ghostUsageByMode?: Partial<Record<GhostPreviewMode, number>>
+  heatmapUsageCount?: number
+  heatmapUsageDurationMs?: number
+  heatmapUsageByMode?: Partial<Record<HeatmapMode, number>>
 }
 
 // Gewinn-Statistiken
@@ -97,6 +103,8 @@ export interface SolverProgress {
 
 export type PuzzleMoveDirection = 'up' | 'down' | 'left' | 'right'
 export type GhostPreviewMode = 'image' | 'contours' | 'edges'
+export type GhostPreviewScope = 'misplaced' | 'focus'
+export type GhostPreviewMotion = 'static' | 'pulse'
 export type HeatmapMode = 'classic' | 'arrows' | 'delta'
 
 export type OptimalStartMoveCountKind = 'exact' | 'lower-bound' | 'unavailable'
@@ -124,6 +132,10 @@ export interface PersistedPuzzleProgress {
   ghostPreviewVisible?: boolean
   ghostPreviewWeight?: number
   ghostPreviewMode?: GhostPreviewMode
+  ghostPreviewScope?: GhostPreviewScope
+  ghostPreviewMotion?: GhostPreviewMotion
+  ghostPreviewProgressive?: boolean
+  ghostPreviewProgressPeak?: number
   heatmapOverlayVisible?: boolean
   heatmapMode?: HeatmapMode
   heatmapIntensity?: number
@@ -215,6 +227,12 @@ export interface PuzzleCompletionRecord {
   redoCount: number
   hintCount: number
   suggestedMoveCount: number
+  ghostUsageCount?: number
+  ghostUsageDurationMs?: number
+  ghostUsageByMode?: Partial<Record<GhostPreviewMode, number>>
+  heatmapUsageCount?: number
+  heatmapUsageDurationMs?: number
+  heatmapUsageByMode?: Partial<Record<HeatmapMode, number>>
   assistanceMode: PuzzleAssistanceMode
   hasDetailedProfile: boolean
 }

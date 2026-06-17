@@ -184,6 +184,12 @@ interface StoredRunMetrics {
   redoCount: number
   hintCount: number
   suggestedMoveCount: number
+  ghostUsageCount?: number
+  ghostUsageDurationMs?: number
+  ghostUsageByMode?: Partial<Record<'image' | 'contours' | 'edges', number>>
+  heatmapUsageCount?: number
+  heatmapUsageDurationMs?: number
+  heatmapUsageByMode?: Partial<Record<'classic' | 'arrows' | 'delta', number>>
 }
 
 type StoredSaveTitleSource = 'gemini' | 'reused' | 'fallback'
@@ -307,6 +313,12 @@ interface StoredCompletionRecord {
   redoCount: number
   hintCount: number
   suggestedMoveCount: number
+  ghostUsageCount?: number
+  ghostUsageDurationMs?: number
+  ghostUsageByMode?: Partial<Record<'image' | 'contours' | 'edges', number>>
+  heatmapUsageCount?: number
+  heatmapUsageDurationMs?: number
+  heatmapUsageByMode?: Partial<Record<'classic' | 'arrows' | 'delta', number>>
   assistanceMode: StoredAssistanceMode
   hasDetailedProfile: boolean
 }
@@ -1954,12 +1966,38 @@ async function readTextFile(filePath: string): Promise<string | null> {
 
 function sanitizeRunMetrics(input: unknown, fallbackMoveCount: number = 0): StoredRunMetrics {
   const source = input && typeof input === 'object' ? (input as Record<string, unknown>) : {}
+  const ghostUsageByMode = sanitizeGhostUsageByMode(source.ghostUsageByMode)
+  const heatmapUsageByMode = sanitizeHeatmapUsageByMode(source.heatmapUsageByMode)
   return {
     actionMoves: Math.max(fallbackMoveCount, sanitizeCount(source.actionMoves)),
     undoCount: sanitizeCount(source.undoCount),
     redoCount: sanitizeCount(source.redoCount),
     hintCount: sanitizeCount(source.hintCount),
     suggestedMoveCount: sanitizeCount(source.suggestedMoveCount),
+    ghostUsageCount: sanitizeCount(source.ghostUsageCount),
+    ghostUsageDurationMs: sanitizeCount(source.ghostUsageDurationMs),
+    ghostUsageByMode: Object.keys(ghostUsageByMode).length > 0 ? ghostUsageByMode : undefined,
+    heatmapUsageCount: sanitizeCount(source.heatmapUsageCount),
+    heatmapUsageDurationMs: sanitizeCount(source.heatmapUsageDurationMs),
+    heatmapUsageByMode: Object.keys(heatmapUsageByMode).length > 0 ? heatmapUsageByMode : undefined,
+  }
+}
+
+function sanitizeGhostUsageByMode(input: unknown): Partial<Record<'image' | 'contours' | 'edges', number>> {
+  const source = input && typeof input === 'object' ? (input as Record<string, unknown>) : {}
+  return {
+    ...(source.image !== undefined ? { image: sanitizeCount(source.image) } : {}),
+    ...(source.contours !== undefined ? { contours: sanitizeCount(source.contours) } : {}),
+    ...(source.edges !== undefined ? { edges: sanitizeCount(source.edges) } : {}),
+  }
+}
+
+function sanitizeHeatmapUsageByMode(input: unknown): Partial<Record<'classic' | 'arrows' | 'delta', number>> {
+  const source = input && typeof input === 'object' ? (input as Record<string, unknown>) : {}
+  return {
+    ...(source.classic !== undefined ? { classic: sanitizeCount(source.classic) } : {}),
+    ...(source.arrows !== undefined ? { arrows: sanitizeCount(source.arrows) } : {}),
+    ...(source.delta !== undefined ? { delta: sanitizeCount(source.delta) } : {}),
   }
 }
 
@@ -2803,21 +2841,38 @@ function createEmptyCustomTagCategoriesFile(): StoredCustomTagCategoriesFile {
     lastUpdatedAt: null,
   }
 }
-function deriveAssistanceMode(runMetrics: Pick<StoredRunMetrics, 'hintCount' | 'suggestedMoveCount'>): StoredAssistanceMode {
+function deriveAssistanceMode(
+  runMetrics: Pick<
+    StoredRunMetrics,
+    'hintCount' | 'suggestedMoveCount' | 'ghostUsageCount' | 'heatmapUsageCount'
+  >
+): StoredAssistanceMode {
   if (runMetrics.suggestedMoveCount > 0) return 'auto-assisted'
-  if (runMetrics.hintCount > 0) return 'hinted'
+  if (
+    runMetrics.hintCount > 0
+    || (runMetrics.ghostUsageCount ?? 0) > 0
+    || (runMetrics.heatmapUsageCount ?? 0) > 0
+  ) return 'hinted'
   return 'clean'
 }
 
 function sanitizeAssistanceMode(
   input: unknown,
-  runMetrics: Pick<StoredRunMetrics, 'hintCount' | 'suggestedMoveCount'>
+  runMetrics: Pick<
+    StoredRunMetrics,
+    'hintCount' | 'suggestedMoveCount' | 'ghostUsageCount' | 'heatmapUsageCount'
+  >
 ): StoredAssistanceMode {
-  if (input === 'clean' || input === 'hinted' || input === 'auto-assisted') {
+  if (input === 'auto-assisted') return input
+
+  const derivedMode = deriveAssistanceMode(runMetrics)
+  if (derivedMode !== 'clean') return derivedMode
+
+  if (input === 'clean' || input === 'hinted') {
     return input
   }
 
-  return deriveAssistanceMode(runMetrics)
+  return derivedMode
 }
 
 function countExtraMoves(entry: Pick<StoredCompletionRecord, 'moves' | 'actionMoves'>): number {
@@ -3296,6 +3351,12 @@ function hasDetailedProfileData(input: {
   redoCount?: unknown
   hintCount?: unknown
   suggestedMoveCount?: unknown
+  ghostUsageCount?: unknown
+  ghostUsageDurationMs?: unknown
+  ghostUsageByMode?: unknown
+  heatmapUsageCount?: unknown
+  heatmapUsageDurationMs?: unknown
+  heatmapUsageByMode?: unknown
   assistanceMode?: unknown
   hasDetailedProfile?: unknown
 }): boolean {
@@ -3306,6 +3367,12 @@ function hasDetailedProfileData(input: {
     || input.redoCount !== undefined
     || input.hintCount !== undefined
     || input.suggestedMoveCount !== undefined
+    || input.ghostUsageCount !== undefined
+    || input.ghostUsageDurationMs !== undefined
+    || input.ghostUsageByMode !== undefined
+    || input.heatmapUsageCount !== undefined
+    || input.heatmapUsageDurationMs !== undefined
+    || input.heatmapUsageByMode !== undefined
     || input.assistanceMode !== undefined
   )
 }
@@ -3447,6 +3514,12 @@ function normalizeCompletionRecord(entry: unknown, assets: BackupAssetMap = {}):
     redoCount?: unknown
     hintCount?: unknown
     suggestedMoveCount?: unknown
+    ghostUsageCount?: unknown
+    ghostUsageDurationMs?: unknown
+    ghostUsageByMode?: unknown
+    heatmapUsageCount?: unknown
+    heatmapUsageDurationMs?: unknown
+    heatmapUsageByMode?: unknown
     assistanceMode?: unknown
   }
 
@@ -3462,6 +3535,12 @@ function normalizeCompletionRecord(entry: unknown, assets: BackupAssetMap = {}):
       redoCount: input.redoCount,
       hintCount: input.hintCount,
       suggestedMoveCount: input.suggestedMoveCount,
+      ghostUsageCount: input.ghostUsageCount,
+      ghostUsageDurationMs: input.ghostUsageDurationMs,
+      ghostUsageByMode: input.ghostUsageByMode,
+      heatmapUsageCount: input.heatmapUsageCount,
+      heatmapUsageDurationMs: input.heatmapUsageDurationMs,
+      heatmapUsageByMode: input.heatmapUsageByMode,
     },
     moves
   )
@@ -3479,6 +3558,12 @@ function normalizeCompletionRecord(entry: unknown, assets: BackupAssetMap = {}):
     redoCount: runMetrics.redoCount,
     hintCount: runMetrics.hintCount,
     suggestedMoveCount: runMetrics.suggestedMoveCount,
+    ghostUsageCount: runMetrics.ghostUsageCount,
+    ghostUsageDurationMs: runMetrics.ghostUsageDurationMs,
+    ghostUsageByMode: runMetrics.ghostUsageByMode,
+    heatmapUsageCount: runMetrics.heatmapUsageCount,
+    heatmapUsageDurationMs: runMetrics.heatmapUsageDurationMs,
+    heatmapUsageByMode: runMetrics.heatmapUsageByMode,
     assistanceMode: sanitizeAssistanceMode(input.assistanceMode, runMetrics),
     hasDetailedProfile,
   }
@@ -4702,6 +4787,12 @@ function validateCompletionPayload(payload: unknown): payload is {
   redoCount: number
   hintCount: number
   suggestedMoveCount: number
+  ghostUsageCount?: number
+  ghostUsageDurationMs?: number
+  ghostUsageByMode?: Partial<Record<'image' | 'contours' | 'edges', number>>
+  heatmapUsageCount?: number
+  heatmapUsageDurationMs?: number
+  heatmapUsageByMode?: Partial<Record<'classic' | 'arrows' | 'delta', number>>
 } {
   if (!payload || typeof payload !== 'object') return false
 
@@ -4729,6 +4820,24 @@ function validateCompletionPayload(payload: unknown): payload is {
     typeof input.suggestedMoveCount === 'number' &&
     Number.isFinite(input.suggestedMoveCount) &&
     input.suggestedMoveCount >= 0 &&
+    (
+      input.ghostUsageCount === undefined ||
+      (typeof input.ghostUsageCount === 'number' && Number.isFinite(input.ghostUsageCount) && input.ghostUsageCount >= 0)
+    ) &&
+    (
+      input.ghostUsageDurationMs === undefined ||
+      (typeof input.ghostUsageDurationMs === 'number' && Number.isFinite(input.ghostUsageDurationMs) && input.ghostUsageDurationMs >= 0)
+    ) &&
+    (input.ghostUsageByMode === undefined || typeof input.ghostUsageByMode === 'object') &&
+    (
+      input.heatmapUsageCount === undefined ||
+      (typeof input.heatmapUsageCount === 'number' && Number.isFinite(input.heatmapUsageCount) && input.heatmapUsageCount >= 0)
+    ) &&
+    (
+      input.heatmapUsageDurationMs === undefined ||
+      (typeof input.heatmapUsageDurationMs === 'number' && Number.isFinite(input.heatmapUsageDurationMs) && input.heatmapUsageDurationMs >= 0)
+    ) &&
+    (input.heatmapUsageByMode === undefined || typeof input.heatmapUsageByMode === 'object') &&
     (input.previewImage === undefined || input.previewImage === null || typeof input.previewImage === 'string')
   )
 }
@@ -5984,7 +6093,18 @@ async function handleStatsApi(
       const redoCount = sanitizeCount(body.redoCount)
       const hintCount = sanitizeCount(body.hintCount)
       const suggestedMoveCount = sanitizeCount(body.suggestedMoveCount)
-      const assistanceMode = deriveAssistanceMode({ hintCount, suggestedMoveCount })
+      const ghostUsageCount = sanitizeCount(body.ghostUsageCount)
+      const ghostUsageDurationMs = sanitizeCount(body.ghostUsageDurationMs)
+      const ghostUsageByMode = sanitizeGhostUsageByMode(body.ghostUsageByMode)
+      const heatmapUsageCount = sanitizeCount(body.heatmapUsageCount)
+      const heatmapUsageDurationMs = sanitizeCount(body.heatmapUsageDurationMs)
+      const heatmapUsageByMode = sanitizeHeatmapUsageByMode(body.heatmapUsageByMode)
+      const assistanceMode = deriveAssistanceMode({
+        hintCount,
+        suggestedMoveCount,
+        ghostUsageCount,
+        heatmapUsageCount,
+      })
       const nowIso = new Date().toISOString()
       const previousHistory = getCompletionHistoryForConfig(stats.completionHistory, body.config)
       const previousCompletion = previousHistory[0] ?? null
@@ -6006,6 +6126,12 @@ async function handleStatsApi(
         redoCount,
         hintCount,
         suggestedMoveCount,
+        ghostUsageCount,
+        ghostUsageDurationMs,
+        ghostUsageByMode: Object.keys(ghostUsageByMode).length > 0 ? ghostUsageByMode : undefined,
+        heatmapUsageCount,
+        heatmapUsageDurationMs,
+        heatmapUsageByMode: Object.keys(heatmapUsageByMode).length > 0 ? heatmapUsageByMode : undefined,
         assistanceMode,
         hasDetailedProfile: true,
       }

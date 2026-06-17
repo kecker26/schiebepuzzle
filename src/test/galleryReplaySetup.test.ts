@@ -3,10 +3,19 @@ import type { SolvedGalleryEntry } from '../types/index.ts'
 import {
   createGalleryChallengeTarget,
   hasGalleryChallengeSetup,
+  isGalleryChallengeTargetEligible,
   isGalleryReplaySetupCompatible,
 } from '../utils/galleryReplaySetup.ts'
 
 const config = { rows: 2, cols: 2 }
+const replaySetup = {
+  version: 1,
+  startBoard: [1, 2, 0, 3],
+  emptyIndex: 3,
+  shuffleMoves: ['tile-2'],
+  optimalStartMoveCount: 1,
+  optimalStartMoveCountKind: 'exact',
+} satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
 
 function createEntry(overrides: Partial<SolvedGalleryEntry> = {}): SolvedGalleryEntry {
   return {
@@ -54,14 +63,7 @@ describe('galleryReplaySetup', () => {
 
   it('erstellt Challenge-Zieldaten aus einem Galerieeintrag', () => {
     const entry = createEntry({
-      replaySetup: {
-        version: 1,
-        startBoard: [1, 2, 0, 3],
-        emptyIndex: 3,
-        shuffleMoves: ['tile-2'],
-        optimalStartMoveCount: 1,
-        optimalStartMoveCountKind: 'exact',
-      },
+      replaySetup,
     })
 
     expect(hasGalleryChallengeSetup(entry)).toBe(true)
@@ -72,5 +74,22 @@ describe('galleryReplaySetup', () => {
       optimalStartMoveCount: 1,
       optimalStartMoveCountKind: 'exact',
     })
+  })
+
+  it('erlaubt nur cleane Detailprofile als Medaillen-Vorlage', () => {
+    expect(isGalleryChallengeTargetEligible(createEntry({ replaySetup }))).toBe(true)
+    expect(isGalleryChallengeTargetEligible(createEntry({
+      replaySetup,
+      assistanceMode: 'auto-assisted',
+    }))).toBe(false)
+    expect(isGalleryChallengeTargetEligible(createEntry({
+      replaySetup,
+      assistanceMode: 'hinted',
+    }))).toBe(false)
+    expect(isGalleryChallengeTargetEligible(createEntry({
+      replaySetup,
+      hasDetailedProfile: false,
+    }))).toBe(false)
+    expect(isGalleryChallengeTargetEligible(createEntry())).toBe(false)
   })
 })

@@ -76,6 +76,10 @@ describe('puzzle pause', () => {
       ghostPreviewVisible: false,
       ghostPreviewWeight: 35,
       ghostPreviewMode: 'image',
+      ghostPreviewScope: 'focus',
+      ghostPreviewMotion: 'pulse',
+      ghostPreviewProgressive: true,
+      ghostPreviewProgressPeak: 42,
       heatmapOverlayVisible: false,
       heatmapMode: 'arrows',
       heatmapIntensity: 64,
@@ -87,5 +91,9 @@ describe('puzzle pause', () => {
     expect(progress.heatmapMode).toBe('arrows')
     expect(progress.heatmapIntensity).toBe(64)
     expect(progress.heatmapDistancesVisible).toBe(true)
+    expect(progress.ghostPreviewScope).toBe('focus')
+    expect(progress.ghostPreviewMotion).toBe('pulse')
+    expect(progress.ghostPreviewProgressive).toBe(true)
+    expect(progress.ghostPreviewProgressPeak).toBe(42)
   })
 })

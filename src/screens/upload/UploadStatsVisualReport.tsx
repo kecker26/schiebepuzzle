@@ -574,6 +574,10 @@ function buildHistoryCsv(entries: PuzzleCompletionRecord[]): string {
       'Laufart',
       'Hinweise',
       'Auto-Zuege',
+      'Ghost-Aktivierungen',
+      'Ghost-Sekunden',
+      'Heatmap-Aktivierungen',
+      'Heatmap-Sekunden',
       'Laufprofil',
     ],
     sortedEntries.map((entry) => [
@@ -587,6 +591,10 @@ function buildHistoryCsv(entries: PuzzleCompletionRecord[]): string {
       entry.hasDetailedProfile ? formatAssistanceModeLabel(entry.assistanceMode) : 'Legacy',
       entry.hasDetailedProfile ? entry.hintCount : '',
       entry.hasDetailedProfile ? entry.suggestedMoveCount : '',
+      entry.hasDetailedProfile ? (entry.ghostUsageCount ?? 0) : '',
+      entry.hasDetailedProfile ? Math.round((entry.ghostUsageDurationMs ?? 0) / 1000) : '',
+      entry.hasDetailedProfile ? (entry.heatmapUsageCount ?? 0) : '',
+      entry.hasDetailedProfile ? Math.round((entry.heatmapUsageDurationMs ?? 0) / 1000) : '',
       entry.hasDetailedProfile ? 'ja' : 'nein',
     ])
   )
@@ -1358,6 +1366,14 @@ function buildKpiCards(
   const profiledHistory = completionHistory.filter((entry) => entry.hasDetailedProfile)
   const averageActionMoves = calculateAverage(profiledHistory.map((entry) => entry.actionMoves))
   const averageCorrections = calculateAverageValue(profiledHistory.map((entry) => getCompletionExtraMoves(entry)))
+  const ghostRuns = profiledHistory.filter((entry) => (entry.ghostUsageCount ?? 0) > 0)
+  const totalGhostSeconds = Math.round(
+    profiledHistory.reduce((sum, entry) => sum + (entry.ghostUsageDurationMs ?? 0), 0) / 1000
+  )
+  const heatmapRuns = profiledHistory.filter((entry) => (entry.heatmapUsageCount ?? 0) > 0)
+  const totalHeatmapSeconds = Math.round(
+    profiledHistory.reduce((sum, entry) => sum + (entry.heatmapUsageDurationMs ?? 0), 0) / 1000
+  )
 
   return [
     {
@@ -1408,9 +1424,25 @@ function buildKpiCards(
       label: 'Clean-Quote',
       value: formatPercent(assistanceSummary.cleanRate),
       detail: `${assistanceSummary.cleanSolvedCount} clean geloest`,
-      helpText: 'Anteil der abgeschlossenen Laeufe ohne Hinweise, Auto-Zuege oder Solver-Unterstuetzung. Aeltere Laeufe ohne Detailprofil koennen als Legacy erscheinen.',
+      helpText: 'Anteil der abgeschlossenen Laeufe ohne Hilfen (Hinweise, Ghost, Heatmap, Auto-Zuege oder Solver-Unterstuetzung). Aeltere Laeufe ohne Detailprofil koennen als Legacy erscheinen.',
       springValue: assistanceSummary.cleanRate,
       springFormatter: (value) => formatPercent(Math.round(value)),
+    },
+    {
+      id: 'ghost-usage',
+      label: 'Ghost-Nutzung',
+      value: `${ghostRuns.length}`,
+      detail: `${totalGhostSeconds}s Geisterbild`,
+      helpText: 'Laeufe mit aktivierter Geisteransicht und aufsummierte sichtbare Dauer. Dies wird separat von Hinweisen und Auto-Zuegen erfasst.',
+      springValue: ghostRuns.length,
+    },
+    {
+      id: 'heatmap-usage',
+      label: 'Heatmap-Nutzung',
+      value: `${heatmapRuns.length}`,
+      detail: `${totalHeatmapSeconds}s Heatmap`,
+      helpText: 'Laeufe mit aktivierter Heatmap und aufsummierte sichtbare Dauer. Dies wird separat von Hinweisen und Auto-Zuegen erfasst.',
+      springValue: heatmapRuns.length,
     },
   ]
 }
@@ -1418,7 +1450,7 @@ function buildKpiCards(
 function buildDonutSegments(assistanceSummary: AssistanceSummary): DonutSegment[] {
   return [
     { key: 'clean', label: 'Clean', value: assistanceSummary.cleanSolvedCount, color: ASSISTANCE_COLORS.clean },
-    { key: 'hinted', label: 'Mit Hinweisen', value: assistanceSummary.hintedSolvedCount, color: ASSISTANCE_COLORS.hinted },
+    { key: 'hinted', label: 'Mit Hilfen', value: assistanceSummary.hintedSolvedCount, color: ASSISTANCE_COLORS.hinted },
     { key: 'auto', label: 'Auto/Solver', value: assistanceSummary.autoAssistedSolvedCount, color: ASSISTANCE_COLORS.auto },
     { key: 'legacy', label: 'Legacy', value: assistanceSummary.legacySolvedCount, color: ASSISTANCE_COLORS.legacy },
   ].filter((segment) => segment.value > 0)

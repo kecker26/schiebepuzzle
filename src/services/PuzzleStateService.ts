@@ -1,5 +1,7 @@
 import {
   type GhostPreviewMode,
+  type GhostPreviewMotion,
+  type GhostPreviewScope,
   type HeatmapMode,
   GalleryChallengeTarget,
   OptimalStartMoveCountKind,
@@ -87,6 +89,10 @@ export function createPersistedPuzzleProgress({
   ghostPreviewVisible,
   ghostPreviewWeight,
   ghostPreviewMode,
+  ghostPreviewScope = 'misplaced',
+  ghostPreviewMotion = 'static',
+  ghostPreviewProgressive = false,
+  ghostPreviewProgressPeak = 0,
   heatmapOverlayVisible,
   heatmapMode = 'classic',
   heatmapIntensity = 100,
@@ -110,6 +116,10 @@ export function createPersistedPuzzleProgress({
   ghostPreviewVisible: boolean
   ghostPreviewWeight: number
   ghostPreviewMode: GhostPreviewMode
+  ghostPreviewScope?: GhostPreviewScope
+  ghostPreviewMotion?: GhostPreviewMotion
+  ghostPreviewProgressive?: boolean
+  ghostPreviewProgressPeak?: number
   heatmapOverlayVisible: boolean
   heatmapMode?: HeatmapMode
   heatmapIntensity?: number
@@ -136,6 +146,10 @@ export function createPersistedPuzzleProgress({
     ghostPreviewVisible,
     ghostPreviewWeight,
     ghostPreviewMode,
+    ghostPreviewScope,
+    ghostPreviewMotion,
+    ghostPreviewProgressive,
+    ghostPreviewProgressPeak,
     heatmapOverlayVisible,
     heatmapMode,
     heatmapIntensity,

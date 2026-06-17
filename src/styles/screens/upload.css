@@ -6795,6 +6795,119 @@
   line-height: 1.45;
 }
 
+.gallery-detail-challenge-related-start-state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px dashed color-mix(in srgb, #facc15 36%, var(--secondary-border));
+  background: color-mix(in srgb, #facc15 7%, var(--secondary-bg));
+}
+
+.gallery-detail-challenge-related-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: color-mix(in srgb, #facc15 78%, var(--text-main));
+}
+
+.gallery-detail-challenge-related-head span {
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.gallery-detail-challenge-related-head strong {
+  color: var(--text-main);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.gallery-detail-challenge-related-start-state p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.gallery-detail-challenge-related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.gallery-detail-challenge-related-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 8px 9px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #facc15 20%, var(--secondary-border));
+  background: color-mix(in srgb, #facc15 5%, var(--card-bg));
+}
+
+.gallery-detail-challenge-related-node {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  color: color-mix(in srgb, #facc15 82%, var(--text-main));
+  background: color-mix(in srgb, #facc15 12%, var(--secondary-bg));
+}
+
+.gallery-detail-challenge-related-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gallery-detail-challenge-related-row span {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gallery-detail-challenge-related-row strong {
+  color: var(--text-main);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.gallery-detail-challenge-related-row small {
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.gallery-detail-challenge-related-action {
+  min-height: 32px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #facc15 32%, var(--secondary-border));
+  background: color-mix(in srgb, #facc15 11%, var(--secondary-bg));
+  color: var(--text-main);
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.gallery-detail-challenge-related-action:hover:not(:disabled),
+.gallery-detail-challenge-related-action:focus-visible {
+  border-color: color-mix(in srgb, #facc15 55%, var(--secondary-border));
+  background: color-mix(in srgb, #facc15 17%, var(--secondary-bg));
+}
+
 .gallery-detail-challenge-comparison {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7066,6 +7179,12 @@
   gap: 8px;
 }
 
+.gallery-detail-start-state-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .gallery-detail-timeline-item {
   --timeline-relation-color: var(--image-accent-solid);
   position: relative;
@@ -7103,6 +7222,66 @@
 
 .gallery-detail-timeline-item.is-bronze {
   --timeline-relation-color: #fb923c;
+}
+
+.gallery-detail-timeline-item.is-start-state-series {
+  --timeline-relation-color: #facc15;
+  border-color: color-mix(in srgb, var(--timeline-relation-color) 32%, var(--card-border));
+}
+
+.gallery-detail-timeline-item.is-start-state-series.is-clean-anchor {
+  border-color: color-mix(in srgb, var(--timeline-relation-color) 52%, var(--card-border));
+  box-shadow:
+    var(--panel-shadow),
+    0 0 18px color-mix(in srgb, var(--timeline-relation-color) 16%, transparent);
+}
+
+.gallery-detail-timeline-item.is-start-state-series::before {
+  content: '';
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  left: 10px;
+  width: 3px;
+  border-radius: 999px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--timeline-relation-color) 82%, var(--image-accent-solid)) 0 8px,
+      transparent 8px 13px
+    );
+}
+
+.gallery-detail-timeline-item.is-start-state-series {
+  padding-left: 24px;
+}
+
+.gallery-detail-start-state-tools {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 4px;
+}
+
+.gallery-detail-start-state-toggle {
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #facc15 30%, var(--card-border));
+  background: color-mix(in srgb, #facc15 10%, var(--card-bg));
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.gallery-detail-start-state-toggle:hover,
+.gallery-detail-start-state-toggle:focus-visible {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, #facc15 54%, var(--card-border));
+  background: color-mix(in srgb, #facc15 16%, var(--card-bg));
 }
 
 .gallery-detail-timeline-item.is-challenge-related {
@@ -8359,13 +8538,16 @@
 .stats-visual-kpi-grid {
   position: relative;
   z-index: 40;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
   overflow: visible;
 }
 
 .stats-visual-kpi-card {
+  flex: 0 0 calc((100% - 36px) / 4);
+  max-width: calc((100% - 36px) / 4);
   min-height: 170px;
   display: grid;
   grid-template-rows: 40px 34px 44px;
@@ -8414,6 +8596,13 @@
   gap: 12px;
   align-items: stretch;
   overflow: visible;
+}
+
+@media (max-width: 1100px) {
+  .stats-visual-kpi-card {
+    flex-basis: calc((100% - 12px) / 2);
+    max-width: calc((100% - 12px) / 2);
+  }
 }
 
 .stats-visual-overview-grid {
@@ -12379,6 +12568,11 @@
   .stats-raw-field-groups,
   .stats-visual-assistance-grid {
     grid-template-columns: 1fr;
+  }
+
+  .stats-visual-kpi-card {
+    flex-basis: 100%;
+    max-width: 100%;
   }
 
   .stats-visual-difficulty-row,

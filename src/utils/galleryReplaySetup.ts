@@ -43,6 +43,12 @@ export function hasGalleryChallengeSetup(entry: SolvedGalleryEntry): boolean {
   return isGalleryReplaySetupCompatible(entry.replaySetup, entry.config)
 }
 
+export function isGalleryChallengeTargetEligible(entry: SolvedGalleryEntry): boolean {
+  return hasGalleryChallengeSetup(entry)
+    && entry.hasDetailedProfile
+    && entry.assistanceMode === 'clean'
+}
+
 export function createGalleryChallengeTarget(entry: SolvedGalleryEntry): GalleryChallengeTarget {
   return {
     entryId: entry.id,

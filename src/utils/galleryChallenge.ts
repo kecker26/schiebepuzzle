@@ -21,7 +21,7 @@ export function deriveChallengeMedal(
   stats: WinStats,
   target: GalleryChallengeTarget
 ): ChallengeMedal | null {
-  const isClean = stats.assistanceMode === 'clean'
+  const isClean = isChallengeCleanRun(stats)
   const beatTime = stats.time < target.time
   const beatMoves = stats.moves < target.moves
   const reachedTime = stats.time <= target.time
@@ -67,10 +67,12 @@ export function deriveLiveChallengeForecast(
     moves: number
     time: number
     assistanceMode: PuzzleAssistanceMode
+    ghostUsageCount?: number
+    heatmapUsageCount?: number
   },
   target: GalleryChallengeTarget
 ): LiveChallengeForecast {
-  const isClean = metrics.assistanceMode === 'clean'
+  const isClean = isChallengeCleanRun(metrics)
   const timeReached = metrics.time <= target.time
   const movesReached = metrics.moves <= target.moves
   const timeBeaten = metrics.time < target.time
@@ -115,7 +117,7 @@ export function getNextChallengeMedalGoal(
   target: GalleryChallengeTarget,
   medal: ChallengeMedal | null
 ): ChallengeMedalGoal {
-  const isClean = stats.assistanceMode === 'clean'
+  const isClean = isChallengeCleanRun(stats)
   const timeGapToBeat = Math.max(0, stats.time - target.time + 1)
   const movesGapToBeat = Math.max(0, stats.moves - target.moves + 1)
   const exactOptimalGap =
@@ -208,12 +210,22 @@ export function getChallengeMedalExplanation(
   if (medal === 'gold') return 'Clean geloest und beide Ziele strikt unterboten.'
   if (medal === 'silver') {
     const beatBoth = stats.time < target.time && stats.moves < target.moves
-    if (beatBoth && stats.assistanceMode !== 'clean') {
-      return 'Beide Ziele unterboten, aber Gold erfordert einen sauberen Lauf ohne Hinweise.'
+    if (beatBoth && !isChallengeCleanRun(stats)) {
+      return 'Beide Ziele unterboten, aber Gold erfordert einen sauberen Lauf ohne Hilfe.'
     }
     return 'Beide Ziele der Vorlage erreicht oder unterboten.'
   }
   return 'Mindestens ein Ziel der Vorlage strikt unterboten.'
+}
+
+export function isChallengeCleanRun(metrics: {
+  assistanceMode: PuzzleAssistanceMode
+  ghostUsageCount?: number
+  heatmapUsageCount?: number
+}): boolean {
+  return metrics.assistanceMode === 'clean'
+    && (metrics.ghostUsageCount ?? 0) <= 0
+    && (metrics.heatmapUsageCount ?? 0) <= 0
 }
 
 export function getBestChallengeMedal(

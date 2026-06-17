@@ -121,8 +121,9 @@ describe('galleryReplayActions', () => {
     ])
   })
 
-  it('beschreibt echte Challenge-Starts als gespeicherten Startzustand', () => {
+  it('beschreibt cleane Startzustaende als Medaillen-Vorlage', () => {
     const current = createEntry('current', {
+      assistanceMode: 'clean',
       replaySetup: {
         version: 1,
         startBoard: [1, 2, 0, 3],
@@ -141,7 +142,33 @@ describe('galleryReplayActions', () => {
         id: 'current',
         label: 'Spielen',
         entry: { id: 'current' },
-        description: expect.stringContaining('gespeicherten Startzustand'),
+        description: expect.stringContaining('cleane Medaillen-Vorlage'),
+      },
+    ])
+  })
+
+  it('beschreibt assistierte Startzustaende als Uebung ohne Medaille', () => {
+    const current = createEntry('current', {
+      assistanceMode: 'auto-assisted',
+      replaySetup: {
+        version: 1,
+        startBoard: [1, 2, 0, 3],
+        emptyIndex: 3,
+        shuffleMoves: ['tile-1'],
+        optimalStartMoveCount: 1,
+        optimalStartMoveCountKind: 'exact',
+      },
+      config: { rows: 2, cols: 2 },
+    })
+
+    const displayEntry = createDisplayEntry(current, [current], [{ rows: 2, cols: 2 }])
+
+    expect(getGalleryReplayActions(displayEntry)).toMatchObject([
+      {
+        id: 'current',
+        label: 'Spielen',
+        entry: { id: 'current' },
+        description: expect.stringContaining('Uebung ohne Medaille'),
       },
     ])
   })

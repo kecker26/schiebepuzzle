@@ -23,6 +23,8 @@ import PuzzleRenderer, {
 import { type PuzzleProgressMetrics } from '../services/PuzzleSolver.ts'
 import {
   type GhostPreviewMode,
+  type GhostPreviewMotion,
+  type GhostPreviewScope,
   type HeatmapMode,
   GalleryChallengeTarget,
   GalleryReplaySetup,
@@ -56,6 +58,8 @@ import {
   createMoveRecordForStates,
   EXACT_SOLUTION_NODE_LIMIT,
   GHOST_PREVIEW_MODE_DEFAULT,
+  GHOST_PREVIEW_MOTION_DEFAULT,
+  GHOST_PREVIEW_SCOPE_DEFAULT,
   HEATMAP_INTENSITY_DEFAULT,
   HEATMAP_MODE_DEFAULT,
   getKeyboardMoveDirection,
@@ -65,6 +69,9 @@ import {
   INVALID_TILE_FEEDBACK_DURATION_MS,
   MOVE_ANIMATION_DURATION_MS,
   normalizeGhostPreviewMode,
+  normalizeGhostPreviewMotion,
+  normalizeGhostPreviewProgressPeak,
+  normalizeGhostPreviewScope,
   normalizeHeatmapIntensity,
   normalizeHeatmapMode,
   registerHintForState,
@@ -111,6 +118,12 @@ const EMPTY_RUN_METRICS: PuzzleRunMetrics = {
   redoCount: 0,
   hintCount: 0,
   suggestedMoveCount: 0,
+  ghostUsageCount: 0,
+  ghostUsageDurationMs: 0,
+  ghostUsageByMode: {},
+  heatmapUsageCount: 0,
+  heatmapUsageDurationMs: 0,
+  heatmapUsageByMode: {},
 }
 
 const LEGACY_OPTIMAL_START_MOVE_COUNT_SOLVER_VERSION = 'legacy-optimal-start-v0'
@@ -155,12 +168,22 @@ function normalizeRunMetrics(runMetrics: PuzzleRunMetrics | undefined, moveCount
     redoCount: runMetrics?.redoCount ?? 0,
     hintCount: runMetrics?.hintCount ?? 0,
     suggestedMoveCount: runMetrics?.suggestedMoveCount ?? 0,
+    ghostUsageCount: runMetrics?.ghostUsageCount ?? 0,
+    ghostUsageDurationMs: runMetrics?.ghostUsageDurationMs ?? 0,
+    ghostUsageByMode: { ...(runMetrics?.ghostUsageByMode ?? {}) },
+    heatmapUsageCount: runMetrics?.heatmapUsageCount ?? 0,
+    heatmapUsageDurationMs: runMetrics?.heatmapUsageDurationMs ?? 0,
+    heatmapUsageByMode: { ...(runMetrics?.heatmapUsageByMode ?? {}) },
   }
 }
 
 function deriveAssistanceModeFromRunMetrics(runMetrics: PuzzleRunMetrics): WinStats['assistanceMode'] {
   if (runMetrics.suggestedMoveCount > 0) return 'auto-assisted'
-  if (runMetrics.hintCount > 0) return 'hinted'
+  if (
+    runMetrics.hintCount > 0
+    || (runMetrics.ghostUsageCount ?? 0) > 0
+    || (runMetrics.heatmapUsageCount ?? 0) > 0
+  ) return 'hinted'
   return 'clean'
 }
 
@@ -313,6 +336,8 @@ export default function PuzzleScreen({
   const reducedPathIndexByHashRef = useRef<Map<string, number>>(new Map())
   const progressReferenceHeuristicRef = useRef<number | null>(null)
   const boardPointerClientPositionRef = useRef<{ clientX: number; clientY: number } | null>(null)
+  const ghostUsageStartedAtRef = useRef<number | null>(null)
+  const heatmapUsageStartedAtRef = useRef<number | null>(null)
   const isComputingSuggestionRef = useRef(false)
   const tileNumbersTimeoutRef = useRef<number | null>(null)
   const hintAutoHideTimerRef = useRef<number | null>(null)
@@ -356,6 +381,12 @@ export default function PuzzleScreen({
   const [isGhostPreviewVisible, setIsGhostPreviewVisible] = useState(false)
   const [isHeatmapOverlayVisible, setIsHeatmapOverlayVisible] = useState(false)
   const [ghostPreviewMode, setGhostPreviewMode] = useState<GhostPreviewMode>(GHOST_PREVIEW_MODE_DEFAULT)
+  const [ghostPreviewScope, setGhostPreviewScope] = useState<GhostPreviewScope>(GHOST_PREVIEW_SCOPE_DEFAULT)
+  const [ghostPreviewMotion, setGhostPreviewMotion] = useState<GhostPreviewMotion>(GHOST_PREVIEW_MOTION_DEFAULT)
+  const [isGhostPreviewProgressive, setIsGhostPreviewProgressive] = useState(false)
+  const [ghostPreviewProgressPeak, setGhostPreviewProgressPeak] = useState(0)
+  const [ghostPreviewPulseFactor, setGhostPreviewPulseFactor] = useState(1)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const [ghostPreviewWeight, setGhostPreviewWeight] = useState(GHOST_PREVIEW_WEIGHT_DEFAULT)
   const [heatmapMode, setHeatmapMode] = useState<HeatmapMode>(HEATMAP_MODE_DEFAULT)
   const [heatmapIntensity, setHeatmapIntensity] = useState(HEATMAP_INTENSITY_DEFAULT)
@@ -370,6 +401,7 @@ export default function PuzzleScreen({
   const [isBoardIntroActive, setIsBoardIntroActive] = useState(false)
   const [isComputingSuggestion, setIsComputingSuggestion] = useState(false)
   const [hintPreview, setHintPreview] = useState<SuggestedHintPreview | null>(null)
+  const [ghostFocusTileId, setGhostFocusTileId] = useState<string | null>(null)
   const [heatmapSuggestedTileId, setHeatmapSuggestedTileId] = useState<string | null>(null)
   const [heatmapSuggestedQueue, setHeatmapSuggestedQueue] = useState<string[]>([])
   const [isHeatmapTargetPathVisible, setIsHeatmapTargetPathVisible] = useState(false)
@@ -605,6 +637,16 @@ export default function PuzzleScreen({
 
   const updateHoveredSearchTileId = useCallback((tileId: string | null) => {
     setHoveredSearchTileId((prev) => (prev === tileId ? prev : tileId))
+    if (tileId) {
+      setGhostFocusTileId(tileId)
+    }
+  }, [])
+
+  const findDefaultGhostFocusTileId = useCallback((state: PuzzleState): string | null => {
+    const misplacedTile = state.tiles.find(
+      (tile) => !tile.isEmpty && (tile.row !== tile.correctRow || tile.col !== tile.correctCol)
+    )
+    return misplacedTile?.id ?? state.tiles.find((tile) => !tile.isEmpty)?.id ?? null
   }, [])
 
   const resetTrackedPathToState = useCallback((state: PuzzleState) => {
@@ -962,6 +1004,7 @@ export default function PuzzleScreen({
     setKnownStartSolutionMoveCount(null)
     setIsImprovingStartSolution(false)
     setHoveredSearchTileId(null)
+    setGhostFocusTileId(null)
     setMoveAnimation(null)
     setInvalidTileFeedback(null)
     stopBoardIntro()
@@ -972,6 +1015,10 @@ export default function PuzzleScreen({
     setIsGhostPreviewVisible(false)
     setIsHeatmapOverlayVisible(false)
     setGhostPreviewMode(GHOST_PREVIEW_MODE_DEFAULT)
+    setGhostPreviewScope(GHOST_PREVIEW_SCOPE_DEFAULT)
+    setGhostPreviewMotion(GHOST_PREVIEW_MOTION_DEFAULT)
+    setIsGhostPreviewProgressive(false)
+    setGhostPreviewProgressPeak(0)
     setGhostPreviewWeight(GHOST_PREVIEW_WEIGHT_DEFAULT)
     setHeatmapMode(HEATMAP_MODE_DEFAULT)
     setHeatmapIntensity(HEATMAP_INTENSITY_DEFAULT)
@@ -1137,6 +1184,7 @@ export default function PuzzleScreen({
         const restoredStartState = restoreTrackedPath(restoredState, restoredProgress.solverProgress)
         runStartStateRef.current = restoredStartState
         setPuzzleState(restoredState)
+        setGhostFocusTileId(findDefaultGhostFocusTileId(restoredState))
         startBoardIntro()
         setMoveCount(restoredMoveCount)
         setElapsedTime(Math.max(0, restoredProgress.elapsedTime))
@@ -1149,6 +1197,10 @@ export default function PuzzleScreen({
         setIsGhostPreviewVisible(restoredHeatmapOverlayVisible ? false : (restoredProgress.ghostPreviewVisible ?? false))
         setIsHeatmapOverlayVisible(restoredHeatmapOverlayVisible)
         setGhostPreviewMode(normalizeGhostPreviewMode(restoredProgress.ghostPreviewMode))
+        setGhostPreviewScope(normalizeGhostPreviewScope(restoredProgress.ghostPreviewScope))
+        setGhostPreviewMotion(normalizeGhostPreviewMotion(restoredProgress.ghostPreviewMotion))
+        setIsGhostPreviewProgressive(restoredProgress.ghostPreviewProgressive ?? false)
+        setGhostPreviewProgressPeak(normalizeGhostPreviewProgressPeak(restoredProgress.ghostPreviewProgressPeak))
         setGhostPreviewWeight(normalizeGhostPreviewWeight(restoredProgress.ghostPreviewWeight))
         const restoredHeatmapMode = normalizeHeatmapMode(restoredProgress.heatmapMode)
         const restoredHeatmapDistancesVisible = restoredProgress.heatmapDistancesVisible ?? false
@@ -1179,6 +1231,7 @@ export default function PuzzleScreen({
           initializeTrackedPath(normalizedReplayState, replaySetup.shuffleMoves)
           runStartStateRef.current = normalizedReplayState
           setPuzzleState(normalizedReplayState)
+          setGhostFocusTileId(findDefaultGhostFocusTileId(normalizedReplayState))
           startBoardIntro()
           setMoveCount(0)
           setElapsedTime(0)
@@ -1191,6 +1244,10 @@ export default function PuzzleScreen({
           setIsGhostPreviewVisible(false)
           setIsHeatmapOverlayVisible(false)
           setGhostPreviewMode(GHOST_PREVIEW_MODE_DEFAULT)
+          setGhostPreviewScope(GHOST_PREVIEW_SCOPE_DEFAULT)
+          setGhostPreviewMotion(GHOST_PREVIEW_MOTION_DEFAULT)
+          setIsGhostPreviewProgressive(false)
+          setGhostPreviewProgressPeak(0)
           setGhostPreviewWeight(GHOST_PREVIEW_WEIGHT_DEFAULT)
           setHeatmapMode(HEATMAP_MODE_DEFAULT)
           setHeatmapIntensity(HEATMAP_INTENSITY_DEFAULT)
@@ -1205,6 +1262,7 @@ export default function PuzzleScreen({
       initializeTrackedPath(shuffledState, shuffledResult.moves)
       runStartStateRef.current = shuffledState
       setPuzzleState(shuffledState)
+      setGhostFocusTileId(findDefaultGhostFocusTileId(shuffledState))
       startBoardIntro()
       setMoveCount(0)
       setElapsedTime(0)
@@ -1217,6 +1275,10 @@ export default function PuzzleScreen({
       setIsGhostPreviewVisible(false)
       setIsHeatmapOverlayVisible(false)
       setGhostPreviewMode(GHOST_PREVIEW_MODE_DEFAULT)
+      setGhostPreviewScope(GHOST_PREVIEW_SCOPE_DEFAULT)
+      setGhostPreviewMotion(GHOST_PREVIEW_MOTION_DEFAULT)
+      setIsGhostPreviewProgressive(false)
+      setGhostPreviewProgressPeak(0)
       setGhostPreviewWeight(GHOST_PREVIEW_WEIGHT_DEFAULT)
       setHeatmapMode(HEATMAP_MODE_DEFAULT)
       setHeatmapIntensity(HEATMAP_INTENSITY_DEFAULT)
@@ -1256,7 +1318,12 @@ export default function PuzzleScreen({
       clearHintAutoHideTimeout()
       setHintPreview(null)
       setHoveredSearchTileId(null)
+      setGhostFocusTileId(null)
       setGhostPreviewMode(GHOST_PREVIEW_MODE_DEFAULT)
+      setGhostPreviewScope(GHOST_PREVIEW_SCOPE_DEFAULT)
+      setGhostPreviewMotion(GHOST_PREVIEW_MOTION_DEFAULT)
+      setIsGhostPreviewProgressive(false)
+      setGhostPreviewProgressPeak(0)
     }
   }, [
     cancelSuggestionFlow,
@@ -1265,6 +1332,7 @@ export default function PuzzleScreen({
     clearHintAutoHideTimeout,
     clearTileNumbersTimeout,
     config,
+    findDefaultGhostFocusTileId,
     getTrackedSolutionMoves,
     hideTileNumbers,
     image,
@@ -1350,6 +1418,116 @@ export default function PuzzleScreen({
   }, [isTimerActive])
 
   useEffect(() => {
+    if (isHeatmapOverlayVisible) return
+    if (moveFeedbackTimerRef.current !== null) {
+      window.clearTimeout(moveFeedbackTimerRef.current)
+      moveFeedbackTimerRef.current = null
+    }
+    setMoveFeedback(null)
+  }, [isHeatmapOverlayVisible])
+
+  const isGhostEffectivelyVisible =
+    isGhostPreviewVisible && hintPreview === null && !isPaused && Boolean(puzzleState && !puzzleState.isSolved)
+  const isHeatmapEffectivelyVisible =
+    isHeatmapOverlayVisible && hintPreview === null && !isPaused && Boolean(puzzleState && !puzzleState.isSolved)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    if (!mediaQuery) return
+
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches)
+    updatePreference()
+    mediaQuery.addEventListener?.('change', updatePreference)
+    return () => mediaQuery.removeEventListener?.('change', updatePreference)
+  }, [])
+
+  useEffect(() => {
+    if (!puzzleState) return
+    const playableTiles = puzzleState.tiles.filter((tile) => !tile.isEmpty)
+    if (playableTiles.length === 0) return
+    const correctTiles = playableTiles.filter(
+      (tile) => tile.row === tile.correctRow && tile.col === tile.correctCol
+    ).length
+    const progressPercent = Math.round((correctTiles / playableTiles.length) * 100)
+    setGhostPreviewProgressPeak((current) => Math.max(current, progressPercent))
+  }, [puzzleState])
+
+  useEffect(() => {
+    if (!isGhostEffectivelyVisible) {
+      ghostUsageStartedAtRef.current = null
+      return
+    }
+
+    ghostUsageStartedAtRef.current = performance.now()
+    const flushUsageDuration = () => {
+      const startedAt = ghostUsageStartedAtRef.current
+      if (startedAt === null) return
+      const now = performance.now()
+      const elapsed = Math.max(0, Math.round(now - startedAt))
+      ghostUsageStartedAtRef.current = now
+      if (elapsed === 0) return
+      setRunMetrics((current) => ({
+        ...current,
+        ghostUsageDurationMs: (current.ghostUsageDurationMs ?? 0) + elapsed,
+      }))
+    }
+    const interval = window.setInterval(flushUsageDuration, 500)
+    return () => {
+      window.clearInterval(interval)
+      flushUsageDuration()
+      ghostUsageStartedAtRef.current = null
+    }
+  }, [isGhostEffectivelyVisible])
+
+  useEffect(() => {
+    if (!isHeatmapEffectivelyVisible) {
+      heatmapUsageStartedAtRef.current = null
+      return
+    }
+
+    heatmapUsageStartedAtRef.current = performance.now()
+    const flushUsageDuration = () => {
+      const startedAt = heatmapUsageStartedAtRef.current
+      if (startedAt === null) return
+      const now = performance.now()
+      const elapsed = Math.max(0, Math.round(now - startedAt))
+      heatmapUsageStartedAtRef.current = now
+      if (elapsed === 0) return
+      setRunMetrics((current) => ({
+        ...current,
+        heatmapUsageDurationMs: (current.heatmapUsageDurationMs ?? 0) + elapsed,
+      }))
+    }
+    const interval = window.setInterval(flushUsageDuration, 500)
+    return () => {
+      window.clearInterval(interval)
+      flushUsageDuration()
+      heatmapUsageStartedAtRef.current = null
+    }
+  }, [isHeatmapEffectivelyVisible])
+
+  useEffect(() => {
+    if (!isGhostEffectivelyVisible || ghostPreviewMotion !== 'pulse' || prefersReducedMotion) {
+      setGhostPreviewPulseFactor(1)
+      return
+    }
+
+    let animationFrame = 0
+    let lastUpdate = 0
+    const startTime = performance.now()
+    const animatePulse = (now: number) => {
+      if (now - lastUpdate >= 50) {
+        const phase = ((now - startTime) / 2200) * Math.PI * 2
+        setGhostPreviewPulseFactor(0.34 + ((Math.sin(phase) + 1) / 2) * 0.66)
+        lastUpdate = now
+      }
+      animationFrame = window.requestAnimationFrame(animatePulse)
+    }
+    animationFrame = window.requestAnimationFrame(animatePulse)
+    return () => window.cancelAnimationFrame(animationFrame)
+  }, [ghostPreviewMotion, isGhostEffectivelyVisible, prefersReducedMotion])
+
+  useEffect(() => {
     if (!puzzleState || !rendererRef.current) return
 
     if (canvasDisplaySize) {
@@ -1405,6 +1583,10 @@ export default function PuzzleScreen({
           }
         })()
         : null
+    const progressiveFactor = isGhostPreviewProgressive
+      ? Math.max(0.28, 1 - (ghostPreviewProgressPeak / 100) * 0.72)
+      : 1
+    const effectiveGhostWeight = (ghostPreviewWeight / 100) * progressiveFactor * ghostPreviewPulseFactor
     rendererRef.current.render(
       puzzleState,
       moveAnimation,
@@ -1413,9 +1595,14 @@ export default function PuzzleScreen({
       hintOverlay,
       areTileNumbersVisible,
       tileNumberCorrectnessPulseProgress,
-      isGhostPreviewVisible && !isConcreteHintVisible,
-      ghostPreviewWeight / 100,
-      ghostPreviewMode,
+      isGhostPreviewVisible && !isConcreteHintVisible
+        ? {
+            mode: ghostPreviewMode,
+            scope: ghostPreviewScope,
+            weight: effectiveGhostWeight,
+            focusedTileId: hoveredSearchTileId ?? ghostFocusTileId,
+          }
+        : null,
       heatmapOverlay,
       invalidTileFeedback,
       hoveredSearchTileId
@@ -1429,6 +1616,10 @@ export default function PuzzleScreen({
     correctTilePulse,
     ghostPreviewWeight,
     ghostPreviewMode,
+    ghostPreviewScope,
+    ghostPreviewPulseFactor,
+    ghostPreviewProgressPeak,
+    ghostFocusTileId,
     heatmapIntensity,
     heatmapMode,
     heatmapSuggestedTileId,
@@ -1438,6 +1629,7 @@ export default function PuzzleScreen({
     invalidTileFeedback,
     isHeatmapOverlayVisible,
     isGhostPreviewVisible,
+    isGhostPreviewProgressive,
     isHeatmapTargetPathVisible,
     moveAnimation,
     moveHistory,
@@ -1540,6 +1732,10 @@ export default function PuzzleScreen({
         ghostPreviewVisible: isGhostPreviewVisible,
         ghostPreviewWeight,
         ghostPreviewMode,
+        ghostPreviewScope,
+        ghostPreviewMotion,
+        ghostPreviewProgressive: isGhostPreviewProgressive,
+        ghostPreviewProgressPeak,
         heatmapOverlayVisible: isHeatmapOverlayVisible,
         heatmapMode,
         heatmapIntensity,
@@ -1558,10 +1754,14 @@ export default function PuzzleScreen({
     areHeatmapDistancesVisible,
     ghostPreviewWeight,
     ghostPreviewMode,
+    ghostPreviewScope,
+    ghostPreviewMotion,
+    ghostPreviewProgressPeak,
     heatmapIntensity,
     heatmapMode,
     isHeatmapOverlayVisible,
     isGhostPreviewVisible,
+    isGhostPreviewProgressive,
     isPaused,
     isPreviewVisible,
     moveCount,
@@ -1770,7 +1970,7 @@ export default function PuzzleScreen({
       heuristicAfter,
       isSuggested: moveSource === 'suggested',
     })
-    if (heatmapPathFeedback || feedback) {
+    if (isHeatmapOverlayVisible && (heatmapPathFeedback || feedback)) {
       showMoveFeedback(heatmapPathFeedback ?? feedback!)
     }
     if (reachedCorrectPlace) {
@@ -2214,9 +2414,17 @@ export default function PuzzleScreen({
     if (nextValue) {
       endActiveBoardHelp()
       setIsHeatmapOverlayVisible(false)
+      setRunMetrics((current) => ({
+        ...current,
+        ghostUsageCount: (current.ghostUsageCount ?? 0) + 1,
+        ghostUsageByMode: {
+          ...(current.ghostUsageByMode ?? {}),
+          [ghostPreviewMode]: (current.ghostUsageByMode?.[ghostPreviewMode] ?? 0) + 1,
+        },
+      }))
     }
     setIsGhostPreviewVisible(nextValue)
-  }, [endActiveBoardHelp, isGhostPreviewVisible, isPaused, showBoardToolHelp])
+  }, [endActiveBoardHelp, ghostPreviewMode, isGhostPreviewVisible, isPaused, showBoardToolHelp])
 
   const toggleHeatmapOverlayVisibility = useCallback(() => {
     if (isPaused) return
@@ -2225,9 +2433,17 @@ export default function PuzzleScreen({
     if (nextValue) {
       endActiveBoardHelp()
       setIsGhostPreviewVisible(false)
+      setRunMetrics((current) => ({
+        ...current,
+        heatmapUsageCount: (current.heatmapUsageCount ?? 0) + 1,
+        heatmapUsageByMode: {
+          ...(current.heatmapUsageByMode ?? {}),
+          [heatmapMode]: (current.heatmapUsageByMode?.[heatmapMode] ?? 0) + 1,
+        },
+      }))
     }
     setIsHeatmapOverlayVisible(nextValue)
-  }, [endActiveBoardHelp, isHeatmapOverlayVisible, isPaused, showBoardToolHelp])
+  }, [endActiveBoardHelp, heatmapMode, isHeatmapOverlayVisible, isPaused, showBoardToolHelp])
 
   const handleGhostPreviewWeightChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     if (isPaused) return
@@ -2238,6 +2454,36 @@ export default function PuzzleScreen({
     if (isPaused) return
     setGhostPreviewMode(mode)
   }, [isPaused])
+
+  const handleGhostPreviewScopeChange = useCallback((scope: GhostPreviewScope) => {
+    if (isPaused) return
+    if (scope === 'focus' && !ghostFocusTileId && puzzleState) {
+      setGhostFocusTileId(findDefaultGhostFocusTileId(puzzleState))
+    }
+    setGhostPreviewScope(scope)
+  }, [findDefaultGhostFocusTileId, ghostFocusTileId, isPaused, puzzleState])
+
+  const handleGhostPreviewMotionChange = useCallback((motion: GhostPreviewMotion) => {
+    if (isPaused) return
+    setGhostPreviewMotion(motion)
+  }, [isPaused])
+
+  const toggleGhostPreviewProgressive = useCallback(() => {
+    if (isPaused) return
+    setIsGhostPreviewProgressive((current) => !current)
+  }, [isPaused])
+
+  const adjustGhostPreviewWeight = useCallback((delta: number) => {
+    if (isPaused || !isGhostPreviewVisible) return
+    setGhostPreviewWeight((current) => normalizeGhostPreviewWeight(current + delta))
+  }, [isGhostPreviewVisible, isPaused])
+
+  const cycleGhostPreviewMode = useCallback(() => {
+    if (isPaused) return
+    const modes: GhostPreviewMode[] = ['image', 'contours', 'edges']
+    const currentIndex = modes.indexOf(ghostPreviewMode)
+    setGhostPreviewMode(modes[(currentIndex + 1) % modes.length] ?? GHOST_PREVIEW_MODE_DEFAULT)
+  }, [ghostPreviewMode, isPaused])
 
   const handleHeatmapIntensityChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     if (isPaused) return
@@ -2387,6 +2633,16 @@ export default function PuzzleScreen({
     focusHotkeyFeedbackTarget(ghostPreviewButtonRef)
   }
 
+  const cycleGhostPreviewModeFromHotkey = () => {
+    cycleGhostPreviewMode()
+    focusHotkeyFeedbackTarget(ghostPreviewButtonRef)
+  }
+
+  const adjustGhostPreviewWeightFromHotkey = (delta: number) => {
+    adjustGhostPreviewWeight(delta)
+    focusHotkeyFeedbackTarget(ghostPreviewButtonRef)
+  }
+
   const toggleHeatmapFromHotkey = () => {
     toggleHeatmapOverlayVisibility()
     focusHotkeyFeedbackTarget(heatmapButtonRef)
@@ -2470,6 +2726,8 @@ export default function PuzzleScreen({
     onQuit,
     onTogglePreview: togglePreviewFromHotkey,
     onToggleGhostPreview: toggleGhostPreviewFromHotkey,
+    onCycleGhostPreviewMode: cycleGhostPreviewModeFromHotkey,
+    onAdjustGhostPreviewWeight: adjustGhostPreviewWeightFromHotkey,
     onToggleHeatmapOverlay: toggleHeatmapFromHotkey,
     onShowTileNumbers: handleShowTileNumbersFromHotkey,
     onSuggestedMove: handleSuggestedMoveFromHotkey,
@@ -2578,7 +2836,12 @@ export default function PuzzleScreen({
             isHeatmapOverlayVisible={isHeatmapOverlayVisible}
             areTileNumbersVisible={areTileNumbersVisible}
             ghostPreviewMode={ghostPreviewMode}
+            ghostPreviewScope={ghostPreviewScope}
+            ghostPreviewMotion={ghostPreviewMotion}
+            isGhostPreviewProgressive={isGhostPreviewProgressive}
             ghostPreviewWeight={ghostPreviewWeight}
+            ghostUsageCount={runMetrics.ghostUsageCount ?? 0}
+            ghostUsageDurationMs={runMetrics.ghostUsageDurationMs ?? 0}
             heatmapMode={heatmapMode}
             heatmapIntensity={heatmapIntensity}
             areHeatmapDistancesVisible={areHeatmapDistancesVisible}
@@ -2597,6 +2860,9 @@ export default function PuzzleScreen({
             onToggleHeatmapOverlay={toggleHeatmapOverlayVisibility}
             onShowTileNumbers={handleShowTileNumbers}
               onGhostPreviewModeChange={handleGhostPreviewModeChange}
+              onGhostPreviewScopeChange={handleGhostPreviewScopeChange}
+              onGhostPreviewMotionChange={handleGhostPreviewMotionChange}
+              onToggleGhostPreviewProgressive={toggleGhostPreviewProgressive}
               onGhostPreviewWeightChange={handleGhostPreviewWeightChange}
               onHeatmapModeChange={handleHeatmapModeChange}
               onHeatmapIntensityChange={handleHeatmapIntensityChange}
@@ -2669,7 +2935,7 @@ export default function PuzzleScreen({
                         </div>
                     )}
                     <AnimatePresence initial={false}>
-                      {moveFeedback && (
+                      {isHeatmapOverlayVisible && moveFeedback && (
                         <div
                           key={moveFeedback.message}
                           className={`puzzle-move-feedback is-${moveFeedback.tone}`}

@@ -2512,6 +2512,8 @@ describe('keyboard smoke tests', () => {
         onQuit: vi.fn(),
         onTogglePreview: vi.fn(),
         onToggleGhostPreview: vi.fn(),
+        onCycleGhostPreviewMode: vi.fn(),
+        onAdjustGhostPreviewWeight: vi.fn(),
         onToggleHeatmapOverlay: vi.fn(),
         onShowTileNumbers: vi.fn(),
         onSuggestedMove: vi.fn(),
@@ -2571,6 +2573,8 @@ describe('keyboard smoke tests', () => {
         onQuit: vi.fn(),
         onTogglePreview: vi.fn(),
         onToggleGhostPreview: vi.fn(),
+        onCycleGhostPreviewMode: vi.fn(),
+        onAdjustGhostPreviewWeight: vi.fn(),
         onToggleHeatmapOverlay: vi.fn(),
         onShowTileNumbers: vi.fn(),
         onSuggestedMove: vi.fn(),
@@ -3351,6 +3355,7 @@ describe('keyboard smoke tests', () => {
       ...createSolvedGalleryEntry('21', '2026-04-10T09:00:00.000Z'),
       time: 120,
       moves: 40,
+      assistanceMode: 'clean' as const,
       replaySetup: {
         version: 1 as const,
         startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
@@ -3420,10 +3425,185 @@ describe('keyboard smoke tests', () => {
     expect(screen.queryByRole('button', { name: /versuch.*herausfordern/i })).toBeNull()
   })
 
+  it('assigns same-start-state practice runs to their challenge series', () => {
+    const onReplayEntry = vi.fn()
+    const replaySetup = {
+      version: 1 as const,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    }
+    const origin = {
+      ...createSolvedGalleryEntry('30', '2026-04-09T09:00:00.000Z'),
+      replaySetup,
+      assistanceMode: 'auto-assisted' as const,
+    }
+    const target = {
+      ...createSolvedGalleryEntry('31', '2026-04-10T09:00:00.000Z'),
+      replaySetup,
+      assistanceMode: 'clean' as const,
+    }
+    const attempt = {
+      ...createSolvedGalleryEntry('32', '2026-04-11T09:00:00.000Z'),
+      replaySetup,
+      challengeTargetId: target.id,
+      challengeMedal: 'silver' as const,
+    }
+    const detailEntry = createGalleryDisplayEntry('32', '2026-04-11T09:00:00.000Z')
+
+    detailEntry.representativeEntry = attempt
+    detailEntry.visibleEntries = [attempt]
+    detailEntry.allEntries = [attempt]
+    detailEntry.motifReplaySummary = {
+      ...detailEntry.motifReplaySummary,
+      allEntries: [attempt, origin, target],
+      totalSolveCount: 3,
+      replayableSolveCount: 3,
+      bestChallengeMedal: 'silver',
+      challengeSolveCount: 1,
+    }
+
+    render(
+      <UploadGalleryDetailDialog
+        entry={detailEntry}
+        onReplayEntry={onReplayEntry}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Challenge-Serien')).toBeTruthy()
+    expect(screen.getByText('Verwandte Startzustandslaeufe')).toBeTruthy()
+    expect(screen.getByText('Verwandter Ursprung')).toBeTruthy()
+    expect(screen.getByText(/nicht Teil der Medaillenwertung/i)).toBeTruthy()
+    expect(Boolean(
+      screen.getByText('Zugehoerige Versuche').compareDocumentPosition(
+        screen.getByText('Verwandte Startzustandslaeufe')
+      ) & Node.DOCUMENT_POSITION_FOLLOWING
+    )).toBe(true)
+    expect(screen.queryByText('Startzustand-Serien')).toBeNull()
+    expect(screen.queryByText('Eigenstaendige Laeufe')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', {
+      name: /Verwandten Startzustandslauf Normal 4x4 vom 09\.04\.2026, 11:00 spielen/,
+    }))
+    expect(onReplayEntry).toHaveBeenCalledWith(origin, 'run')
+  })
+
+  it('groups repeated non-medal start-board runs as a start-state series', () => {
+    const onReplayEntry = vi.fn()
+    const replaySetup = {
+      version: 1 as const,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    }
+    const origin = {
+      ...createSolvedGalleryEntry('81', '2026-04-10T09:00:00.000Z'),
+      replaySetup,
+      assistanceMode: 'auto-assisted' as const,
+    }
+    const practice = {
+      ...createSolvedGalleryEntry('82', '2026-04-11T09:00:00.000Z'),
+      replaySetup,
+      assistanceMode: 'auto-assisted' as const,
+    }
+    const detailEntry = createGalleryDisplayEntry('82', '2026-04-11T09:00:00.000Z')
+
+    detailEntry.representativeEntry = practice
+    detailEntry.visibleEntries = [practice]
+    detailEntry.allEntries = [practice]
+    detailEntry.motifReplaySummary = {
+      ...detailEntry.motifReplaySummary,
+      allEntries: [practice, origin],
+      totalSolveCount: 2,
+      replayableSolveCount: 2,
+      latestCompletedAt: practice.completedAt,
+      lastReplayableEntry: practice,
+      bestTimeEntry: practice,
+      bestMovesEntry: practice,
+    }
+
+    render(
+      <UploadGalleryDetailDialog
+        entry={detailEntry}
+        onReplayEntry={onReplayEntry}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Startzustand-Serien')).toBeTruthy()
+    expect(screen.getAllByText('Startzustand-Serie 1')).toHaveLength(2)
+    expect(screen.getAllByText('Ursprung').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('Uebung 2')).toBeTruthy()
+    expect(screen.queryByText('Eigenstaendige Laeufe')).toBeNull()
+    expect(screen.queryByText('Eigenstaendiger Lauf')).toBeNull()
+
+    const practiceButtons = screen.getAllByRole('button', { name: /Lauf .* spielen/ })
+    expect(practiceButtons).toHaveLength(2)
+    fireEvent.click(practiceButtons[0])
+    expect(onReplayEntry).toHaveBeenCalledWith(practice, 'run')
+  })
+
+  it('prioritizes a clean start-state template and collapses assisted practice runs', () => {
+    const replaySetup = {
+      version: 1 as const,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    }
+    const origin = {
+      ...createSolvedGalleryEntry('91', '2026-04-10T09:00:00.000Z'),
+      replaySetup,
+      assistanceMode: 'auto-assisted' as const,
+    }
+    const cleanPractice = {
+      ...createSolvedGalleryEntry('92', '2026-04-11T09:00:00.000Z'),
+      replaySetup,
+      assistanceMode: 'clean' as const,
+    }
+    const detailEntry = createGalleryDisplayEntry('92', '2026-04-11T09:00:00.000Z')
+
+    detailEntry.representativeEntry = cleanPractice
+    detailEntry.visibleEntries = [cleanPractice]
+    detailEntry.allEntries = [cleanPractice]
+    detailEntry.motifReplaySummary = {
+      ...detailEntry.motifReplaySummary,
+      allEntries: [cleanPractice, origin],
+      totalSolveCount: 2,
+      replayableSolveCount: 2,
+      latestCompletedAt: cleanPractice.completedAt,
+      lastReplayableEntry: cleanPractice,
+      bestTimeEntry: cleanPractice,
+      bestMovesEntry: cleanPractice,
+      bestCleanTimeEntry: cleanPractice,
+    }
+
+    render(
+      <UploadGalleryDetailDialog
+        entry={detailEntry}
+        onReplayEntry={vi.fn()}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Startzustand-Serien')).toBeTruthy()
+    expect(screen.getAllByText('Medaillen-Vorlage').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole('button', { name: '1 Uebungslauf anzeigen' })).toBeTruthy()
+    expect(screen.queryByText('Ursprung')).toBeNull()
+    expect(screen.queryByText('Startzustand ueben')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: '1 Uebungslauf anzeigen' }))
+
+    expect(screen.getByRole('button', { name: '1 Uebungslauf ausblenden' })).toBeTruthy()
+    expect(screen.getAllByText('Ursprung').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('Startzustand ueben')).toBeTruthy()
+  })
+
   it('moves between challenge-series actions in gallery details', () => {
     const detailEntry = createGalleryDisplayEntry('70', '2026-04-11T12:00:00.000Z')
     const firstTarget = {
       ...createSolvedGalleryEntry('71', '2026-04-10T09:00:00.000Z'),
+      assistanceMode: 'clean' as const,
       replaySetup: {
         version: 1 as const,
         startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
@@ -3433,6 +3613,7 @@ describe('keyboard smoke tests', () => {
     }
     const secondTarget = {
       ...createSolvedGalleryEntry('72', '2026-04-09T09:00:00.000Z'),
+      assistanceMode: 'clean' as const,
       replaySetup: {
         version: 1 as const,
         startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
@@ -3489,6 +3670,10 @@ describe('keyboard smoke tests', () => {
           redoCount: 0,
           hintCount: 1,
           suggestedMoveCount: 0,
+          ghostUsageCount: 1,
+          ghostUsageDurationMs: 12000,
+          heatmapUsageCount: 1,
+          heatmapUsageDurationMs: 8000,
           assistanceMode: 'hinted',
         }}
         config={{ rows: 4, cols: 4 }}
@@ -3516,14 +3701,18 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    expect(screen.getByText(/Gold erfordert einen sauberen Lauf ohne Hinweise/)).toBeTruthy()
+    expect(screen.getByText(/Gold erfordert einen sauberen Lauf ohne Hilfe/)).toBeTruthy()
+    expect(screen.getByText('Ghost 1x / 12s')).toBeTruthy()
+    expect(screen.getByText('Heatmap 1x / 8s')).toBeTruthy()
+    expect(screen.getByText(/1x Ghost \(12s\)/)).toBeTruthy()
+    expect(screen.getByText(/1x Heatmap \(8s\)/)).toBeTruthy()
     expect(screen.getByText('Aufstieg: Bronze zu Silber')).toBeTruthy()
     expect(screen.getByText('Fuer Gold')).toBeTruthy()
     expect(screen.getByText('ohne Hilfe')).toBeTruthy()
     expect(screen.getByText('Stufenvergleich')).toBeTruthy()
-    expect(screen.getByText('Aktueller Lauf · Zeit')).toBeTruthy()
-    expect(screen.getByText('Aktueller Lauf · Netto-Zuege')).toBeTruthy()
-    expect(screen.getByText('Aktueller Lauf · Laufart')).toBeTruthy()
+    expect(screen.getByText('Aktueller Lauf - Zeit')).toBeTruthy()
+    expect(screen.getByText('Aktueller Lauf - Netto-Zuege')).toBeTruthy()
+    expect(screen.getByText('Aktueller Lauf - Laufart')).toBeTruthy()
     expect(screen.getByText(/Die Challenge-Vorlage wird oben separat verglichen/)).toBeTruthy()
     expect(screen.getByText(/Letzter abgeschlossener Normal 4x4-Lauf/)).toBeTruthy()
     expect(screen.getByText(/schneller als letzter Normal 4x4-Lauf/)).toBeTruthy()
