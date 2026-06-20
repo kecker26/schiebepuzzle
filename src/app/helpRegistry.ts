@@ -476,16 +476,16 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'medal',
         items: [
           {
-            label: 'Bronze: Zeit oder Zugziel der Vorlage strikt unterbieten.',
+            label: 'Bronze: Absolut clean genau ein Ziel der Vorlage strikt unterbieten.',
           },
           {
-            label: 'Silber: Beide Zielwerte der Vorlage erreichen oder unterbieten.',
+            label: 'Silber: Absolut clean Zeit und Zuege strikt unterbieten.',
           },
           {
-            label: 'Gold: Beide Zielwerte strikt unterbieten und ohne Hilfe loesen.',
+            label: 'Gold: Absolut clean Zeit und Zuege jeweils um mindestens 20 % unterbieten.',
           },
           {
-            label: 'Diamant: Ohne Hilfe, schneller als die Vorlage und exakt solver-optimal loesen.',
+            label: 'Diamant: Gold erreichen und zusaetzlich exakt solver-optimal loesen.',
           },
           {
             label: 'Gold oder Diamant koennen fuer einzelne Vorlagen mathematisch nicht erreichbar sein.',
@@ -713,13 +713,13 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
             label: 'Die Live-Prognose zeigt die beste Medaille, die mit dem aktuellen Stand noch erreichbar ist.',
           },
           {
-            label: 'Erreicht bedeutet gleich gut oder besser; strikt unterboten bedeutet schneller oder mit weniger Zuegen.',
+            label: 'Silber verlangt zwei strikt verbesserte Ziele; Gold verlangt bei Zeit und Zuegen jeweils mindestens 20 % Verbesserung.',
           },
           {
-            label: 'Hinweise und automatische Zuege verhindern Gold und Diamant, Silber und Bronze bleiben erreichbar.',
+            label: 'Jede Hilfe verhindert alle Medaillen; der Abschluss wird als verwandter Startzustandslauf gespeichert.',
           },
           {
-            label: 'Diamant ist nur verfuegbar, wenn eine exakte optimale Zugzahl fuer das Startbrett bekannt ist.',
+            label: 'Diamant ist nur verfuegbar, wenn Gold erreichbar und eine exakte optimale Zugzahl bekannt ist.',
           },
         ],
       },

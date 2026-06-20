@@ -23,6 +23,7 @@ import {
   getChallengeMedalExplanation,
   getChallengeMedalRank,
   getNextChallengeMedalGoal,
+  isChallengeCleanRun,
 } from '../utils/galleryChallenge.ts'
 import {
   ComparisonTone,
@@ -270,6 +271,7 @@ export default function WinDialog({
   const challengeMovesDelta = challengeTarget ? stats.moves - challengeTarget.moves : null
   const challengeTimeDelta = challengeTarget ? stats.time - challengeTarget.time : null
   const challengeMedalLabel = challengeMedal ? formatChallengeMedalLabel(challengeMedal) : null
+  const isCleanChallengeRun = challengeTarget ? isChallengeCleanRun(stats) : false
   const challengeExplanation = challengeTarget
     ? getChallengeMedalExplanation(stats, challengeTarget, challengeMedal)
     : null
@@ -283,7 +285,9 @@ export default function WinDialog({
         ? `Aufstieg: ${formatChallengeMedalLabel(challengePreviousBestMedal)} zu ${challengeMedalLabel}`
         : `Medaille bestaetigt: ${challengeMedalLabel}`
     : challengeTarget
-      ? 'Challenge abgeschlossen: keine Medaille'
+      ? isCleanChallengeRun
+        ? 'Challenge abgeschlossen: keine Medaille'
+        : 'Mit Hilfe: als verwandter Uebungslauf gespeichert'
       : null
   const timeComparison = compareLowerIsBetterMetric(currentRun.time, previousRun?.time ?? null)
   const movesComparison = compareLowerIsBetterMetric(currentRun.moves, previousRun?.moves ?? null)
@@ -488,7 +492,9 @@ export default function WinDialog({
               )}
             </div>
             <div className="win-challenge-copy">
-              <span className="win-kicker">Challenge abgeschlossen</span>
+              <span className="win-kicker">
+                {isCleanChallengeRun ? 'Challenge abgeschlossen' : 'Uebung abgeschlossen'}
+              </span>
               <h3>{challengeMedalLabel ? `${challengeMedalLabel}-Medaille` : 'Keine Medaille'}</h3>
               <p>{challengeExplanation}</p>
               {challengeUpgradeLabel ? (

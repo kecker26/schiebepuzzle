@@ -4,6 +4,7 @@ import {
   deriveChallengeMedal,
   deriveLiveChallengeForecast,
   getBestChallengeMedal,
+  getChallengeGoldTargets,
   getChallengeMedalExplanation,
   getNextChallengeMedalGoal,
   isChallengeDiamondAvailable,
@@ -13,24 +14,24 @@ import {
 const target: GalleryChallengeTarget = {
   entryId: 'target',
   completedAt: '2026-06-09T10:00:00.000Z',
-  time: 60,
-  moves: 20,
-  actionMoves: 24,
+  time: 120,
+  moves: 100,
+  actionMoves: 110,
   assistanceMode: 'clean',
-  optimalStartMoveCount: 18,
+  optimalStartMoveCount: 70,
   optimalStartMoveCountKind: 'exact',
 }
 
-const optimalTarget: GalleryChallengeTarget = {
+const goldUnavailableTarget: GalleryChallengeTarget = {
   ...target,
-  moves: 18,
+  optimalStartMoveCount: 81,
 }
 
 function createStats(overrides: Partial<WinStats> = {}): WinStats {
   return {
-    moves: 19,
-    time: 59,
-    actionMoves: 21,
+    moves: 85,
+    time: 100,
+    actionMoves: 90,
     undoCount: 0,
     redoCount: 0,
     hintCount: 0,
@@ -41,38 +42,50 @@ function createStats(overrides: Partial<WinStats> = {}): WinStats {
 }
 
 describe('galleryChallenge', () => {
-  it('vergibt Diamant nur fuer einen cleanen, schnelleren und exakt optimalen Lauf', () => {
-    expect(deriveChallengeMedal(createStats({ moves: 18 }), target)).toBe('diamond')
-    expect(deriveChallengeMedal(createStats({ moves: 18, time: 60 }), target)).toBe('silver')
-    expect(deriveChallengeMedal(createStats({ moves: 18, assistanceMode: 'hinted' }), target)).toBe('silver')
+  it('berechnet die 20-Prozent-Ziele mit ganzzahligen Grenzwerten', () => {
+    expect(getChallengeGoldTargets(target)).toEqual({ time: 96, moves: 80 })
+    expect(getChallengeGoldTargets({ ...target, time: 121, moves: 101 })).toEqual({ time: 96, moves: 80 })
+  })
+
+  it('vergibt Diamant nur fuer Gold plus exakte Solver-Optimalitaet', () => {
+    expect(deriveChallengeMedal(createStats({ moves: 70, time: 96 }), target)).toBe('diamond')
+    expect(deriveChallengeMedal(createStats({ moves: 70, time: 97 }), target)).toBe('silver')
+    expect(deriveChallengeMedal(createStats({ moves: 80, time: 96 }), target)).toBe('gold')
+    expect(deriveChallengeMedal(createStats({ moves: 70, time: 96, assistanceMode: 'hinted' }), target)).toBeNull()
   })
 
   it('vergibt keinen Diamanten fuer eine Solver-Untergrenze', () => {
-    expect(deriveChallengeMedal(createStats({ moves: 18 }), {
+    expect(deriveChallengeMedal(createStats({ moves: 80, time: 96 }), {
       ...target,
       optimalStartMoveCountKind: 'lower-bound',
     })).toBe('gold')
   })
 
-  it('vergibt Gold strikt und Silber nur, wenn beide Ziele erreicht werden', () => {
-    expect(deriveChallengeMedal(createStats(), target)).toBe('gold')
-    expect(deriveChallengeMedal(createStats({ time: 60 }), target)).toBe('silver')
-    expect(deriveChallengeMedal(createStats({ moves: 20 }), target)).toBe('silver')
-    expect(deriveChallengeMedal(createStats({ moves: 20, time: 60 }), target)).toBe('silver')
-    expect(deriveChallengeMedal(createStats({ moves: 21, time: 61 }), target)).toBeNull()
+  it('vergibt Gold ab 20 Prozent in beiden Zielen und Silber bei zwei kleineren Verbesserungen', () => {
+    expect(deriveChallengeMedal(createStats({ moves: 80, time: 96 }), target)).toBe('gold')
+    expect(deriveChallengeMedal(createStats({ moves: 81, time: 96 }), target)).toBe('silver')
+    expect(deriveChallengeMedal(createStats({ moves: 85, time: 100 }), target)).toBe('silver')
+    expect(deriveChallengeMedal(createStats({ moves: 99, time: 119 }), target)).toBe('silver')
+    expect(deriveChallengeMedal(createStats({ moves: 99, time: 120 }), target)).toBe('bronze')
+    expect(deriveChallengeMedal(createStats({ moves: 100, time: 120 }), target)).toBeNull()
   })
 
-  it('vergibt Bronze nur, wenn mindestens ein Ziel strikt unterboten wird', () => {
-    expect(deriveChallengeMedal(createStats({ moves: 21, time: 59 }), target)).toBe('bronze')
-    expect(deriveChallengeMedal(createStats({ moves: 19, time: 61 }), target)).toBe('bronze')
-    expect(deriveChallengeMedal(createStats({ moves: 21, time: 60 }), target)).toBeNull()
-    expect(deriveChallengeMedal(createStats({ moves: 20, time: 61 }), target)).toBeNull()
+  it('unterscheidet Gold und Silber an der 20-Prozent-Grenze', () => {
+    expect(deriveChallengeMedal(createStats({ time: 90, moves: 80 }), target)).toBe('gold')
+    expect(deriveChallengeMedal(createStats({ time: 100, moves: 85 }), target)).toBe('silver')
   })
 
-  it('begrenzt assistierte Laeufe trotz zweier unterbotener Ziele auf Silber', () => {
-    expect(deriveChallengeMedal(createStats({ assistanceMode: 'auto-assisted' }), target)).toBe('silver')
-    expect(deriveChallengeMedal(createStats({ ghostUsageCount: 1 }), target)).toBe('silver')
-    expect(deriveChallengeMedal(createStats({ heatmapUsageCount: 1 }), target)).toBe('silver')
+  it('vergibt Bronze nur, wenn genau ein Ziel strikt unterboten wird', () => {
+    expect(deriveChallengeMedal(createStats({ moves: 101, time: 119 }), target)).toBe('bronze')
+    expect(deriveChallengeMedal(createStats({ moves: 99, time: 121 }), target)).toBe('bronze')
+    expect(deriveChallengeMedal(createStats({ moves: 101, time: 120 }), target)).toBeNull()
+    expect(deriveChallengeMedal(createStats({ moves: 100, time: 121 }), target)).toBeNull()
+  })
+
+  it('vergibt assistierten Laeufen unabhaengig von den Zielwerten keine Medaille', () => {
+    expect(deriveChallengeMedal(createStats({ assistanceMode: 'auto-assisted' }), target)).toBeNull()
+    expect(deriveChallengeMedal(createStats({ ghostUsageCount: 1 }), target)).toBeNull()
+    expect(deriveChallengeMedal(createStats({ heatmapUsageCount: 1 }), target)).toBeNull()
   })
 
   it('ermittelt die beste gespeicherte Medaille', () => {
@@ -85,34 +98,34 @@ describe('galleryChallenge', () => {
   })
 
   it('prognostiziert die aktuell erreichbare Medaille und Assistance-Deckelung', () => {
-    expect(deriveLiveChallengeForecast(createStats({ moves: 18, time: 40 }), target)).toMatchObject({
+    expect(deriveLiveChallengeForecast(createStats({ moves: 70, time: 96 }), target)).toMatchObject({
       medal: 'diamond',
       diamondAvailable: true,
       goldAvailable: true,
       isClean: true,
     })
-    expect(deriveLiveChallengeForecast(createStats({ moves: 19, time: 40 }), target).medal).toBe('gold')
+    expect(deriveLiveChallengeForecast(createStats({ moves: 80, time: 96 }), target).medal).toBe('gold')
     expect(deriveLiveChallengeForecast(createStats({
-      moves: 19,
-      time: 40,
+      moves: 80,
+      time: 96,
       assistanceMode: 'hinted',
-    }), target).medal).toBe('silver')
-    expect(deriveLiveChallengeForecast(createStats({ moves: 21, time: 59 }), target).medal).toBe('bronze')
-    expect(deriveLiveChallengeForecast(createStats({ moves: 21, time: 61 }), target).medal).toBeNull()
+    }), target).medal).toBeNull()
+    expect(deriveLiveChallengeForecast(createStats({ moves: 101, time: 119 }), target).medal).toBe('bronze')
+    expect(deriveLiveChallengeForecast(createStats({ moves: 101, time: 121 }), target).medal).toBeNull()
   })
 
-  it('erklaert Assistance-Deckelung und das naechste Medaillenziel', () => {
+  it('erklaert den vollstaendigen Medaillenausschluss nach Assistance', () => {
     const assistedStats = createStats({ assistanceMode: 'hinted' })
-    expect(getChallengeMedalExplanation(assistedStats, target, 'silver')).toContain('ohne Hilfe')
-    expect(getNextChallengeMedalGoal(assistedStats, target, 'silver')).toEqual({
-      medal: 'gold',
-      label: 'ohne Hilfe',
-    })
-    expect(getNextChallengeMedalGoal(createStats({ moves: 23, time: 64 }), target, null)).toEqual({
+    expect(getChallengeMedalExplanation(assistedStats, target, null)).toContain('keine Medaille')
+    expect(getNextChallengeMedalGoal(assistedStats, target, null)).toEqual({
       medal: 'bronze',
-      label: '5 Sek. schneller oder 4 Zuege weniger',
+      label: 'Ohne Hilfe neu starten. Medaillen werden nur fuer absolut cleane Laeufe vergeben.',
     })
-    expect(getChallengeMedalExplanation(createStats({ moves: 23, time: 64 }), target, null))
+    expect(getNextChallengeMedalGoal(createStats({ moves: 105, time: 125 }), target, null)).toEqual({
+      medal: 'bronze',
+      label: '6 Sek. schneller oder 6 Zuege weniger',
+    })
+    expect(getChallengeMedalExplanation(createStats({ moves: 105, time: 125 }), target, null))
       .toContain('kein Ziel')
   })
 
@@ -121,21 +134,22 @@ describe('galleryChallenge', () => {
     expect(isChallengeDiamondAvailable({ ...target, optimalStartMoveCountKind: 'lower-bound' })).toBe(false)
   })
 
-  it('ueberspringt Gold, wenn die Vorlage bereits exakt optimal geloest wurde', () => {
-    expect(isChallengeGoldAvailable(optimalTarget)).toBe(false)
-    expect(deriveChallengeMedal(createStats({ moves: 18, time: 40 }), optimalTarget)).toBe('diamond')
-    expect(deriveLiveChallengeForecast(createStats({ moves: 0, time: 0 }), optimalTarget)).toMatchObject({
-      medal: 'diamond',
-      diamondAvailable: true,
+  it('markiert Gold und Diamant als unerreichbar, wenn das Solver-Optimum ueber dem Gold-Zugziel liegt', () => {
+    expect(isChallengeGoldAvailable(goldUnavailableTarget)).toBe(false)
+    expect(isChallengeDiamondAvailable(goldUnavailableTarget)).toBe(false)
+    expect(deriveChallengeMedal(createStats({ moves: 81, time: 96 }), goldUnavailableTarget)).toBe('silver')
+    expect(deriveLiveChallengeForecast(createStats({ moves: 0, time: 0 }), goldUnavailableTarget)).toMatchObject({
+      medal: 'silver',
+      diamondAvailable: false,
       goldAvailable: false,
     })
     expect(getNextChallengeMedalGoal(
-      createStats({ moves: 18, time: 40, assistanceMode: 'hinted' }),
-      optimalTarget,
+      createStats({ moves: 81, time: 96 }),
+      goldUnavailableTarget,
       'silver'
     )).toEqual({
-      medal: 'diamond',
-      label: 'Gold ist gegen die bereits optimale Vorlage mathematisch nicht erreichbar. Fuer Diamant: ohne Hilfe.',
+      medal: null,
+      label: 'Gold und Diamant sind fuer diese Vorlage nicht erreichbar: Das exakte Solver-Optimum liegt ueber dem 20-Prozent-Zugziel.',
     })
   })
 })

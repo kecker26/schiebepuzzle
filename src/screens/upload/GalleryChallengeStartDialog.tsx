@@ -19,10 +19,10 @@ interface GalleryChallengeStartDialogProps {
 }
 
 const MEDAL_RULES = [
-  { medal: 'bronze', rule: 'Zeit oder Zuege strikt unterbieten' },
-  { medal: 'silver', rule: 'Zeit und Zuege erreichen oder unterbieten' },
-  { medal: 'gold', rule: 'Beide Ziele strikt unterbieten und ohne Hilfe loesen' },
-  { medal: 'diamond', rule: 'Ohne Hilfe, schneller und exakt solver-optimal loesen' },
+  { medal: 'bronze', rule: 'Genau ein Ziel strikt unterbieten' },
+  { medal: 'silver', rule: 'Beide Ziele strikt unterbieten' },
+  { medal: 'gold', rule: 'Beide Ziele um mindestens 20 % unterbieten' },
+  { medal: 'diamond', rule: 'Gold erreichen und exakt solver-optimal loesen' },
 ] as const
 
 export default function GalleryChallengeStartDialog({
@@ -104,14 +104,18 @@ export default function GalleryChallengeStartDialog({
         </div>
       </details>
 
-      {!diamondAvailable ? (
+      <p className="gallery-challenge-start-note" role="note">
+        Jede Medaille setzt einen absolut cleanen Lauf voraus.
+      </p>
+
+      {!goldAvailable ? (
+        <p className="gallery-challenge-start-note" role="note">
+          Gold und Diamant sind fuer diese Vorlage nicht erreichbar: Das exakte Solver-Optimum liegt ueber dem
+          20-Prozent-Zugziel.
+        </p>
+      ) : !diamondAvailable ? (
         <p className="gallery-challenge-start-note" role="note">
           Diamant ist bei diesem Puzzle nicht verfuegbar, weil keine exakte optimale Zugzahl berechnet werden konnte.
-        </p>
-      ) : !goldAvailable ? (
-        <p className="gallery-challenge-start-note" role="note">
-          Die Vorlage ist bereits exakt optimal geloest. Weniger Zuege sind mathematisch unmoeglich:
-          Gold wird uebersprungen, Diamant ist mit derselben optimalen Zugzahl und besserer Zeit erreichbar.
         </p>
       ) : null}
 

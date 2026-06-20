@@ -1,8 +1,10 @@
 import { ChallengeMedal, PuzzleConfig, SolvedGalleryEntry } from '../../types/index'
 import {
   getBestChallengeMedal,
+  getChallengeGoldTargets,
   getChallengeMedalProgress,
   getChallengeMedalRank,
+  isChallengeCleanRun,
 } from '../../utils/galleryChallenge.ts'
 import { isGalleryChallengeTargetEligible } from '../../utils/galleryReplaySetup.ts'
 import {
@@ -121,19 +123,20 @@ function getAttemptUpgradeProximity(
   target: SolvedGalleryEntry,
   nextMedal: ChallengeMedal
 ): number | null {
+  const cleanPenalty = isChallengeCleanRun(attempt) ? 0 : 0.2
+
   if (nextMedal === 'silver') {
-    return Math.min(
-      normalizedGap(attempt.time - target.time, target.time),
-      normalizedGap(attempt.moves - target.moves, target.moves)
-    )
+    return normalizedGap(attempt.time - target.time + 1, target.time)
+      + normalizedGap(attempt.moves - target.moves + 1, target.moves)
+      + cleanPenalty
   }
 
-  const cleanPenalty = attempt.assistanceMode === 'clean' ? 0 : 0.2
-  const timeGap = normalizedGap(attempt.time - target.time + 1, target.time)
+  const goldTargets = getChallengeGoldTargets(target)
+  const goldTimeGap = normalizedGap(attempt.time - goldTargets.time, target.time)
 
   if (nextMedal === 'gold') {
-    return timeGap
-      + normalizedGap(attempt.moves - target.moves + 1, target.moves)
+    return goldTimeGap
+      + normalizedGap(attempt.moves - goldTargets.moves, target.moves)
       + cleanPenalty
   }
 
@@ -142,7 +145,7 @@ function getAttemptUpgradeProximity(
     && target.replaySetup?.optimalStartMoveCountKind === 'exact'
     && typeof target.replaySetup.optimalStartMoveCount === 'number'
   ) {
-    return timeGap
+    return goldTimeGap
       + normalizedGap(
         attempt.moves - target.replaySetup.optimalStartMoveCount,
         target.replaySetup.optimalStartMoveCount
@@ -215,7 +218,7 @@ export function getGalleryMedalHuntRecommendation(
   if (!status.hasStarted) {
     return {
       label: 'Erste Medaille holen',
-      detail: 'Unterbiete Zeit oder Zuege einer Vorlage strikt, um Bronze zu sichern.',
+      detail: 'Unterbiete in einem absolut cleanen Lauf Zeit oder Zuege einer Vorlage strikt, um Bronze zu sichern.',
       tone: 'new',
     }
   }
@@ -265,8 +268,8 @@ export interface GalleryChallengeSeries {
   attempts: SolvedGalleryEntry[]
   relatedStartStateEntries: SolvedGalleryEntry[]
   medalHistory: GalleryChallengeMedalHistoryItem[]
-  bestAttempt: SolvedGalleryEntry
-  bestMedal: ChallengeMedal
+  bestAttempt: SolvedGalleryEntry | null
+  bestMedal: ChallengeMedal | null
   improvedAttemptCount: number
 }
 
@@ -379,6 +382,9 @@ function getRelatedStartStateEntries(
   return sortEntriesByLatest(
     entries.filter((entry) => {
       if (excludedEntryIds.has(entry.id)) return false
+      if (entry.challengeTargetId) {
+        return entry.challengeTargetId === targetEntry.id && !entry.challengeMedal
+      }
       return getGalleryStartStateKey(entry) === targetStartStateKey
     })
   )
@@ -406,13 +412,13 @@ export function buildGalleryStartStateSeries(
 
   return Array.from(entriesByStartState.entries())
     .flatMap(([startStateKey, startStateEntries]): GalleryStartStateSeries[] => {
-      if (startStateEntries.length < 2) return []
-
       const chronologicalEntries = [...startStateEntries].sort(
         (a, b) => parseTimestamp(a.completedAt) - parseTimestamp(b.completedAt)
       )
       const entriesByLatest = sortEntriesByLatest(startStateEntries)
       const cleanAnchorEntry = entriesByLatest.find(isGalleryChallengeTargetEligible) ?? null
+      if (startStateEntries.length < 2 && !cleanAnchorEntry) return []
+
       const displayEntries = cleanAnchorEntry
         ? [
             cleanAnchorEntry,
@@ -484,27 +490,31 @@ export function buildGalleryChallengeMedalHistory(
 
 export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): GalleryChallengeSeries[] {
   const entriesById = new Map(entries.map((entry) => [entry.id, entry]))
-  const attemptsByTarget = new Map<string, SolvedGalleryEntry[]>()
+  const linkedEntriesByTarget = new Map<string, SolvedGalleryEntry[]>()
 
   for (const entry of entries) {
-    if (!entry.challengeTargetId || !entry.challengeMedal) continue
-    const attempts = attemptsByTarget.get(entry.challengeTargetId)
-    if (attempts) {
-      attempts.push(entry)
+    if (!entry.challengeTargetId) continue
+    const linkedEntries = linkedEntriesByTarget.get(entry.challengeTargetId)
+    if (linkedEntries) {
+      linkedEntries.push(entry)
     } else {
-      attemptsByTarget.set(entry.challengeTargetId, [entry])
+      linkedEntriesByTarget.set(entry.challengeTargetId, [entry])
     }
   }
 
   const allChallengeEntryIds = new Set<string>()
-  attemptsByTarget.forEach((attempts, targetId) => {
+  linkedEntriesByTarget.forEach((linkedEntries, targetId) => {
     allChallengeEntryIds.add(targetId)
-    attempts.forEach((attempt) => allChallengeEntryIds.add(attempt.id))
+    linkedEntries.forEach((entry) => {
+      if (entry.challengeMedal) allChallengeEntryIds.add(entry.id)
+    })
   })
 
-  return Array.from(attemptsByTarget.entries(), ([targetId, attempts]) => {
+  return Array.from(linkedEntriesByTarget.entries(), ([targetId, linkedEntries]) => {
+    const attempts = linkedEntries.filter((entry) => entry.challengeMedal)
     const sortedAttempts = [...attempts].sort(compareChallengeAttempts)
     const targetEntry = entriesById.get(targetId) ?? null
+    const bestAttempt = sortedAttempts[0] ?? null
 
     return {
       targetId,
@@ -512,16 +522,19 @@ export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): Gall
       attempts: sortedAttempts,
       relatedStartStateEntries: getRelatedStartStateEntries(entries, targetEntry, allChallengeEntryIds),
       medalHistory: buildGalleryChallengeMedalHistory(attempts),
-      bestAttempt: sortedAttempts[0],
-      bestMedal: sortedAttempts[0].challengeMedal ?? 'bronze',
+      bestAttempt,
+      bestMedal: bestAttempt?.challengeMedal ?? null,
       improvedAttemptCount: targetEntry
         ? sortedAttempts.filter((attempt) => attempt.time < targetEntry.time || attempt.moves < targetEntry.moves).length
         : sortedAttempts.filter((attempt) => attempt.challengeMedal !== 'bronze').length,
     }
   }).sort((a, b) => {
-    const medalRankDelta = getChallengeMedalRank(b.bestMedal) - getChallengeMedalRank(a.bestMedal)
+    const medalRankDelta = (b.bestMedal ? getChallengeMedalRank(b.bestMedal) : 0)
+      - (a.bestMedal ? getChallengeMedalRank(a.bestMedal) : 0)
     if (medalRankDelta !== 0) return medalRankDelta
-    return parseTimestamp(b.bestAttempt.completedAt) - parseTimestamp(a.bestAttempt.completedAt)
+    const latestA = a.bestAttempt ?? a.relatedStartStateEntries[0] ?? a.targetEntry
+    const latestB = b.bestAttempt ?? b.relatedStartStateEntries[0] ?? b.targetEntry
+    return parseTimestamp(latestB?.completedAt) - parseTimestamp(latestA?.completedAt)
   })
 }
 

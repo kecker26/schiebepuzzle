@@ -3819,7 +3819,8 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     ...(typeof input.useFullImage === 'boolean' ? { useFullImage: input.useFullImage } : {}),
     ...(replaySetup ? { replaySetup } : {}),
     ...(imageTheme ? { imageTheme } : {}),
-    ...(challengeTargetId && challengeMedal ? { challengeTargetId, challengeMedal } : {}),
+    ...(challengeTargetId ? { challengeTargetId } : {}),
+    ...(challengeMedal ? { challengeMedal } : {}),
   }
 }
 
@@ -4938,9 +4939,13 @@ function validateGalleryPayload(payload: unknown): payload is {
       || (
         typeof input.challengeTargetId === 'string'
         && input.challengeTargetId.trim().length > 0
-        && sanitizeChallengeMedal(input.challengeMedal) !== undefined
+        && (
+          input.challengeMedal === undefined
+          || sanitizeChallengeMedal(input.challengeMedal) !== undefined
+        )
       )
-    )
+    ) &&
+    (input.challengeMedal === undefined || input.assistanceMode === 'clean')
   )
 }
 
@@ -5853,9 +5858,10 @@ async function handleGalleryApi(
         useFullImage: typeof body.useFullImage === 'boolean' ? body.useFullImage : undefined,
         replaySetup: sanitizeGalleryReplaySetup(body.replaySetup, body.config),
         ...(imageTheme ? { imageTheme } : {}),
-        ...(typeof body.challengeTargetId === 'string' && challengeMedal
-          ? { challengeTargetId: body.challengeTargetId, challengeMedal }
+        ...(typeof body.challengeTargetId === 'string'
+          ? { challengeTargetId: body.challengeTargetId }
           : {}),
+        ...(challengeMedal ? { challengeMedal } : {}),
         aiTagging: {
           status: 'pending',
           provider: geminiGalleryConfig.provider,

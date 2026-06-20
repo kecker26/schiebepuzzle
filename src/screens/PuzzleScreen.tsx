@@ -67,6 +67,7 @@ import {
   HISTORY_LIMIT,
   HOTKEY_HINT_PREVIEW_MS,
   INVALID_TILE_FEEDBACK_DURATION_MS,
+  MEDAL_RUN_LOCK_MESSAGE,
   MOVE_ANIMATION_DURATION_MS,
   normalizeGhostPreviewMode,
   normalizeGhostPreviewMotion,
@@ -304,6 +305,7 @@ export default function PuzzleScreen({
   onRestart,
 }: PuzzleScreenProps) {
   const announceAccessibility = useAccessibilityAnnouncer()
+  const areGameAidsLocked = Boolean(challengeTarget)
   const puzzleRootRef = useRef<HTMLDivElement>(null)
   const initialProgressRef = useRef(initialProgress)
   const initialReplaySetupRef = useRef(initialReplaySetup)
@@ -595,7 +597,7 @@ export default function PuzzleScreen({
   }, [cancelSuggestionFlow, hideTileNumbers])
 
   const handleShowTileNumbers = useCallback(() => {
-    if (!puzzleState || isPaused) return
+    if (!puzzleState || isPaused || areGameAidsLocked) return
 
     showBoardToolHelp('tile-numbers')
     endActiveBoardHelp()
@@ -605,7 +607,7 @@ export default function PuzzleScreen({
       tileNumbersTimeoutRef.current = null
       hideTileNumbers()
     }, TILE_NUMBER_PREVIEW_MS)
-  }, [endActiveBoardHelp, hideTileNumbers, isPaused, puzzleState, showBoardToolHelp, startTileNumberCorrectnessPulse])
+  }, [areGameAidsLocked, endActiveBoardHelp, hideTileNumbers, isPaused, puzzleState, showBoardToolHelp, startTileNumberCorrectnessPulse])
 
   const mapTileValueToId = useCallback((state: PuzzleState, tileValue: number): string | null => {
     const directTile = state.tiles[tileValue]
@@ -1192,9 +1194,17 @@ export default function PuzzleScreen({
         setRunMetrics(normalizeRunMetrics(restoredProgress.runMetrics, restoredMoveCount))
         setMoveHistory(restoredMoveHistory)
         setRedoHistory(restoredRedoHistory)
-        setIsPreviewVisible(restoredProgress.previewVisible)
-        const restoredHeatmapOverlayVisible = restoredProgress.heatmapOverlayVisible ?? false
-        setIsGhostPreviewVisible(restoredHeatmapOverlayVisible ? false : (restoredProgress.ghostPreviewVisible ?? false))
+        setIsPreviewVisible(areGameAidsLocked ? true : restoredProgress.previewVisible)
+        const restoredHeatmapOverlayVisible = areGameAidsLocked
+          ? false
+          : (restoredProgress.heatmapOverlayVisible ?? false)
+        setIsGhostPreviewVisible(
+          areGameAidsLocked
+            ? false
+            : restoredHeatmapOverlayVisible
+              ? false
+              : (restoredProgress.ghostPreviewVisible ?? false)
+        )
         setIsHeatmapOverlayVisible(restoredHeatmapOverlayVisible)
         setGhostPreviewMode(normalizeGhostPreviewMode(restoredProgress.ghostPreviewMode))
         setGhostPreviewScope(normalizeGhostPreviewScope(restoredProgress.ghostPreviewScope))
@@ -1326,6 +1336,7 @@ export default function PuzzleScreen({
       setGhostPreviewProgressPeak(0)
     }
   }, [
+    areGameAidsLocked,
     cancelSuggestionFlow,
     clearCorrectTilePulse,
     clearWinCelebration,
@@ -2368,12 +2379,14 @@ export default function PuzzleScreen({
   }
 
   const handleShowHint = () => {
+    if (areGameAidsLocked) return
     showBoardToolHelp('hint')
     hideTileNumbers()
     runSuggestionResolution(false)
   }
 
   const handleShowHintFromHotkey = () => {
+    if (areGameAidsLocked) return
     showBoardToolHelp('hint')
     hideTileNumbers()
     runSuggestionResolution(false, HOTKEY_HINT_PREVIEW_MS)
@@ -2381,7 +2394,7 @@ export default function PuzzleScreen({
   }
 
   const handleSuggestedMove = () => {
-    if (!puzzleState || !engineRef.current || puzzleState.isSolved || isInteractionLocked) return
+    if (areGameAidsLocked || !puzzleState || !engineRef.current || puzzleState.isSolved || isInteractionLocked) return
 
     showBoardToolHelp('suggested-move')
 
@@ -2401,14 +2414,14 @@ export default function PuzzleScreen({
   }
 
   const togglePersistentPreviewVisibility = useCallback(() => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     showBoardToolHelp('preview')
     hideTileNumbers()
     setIsPreviewVisible((prev) => !prev)
-  }, [hideTileNumbers, isPaused, showBoardToolHelp])
+  }, [areGameAidsLocked, hideTileNumbers, isPaused, showBoardToolHelp])
 
   const toggleGhostPreviewVisibility = useCallback(() => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     showBoardToolHelp('ghost-preview')
     const nextValue = !isGhostPreviewVisible
     if (nextValue) {
@@ -2424,10 +2437,10 @@ export default function PuzzleScreen({
       }))
     }
     setIsGhostPreviewVisible(nextValue)
-  }, [endActiveBoardHelp, ghostPreviewMode, isGhostPreviewVisible, isPaused, showBoardToolHelp])
+  }, [areGameAidsLocked, endActiveBoardHelp, ghostPreviewMode, isGhostPreviewVisible, isPaused, showBoardToolHelp])
 
   const toggleHeatmapOverlayVisibility = useCallback(() => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     showBoardToolHelp('heatmap')
     const nextValue = !isHeatmapOverlayVisible
     if (nextValue) {
@@ -2443,71 +2456,71 @@ export default function PuzzleScreen({
       }))
     }
     setIsHeatmapOverlayVisible(nextValue)
-  }, [endActiveBoardHelp, heatmapMode, isHeatmapOverlayVisible, isPaused, showBoardToolHelp])
+  }, [areGameAidsLocked, endActiveBoardHelp, heatmapMode, isHeatmapOverlayVisible, isPaused, showBoardToolHelp])
 
   const handleGhostPreviewWeightChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     setGhostPreviewWeight(normalizeGhostPreviewWeight(Number(event.target.value)))
-  }, [isPaused])
+  }, [areGameAidsLocked, isPaused])
 
   const handleGhostPreviewModeChange = useCallback((mode: GhostPreviewMode) => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     setGhostPreviewMode(mode)
-  }, [isPaused])
+  }, [areGameAidsLocked, isPaused])
 
   const handleGhostPreviewScopeChange = useCallback((scope: GhostPreviewScope) => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     if (scope === 'focus' && !ghostFocusTileId && puzzleState) {
       setGhostFocusTileId(findDefaultGhostFocusTileId(puzzleState))
     }
     setGhostPreviewScope(scope)
-  }, [findDefaultGhostFocusTileId, ghostFocusTileId, isPaused, puzzleState])
+  }, [areGameAidsLocked, findDefaultGhostFocusTileId, ghostFocusTileId, isPaused, puzzleState])
 
   const handleGhostPreviewMotionChange = useCallback((motion: GhostPreviewMotion) => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     setGhostPreviewMotion(motion)
-  }, [isPaused])
+  }, [areGameAidsLocked, isPaused])
 
   const toggleGhostPreviewProgressive = useCallback(() => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     setIsGhostPreviewProgressive((current) => !current)
-  }, [isPaused])
+  }, [areGameAidsLocked, isPaused])
 
   const adjustGhostPreviewWeight = useCallback((delta: number) => {
-    if (isPaused || !isGhostPreviewVisible) return
+    if (isPaused || areGameAidsLocked || !isGhostPreviewVisible) return
     setGhostPreviewWeight((current) => normalizeGhostPreviewWeight(current + delta))
-  }, [isGhostPreviewVisible, isPaused])
+  }, [areGameAidsLocked, isGhostPreviewVisible, isPaused])
 
   const cycleGhostPreviewMode = useCallback(() => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     const modes: GhostPreviewMode[] = ['image', 'contours', 'edges']
     const currentIndex = modes.indexOf(ghostPreviewMode)
     setGhostPreviewMode(modes[(currentIndex + 1) % modes.length] ?? GHOST_PREVIEW_MODE_DEFAULT)
-  }, [ghostPreviewMode, isPaused])
+  }, [areGameAidsLocked, ghostPreviewMode, isPaused])
 
   const handleHeatmapIntensityChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     setHeatmapIntensity(normalizeHeatmapIntensity(Number(event.target.value)))
-  }, [isPaused])
+  }, [areGameAidsLocked, isPaused])
 
   const handleHeatmapModeChange = useCallback((mode: HeatmapMode) => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     const selection = selectHeatmapMode(mode, areHeatmapDistancesVisible)
     setHeatmapMode(selection.mode)
     setAreHeatmapDistancesVisible(selection.distancesVisible)
-  }, [areHeatmapDistancesVisible, isPaused])
+  }, [areGameAidsLocked, areHeatmapDistancesVisible, isPaused])
 
   const toggleHeatmapDistancesVisibility = useCallback(() => {
-    if (isPaused) return
+    if (isPaused || areGameAidsLocked) return
     const selection = toggleHeatmapDistances(heatmapMode, areHeatmapDistancesVisible)
     setHeatmapMode(selection.mode)
     setAreHeatmapDistancesVisible(selection.distancesVisible)
-  }, [areHeatmapDistancesVisible, heatmapMode, isPaused])
+  }, [areGameAidsLocked, areHeatmapDistancesVisible, heatmapMode, isPaused])
 
   const toggleHeatmapTargetPathVisibility = useCallback(() => {
-    if (isPaused || heatmapSuggestedQueue.length < 2) return
+    if (isPaused || areGameAidsLocked || heatmapSuggestedQueue.length < 2) return
     setIsHeatmapTargetPathVisible((visible) => !visible)
-  }, [heatmapSuggestedQueue.length, isPaused])
+  }, [areGameAidsLocked, heatmapSuggestedQueue.length, isPaused])
 
   const closeRestartConfirm = useCallback(() => {
     setIsRestartConfirmOpen(false)
@@ -2531,7 +2544,7 @@ export default function PuzzleScreen({
   }, [elapsedTime, isInteractionLocked, moveCount, moveHistory.length, onRestart, redoHistory.length])
 
   const handleUndoMove = () => {
-    if (!puzzleState || moveHistory.length === 0 || isInteractionLocked) return
+    if (areGameAidsLocked || !puzzleState || moveHistory.length === 0 || isInteractionLocked) return
 
     hideTileNumbers()
     cancelSuggestionFlow()
@@ -2572,7 +2585,7 @@ export default function PuzzleScreen({
   }
 
   const handleRedoMove = () => {
-    if (!puzzleState || redoHistory.length === 0 || isInteractionLocked) return
+    if (areGameAidsLocked || !puzzleState || redoHistory.length === 0 || isInteractionLocked) return
 
     hideTileNumbers()
     cancelSuggestionFlow()
@@ -2719,6 +2732,7 @@ export default function PuzzleScreen({
     isRestartConfirmOpen,
     isHelpOpen,
     isPaused,
+    areGameAidsLocked,
     puzzleState,
     isInteractionLocked,
     onFocusBoard: focusBoardCanvas,
@@ -2894,7 +2908,9 @@ export default function PuzzleScreen({
                   <div
                     className={`puzzle-board-canvas-stack${isBoardIntroActive ? ' is-intro' : ''}${isCelebratingWin ? ' is-celebrating' : ''}${isPaused ? ' is-paused' : ''}`}
                     style={canvasDisplaySize ? { width: `${canvasDisplaySize.width}px`, height: `${canvasDisplaySize.height}px` } : undefined}
-                    data-app-tooltip="Brett fokussieren: Pfeile/WASD bewegen, H Hinweis, Enter Auto-Zug, Leertaste Vorschau."
+                    data-app-tooltip={areGameAidsLocked
+                      ? MEDAL_RUN_LOCK_MESSAGE
+                      : 'Brett fokussieren: Pfeile/WASD bewegen, H Hinweis, Enter Auto-Zug, Leertaste Vorschau.'}
                     data-app-tooltip-align="start"
                   >
                     <canvas
@@ -2913,7 +2929,9 @@ export default function PuzzleScreen({
                       aria-label="Puzzlebrett. Wenn das Brett fokussiert ist, bewegen Pfeiltasten oder WASD benachbarte Kacheln in das Leerfeld."
                       aria-describedby={`${boardDescriptionId} ${boardCaptionId}`}
                       aria-roledescription="Schiebepuzzle-Brett"
-                      aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight W A S D B H Enter Space G M N P Control+Z Control+Y Control+Shift+Z R Escape"
+                      aria-keyshortcuts={areGameAidsLocked
+                        ? 'ArrowUp ArrowDown ArrowLeft ArrowRight W A S D B P R Escape'
+                        : 'ArrowUp ArrowDown ArrowLeft ArrowRight W A S D B H Enter Space G M N P Control+Z Control+Y Control+Shift+Z R Escape'}
                     />
                     {hintPreview && (
                       <div className="puzzle-hint-board-legend" aria-hidden="true">
@@ -2962,7 +2980,9 @@ export default function PuzzleScreen({
                 </div>
               </div>
               <p id={boardDescriptionId} className="visually-hidden">
-                Das Puzzlebrett ist der zentrale Spielbereich. Pfeiltasten oder WASD bewegen Kacheln, H zeigt einen Hinweis, Enter spielt den empfohlenen Zug und B holt den Fokus zurueck auf das Brett.
+                {areGameAidsLocked
+                  ? 'Das Puzzlebrett ist der zentrale Spielbereich. Pfeiltasten oder WASD bewegen Kacheln und B holt den Fokus zurueck auf das Brett. Im Medaillenlauf sind die Spielhilfen gesperrt.'
+                  : 'Das Puzzlebrett ist der zentrale Spielbereich. Pfeiltasten oder WASD bewegen Kacheln, H zeigt einen Hinweis, Enter spielt den empfohlenen Zug und B holt den Fokus zurueck auf das Brett.'}
               </p>
               <p id={boardCaptionId} className="puzzle-board-caption" aria-live="polite">
                 {boardCaption}
@@ -3003,6 +3023,7 @@ export default function PuzzleScreen({
             position={contextMenuPosition}
             isSolved={puzzleState?.isSolved ?? true}
             isInteractionLocked={isInteractionLocked}
+            areGameAidsLocked={areGameAidsLocked}
             isPreviewVisible={isPreviewVisible}
             isGhostPreviewVisible={isGhostPreviewVisible}
             isHeatmapOverlayVisible={isHeatmapOverlayVisible}
