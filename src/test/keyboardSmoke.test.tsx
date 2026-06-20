@@ -420,6 +420,18 @@ describe('keyboard smoke tests', () => {
     const galleryView = getHelpView('upload-gallery')
     expect(galleryView.kicker).toBe('Galerie')
     expect(galleryView.sections[0]?.title).toBe('Filter und Eintraege')
+    expect(galleryView.sections.some((section) => section.title === 'Sammlungen erstellen & verwalten')).toBe(true)
+    expect(galleryView.sections.some((section) => section.title === 'Tags und Tag-Manager')).toBe(true)
+
+    const backupSection = getHelpView('upload-start').sections.find(
+      (section) => section.title === 'Datenbereiche und Backups'
+    )
+    expect(backupSection?.items.some((item) => item.label.includes('3 neuesten lokalen Backups'))).toBe(true)
+    expect(backupSection?.items.some((item) => item.label.includes('ersetzt den aktuellen Datenstand komplett'))).toBe(true)
+
+    const appearanceSection = galleryView.sections.find((section) => section.title === 'Musik und Darstellung')
+    expect(appearanceSection?.items.some((item) => item.label.includes('nur lokal im Browser'))).toBe(true)
+    expect(appearanceSection?.items.some((item) => item.label.includes('keine Gemini-Anfrage'))).toBe(true)
 
     const playingView = getHelpView('playing')
     expect(playingView.kicker).toBe('Puzzle')

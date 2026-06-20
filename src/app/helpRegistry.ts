@@ -128,7 +128,13 @@ const COMMON_SECTIONS: HelpSection[] = [
         label: 'Per Pfeil nach unten oeffnest du Lautstaerke oder Stilauswahl direkt im Dropdown.',
       },
       {
-        label: 'Die Bildpalette laesst sich zentral fuer UI, Galerie-, Spielstand- und Sammlungskarten ein- oder ausschalten; das Theme wechselt sofort zwischen hell und dunkel.',
+        label: 'Das Emotion-Theme leitet aus dem aktuellen Bild eine passende Stimmung und Farbpalette fuer UI, Galerie-, Spielstand- und Sammlungskarten ab.',
+      },
+      {
+        label: 'Die Bildstimmung wird nur lokal im Browser aus Farben, Helligkeit, Saettigung und Kontrast ermittelt; dafuer wird keine Gemini-Anfrage gesendet.',
+      },
+      {
+        label: 'Mit dem Palette-Button wechselst du jederzeit zwischen Emotion-Theme und Standard-Farbgebung; Hell- und Dunkel-Modus bleiben davon unabhaengig.',
       },
     ],
   },
@@ -245,13 +251,19 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'archive',
         items: [
           {
-            label: 'Spielstaende, Statistik und Galerie lassen sich vollstaendig per Fokus und Enter oeffnen.',
+            label: 'Spielstaende, Statistik, Galerie und Sammlungen lassen sich vollstaendig per Fokus und Enter oeffnen.',
           },
           {
             label: 'Backups koennen ohne Maus exportiert und importiert werden.',
           },
           {
-            label: 'Die Auswahlansicht bleibt bewusst ruhig, waehrend Datenbereiche in eigenen Fenstern oeffnen.',
+            label: 'Ein Backup sichert Spielstaende, Statistik, Galerie, Sammlungen sowie eigene und gelernte Tag-Kategorien gemeinsam.',
+          },
+          {
+            label: 'Die App behaelt die 3 neuesten lokalen Backups; beim Erstellen eines weiteren Backups wird das aelteste automatisch entfernt.',
+          },
+          {
+            label: 'Ein Import fuehrt Daten nicht zusammen, sondern ersetzt den aktuellen Datenstand komplett. Erstelle vorher ein frisches Backup, wenn du ihn behalten moechtest.',
           },
         ],
       },
@@ -468,6 +480,46 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             label: 'Ueber die Filter-Selects oben kannst du Schwierigkeit und Laufart einschraenken.',
+          },
+        ],
+      },
+      {
+        title: 'Sammlungen erstellen & verwalten',
+        icon: 'archive',
+        items: [
+          {
+            label: 'Fuege ein geloestes Motiv in der Galerie einer bestehenden oder direkt einer neuen Sammlung hinzu.',
+          },
+          {
+            label: 'Aus einem aktiven Tag kannst du passende Galerie-Motive gemeinsam als neue Sammlung uebernehmen oder eine bestehende Sammlung ergaenzen.',
+          },
+          {
+            label: 'In der Sammlungsansicht kannst du Name und Beschreibung bearbeiten, Motive oeffnen und einzelne Motive wieder entfernen.',
+          },
+          {
+            label: 'Das Entfernen eines Motivs oder das Loeschen einer Sammlung loescht keine Galerie-Eintraege.',
+          },
+        ],
+      },
+      {
+        title: 'Tags und Tag-Manager',
+        icon: 'helpCircle',
+        items: [
+          {
+            label: 'Bild-Tags stammen aus der Gemini-Analyse, aus importierten Daten oder aus deinen manuellen Ergaenzungen.',
+          },
+          {
+            label: 'Die Kategorie eines Tags kommt getrennt davon aus der statischen Taxonomie, einer manuellen Zuordnung oder dem lokal gespeicherten KI-Lerncache.',
+          },
+          {
+            label: 'Im Tag-Manager kannst du Tags suchen, filtern, umbenennen, zusammenfuehren, gesammelt hinzufuegen oder aus betroffenen Motiven entfernen.',
+          },
+          {
+            label: 'Entfernte Gemini-Tags werden dauerhaft als abgelehnt gespeichert und bei einer erneuten KI-Analyse nicht wieder hinzugefuegt.',
+            detail: 'Diese Sperrliste wird intern als rejectedAiTags gespeichert. Ein bewusst erneut manuell hinzugefuegter Tag ist davon ausgenommen.',
+          },
+          {
+            label: 'KI-Tags und Sammlungsvorschlaege sind von der lokalen Bildstimmungsanalyse fuer das Emotion-Theme getrennt.',
           },
         ],
       },
