@@ -95,7 +95,6 @@ export default function UploadConfirmDialog({
       descriptionId={descriptionId}
       role="alertdialog"
       onClose={isBusy ? undefined : onCancel}
-      closeOnOverlayClick={!isBusy}
       closeOnEscape={!isBusy}
       trapFocus
       restoreFocus

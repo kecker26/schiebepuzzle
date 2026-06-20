@@ -675,7 +675,6 @@ export default function UploadGalleryDetailDialog({
       titleId="gallery-detail-title"
       descriptionId={descriptionId}
       onClose={onClose}
-      closeOnOverlayClick
       closeOnEscape
       trapFocus
       restoreFocus

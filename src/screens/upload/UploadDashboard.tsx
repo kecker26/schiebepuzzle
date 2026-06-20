@@ -608,8 +608,6 @@ export default function UploadDashboard({
       titleId="workspace-window-title"
       descriptionId="workspace-window-copy"
       onClose={handleReturnToStart}
-      onOverlayClick={handleReturnToStart}
-      closeOnOverlayClick
       closeOnEscape
       trapFocus
       restoreFocus

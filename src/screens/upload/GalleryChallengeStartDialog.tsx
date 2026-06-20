@@ -51,7 +51,6 @@ export default function GalleryChallengeStartDialog({
       titleId="gallery-challenge-start-title"
       descriptionId="gallery-challenge-start-description"
       onClose={onCancel}
-      closeOnOverlayClick
       closeOnEscape
       trapFocus
       restoreFocus

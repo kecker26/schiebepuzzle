@@ -42,8 +42,10 @@ import CropScreen from '../screens/CropScreen.tsx'
 import StartScreen from '../screens/StartScreen.tsx'
 import UploadScreen from '../screens/UploadScreen.tsx'
 import UploadBackupBrowserDialog from '../screens/upload/UploadBackupBrowserDialog.tsx'
+import UploadCollectionPickerDialog from '../screens/upload/UploadCollectionPickerDialog.tsx'
 import UploadGalleryCard from '../screens/upload/UploadGalleryCard.tsx'
 import UploadGalleryDetailDialog from '../screens/upload/UploadGalleryDetailDialog.tsx'
+import UploadGalleryTagManagerDialog from '../screens/upload/UploadGalleryTagManagerDialog.tsx'
 import UploadGalleryPanel from '../screens/upload/UploadGalleryPanel.tsx'
 import UploadCollectionsPanel from '../screens/upload/UploadCollectionsPanel.tsx'
 import UploadMenuCards from '../screens/upload/UploadMenuCards.tsx'
@@ -57,6 +59,7 @@ import UploadStatsHistorySection from '../screens/upload/UploadStatsHistorySecti
 import UploadStatsSection from '../screens/upload/UploadStatsSection.tsx'
 import UploadStatsVisualReport from '../screens/upload/UploadStatsVisualReport.tsx'
 import UploadWorkspaceLauncher from '../screens/upload/UploadWorkspaceLauncher.tsx'
+import PuzzleRestartConfirmDialog from '../screens/puzzle/PuzzleRestartConfirmDialog.tsx'
 import { DIFFICULTY_OPTIONS } from '../utils/puzzleDifficulty.ts'
 import type {
   PuzzleCompletionRecord,
@@ -621,6 +624,9 @@ describe('keyboard smoke tests', () => {
     expect(dialog.getAttribute('aria-describedby')).toContain('recovery-resume-details')
     expect(dialog.getAttribute('aria-describedby')).toContain('recovery-resume-keyboard-hint')
 
+    fireEvent.click(document.body.querySelector<HTMLElement>('.recovery-resume-overlay')!)
+    expect(onDismiss).not.toHaveBeenCalled()
+
     fireEvent.keyDown(laterButton, { key: 'ArrowRight' })
     expect(document.activeElement).toBe(declineButton)
 
@@ -644,6 +650,9 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.click(resumeButton)
     expect(onResume).toHaveBeenCalledTimes(1)
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onDismiss).toHaveBeenCalledOnce()
   })
 
   it('keeps the recovery dialog closed for the current app session after choosing later', async () => {
@@ -1137,6 +1146,58 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.keyDown(window, { key: 'v' })
     expect(document.activeElement).toBe(within(workspaceNavigation).getByRole('button', { name: /Auswahl/i }))
+  })
+
+  it('ignores workspace overlay clicks while allowing Escape and Auswahl to close', () => {
+    const onWindowChange = vi.fn()
+
+    render(
+      <UploadDashboard
+        activeWindow="savedGames"
+        savedGames={[]}
+        savedGamesCount={0}
+        loadingSaveId={null}
+        deletingSaveId={null}
+        isDeletingAllSavedGames={false}
+        completionHistory={[]}
+        filteredHistory={[]}
+        historyFilter="all"
+        historyFilterOptions={[]}
+        topStats={[]}
+        latestCompletion={null}
+        favoriteDifficulty={null}
+        fastestDifficulty={null}
+        stats={null}
+        gallery={null}
+        isLoadingStats={false}
+        isResettingStats={false}
+        isLoadingSavedGames={false}
+        isLoadingGallery={false}
+        isResettingGallery={false}
+        hasRecordedStats={false}
+        onWindowChange={onWindowChange}
+        onHistoryFilterChange={vi.fn()}
+        onRequestStatsReset={vi.fn()}
+        onRequestGalleryReset={vi.fn()}
+        onReplayGalleryEntry={vi.fn()}
+        onDeleteGalleryEntries={vi.fn(() => Promise.resolve())}
+        onLoadSave={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        onDeleteAllRequest={vi.fn()}
+      />
+    )
+
+    fireEvent.click(document.body.querySelector<HTMLElement>('.workspace-window-overlay')!)
+    expect(onWindowChange).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onWindowChange).toHaveBeenCalledOnce()
+    expect(onWindowChange).toHaveBeenCalledWith('start')
+
+    onWindowChange.mockClear()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Auswahl' })[0])
+    expect(onWindowChange).toHaveBeenCalledOnce()
+    expect(onWindowChange).toHaveBeenCalledWith('start')
   })
 
   it('moves through workspace header actions with arrows, Pos1 and Ende', async () => {
@@ -2362,6 +2423,9 @@ describe('keyboard smoke tests', () => {
     const cancelButton = await screen.findByRole('button', { name: 'Abbrechen' })
     expect(document.activeElement).toBe(cancelButton)
 
+    fireEvent.click(document.body.querySelector<HTMLElement>('.delete-confirm-overlay')!)
+    expect(screen.getByRole('alertdialog', { name: 'Wirklich loeschen?' })).toBeTruthy()
+
     fireEvent.keyDown(cancelButton, { key: 'ArrowRight' })
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Loeschen' }))
 
@@ -2371,6 +2435,73 @@ describe('keyboard smoke tests', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => {
       expect(document.activeElement).toBe(opener)
+    })
+  })
+
+  it('ignores overlay clicks but keeps Escape active in editing and restart dialogs', () => {
+    const closeCases: Array<{
+      overlaySelector: string
+      renderDialog: (onClose: () => void) => React.ReactElement
+    }> = [
+      {
+        overlaySelector: '.collection-dialog-overlay',
+        renderDialog: (onClose) => (
+          <UploadCollectionPickerDialog
+            collections={[]}
+            imageIds={['gallery-1']}
+            imageLabel="Dieses Motiv"
+            isBusy={false}
+            onCreateCollection={vi.fn(() => Promise.resolve())}
+            onAddToCollection={vi.fn(() => Promise.resolve())}
+            onClose={onClose}
+          />
+        ),
+      },
+      {
+        overlaySelector: '.puzzle-confirm-overlay',
+        renderDialog: (onClose) => (
+          <PuzzleRestartConfirmDialog
+            onCancel={onClose}
+            onConfirm={vi.fn()}
+            confirmButtonRef={React.createRef<HTMLButtonElement>()}
+          />
+        ),
+      },
+      {
+        overlaySelector: '.gallery-tag-manager-overlay',
+        renderDialog: (onClose) => (
+          <UploadGalleryTagManagerDialog
+            tagOptions={[]}
+            activeTagFilterKeys={[]}
+            isBusy={false}
+            onRenameTag={vi.fn(() => Promise.resolve())}
+            onRemoveTag={vi.fn(() => Promise.resolve())}
+            onEditEntryTags={vi.fn(() => Promise.resolve())}
+            tagCategoryCatalog={{ categories: [], assignments: [], lastUpdatedAt: null }}
+            tagCategorySuggestions={[]}
+            onUpdateTagCategory={vi.fn(() => Promise.resolve())}
+            onClassifyUnknownTags={vi.fn(() => Promise.resolve())}
+            onCreateTagCategory={vi.fn(() => Promise.resolve())}
+            onDeleteTagCategory={vi.fn(() => Promise.resolve())}
+            onApplyTagFilters={vi.fn()}
+            onClose={onClose}
+          />
+        ),
+      },
+    ]
+
+    closeCases.forEach(({ overlaySelector, renderDialog }) => {
+      const onClose = vi.fn()
+      const view = render(renderDialog(onClose))
+      const overlay = document.body.querySelector<HTMLElement>(overlaySelector)!
+
+      fireEvent.click(overlay)
+      expect(onClose).not.toHaveBeenCalled()
+
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(onClose).toHaveBeenCalledOnce()
+
+      view.unmount()
     })
   })
 
@@ -3277,6 +3408,9 @@ describe('keyboard smoke tests', () => {
     const firstSelectButton = selectButtons[0]!
     expect(document.activeElement).toBe(firstSelectButton)
 
+    fireEvent.click(document.body.querySelector<HTMLElement>('.backup-browser-overlay')!)
+    expect(screen.getByRole('dialog', { name: 'Backup importieren' })).toBeTruthy()
+
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => {
       expect(document.activeElement).toBe(opener)
@@ -3336,6 +3470,9 @@ describe('keyboard smoke tests', () => {
     const opener = screen.getByRole('button', { name: 'Galerie-Detail oeffnen' })
     opener.focus()
     fireEvent.click(opener)
+
+    fireEvent.click(document.body.querySelector<HTMLElement>('.gallery-detail-overlay')!)
+    expect(screen.getByRole('dialog', { name: /Normal 4x4/i })).toBeTruthy()
 
     const collectButton = screen.getByRole('button', { name: /zu einer Sammlung hinzufuegen/i })
     const closeButton = screen.getByRole('button', { name: 'Schliessen' })
@@ -3508,6 +3645,9 @@ describe('keyboard smoke tests', () => {
     expect(detailOverlay).toBeTruthy()
     expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2)
     expect(onReplayEntry).not.toHaveBeenCalled()
+    fireEvent.click(challengeOverlay!)
+    expect(screen.getByText('Medaillen-Regeln')).toBeTruthy()
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2)
     fireEvent.click(screen.getByRole('button', { name: 'Challenge starten' }))
     expect(onReplayEntry).toHaveBeenCalledWith(target, 'run')
     expect(screen.queryByRole('button', { name: /versuch.*herausfordern/i })).toBeNull()

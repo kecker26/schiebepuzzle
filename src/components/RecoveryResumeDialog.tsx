@@ -130,8 +130,6 @@ export default function RecoveryResumeDialog({
       titleId={titleId}
       descriptionId={`${descriptionId} recovery-resume-details recovery-resume-keyboard-hint`}
       onClose={onDismiss}
-      onOverlayClick={onDismiss}
-      closeOnOverlayClick
       closeOnEscape
       trapFocus
       restoreFocus
