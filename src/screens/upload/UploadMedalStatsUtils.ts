@@ -224,21 +224,26 @@ export function buildGroupedMotifCards(entries: SolvedGalleryEntry[]): GroupedMo
       })
     }
     const motifSeries = challengeSeries
-      .filter((series) => getGalleryMotifKey(series.bestAttempt) === motifKey)
-      .map((series): MotifChallengeSeries => ({
-        targetId: series.targetId,
-        targetTime: series.targetEntry?.time ?? null,
-        targetMoves: series.targetEntry?.moves ?? null,
-        targetConfig: series.targetEntry ? formatConfig(series.targetEntry.config) : null,
-        targetDifficultyLabel: series.targetEntry ? formatDifficultyLabel(series.targetEntry.config) : null,
-        bestAttemptId: series.bestAttempt.id,
-        bestAttemptTime: series.bestAttempt.time,
-        bestAttemptMoves: series.bestAttempt.moves,
-        bestMedal: series.bestMedal,
-        attemptCount: series.attempts.length,
-        timeDeltaToTarget: series.targetEntry ? series.bestAttempt.time - series.targetEntry.time : null,
-        movesDeltaToTarget: series.targetEntry ? series.bestAttempt.moves - series.targetEntry.moves : null,
-      }))
+      .flatMap((series): MotifChallengeSeries[] => {
+        const bestAttempt = series.bestAttempt
+        const bestMedal = series.bestMedal
+        if (!bestAttempt || !bestMedal || getGalleryMotifKey(bestAttempt) !== motifKey) return []
+
+        return [{
+          targetId: series.targetId,
+          targetTime: series.targetEntry?.time ?? null,
+          targetMoves: series.targetEntry?.moves ?? null,
+          targetConfig: series.targetEntry ? formatConfig(series.targetEntry.config) : null,
+          targetDifficultyLabel: series.targetEntry ? formatDifficultyLabel(series.targetEntry.config) : null,
+          bestAttemptId: bestAttempt.id,
+          bestAttemptTime: bestAttempt.time,
+          bestAttemptMoves: bestAttempt.moves,
+          bestMedal,
+          attemptCount: series.attempts.length,
+          timeDeltaToTarget: series.targetEntry ? bestAttempt.time - series.targetEntry.time : null,
+          movesDeltaToTarget: series.targetEntry ? bestAttempt.moves - series.targetEntry.moves : null,
+        }]
+      })
 
     return {
       motifKey,

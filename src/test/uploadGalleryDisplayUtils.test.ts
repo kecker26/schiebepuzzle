@@ -228,8 +228,8 @@ describe('UploadGalleryDisplayUtils', () => {
           challengeTargetId: 'silver-target',
           challengeMedal: 'silver',
           assistanceMode: 'clean',
-          moves: 41,
-          time: 101,
+          moves: 33,
+          time: 81,
         }),
         createGalleryEntry('gold-target', {
           sourceImage: 'source-gold',
@@ -264,7 +264,7 @@ describe('UploadGalleryDisplayUtils', () => {
       ? getGalleryMedalHuntRecommendation(getGalleryMedalHuntStatus(silverEntry))
       : null
     ).toMatchObject({
-      label: 'Nah am Upgrade',
+      label: 'Sehr nah am Upgrade',
       tone: 'near',
     })
     expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-medal'))).toHaveLength(1)
@@ -318,13 +318,13 @@ describe('UploadGalleryDisplayUtils', () => {
 
   it('markiert die beste Medaille und das naechste erreichbare Motiv-Ziel', () => {
     const target = createGalleryEntry('target', {
-      moves: 20,
+      moves: 100,
       replaySetup: {
         version: 1,
         startBoard: [],
         emptyIndex: 0,
         shuffleMoves: [],
-        optimalStartMoveCount: 20,
+        optimalStartMoveCount: 70,
         optimalStartMoveCountKind: 'exact',
       },
     })
@@ -338,15 +338,15 @@ describe('UploadGalleryDisplayUtils', () => {
 
     expect(progress).toMatchObject({
       currentMedal: 'silver',
-      nextMedal: 'diamond',
+      nextMedal: 'gold',
       stages: [
         { medal: 'bronze', status: 'completed' },
         { medal: 'silver', status: 'current' },
-        { medal: 'gold', status: 'unavailable' },
-        { medal: 'diamond', status: 'next' },
+        { medal: 'gold', status: 'next' },
+        { medal: 'diamond', status: 'locked' },
       ],
     })
-    expect(progress?.label).toContain('Gold ist fuer die beste Vorlage nicht erreichbar')
+    expect(progress?.label).toContain('Naechstes Ziel: Gold')
   })
 
   it('markiert Diamant ohne exaktes Solver-Optimum als nicht verfuegbar', () => {
@@ -361,6 +361,32 @@ describe('UploadGalleryDisplayUtils', () => {
 
     expect(progress?.nextMedal).toBeNull()
     expect(progress?.stages[progress.stages.length - 1]).toEqual({ medal: 'diamond', status: 'unavailable' })
+  })
+
+  it('bewahrt historische Goldmedaillen unter der neuen 20-Prozent-Regel', () => {
+    const target = createGalleryEntry('target', {
+      moves: 100,
+      replaySetup: {
+        version: 1,
+        startBoard: [],
+        emptyIndex: 0,
+        shuffleMoves: [],
+        optimalStartMoveCount: 81,
+        optimalStartMoveCountKind: 'exact',
+      },
+    })
+    const progress = getChallengeMedalProgress([
+      target,
+      createGalleryEntry('historical-gold', {
+        challengeTargetId: target.id,
+        challengeMedal: 'gold',
+      }),
+    ])
+
+    expect(progress.currentMedal).toBe('gold')
+    expect(progress.stages).toContainEqual({ medal: 'gold', status: 'current' })
+    expect(progress.stages).toContainEqual({ medal: 'diamond', status: 'unavailable' })
+    expect(progress.label).not.toContain('Gold ist fuer die beste Vorlage nicht erreichbar')
   })
 
   it('zeigt fuer Motive ohne Challenge-Medaille Bronze als erstes Ziel', () => {
@@ -461,6 +487,64 @@ describe('UploadGalleryDisplayUtils', () => {
     const [series] = buildGalleryChallengeSeries([unrelated, challengeAttempt, origin, target])
 
     expect(series.relatedStartStateEntries.map((entry) => entry.id)).toEqual(['origin'])
+  })
+
+  it('ordnet assistierte medaillenlose Challenge-Abschluesse als verwandte Startzustandslaeufe ein', () => {
+    const replaySetup = {
+      version: 1,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    } satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
+    const target = createGalleryEntry('target', {
+      replaySetup,
+      assistanceMode: 'clean',
+    })
+    const cleanMedalAttempt = createGalleryEntry('clean-medal-attempt', {
+      replaySetup,
+      assistanceMode: 'clean',
+      challengeTargetId: target.id,
+      challengeMedal: 'bronze',
+    })
+    const assistedChallengeRun = createGalleryEntry('assisted-challenge-run', {
+      replaySetup,
+      assistanceMode: 'hinted',
+      challengeTargetId: target.id,
+    })
+
+    const [series] = buildGalleryChallengeSeries([assistedChallengeRun, cleanMedalAttempt, target])
+
+    expect(series.attempts.map((entry) => entry.id)).toEqual(['clean-medal-attempt'])
+    expect(series.relatedStartStateEntries.map((entry) => entry.id)).toEqual(['assisted-challenge-run'])
+  })
+
+  it('erstellt bereits fuer den ersten assistierten Versuch eine medaillenlose Challenge-Serie', () => {
+    const replaySetup = {
+      version: 1,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    } satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
+    const target = createGalleryEntry('target', {
+      replaySetup,
+      assistanceMode: 'clean',
+    })
+    const assistedChallengeRun = createGalleryEntry('assisted-challenge-run', {
+      replaySetup,
+      assistanceMode: 'auto-assisted',
+      challengeTargetId: target.id,
+    })
+
+    const series = buildGalleryChallengeSeries([assistedChallengeRun, target])
+
+    expect(series).toHaveLength(1)
+    expect(series[0]).toMatchObject({
+      targetId: target.id,
+      bestAttempt: null,
+      bestMedal: null,
+      attempts: [],
+    })
+    expect(series[0].relatedStartStateEntries.map((entry) => entry.id)).toEqual(['assisted-challenge-run'])
   })
 
   it('erkennt bestaetigte Medaillen und Aufstiege chronologisch', () => {
@@ -588,6 +672,26 @@ describe('UploadGalleryDisplayUtils', () => {
       isOrigin: false,
     })
     expect(relations.entriesByEntryId.has(unrelated.id)).toBe(false)
+  })
+
+  it('erstellt fuer eine einzelne cleane Vorlage bereits eine Startzustand-Serie', () => {
+    const cleanTemplate = createGalleryEntry('clean-template', {
+      assistanceMode: 'clean',
+      replaySetup: {
+        version: 1,
+        startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+        emptyIndex: 15,
+        shuffleMoves: ['tile-15'],
+      },
+    })
+
+    const series = buildGalleryStartStateSeries([cleanTemplate])
+
+    expect(series).toHaveLength(1)
+    expect(series[0]).toMatchObject({
+      entries: [{ id: cleanTemplate.id }],
+      cleanAnchorEntry: { id: cleanTemplate.id },
+    })
   })
 
   it('zieht eine cleane Vorlage in Startzustand-Serien nach vorne', () => {

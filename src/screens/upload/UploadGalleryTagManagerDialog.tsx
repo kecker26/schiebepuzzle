@@ -1161,7 +1161,6 @@ export default function UploadGalleryTagManagerDialog({
       titleId="gallery-tag-manager-title"
       descriptionId="gallery-tag-manager-description"
       onClose={isBusy ? undefined : onClose}
-      closeOnOverlayClick={!isBusy}
       closeOnEscape={!isBusy}
       trapFocus
       restoreFocus

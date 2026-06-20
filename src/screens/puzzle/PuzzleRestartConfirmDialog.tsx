@@ -73,7 +73,6 @@ export default function PuzzleRestartConfirmDialog({
       descriptionId="restart-confirm-description"
       role="alertdialog"
       onClose={onCancel}
-      closeOnOverlayClick
       closeOnEscape
       trapFocus
       restoreFocus

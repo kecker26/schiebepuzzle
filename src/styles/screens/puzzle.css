@@ -303,6 +303,27 @@
   text-transform: uppercase;
 }
 
+.puzzle-medal-run-lock-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--image-accent-solid) 56%, rgba(56, 189, 248, 0.54));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--image-accent-soft) 42%, rgba(8, 47, 73, 0.68));
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.4;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.puzzle-medal-run-lock-note svg {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--image-accent-solid) 78%, #67e8f9);
+}
+
 .puzzle-challenge-badge.is-diamond .puzzle-challenge-badge-label svg,
 .puzzle-challenge-badge.is-gold .puzzle-challenge-badge-label svg {
   animation: puzzle-challenge-trophy-pulse 1.8s ease-in-out infinite;
@@ -1201,6 +1222,25 @@
 
 .puzzle-tool-secondary {
   opacity: 0.92;
+}
+
+.puzzle-hint-panel.is-game-aids-locked button:disabled,
+.puzzle-tools-shell.is-game-aids-locked button:disabled {
+  border-color: color-mix(in srgb, var(--text-muted) 25%, transparent);
+  background: color-mix(in srgb, var(--puzzle-card-secondary-bg) 76%, rgba(15, 23, 42, 0.34));
+  box-shadow: none;
+  color: var(--text-muted);
+  filter: grayscale(1) saturate(0.2);
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.puzzle-hint-panel.is-game-aids-locked button:disabled .puzzle-button-hotkey,
+.puzzle-tools-shell.is-game-aids-locked button:disabled .puzzle-button-hotkey {
+  border-color: color-mix(in srgb, var(--text-muted) 24%, transparent);
+  background: color-mix(in srgb, var(--puzzle-card-secondary-bg) 82%, rgba(2, 6, 23, 0.42));
+  color: var(--text-muted);
+  opacity: 0.72;
 }
 
 .puzzle-ghost-slider {

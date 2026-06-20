@@ -40,6 +40,7 @@ import { useSolvedGallery } from './app/useSolvedGallery.ts'
 import { useImageCollections } from './app/useImageCollections.ts'
 import { type AppContextMenuHandler } from './app/appContextMenu.ts'
 import { useButtonOnlyTabNavigation } from './app/useButtonOnlyTabNavigation.ts'
+import { discardMedalRunSave, shouldAutosavePuzzleRun } from './app/medalRunPersistence.ts'
 import AnimatedScreen from './motion/AnimatedScreen.tsx'
 import BusyIndicator from './motion/BusyIndicator.tsx'
 import { useGlobalGlowTracking } from './motion/useGlowTracking.ts'
@@ -1206,6 +1207,11 @@ export default function App() {
       pendingSaveProgressRef.current = null
       pendingSaveStartedAtRef.current = 0
 
+      if (!shouldAutosavePuzzleRun(activeGalleryChallengeTarget)) {
+        setHasPendingSaveChanges(false)
+        return Promise.resolve()
+      }
+
       if (!latestProgress) {
         setHasPendingSaveChanges(false)
         return Promise.resolve()
@@ -1243,8 +1249,59 @@ export default function App() {
         }
       })
     },
-    [enqueueSaveTask, persistSaveProgress]
+    [activeGalleryChallengeTarget, enqueueSaveTask, persistSaveProgress]
   )
+
+  const discardActiveMedalRunSave = useCallback(async (): Promise<boolean> => {
+    clearScheduledSave()
+    await saveQueueRef.current
+
+    const saveId = currentSaveIdRef.current
+    currentSaveIdRef.current = null
+    setCurrentSaveId(null)
+    setSavedProgress(null)
+    clearRecoverySessionSnapshot()
+    setDeferredRecoverySaveId(null)
+
+    if (!saveId) {
+      return true
+    }
+
+    const discardResult = await discardMedalRunSave(saveId, deleteSavedGame)
+    if (discardResult.ok) {
+      setSavedGames((prev) => prev.filter((entry) => entry.id !== saveId))
+      clearDeletedSaveFromLastSession(saveId)
+      clearIgnoredRecoverySave(saveId)
+      setSavedGamesError(null)
+      return true
+    }
+
+    currentSaveIdRef.current = saveId
+    setCurrentSaveId(saveId)
+    setSavedGamesError(`Medaillenlauf konnte nicht verworfen werden: ${getErrorMessage(discardResult.error)}`)
+    return false
+  }, [
+    clearDeletedSaveFromLastSession,
+    clearIgnoredRecoverySave,
+    clearScheduledSave,
+    setSavedGames,
+    setSavedGamesError,
+  ])
+
+  const prepareToLeavePlayingRun = useCallback(async (): Promise<boolean> => {
+    if (appState !== 'playing') {
+      return true
+    }
+
+    if (activeGalleryChallengeTarget) {
+      return discardActiveMedalRunSave()
+    }
+
+    await flushPendingSave(activeSessionRef.current, {
+      keepalive: currentSaveIdRef.current !== null,
+    })
+    return true
+  }, [activeGalleryChallengeTarget, appState, discardActiveMedalRunSave, flushPendingSave])
 
   const handleRestoreCropSession = useCallback(async () => {
     const snapshot = cropDraftSnapshotRef.current ?? cropDraftSnapshot
@@ -1252,9 +1309,7 @@ export default function App() {
       return
     }
 
-    if (appState === 'playing') {
-      await flushPendingSave(activeSessionRef.current, {})
-    }
+    if (!await prepareToLeavePlayingRun()) return
 
     releaseAppFocus()
     scrollViewportToTop()
@@ -1277,12 +1332,11 @@ export default function App() {
     setCroppedImage(null)
     setAppState('imageLoaded')
   }, [
-    appState,
     beginSession,
     clearGalleryChallengeState,
     commitCropDraftSnapshot,
     cropDraftSnapshot,
-    flushPendingSave,
+    prepareToLeavePlayingRun,
     releaseAppFocus,
     resetRunArtifacts,
     setImagePalette,
@@ -1736,11 +1790,7 @@ export default function App() {
 
   const handleQuitApp = useCallback(async () => {
     setQuitHint(null)
-    if (appState === 'playing') {
-      await flushPendingSave(activeSessionRef.current, {
-        keepalive: currentSaveIdRef.current !== null,
-      })
-    }
+    if (!await prepareToLeavePlayingRun()) return
 
     window.close()
 
@@ -1749,7 +1799,7 @@ export default function App() {
         setQuitHint('Der Browser blockiert das automatische Beenden. Bitte schliesse das Tab oder Fenster manuell.')
       }
     }, 180)
-  }, [appState, flushPendingSave])
+  }, [prepareToLeavePlayingRun])
 
   const handleCropConfirmed = (croppedSrc: string, confirmedCropDraft?: {
     transform: CropDraftSnapshot['transform']
@@ -1791,7 +1841,7 @@ export default function App() {
   const handleProgressChange = useCallback(
     (progress: PersistedPuzzleProgress | null) => {
       setSavedProgress(progress)
-      if (!progress) {
+      if (!progress || !shouldAutosavePuzzleRun(activeGalleryChallengeTarget)) {
         clearScheduledSave()
         return
       }
@@ -1801,7 +1851,7 @@ export default function App() {
       const sessionId = activeSessionRef.current
       scheduleSaveProgress(progress, sessionId)
     },
-    [clearScheduledSave, scheduleSaveProgress]
+    [activeGalleryChallengeTarget, clearScheduledSave, scheduleSaveProgress]
   )
 
   const createCompletionPayload = useCallback(
@@ -2062,7 +2112,7 @@ export default function App() {
       : null
     const canStartGalleryChallenge = isGalleryChallengeTargetEligible(entry)
 
-    if (mode === 'run' && replaySetup) {
+    if ((mode === 'run' || mode === 'practice') && replaySetup) {
       scrollViewportToTop()
       const sessionId = beginSession()
       resetRunArtifacts()
@@ -2100,7 +2150,9 @@ export default function App() {
           setPendingGalleryReplaySetup(null)
           setPendingGalleryChallengeTarget(null)
           setActiveGalleryReplaySetup(replaySetup)
-          setActiveGalleryChallengeTarget(canStartGalleryChallenge ? createGalleryChallengeTarget(entry) : null)
+          setActiveGalleryChallengeTarget(
+            mode === 'run' && canStartGalleryChallenge ? createGalleryChallengeTarget(entry) : null
+          )
           setWinEffectTags(entry.tags ?? [])
           setConfig(entry.config)
           setImagePalette(entry.imageTheme ?? null)
@@ -2167,10 +2219,7 @@ export default function App() {
   ])
 
   const navigateToTopLevelScreen = useCallback(async (targetState: AppState) => {
-    if (appState === 'playing') {
-      await flushPendingSave(activeSessionRef.current, {
-      })
-    }
+    if (!await prepareToLeavePlayingRun()) return
 
     releaseAppFocus()
     scrollViewportToTop()
@@ -2188,7 +2237,7 @@ export default function App() {
     setCroppedImage(null)
     setAppState(targetState)
     void refreshSavedGames(false)
-  }, [appState, beginSession, clearGalleryChallengeState, flushPendingSave, refreshSavedGames, releaseAppFocus, resetRunArtifacts])
+  }, [beginSession, clearGalleryChallengeState, prepareToLeavePlayingRun, refreshSavedGames, releaseAppFocus, resetRunArtifacts])
 
   const handleReset = useCallback(() => {
     navigateToTopLevelScreen('idle')
@@ -2250,9 +2299,7 @@ export default function App() {
       return
     }
 
-    if (appState === 'playing') {
-      await flushPendingSave(activeSessionRef.current, {})
-    }
+    if (!await prepareToLeavePlayingRun()) return
 
     releaseAppFocus()
     scrollViewportToTop()
@@ -2277,16 +2324,15 @@ export default function App() {
     setCroppedImage(null)
     setAppState('imageLoaded')
   }, [
-    appState,
     beginSession,
     clearGalleryChallengeState,
     commitCropDraftSnapshot,
     config,
-    flushPendingSave,
     image,
     isRandomImage,
     randomImageQuery,
     randomImageSource,
+    prepareToLeavePlayingRun,
     releaseAppFocus,
     resetRunArtifacts,
   ])
@@ -2393,9 +2439,7 @@ export default function App() {
     audioService.activate()
 
     if (startResumeCandidate.kind === 'save') {
-      if (appState === 'playing') {
-        await flushPendingSave(activeSessionRef.current, {})
-      }
+      if (!await prepareToLeavePlayingRun()) return
 
       await handleLoadSavedGame(startResumeCandidate.save.id)
       return
@@ -2407,31 +2451,27 @@ export default function App() {
     }
 
     await handleRestoreUploadSession(startResumeCandidate.activeWindow, startResumeCandidate.historyFilter)
-  }, [appState, flushPendingSave, handleLoadSavedGame, handleRestoreCropSession, handleRestoreUploadSession, startResumeCandidate])
+  }, [handleLoadSavedGame, handleRestoreCropSession, handleRestoreUploadSession, prepareToLeavePlayingRun, startResumeCandidate])
 
   const handleContinueLatestSavedGame = useCallback(async () => {
     if (!latestSavedGame) {
       return
     }
 
-    if (appState === 'playing') {
-      await flushPendingSave(activeSessionRef.current, {})
-    }
+    if (!await prepareToLeavePlayingRun()) return
 
     await handleLoadSavedGame(latestSavedGame.id)
-  }, [appState, flushPendingSave, handleLoadSavedGame, latestSavedGame])
+  }, [handleLoadSavedGame, latestSavedGame, prepareToLeavePlayingRun])
 
   const handleReplayLatestGalleryEntry = useCallback(async () => {
     if (!latestGalleryEntry) {
       return
     }
 
-    if (appState === 'playing') {
-      await flushPendingSave(activeSessionRef.current, {})
-    }
+    if (!await prepareToLeavePlayingRun()) return
 
     handleReplayGalleryEntry(latestGalleryEntry)
-  }, [appState, flushPendingSave, handleReplayGalleryEntry, latestGalleryEntry])
+  }, [handleReplayGalleryEntry, latestGalleryEntry, prepareToLeavePlayingRun])
 
   const latestPlayedPaletteCandidate = useMemo<{
     palette: ImageThemePalette | null
@@ -2512,12 +2552,10 @@ export default function App() {
   })
 
   const handleStartRandomImageFromPalette = useCallback(async () => {
-    if (appState === 'playing') {
-      await flushPendingSave(activeSessionRef.current, {})
-    }
+    if (!await prepareToLeavePlayingRun()) return
 
     await handleFetchRandomImage()
-  }, [appState, flushPendingSave, handleFetchRandomImage])
+  }, [handleFetchRandomImage, prepareToLeavePlayingRun])
 
   const commandPaletteCommands = useMemo<CommandPaletteCommand[]>(() => {
     const commands: CommandPaletteCommand[] = []

@@ -76,7 +76,6 @@ export default function UploadCollectionPickerDialog({
       titleId={titleId}
       descriptionId={descriptionId}
       onClose={isBusy ? undefined : onClose}
-      closeOnOverlayClick={!isBusy}
       closeOnEscape={!isBusy}
       trapFocus
       restoreFocus

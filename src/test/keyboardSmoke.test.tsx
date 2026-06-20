@@ -42,8 +42,10 @@ import CropScreen from '../screens/CropScreen.tsx'
 import StartScreen from '../screens/StartScreen.tsx'
 import UploadScreen from '../screens/UploadScreen.tsx'
 import UploadBackupBrowserDialog from '../screens/upload/UploadBackupBrowserDialog.tsx'
+import UploadCollectionPickerDialog from '../screens/upload/UploadCollectionPickerDialog.tsx'
 import UploadGalleryCard from '../screens/upload/UploadGalleryCard.tsx'
 import UploadGalleryDetailDialog from '../screens/upload/UploadGalleryDetailDialog.tsx'
+import UploadGalleryTagManagerDialog from '../screens/upload/UploadGalleryTagManagerDialog.tsx'
 import UploadGalleryPanel from '../screens/upload/UploadGalleryPanel.tsx'
 import UploadCollectionsPanel from '../screens/upload/UploadCollectionsPanel.tsx'
 import UploadMenuCards from '../screens/upload/UploadMenuCards.tsx'
@@ -57,6 +59,7 @@ import UploadStatsHistorySection from '../screens/upload/UploadStatsHistorySecti
 import UploadStatsSection from '../screens/upload/UploadStatsSection.tsx'
 import UploadStatsVisualReport from '../screens/upload/UploadStatsVisualReport.tsx'
 import UploadWorkspaceLauncher from '../screens/upload/UploadWorkspaceLauncher.tsx'
+import PuzzleRestartConfirmDialog from '../screens/puzzle/PuzzleRestartConfirmDialog.tsx'
 import { DIFFICULTY_OPTIONS } from '../utils/puzzleDifficulty.ts'
 import type {
   PuzzleCompletionRecord,
@@ -417,6 +420,18 @@ describe('keyboard smoke tests', () => {
     const galleryView = getHelpView('upload-gallery')
     expect(galleryView.kicker).toBe('Galerie')
     expect(galleryView.sections[0]?.title).toBe('Filter und Eintraege')
+    expect(galleryView.sections.some((section) => section.title === 'Sammlungen erstellen & verwalten')).toBe(true)
+    expect(galleryView.sections.some((section) => section.title === 'Tags und Tag-Manager')).toBe(true)
+
+    const backupSection = getHelpView('upload-start').sections.find(
+      (section) => section.title === 'Datenbereiche und Backups'
+    )
+    expect(backupSection?.items.some((item) => item.label.includes('3 neuesten lokalen Backups'))).toBe(true)
+    expect(backupSection?.items.some((item) => item.label.includes('ersetzt den aktuellen Datenstand komplett'))).toBe(true)
+
+    const appearanceSection = galleryView.sections.find((section) => section.title === 'Musik und Darstellung')
+    expect(appearanceSection?.items.some((item) => item.label.includes('nur lokal im Browser'))).toBe(true)
+    expect(appearanceSection?.items.some((item) => item.label.includes('keine Gemini-Anfrage'))).toBe(true)
 
     const playingView = getHelpView('playing')
     expect(playingView.kicker).toBe('Puzzle')
@@ -621,6 +636,9 @@ describe('keyboard smoke tests', () => {
     expect(dialog.getAttribute('aria-describedby')).toContain('recovery-resume-details')
     expect(dialog.getAttribute('aria-describedby')).toContain('recovery-resume-keyboard-hint')
 
+    fireEvent.click(document.body.querySelector<HTMLElement>('.recovery-resume-overlay')!)
+    expect(onDismiss).not.toHaveBeenCalled()
+
     fireEvent.keyDown(laterButton, { key: 'ArrowRight' })
     expect(document.activeElement).toBe(declineButton)
 
@@ -644,6 +662,9 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.click(resumeButton)
     expect(onResume).toHaveBeenCalledTimes(1)
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onDismiss).toHaveBeenCalledOnce()
   })
 
   it('keeps the recovery dialog closed for the current app session after choosing later', async () => {
@@ -1139,6 +1160,58 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(within(workspaceNavigation).getByRole('button', { name: /Auswahl/i }))
   })
 
+  it('ignores workspace overlay clicks while allowing Escape and Auswahl to close', () => {
+    const onWindowChange = vi.fn()
+
+    render(
+      <UploadDashboard
+        activeWindow="savedGames"
+        savedGames={[]}
+        savedGamesCount={0}
+        loadingSaveId={null}
+        deletingSaveId={null}
+        isDeletingAllSavedGames={false}
+        completionHistory={[]}
+        filteredHistory={[]}
+        historyFilter="all"
+        historyFilterOptions={[]}
+        topStats={[]}
+        latestCompletion={null}
+        favoriteDifficulty={null}
+        fastestDifficulty={null}
+        stats={null}
+        gallery={null}
+        isLoadingStats={false}
+        isResettingStats={false}
+        isLoadingSavedGames={false}
+        isLoadingGallery={false}
+        isResettingGallery={false}
+        hasRecordedStats={false}
+        onWindowChange={onWindowChange}
+        onHistoryFilterChange={vi.fn()}
+        onRequestStatsReset={vi.fn()}
+        onRequestGalleryReset={vi.fn()}
+        onReplayGalleryEntry={vi.fn()}
+        onDeleteGalleryEntries={vi.fn(() => Promise.resolve())}
+        onLoadSave={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        onDeleteAllRequest={vi.fn()}
+      />
+    )
+
+    fireEvent.click(document.body.querySelector<HTMLElement>('.workspace-window-overlay')!)
+    expect(onWindowChange).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onWindowChange).toHaveBeenCalledOnce()
+    expect(onWindowChange).toHaveBeenCalledWith('start')
+
+    onWindowChange.mockClear()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Auswahl' })[0])
+    expect(onWindowChange).toHaveBeenCalledOnce()
+    expect(onWindowChange).toHaveBeenCalledWith('start')
+  })
+
   it('moves through workspace header actions with arrows, Pos1 and Ende', async () => {
     render(
       <UploadDashboard
@@ -1293,8 +1366,8 @@ describe('keyboard smoke tests', () => {
         ...createSolvedGalleryEntry('silver-attempt', '2026-04-11T12:00:00.000Z'),
         previewImage: silverTarget.previewImage,
         sourceImage: silverTarget.sourceImage,
-        moves: 41,
-        time: 101,
+        moves: 33,
+        time: 81,
         assistanceMode: 'clean',
         challengeTargetId: silverTarget.id,
         challengeMedal: 'silver',
@@ -1330,7 +1403,7 @@ describe('keyboard smoke tests', () => {
     await waitFor(() => {
       expect(screen.getByText('1 von 2 Motiven sichtbar')).toBeTruthy()
       expect(screen.getByText('Medaillen-Jagd aktiv')).toBeTruthy()
-      expect(screen.getByText('Gold: Nah am Upgrade')).toBeTruthy()
+      expect(screen.getByText('Gold: Sehr nah am Upgrade')).toBeTruthy()
     })
 
     huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Jagd' })
@@ -2362,6 +2435,9 @@ describe('keyboard smoke tests', () => {
     const cancelButton = await screen.findByRole('button', { name: 'Abbrechen' })
     expect(document.activeElement).toBe(cancelButton)
 
+    fireEvent.click(document.body.querySelector<HTMLElement>('.delete-confirm-overlay')!)
+    expect(screen.getByRole('alertdialog', { name: 'Wirklich loeschen?' })).toBeTruthy()
+
     fireEvent.keyDown(cancelButton, { key: 'ArrowRight' })
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Loeschen' }))
 
@@ -2371,6 +2447,73 @@ describe('keyboard smoke tests', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => {
       expect(document.activeElement).toBe(opener)
+    })
+  })
+
+  it('ignores overlay clicks but keeps Escape active in editing and restart dialogs', () => {
+    const closeCases: Array<{
+      overlaySelector: string
+      renderDialog: (onClose: () => void) => React.ReactElement
+    }> = [
+      {
+        overlaySelector: '.collection-dialog-overlay',
+        renderDialog: (onClose) => (
+          <UploadCollectionPickerDialog
+            collections={[]}
+            imageIds={['gallery-1']}
+            imageLabel="Dieses Motiv"
+            isBusy={false}
+            onCreateCollection={vi.fn(() => Promise.resolve())}
+            onAddToCollection={vi.fn(() => Promise.resolve())}
+            onClose={onClose}
+          />
+        ),
+      },
+      {
+        overlaySelector: '.puzzle-confirm-overlay',
+        renderDialog: (onClose) => (
+          <PuzzleRestartConfirmDialog
+            onCancel={onClose}
+            onConfirm={vi.fn()}
+            confirmButtonRef={React.createRef<HTMLButtonElement>()}
+          />
+        ),
+      },
+      {
+        overlaySelector: '.gallery-tag-manager-overlay',
+        renderDialog: (onClose) => (
+          <UploadGalleryTagManagerDialog
+            tagOptions={[]}
+            activeTagFilterKeys={[]}
+            isBusy={false}
+            onRenameTag={vi.fn(() => Promise.resolve())}
+            onRemoveTag={vi.fn(() => Promise.resolve())}
+            onEditEntryTags={vi.fn(() => Promise.resolve())}
+            tagCategoryCatalog={{ categories: [], assignments: [], lastUpdatedAt: null }}
+            tagCategorySuggestions={[]}
+            onUpdateTagCategory={vi.fn(() => Promise.resolve())}
+            onClassifyUnknownTags={vi.fn(() => Promise.resolve())}
+            onCreateTagCategory={vi.fn(() => Promise.resolve())}
+            onDeleteTagCategory={vi.fn(() => Promise.resolve())}
+            onApplyTagFilters={vi.fn()}
+            onClose={onClose}
+          />
+        ),
+      },
+    ]
+
+    closeCases.forEach(({ overlaySelector, renderDialog }) => {
+      const onClose = vi.fn()
+      const view = render(renderDialog(onClose))
+      const overlay = document.body.querySelector<HTMLElement>(overlaySelector)!
+
+      fireEvent.click(overlay)
+      expect(onClose).not.toHaveBeenCalled()
+
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(onClose).toHaveBeenCalledOnce()
+
+      view.unmount()
     })
   })
 
@@ -2505,6 +2648,7 @@ describe('keyboard smoke tests', () => {
         isRestartConfirmOpen: false,
         isHelpOpen: false,
         isPaused: false,
+        areGameAidsLocked: false,
         puzzleState: activePuzzleState,
         isInteractionLocked: false,
         onFocusBoard: () => boardRef.current?.focus(),
@@ -2566,6 +2710,7 @@ describe('keyboard smoke tests', () => {
         isRestartConfirmOpen: false,
         isHelpOpen: false,
         isPaused: true,
+        areGameAidsLocked: false,
         puzzleState: activePuzzleState,
         isInteractionLocked: true,
         onFocusBoard: vi.fn(),
@@ -2594,6 +2739,71 @@ describe('keyboard smoke tests', () => {
 
     expect(onTogglePause).toHaveBeenCalledTimes(1)
     expect(onShowHint).not.toHaveBeenCalled()
+  })
+
+  it('blocks every game-aid shortcut during a medal run', () => {
+    const activePuzzleState: PuzzleState = {
+      tiles: [],
+      board: [],
+      emptyIndex: 0,
+      emptyRow: 0,
+      emptyCol: 0,
+      moveCount: 0,
+      startTime: 0,
+      isSolved: false,
+      isAnimating: false,
+      dragState: null,
+    }
+    const gameAidCallbacks = {
+      onTogglePreview: vi.fn(),
+      onToggleGhostPreview: vi.fn(),
+      onCycleGhostPreviewMode: vi.fn(),
+      onAdjustGhostPreviewWeight: vi.fn(),
+      onToggleHeatmapOverlay: vi.fn(),
+      onShowTileNumbers: vi.fn(),
+      onSuggestedMove: vi.fn(),
+      onShowHint: vi.fn(),
+      onUndo: vi.fn(),
+      onRedo: vi.fn(),
+    }
+    const onTogglePause = vi.fn()
+    const onRestart = vi.fn()
+
+    function MedalRunShortcutHarness() {
+      usePuzzleKeyboardShortcuts({
+        isRestartConfirmOpen: false,
+        isHelpOpen: false,
+        isPaused: false,
+        areGameAidsLocked: true,
+        puzzleState: activePuzzleState,
+        isInteractionLocked: false,
+        onFocusBoard: vi.fn(),
+        onTogglePause,
+        onQuit: vi.fn(),
+        ...gameAidCallbacks,
+        onRestart,
+      })
+
+      return <button type="button">Medaillenlauf</button>
+    }
+
+    render(<MedalRunShortcutHarness />)
+
+    for (const key of [' ', 'g', 'G', '+', '-', 'm', 'n', 'Enter', 'h']) {
+      fireEvent.keyDown(window, { key, shiftKey: key === 'G' })
+    }
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+    fireEvent.keyDown(window, { key: 'y', ctrlKey: true })
+
+    Object.values(gameAidCallbacks).forEach((callback) => {
+      expect(callback).not.toHaveBeenCalled()
+    })
+
+    fireEvent.keyDown(window, { key: 'p' })
+    fireEvent.keyDown(window, { key: 'r' })
+
+    expect(onTogglePause).toHaveBeenCalledTimes(1)
+    expect(onRestart).toHaveBeenCalledTimes(1)
   })
 
   it('scrolls focused actions smoothly into view while tabbing even if they are only partly visible', () => {
@@ -3210,6 +3420,9 @@ describe('keyboard smoke tests', () => {
     const firstSelectButton = selectButtons[0]!
     expect(document.activeElement).toBe(firstSelectButton)
 
+    fireEvent.click(document.body.querySelector<HTMLElement>('.backup-browser-overlay')!)
+    expect(screen.getByRole('dialog', { name: 'Backup importieren' })).toBeTruthy()
+
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => {
       expect(document.activeElement).toBe(opener)
@@ -3269,6 +3482,9 @@ describe('keyboard smoke tests', () => {
     const opener = screen.getByRole('button', { name: 'Galerie-Detail oeffnen' })
     opener.focus()
     fireEvent.click(opener)
+
+    fireEvent.click(document.body.querySelector<HTMLElement>('.gallery-detail-overlay')!)
+    expect(screen.getByRole('dialog', { name: /Normal 4x4/i })).toBeTruthy()
 
     const collectButton = screen.getByRole('button', { name: /zu einer Sammlung hinzufuegen/i })
     const closeButton = screen.getByRole('button', { name: 'Schliessen' })
@@ -3348,7 +3564,7 @@ describe('keyboard smoke tests', () => {
     })
   })
 
-  it('groups repeated challenges against the same run in a duel card', () => {
+  it('groups repeated challenges against the same run in a duel card', async () => {
     const onReplayEntry = vi.fn()
     const detailEntry = createGalleryDisplayEntry('20', '2026-04-11T12:00:00.000Z')
     const target = {
@@ -3396,8 +3612,8 @@ describe('keyboard smoke tests', () => {
     )
 
     expect(screen.getByText('Challenge-Serien')).toBeTruthy()
-    expect(screen.getByText('2 Versuche')).toBeTruthy()
-    expect(screen.getByText('1 mit verbessertem Zielwert')).toBeTruthy()
+    expect(screen.queryByText('2 Versuche')).toBeNull()
+    expect(screen.queryByText('1 mit verbessertem Zielwert')).toBeNull()
     expect(screen.getByText('Eigenstaendiger Lauf')).toBeTruthy()
     expect(screen.getByText('Challenge-Serie 1')).toBeTruthy()
     expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
@@ -3406,10 +3622,31 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Zugehoerige Versuche')).toBeTruthy()
     expect(screen.getByText('Versuch 1 von 2')).toBeTruthy()
     expect(screen.getByText('Versuch 2 von 2')).toBeTruthy()
+    const attemptRows = document.querySelectorAll<HTMLElement>('.gallery-detail-challenge-attempt')
+    expect(attemptRows).toHaveLength(2)
+    expect(within(attemptRows[0]!).getByText(/Gold.*Bester Versuch/)).toBeTruthy()
+    expect(within(attemptRows[1]!).getByText('Bronze')).toBeTruthy()
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board.has-start-board')).toHaveLength(1)
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile')).toHaveLength(16)
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile.is-empty')).toHaveLength(1)
     expect(screen.getByText(/Gold · Bester Versuch/)).toBeTruthy()
+
+    const collapseButton = screen.getByRole('button', { name: 'Challenge-Serie 1 einklappen' })
+    const seriesBody = document.getElementById(collapseButton.getAttribute('aria-controls') ?? '')
+    expect(seriesBody).toBeTruthy()
+    expect(collapseButton.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(collapseButton)
+    expect(screen.getByText('Challenge-Serie 1')).toBeTruthy()
+    const expandButton = screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' })
+    expect(expandButton.getAttribute('aria-expanded')).toBe('false')
+    await waitFor(() => {
+      expect(document.getElementById(collapseButton.getAttribute('aria-controls') ?? '')).toBeNull()
+    })
+    fireEvent.click(expandButton)
+    await waitFor(() => {
+      expect(document.getElementById(expandButton.getAttribute('aria-controls') ?? '')).toBeTruthy()
+    })
+    expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Vorlage herausfordern' }))
     expect(screen.getByText('Medaillen-Regeln')).toBeTruthy()
@@ -3420,6 +3657,9 @@ describe('keyboard smoke tests', () => {
     expect(detailOverlay).toBeTruthy()
     expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2)
     expect(onReplayEntry).not.toHaveBeenCalled()
+    fireEvent.click(challengeOverlay!)
+    expect(screen.getByText('Medaillen-Regeln')).toBeTruthy()
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2)
     fireEvent.click(screen.getByRole('button', { name: 'Challenge starten' }))
     expect(onReplayEntry).toHaveBeenCalledWith(target, 'run')
     expect(screen.queryByRole('button', { name: /versuch.*herausfordern/i })).toBeNull()
@@ -3483,10 +3723,56 @@ describe('keyboard smoke tests', () => {
     expect(screen.queryByText('Startzustand-Serien')).toBeNull()
     expect(screen.queryByText('Eigenstaendige Laeufe')).toBeNull()
 
+    expect(screen.getAllByRole('button', { name: /Startzustand.*ueben/i })).toHaveLength(1)
     fireEvent.click(screen.getByRole('button', {
-      name: /Verwandten Startzustandslauf Normal 4x4 vom 09\.04\.2026, 11:00 spielen/,
+      name: 'Gemeinsamen Startzustand der verwandten Laeufe ueben',
     }))
-    expect(onReplayEntry).toHaveBeenCalledWith(origin, 'run')
+    expect(onReplayEntry).toHaveBeenCalledWith(target, 'practice')
+  })
+
+  it('shows an empty practice-run list for a single clean start-state template', () => {
+    const onReplayEntry = vi.fn()
+    const replaySetup = {
+      version: 1 as const,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    }
+    const cleanTemplate = {
+      ...createSolvedGalleryEntry('80', '2026-04-11T09:00:00.000Z'),
+      replaySetup,
+      assistanceMode: 'clean' as const,
+    }
+    const detailEntry = createGalleryDisplayEntry('80', cleanTemplate.completedAt)
+
+    detailEntry.representativeEntry = cleanTemplate
+    detailEntry.visibleEntries = [cleanTemplate]
+    detailEntry.allEntries = [cleanTemplate]
+    detailEntry.motifReplaySummary = {
+      ...detailEntry.motifReplaySummary,
+      allEntries: [cleanTemplate],
+      bestCleanTimeEntry: cleanTemplate,
+    }
+
+    render(
+      <UploadGalleryDetailDialog
+        entry={detailEntry}
+        onReplayEntry={onReplayEntry}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Startzustand-Serien')).toBeTruthy()
+    expect(screen.getByText('Cleane Vorlage')).toBeTruthy()
+    expect(screen.getByText('Uebungslaeufe fuer diesen Startzustand')).toBeTruthy()
+    expect(screen.getByText('Noch keine Uebungslaeufe fuer diesen Startzustand.')).toBeTruthy()
+    expect(document.querySelectorAll('.gallery-detail-start-state-run')).toHaveLength(0)
+    expect(screen.queryByText('Eigenstaendige Laeufe')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Startzustand der Startzustand-Serie 1 als Uebung starten',
+    }))
+    expect(onReplayEntry).toHaveBeenCalledWith(cleanTemplate, 'practice')
   })
 
   it('groups repeated non-medal start-board runs as a start-state series', () => {
@@ -3532,19 +3818,24 @@ describe('keyboard smoke tests', () => {
     )
 
     expect(screen.getByText('Startzustand-Serien')).toBeTruthy()
-    expect(screen.getAllByText('Startzustand-Serie 1')).toHaveLength(2)
+    expect(screen.getAllByText('Startzustand-Serie 1')).toHaveLength(1)
+    expect(screen.getByText('Gemeinsamer Startzustand')).toBeTruthy()
+    expect(screen.getByText('Zugehoerige Laeufe')).toBeTruthy()
     expect(screen.getAllByText('Ursprung').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Uebung 2')).toBeTruthy()
     expect(screen.queryByText('Eigenstaendige Laeufe')).toBeNull()
     expect(screen.queryByText('Eigenstaendiger Lauf')).toBeNull()
 
-    const practiceButtons = screen.getAllByRole('button', { name: /Lauf .* spielen/ })
-    expect(practiceButtons).toHaveLength(2)
-    fireEvent.click(practiceButtons[0])
-    expect(onReplayEntry).toHaveBeenCalledWith(practice, 'run')
+    const practiceButton = screen.getByRole('button', {
+      name: 'Gemeinsamen Startzustand der Startzustand-Serie 1 ueben',
+    })
+    expect(screen.getAllByRole('button', { name: /Startzustand.*ueben/i })).toHaveLength(1)
+    fireEvent.click(practiceButton)
+    expect(onReplayEntry).toHaveBeenCalledWith(practice, 'practice')
   })
 
-  it('prioritizes a clean start-state template and collapses assisted practice runs', () => {
+  it('promotes a clean practice run to the challenge template inside its start-state card', () => {
+    const onReplayEntry = vi.fn()
     const replaySetup = {
       version: 1 as const,
       startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
@@ -3581,22 +3872,34 @@ describe('keyboard smoke tests', () => {
     render(
       <UploadGalleryDetailDialog
         entry={detailEntry}
-        onReplayEntry={vi.fn()}
+        onReplayEntry={onReplayEntry}
         onClose={vi.fn()}
       />
     )
 
     expect(screen.getByText('Startzustand-Serien')).toBeTruthy()
-    expect(screen.getAllByText('Medaillen-Vorlage').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByRole('button', { name: '1 Uebungslauf anzeigen' })).toBeTruthy()
-    expect(screen.queryByText('Ursprung')).toBeNull()
-    expect(screen.queryByText('Startzustand ueben')).toBeNull()
+    expect(screen.getByText('Cleane Vorlage')).toBeTruthy()
+    expect(screen.getByText('Uebungslauf 1')).toBeTruthy()
+    expect(screen.getByText('Uebungslaeufe fuer diesen Startzustand')).toBeTruthy()
+    expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
+    expect(screen.getByText('Vorlage herausfordern')).toBeTruthy()
+    expect(screen.getByRole('button', {
+      name: 'Startzustand der Startzustand-Serie 1 als Uebung starten',
+    })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: '1 Uebungslauf anzeigen' }))
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Cleane Vorlage der Startzustand-Serie 1 herausfordern',
+    }))
+    expect(screen.getByText('Medaillen-Regeln')).toBeTruthy()
+    expect(onReplayEntry).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Challenge starten' }))
+    expect(onReplayEntry).toHaveBeenCalledWith(cleanPractice, 'run')
 
-    expect(screen.getByRole('button', { name: '1 Uebungslauf ausblenden' })).toBeTruthy()
-    expect(screen.getAllByText('Ursprung').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Startzustand ueben')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Startzustand-Serie 1 einklappen' }))
+
+    expect(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' })).toBeTruthy()
+    expect(screen.queryByText('Gemeinsamer Startzustand')).toBeNull()
+    expect(screen.queryByText('Zugehoerige Laeufe')).toBeNull()
   })
 
   it('moves between challenge-series actions in gallery details', () => {
@@ -3646,20 +3949,27 @@ describe('keyboard smoke tests', () => {
     )
 
     const challengeButtons = screen.getAllByRole('button', { name: 'Vorlage herausfordern' })
+    const collapseButtons = [
+      screen.getByRole('button', { name: 'Challenge-Serie 1 einklappen' }),
+      screen.getByRole('button', { name: 'Challenge-Serie 2 einklappen' }),
+    ]
     expect(challengeButtons).toHaveLength(2)
 
     challengeButtons[0]!.focus()
     fireEvent.keyDown(challengeButtons[0]!, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(collapseButtons[1])
+
+    fireEvent.keyDown(collapseButtons[1]!, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(challengeButtons[1])
 
     fireEvent.keyDown(challengeButtons[1]!, { key: 'Home' })
-    expect(document.activeElement).toBe(challengeButtons[0])
+    expect(document.activeElement).toBe(collapseButtons[0])
 
-    fireEvent.keyDown(challengeButtons[0]!, { key: 'End' })
+    fireEvent.keyDown(collapseButtons[0]!, { key: 'End' })
     expect(document.activeElement).toBe(challengeButtons[1])
   })
 
-  it('erklaert eine assistierte Silber-Challenge und zeigt das naechste Ziel', () => {
+  it('erklaert eine assistierte Challenge als medaillenlosen verwandten Uebungslauf', () => {
     render(
       <WinDialog
         stats={{
@@ -3691,7 +4001,7 @@ describe('keyboard smoke tests', () => {
           optimalStartMoveCount: 18,
           optimalStartMoveCountKind: 'exact',
         }}
-        challengeMedal="silver"
+        challengeMedal={null}
         challengePreviousBestMedal="bronze"
         onRetryStats={vi.fn()}
         onReplaySameImage={vi.fn()}
@@ -3701,14 +4011,15 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    expect(screen.getByText(/Gold erfordert einen sauberen Lauf ohne Hilfe/)).toBeTruthy()
+    expect(screen.getByText(/Dieser Lauf bleibt eine Uebung und erhaelt keine Medaille/)).toBeTruthy()
     expect(screen.getByText('Ghost 1x / 12s')).toBeTruthy()
     expect(screen.getByText('Heatmap 1x / 8s')).toBeTruthy()
     expect(screen.getByText(/1x Ghost \(12s\)/)).toBeTruthy()
     expect(screen.getByText(/1x Heatmap \(8s\)/)).toBeTruthy()
-    expect(screen.getByText('Aufstieg: Bronze zu Silber')).toBeTruthy()
-    expect(screen.getByText('Fuer Gold')).toBeTruthy()
-    expect(screen.getByText('ohne Hilfe')).toBeTruthy()
+    expect(screen.getByText('Mit Hilfe: als verwandter Uebungslauf gespeichert')).toBeTruthy()
+    expect(screen.getByText('Uebung abgeschlossen')).toBeTruthy()
+    expect(screen.getByText('Fuer Bronze')).toBeTruthy()
+    expect(screen.getByText(/Medaillen werden nur fuer absolut cleane Laeufe vergeben/)).toBeTruthy()
     expect(screen.getByText('Stufenvergleich')).toBeTruthy()
     expect(screen.getByText('Aktueller Lauf - Zeit')).toBeTruthy()
     expect(screen.getByText('Aktueller Lauf - Netto-Zuege')).toBeTruthy()
@@ -3764,18 +4075,18 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('6 Sek. schneller oder 3 Zuege weniger')).toBeTruthy()
   })
 
-  it('weist bei einer optimalen Challenge-Vorlage auf das Ueberspringen von Gold hin', () => {
+  it('weist auf ein mathematisch unerreichbares 20-Prozent-Goldziel hin', () => {
     render(
       <WinDialog
         stats={{
           moves: 18,
-          time: 42,
+          time: 60,
           actionMoves: 21,
           undoCount: 0,
           redoCount: 0,
-          hintCount: 1,
+          hintCount: 0,
           suggestedMoveCount: 0,
-          assistanceMode: 'hinted',
+          assistanceMode: 'clean',
         }}
         config={{ rows: 4, cols: 4 }}
         nextDifficultyLabel={null}
@@ -3802,8 +4113,8 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    expect(screen.getByText('Fuer Diamant')).toBeTruthy()
-    expect(screen.getByText(/Gold ist gegen die bereits optimale Vorlage mathematisch nicht erreichbar/)).toBeTruthy()
+    expect(screen.getByText('Medaillenstatus')).toBeTruthy()
+    expect(screen.getByText(/Gold und Diamant sind fuer diese Vorlage nicht erreichbar/)).toBeTruthy()
   })
 
   it('moves through gallery detail tag actions with arrows', () => {

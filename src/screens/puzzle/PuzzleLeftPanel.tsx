@@ -1,6 +1,6 @@
 import { AnimatePresence } from 'motion/react'
 import type { ChangeEvent, RefObject } from 'react'
-import { Medal, Trophy } from 'lucide-react'
+import { LockKeyhole, Medal, Trophy } from 'lucide-react'
 import PuzzleScreenIcon from '../../components/PuzzleScreenIcon.tsx'
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedReveal from '../../motion/AnimatedReveal.tsx'
@@ -17,11 +17,16 @@ import {
   type HeatmapMode,
   type PuzzleAssistanceMode,
 } from '../../types/index'
-import { deriveLiveChallengeForecast, formatChallengeMedalLabel } from '../../utils/galleryChallenge.ts'
+import {
+  deriveLiveChallengeForecast,
+  formatChallengeMedalLabel,
+  getChallengeGoldTargets,
+} from '../../utils/galleryChallenge.ts'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import {
   formatElapsedTime,
   getProgressStatusLabel,
+  MEDAL_RUN_LOCK_MESSAGE,
   type HeatmapMovePotentialAnalysis,
   type HeatmapTargetPath,
   type HeatmapPathNavigationProgress,
@@ -274,7 +279,8 @@ export default function PuzzleLeftPanel({
     ? Math.max(0, progressMetrics.totalTiles - progressMetrics.correctTiles)
     : playableTileCount
   const progressStatusLabel = getProgressStatusLabel(progressMetrics?.progressPercent)
-  const canUseBoardTools = progressMetrics !== null && !isPaused
+  const areGameAidsLocked = Boolean(challengeTarget)
+  const canUseBoardTools = progressMetrics !== null && !isPaused && !areGameAidsLocked
   const canTriggerSuggestion = canUseBoardTools && !isInteractionLocked
   const activeGhostPreviewMode =
     GHOST_PREVIEW_MODE_OPTIONS.find((option) => option.value === ghostPreviewMode) ?? GHOST_PREVIEW_MODE_OPTIONS[0]
@@ -285,6 +291,7 @@ export default function PuzzleLeftPanel({
   const challengeForecast = challengeTarget
     ? deriveLiveChallengeForecast({ moves: moveCount, time: elapsedTime, assistanceMode }, challengeTarget)
     : null
+  const challengeGoldTargets = challengeTarget ? getChallengeGoldTargets(challengeTarget) : null
   const challengeForecastLabel = challengeForecast?.medal
     ? formatChallengeMedalLabel(challengeForecast.medal)
     : 'Keine Medaille'
@@ -342,7 +349,7 @@ export default function PuzzleLeftPanel({
           {challengeTarget && (
             <div
               className={`puzzle-challenge-badge is-${challengeForecast?.medal ?? 'none'}`}
-              aria-label={`Challenge aktiv. Beste noch erreichbare Medaille: ${challengeForecastLabel}.`}
+              aria-label={`${MEDAL_RUN_LOCK_MESSAGE} Beste noch erreichbare Medaille: ${challengeForecastLabel}.`}
             >
               <span className="puzzle-challenge-badge-label">
                 <Trophy aria-hidden="true" size={14} strokeWidth={2.3} />
@@ -363,16 +370,19 @@ export default function PuzzleLeftPanel({
               <span className={`puzzle-challenge-badge-detail${challengeForecast?.timeReached ? ' is-positive' : ' is-negative'}`}>
                 Zeit: {formatElapsedTime(elapsedTime)} / {formatElapsedTime(challengeTarget.time)} ({formatSignedDelta(challengeTimeDelta, 's')})
               </span>
+              {challengeGoldTargets ? (
+                <span className="puzzle-challenge-badge-detail is-muted">
+                  Gold ab: max. {formatElapsedTime(challengeGoldTargets.time)} und {challengeGoldTargets.moves} Zuege
+                </span>
+              ) : null}
               <span className={`puzzle-challenge-badge-detail${challengeForecast?.isClean ? ' is-positive' : ' is-negative'}`}>
                 {challengeForecast?.isClean
                   ? challengeForecast?.goldAvailable
-                    ? 'Ohne Hilfe: Gold bleibt erreichbar'
-                    : challengeForecast?.medal === 'diamond'
-                      ? 'Vorlage ist optimal: Gold wird uebersprungen, Diamant bleibt erreichbar'
-                      : 'Vorlage ist optimal: Gold ist nicht erreichbar'
-                  : 'Hilfe genutzt: Gold und Diamant sind fuer diesen Lauf nicht mehr erreichbar'}
+                    ? 'Absolut clean: Medaillen bleiben erreichbar'
+                    : 'Gold und Diamant sind wegen des Solver-Optimums nicht erreichbar'
+                  : 'Hilfe genutzt: Keine Medaille mehr erreichbar; der Abschluss bleibt ein verwandter Uebungslauf'}
               </span>
-              {!challengeForecast?.diamondAvailable ? (
+              {challengeForecast?.goldAvailable && !challengeForecast.diamondAvailable ? (
                 <span className="puzzle-challenge-badge-detail is-muted">
                   Diamant ist ohne exakte optimale Zugzahl nicht verfuegbar.
                 </span>
@@ -460,7 +470,7 @@ export default function PuzzleLeftPanel({
         </AnimatePresence>
 
         <AnimatedReveal
-          className={`puzzle-hint-panel${hintPreview ? ' is-active' : ''}${isComputingSuggestion ? ' is-computing' : ''}`}
+          className={`puzzle-hint-panel${hintPreview ? ' is-active' : ''}${isComputingSuggestion ? ' is-computing' : ''}${areGameAidsLocked ? ' is-game-aids-locked' : ''}`}
           interaction="surface"
           level="medium"
         >
@@ -533,7 +543,9 @@ export default function PuzzleLeftPanel({
               aria-busy={isComputingSuggestion}
               aria-keyshortcuts="H"
               data-puzzle-allow-hotkeys="true"
-              data-app-tooltip="Berechnet und markiert eine hilfreiche naechste Kachel. Zaehlt als Hilfe im Laufprofil."
+              data-app-tooltip={areGameAidsLocked
+                ? 'Im Medaillenlauf gesperrt.'
+                : 'Berechnet und markiert eine hilfreiche naechste Kachel. Zaehlt als Hilfe im Laufprofil.'}
               data-app-tooltip-align="start"
               reveal
               revealLevel="subtle"
@@ -555,7 +567,9 @@ export default function PuzzleLeftPanel({
               aria-busy={isComputingSuggestion}
               aria-keyshortcuts="Enter"
               data-puzzle-allow-hotkeys="true"
-              data-app-tooltip="Fuehrt den empfohlenen Zug aus. Wird als Auto-Zug in der Statistik erfasst."
+              data-app-tooltip={areGameAidsLocked
+                ? 'Im Medaillenlauf gesperrt.'
+                : 'Fuehrt den empfohlenen Zug aus. Wird als Auto-Zug in der Statistik erfasst.'}
               data-app-tooltip-align="end"
               reveal
               revealLevel="subtle"
@@ -573,7 +587,23 @@ export default function PuzzleLeftPanel({
         </AnimatedReveal>
       </div>
 
-      <AnimatedReveal className="puzzle-tools-shell" interaction="surface" level="subtle">
+      {areGameAidsLocked ? (
+        <AnimatedReveal
+          className="puzzle-medal-run-lock-note"
+          interaction="surface"
+          level="subtle"
+          role="status"
+        >
+          <LockKeyhole aria-hidden="true" size={15} strokeWidth={2.4} />
+          <span>{MEDAL_RUN_LOCK_MESSAGE}</span>
+        </AnimatedReveal>
+      ) : null}
+
+      <AnimatedReveal
+        className={`puzzle-tools-shell${areGameAidsLocked ? ' is-game-aids-locked' : ''}`}
+        interaction="surface"
+        level="subtle"
+      >
         <div className="puzzle-tools-shell-header">
           <span className="puzzle-tools-shell-kicker">Werkzeuge</span>
           <p className="puzzle-tools-shell-copy">Vorschau, Overlays und Verlauf fuer die aktuelle Runde.</p>
@@ -583,10 +613,14 @@ export default function PuzzleLeftPanel({
             ref={actionButtonRefs.preview}
             className="secondary puzzle-tool-toggle"
             onClick={onTogglePreview}
-            disabled={isPaused}
+            disabled={isPaused || areGameAidsLocked}
             aria-keyshortcuts="Space"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip={isPreviewVisible ? 'Referenzbild rechts ausblenden.' : 'Referenzbild rechts anzeigen.'}
+            data-app-tooltip={areGameAidsLocked
+              ? 'Im Medaillenlauf gesperrt.'
+              : isPreviewVisible
+                ? 'Referenzbild rechts ausblenden.'
+                : 'Referenzbild rechts anzeigen.'}
             data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
@@ -602,7 +636,11 @@ export default function PuzzleLeftPanel({
             aria-pressed={isGhostPreviewVisible}
             aria-keyshortcuts="G"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip={isGhostPreviewVisible ? 'Geisterbild vom Brett ausblenden.' : 'Zielbild transparent ueber das Brett legen.'}
+            data-app-tooltip={areGameAidsLocked
+              ? 'Im Medaillenlauf gesperrt.'
+              : isGhostPreviewVisible
+                ? 'Geisterbild vom Brett ausblenden.'
+                : 'Zielbild transparent ueber das Brett legen.'}
             data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
@@ -618,7 +656,11 @@ export default function PuzzleLeftPanel({
             aria-pressed={isHeatmapOverlayVisible}
             aria-keyshortcuts="M"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip={isHeatmapOverlayVisible ? 'Zugpotenzial und Heatmap ausblenden.' : 'Bewegliche Kacheln nach ihrem Zugpotenzial bewerten.'}
+            data-app-tooltip={areGameAidsLocked
+              ? 'Im Medaillenlauf gesperrt.'
+              : isHeatmapOverlayVisible
+                ? 'Zugpotenzial und Heatmap ausblenden.'
+                : 'Bewegliche Kacheln nach ihrem Zugpotenzial bewerten.'}
             data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
@@ -634,7 +676,9 @@ export default function PuzzleLeftPanel({
             aria-pressed={areTileNumbersVisible}
             aria-keyshortcuts="N"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip="Kachelnummern kurz einblenden, um Positionen schneller abzugleichen."
+            data-app-tooltip={areGameAidsLocked
+              ? 'Im Medaillenlauf gesperrt.'
+              : 'Kachelnummern kurz einblenden, um Positionen schneller abzugleichen.'}
             data-app-tooltip-align="end"
             reveal
             revealLevel="subtle"
@@ -646,10 +690,10 @@ export default function PuzzleLeftPanel({
             ref={actionButtonRefs.undo}
             className="secondary puzzle-tool-secondary"
             onClick={onUndo}
-            disabled={moveHistoryLength === 0 || isInteractionLocked}
+            disabled={areGameAidsLocked || moveHistoryLength === 0 || isInteractionLocked}
             aria-keyshortcuts="Control+Z"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip="Letzten Zug rueckgaengig machen."
+            data-app-tooltip={areGameAidsLocked ? 'Im Medaillenlauf gesperrt.' : 'Letzten Zug rueckgaengig machen.'}
             data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
@@ -661,10 +705,10 @@ export default function PuzzleLeftPanel({
             ref={actionButtonRefs.redo}
             className="secondary puzzle-tool-secondary"
             onClick={onRedo}
-            disabled={redoHistoryLength === 0 || isInteractionLocked}
+            disabled={areGameAidsLocked || redoHistoryLength === 0 || isInteractionLocked}
             aria-keyshortcuts="Control+Y"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip="Rueckgaengig gemachten Zug wiederholen."
+            data-app-tooltip={areGameAidsLocked ? 'Im Medaillenlauf gesperrt.' : 'Rueckgaengig gemachten Zug wiederholen.'}
             data-app-tooltip-align="end"
             reveal
             revealLevel="subtle"

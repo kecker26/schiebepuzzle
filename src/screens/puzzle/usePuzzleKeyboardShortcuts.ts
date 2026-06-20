@@ -6,6 +6,7 @@ interface UsePuzzleKeyboardShortcutsOptions {
   isRestartConfirmOpen: boolean
   isHelpOpen: boolean
   isPaused: boolean
+  areGameAidsLocked: boolean
   puzzleState: PuzzleState | null
   isInteractionLocked: boolean
   onFocusBoard: () => void
@@ -28,6 +29,7 @@ export function usePuzzleKeyboardShortcuts({
   isRestartConfirmOpen,
   isHelpOpen,
   isPaused,
+  areGameAidsLocked,
   puzzleState,
   isInteractionLocked,
   onFocusBoard,
@@ -86,6 +88,18 @@ export function usePuzzleKeyboardShortcuts({
       }
 
       if (isKeyboardShortcutBlockedTarget(event.target, { allowMarkedButtons: true, key: event.key })) return
+
+      const isLockedHistoryShortcut = hasCommandModifier
+        && !event.altKey
+        && (key === 'z' || (key === 'y' && !event.shiftKey))
+      const isLockedGameAidShortcut = !hasCommandModifier
+        && !event.altKey
+        && [' ', 'spacebar', 'g', '+', '=', '-', '_', 'm', 'n', 'enter', 'numpadenter', 'h'].includes(key)
+
+      if (areGameAidsLocked && (isLockedHistoryShortcut || isLockedGameAidShortcut)) {
+        event.preventDefault()
+        return
+      }
 
       if (hasCommandModifier && !event.altKey) {
         if (!puzzleState || puzzleState.isSolved || isInteractionLocked) return
@@ -190,6 +204,7 @@ export function usePuzzleKeyboardShortcuts({
       window.removeEventListener('keydown', handleWindowKeyDown)
     }
   }, [
+    areGameAidsLocked,
     isHelpOpen,
     isInteractionLocked,
     isPaused,

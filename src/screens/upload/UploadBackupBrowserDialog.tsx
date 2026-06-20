@@ -162,7 +162,6 @@ export default function UploadBackupBrowserDialog({
       titleId="backup-browser-title"
       descriptionId="backup-browser-description"
       onClose={canClose ? onClose : undefined}
-      closeOnOverlayClick={canClose}
       closeOnEscape={canClose}
       trapFocus
       restoreFocus

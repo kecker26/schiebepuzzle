@@ -5,11 +5,12 @@ import { useReducedMotionPreference } from './useReducedMotionPreference.ts'
 
 interface AnimatedCollapseProps {
   isOpen: boolean
+  id?: string
   className?: string
   children: ReactNode
 }
 
-export default function AnimatedCollapse({ isOpen, className, children }: AnimatedCollapseProps) {
+export default function AnimatedCollapse({ isOpen, id, className, children }: AnimatedCollapseProps) {
   const shouldReduceMotion = useReducedMotionPreference()
 
   return (
@@ -17,6 +18,7 @@ export default function AnimatedCollapse({ isOpen, className, children }: Animat
       {isOpen ? (
         <motion.div
           key="expanded"
+          id={id}
           className={className}
           initial={shouldReduceMotion ? { opacity: 0, height: 0 } : { opacity: 0, height: 0, y: -3 }}
           animate={shouldReduceMotion ? { opacity: 1, height: 'auto' } : { opacity: 1, height: 'auto', y: 0 }}
