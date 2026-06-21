@@ -537,14 +537,29 @@ export default function UploadGalleryDetailDialog({
                   <span>{challengeTarget ? 'Vorlage dieser Serie' : 'Gemeinsamer Startzustand'}</span>
                 </div>
                 <div className="gallery-detail-challenge-target-metrics" aria-label="Werte der Startzustand-Serie">
-                  <span>
-                    <small>Stufe</small>
-                    <strong>{formatDifficultyLabel(displayEntry.config)}</strong>
-                  </span>
-                  <span>
-                    <small>Laeufe</small>
-                    <strong>{series.entries.length}</strong>
-                  </span>
+                  {challengeTarget ? (
+                    <>
+                      <span>
+                        <small>Zeit</small>
+                        <strong>{formatTime(challengeTarget.time)}</strong>
+                      </span>
+                      <span>
+                        <small>Netto-Zuege</small>
+                        <strong>{challengeTarget.moves}</strong>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        <small>Stufe</small>
+                        <strong>{formatDifficultyLabel(displayEntry.config)}</strong>
+                      </span>
+                      <span>
+                        <small>Laeufe</small>
+                        <strong>{series.entries.length}</strong>
+                      </span>
+                    </>
+                  )}
                 </div>
                 <small>
                   {challengeTarget

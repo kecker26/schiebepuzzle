@@ -3851,6 +3851,8 @@ describe('keyboard smoke tests', () => {
       ...createSolvedGalleryEntry('92', '2026-04-11T09:00:00.000Z'),
       replaySetup,
       assistanceMode: 'clean' as const,
+      time: 87,
+      moves: 35,
     }
     const detailEntry = createGalleryDisplayEntry('92', '2026-04-11T09:00:00.000Z')
 
@@ -3883,6 +3885,13 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Uebungslaeufe fuer diesen Startzustand')).toBeTruthy()
     expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
     expect(screen.getByText('Vorlage herausfordern')).toBeTruthy()
+    const templateMetrics = within(screen.getByLabelText('Werte der Startzustand-Serie'))
+    expect(templateMetrics.getByText('Zeit')).toBeTruthy()
+    expect(templateMetrics.getByText('1:27')).toBeTruthy()
+    expect(templateMetrics.getByText('Netto-Zuege')).toBeTruthy()
+    expect(templateMetrics.getByText('35')).toBeTruthy()
+    expect(templateMetrics.queryByText('Stufe')).toBeNull()
+    expect(templateMetrics.queryByText('Laeufe')).toBeNull()
     expect(screen.getByRole('button', {
       name: 'Startzustand der Startzustand-Serie 1 als Uebung starten',
     })).toBeTruthy()
