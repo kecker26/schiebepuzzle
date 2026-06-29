@@ -537,6 +537,7 @@ describe('UploadGalleryDisplayUtils', () => {
     const [series] = buildGalleryChallengeSeries([assistedChallengeRun, cleanMedalAttempt, target])
 
     expect(series.attempts.map((entry) => entry.id)).toEqual(['clean-medal-attempt'])
+    expect(series.preTemplateEntries).toEqual([])
     expect(series.relatedStartStateEntries.map((entry) => entry.id)).toEqual(['assisted-challenge-run'])
   })
 
@@ -611,6 +612,125 @@ describe('UploadGalleryDisplayUtils', () => {
       bestMedal: null,
     })
     expect(series.preTemplateEntries.map((entry) => entry.id)).toEqual(['failed-qualification'])
+  })
+
+  it('haengt freie Laeufe mit gleichem Startbrett an die synthetische Ursprungserie', () => {
+    const replaySetup = {
+      version: 1,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    } satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
+    const estimatedChallengeTarget = {
+      entryId: 'synthetic:source:4x4:crop:board:estimate-v1',
+      completedAt: '2026-04-20T12:00:00.000Z',
+      time: 360,
+      moves: 180,
+      actionMoves: 180,
+      assistanceMode: 'clean' as const,
+      synthetic: true,
+      estimate: {
+        version: 1 as const,
+        method: 'heuristic-personal-v1' as const,
+        heuristicScore: 24,
+        createdAt: '2026-04-20T12:00:00.000Z',
+        personalMedianApplied: false,
+      },
+    }
+    const softRun = createGalleryEntry('soft-run', {
+      replaySetup,
+      challengeTargetId: estimatedChallengeTarget.entryId,
+      estimatedChallengeTarget,
+    })
+    const sameStartPractice = createGalleryEntry('same-start-practice', {
+      completedAt: '2026-04-22T12:00:00.000Z',
+      replaySetup,
+      assistanceMode: 'hinted',
+    })
+
+    const [series] = buildGalleryChallengeSeries([sameStartPractice, softRun])
+
+    expect(series.targetId).toBe(estimatedChallengeTarget.entryId)
+    expect(series.preTemplateEntries.map((entry) => entry.id)).toEqual(['soft-run'])
+    expect(series.relatedStartStateEntries.map((entry) => entry.id)).toEqual(['same-start-practice'])
+
+    const excluded = new Set([
+      series.targetId,
+      ...series.preTemplateEntries.map((entry) => entry.id),
+      ...series.relatedStartStateEntries.map((entry) => entry.id),
+    ])
+    expect(buildGalleryStartStateSeries([sameStartPractice, softRun], excluded)).toEqual([])
+  })
+
+  it('fasst synthetischen Ursprung und echte Medaillenlaeufe desselben Startbretts zusammen', () => {
+    const replaySetup = {
+      version: 1,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    } satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
+    const estimatedChallengeTarget = {
+      entryId: 'synthetic:source:4x4:crop:board:estimate-v1',
+      completedAt: '2026-04-20T12:00:00.000Z',
+      time: 360,
+      moves: 180,
+      actionMoves: 180,
+      assistanceMode: 'clean' as const,
+      synthetic: true,
+      estimate: {
+        version: 1 as const,
+        method: 'heuristic-personal-v1' as const,
+        heuristicScore: 24,
+        createdAt: '2026-04-20T12:00:00.000Z',
+        personalMedianApplied: false,
+      },
+    }
+    const softRun = createGalleryEntry('soft-run', {
+      completedAt: '2026-04-20T12:00:00.000Z',
+      replaySetup,
+      challengeTargetId: estimatedChallengeTarget.entryId,
+      estimatedChallengeTarget,
+    })
+    const template = createGalleryEntry('created-template', {
+      completedAt: '2026-04-21T12:00:00.000Z',
+      replaySetup,
+      challengeTargetId: estimatedChallengeTarget.entryId,
+      estimatedChallengeTarget,
+      qualificationResult: 'created-template',
+      assistanceMode: 'clean',
+    })
+    const medalRun = createGalleryEntry('gold-run', {
+      completedAt: '2026-04-22T12:00:00.000Z',
+      replaySetup,
+      challengeTargetId: template.id,
+      challengeMedal: 'gold',
+      time: 90,
+      moves: 80,
+    })
+
+    const series = buildGalleryChallengeSeries([medalRun, softRun, template])
+
+    expect(series).toHaveLength(1)
+    expect(series[0]).toMatchObject({
+      targetId: template.id,
+      targetEntry: { id: template.id },
+      estimatedTarget: { entryId: estimatedChallengeTarget.entryId },
+      templateEntry: { id: template.id },
+      bestAttempt: { id: medalRun.id },
+      bestMedal: 'gold',
+    })
+    expect(series[0].preTemplateEntries.map((entry) => entry.id)).toEqual(['soft-run'])
+    expect(series[0].attempts.map((entry) => entry.id)).toEqual(['gold-run'])
+
+    const relations = buildGalleryTimelineRelations([medalRun, softRun, template])
+    const excluded = new Set([
+      ...Array.from(relations.attemptsByEntryId.keys()),
+      ...Array.from(relations.targetsByEntryId.keys()),
+      ...series[0].preTemplateEntries.map((entry) => entry.id),
+      ...series[0].relatedStartStateEntries.map((entry) => entry.id),
+    ])
+
+    expect(buildGalleryStartStateSeries([medalRun, softRun, template], excluded)).toEqual([])
   })
 
   it('erkennt bestaetigte Medaillen und Aufstiege chronologisch', () => {

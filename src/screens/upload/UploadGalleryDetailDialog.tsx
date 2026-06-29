@@ -75,6 +75,25 @@ function formatChallengeDelta(value: number, unit: string): string {
   return `${Math.abs(value)} ${unit} ${value < 0 ? 'weniger' : 'mehr'}`
 }
 
+function getPreTemplateEntryComment(entry: SolvedGalleryEntry): string {
+  if (entry.qualificationResult === 'failed') return 'Qualifikation: kein echtes Ziel erzeugt.'
+  if (entry.qualificationResult === 'created-template') return 'Vorlage: machte aus der Schaetzung ein echtes Ziel.'
+  if (entry.challengeRunKind === 'qualification') return 'Qualifikation: pruefte das geschaetzte Ziel.'
+  return 'Vor Zielsetzung: gehoert zur frueheren Schaetzphase.'
+}
+
+function getRelatedStartStateEntryComment(entry: SolvedGalleryEntry, canStartRelatedChallenge: boolean): string {
+  if (entry.challengeTargetId && !entry.challengeMedal) {
+    return 'Assistiert: gleiches Startbrett, keine Medaille.'
+  }
+
+  if (canStartRelatedChallenge) {
+    return 'Clean: kann als alternative Vorlage dienen.'
+  }
+
+  return 'Uebung: gleiches Startbrett, nicht gewertet.'
+}
+
 function getCompletedAtTimestamp(entry: SolvedGalleryEntry): number {
   const timestamp = Date.parse(entry.completedAt)
   return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp
@@ -964,9 +983,9 @@ export default function UploadGalleryDetailDialog({
           {challengeSeries.length > 0 ? (
             <section className="gallery-detail-challenge-series" aria-labelledby="gallery-detail-challenge-series-title">
               <div className="gallery-detail-replay-header">
-                <span id="gallery-detail-challenge-series-title" className="saved-games-kicker">Challenge-Serien</span>
+                <span id="gallery-detail-challenge-series-title" className="saved-games-kicker">Challenge-Startzustand-Serien</span>
                 <p className="gallery-detail-replay-copy">
-                  Jede Farbe verbindet genau eine Vorlage mit allen direkten Versuchen gegen diesen Lauf.
+                  Eine Karte fasst alle Laeufe mit identischem gespeicherten Startbrett zusammen.
                 </p>
               </div>
 
@@ -1032,7 +1051,7 @@ export default function UploadGalleryDetailDialog({
                         </span>
                         <div className="gallery-detail-challenge-card-title">
                           <span className="saved-games-kicker">
-                            {isEstimatedOriginSeries ? 'Geschaetzte Ursprungserie' : 'Medaillenserie'} {seriesIndex + 1}
+                            Startzustand-Serie {seriesIndex + 1}
                           </span>
                           <strong>
                             {target
@@ -1043,7 +1062,7 @@ export default function UploadGalleryDetailDialog({
                           </strong>
                           {estimatedTarget ? (
                             <small className="gallery-detail-challenge-origin">
-                              Geschaetzt aus Startbrett, Raster und deinen bisherigen Laeufen.
+                              Enthaelt die geschaetzte Vorphase und die echte Vorlage dieses Startbretts.
                             </small>
                           ) : null}
                           {targetOrigin ? (
@@ -1128,10 +1147,10 @@ export default function UploadGalleryDetailDialog({
                           <small>
                             {isEstimatedOriginSeries
                               ? target
-                                ? 'Der erste erfolgreiche cleane Lauf ist die echte Vorlage; er selbst vergibt keine Medaille.'
-                                : 'Noch keine echte Vorlage vorhanden. Starte eine Qualifikation, um sie zu erspielen.'
+                                ? 'Vorlage: erster erfolgreicher cleaner Referenzlauf dieses Startbretts.'
+                                : 'Noch keine echte Vorlage vorhanden. Eine Qualifikation kann sie erzeugen.'
                               : target
-                              ? `${series.attempts.length} direkte ${series.attempts.length === 1 ? 'Herausforderung' : 'Herausforderungen'} gegen genau diesen Lauf.`
+                              ? `Vorlage: Referenzlauf fuer ${series.attempts.length} ${series.attempts.length === 1 ? 'Medaillenlauf' : 'Medaillenlaeufe'} dieses Startbretts.`
                               : 'Historische Challenge-Serie ohne vorhandene Vorlage.'}
                           </small>
                           <button
@@ -1180,7 +1199,7 @@ export default function UploadGalleryDetailDialog({
                             <span>Vor dem echten Ziel</span>
                             <strong>{series.preTemplateEntries.length}</strong>
                           </div>
-                          <p>Soft-Uebungen, gescheiterte Qualifikationen und assistierte starke Laeufe vor der echten Vorlage.</p>
+                          <p>Laeufe aus der geschaetzten Phase, bevor dieses Startbrett eine echte Vorlage hatte.</p>
                           <div className="gallery-detail-challenge-related-list">
                             {series.preTemplateEntries.map((preTemplateEntry) => (
                               <div key={preTemplateEntry.id} className="gallery-detail-challenge-related-row">
@@ -1196,6 +1215,7 @@ export default function UploadGalleryDetailDialog({
                                         : 'Soft-Uebung'}
                                   </span>
                                   <strong>{formatTime(preTemplateEntry.time)} - {preTemplateEntry.moves} Netto</strong>
+                                  <small>{getPreTemplateEntryComment(preTemplateEntry)}</small>
                                   <small>{formatDate(preTemplateEntry.completedAt)} - {formatAssistanceModeLabel(preTemplateEntry.assistanceMode)}</small>
                                 </div>
                               </div>
@@ -1239,7 +1259,7 @@ export default function UploadGalleryDetailDialog({
                       <div className="gallery-detail-challenge-attempts">
                         <div className="gallery-detail-challenge-attempts-head">
                           <Trophy aria-hidden="true" size={16} strokeWidth={2.4} />
-                          <span>Zugehoerige Versuche</span>
+                          <span>Medaillenlaeufe</span>
                           <strong>{series.attempts.length}</strong>
                         </div>
                         <div className="gallery-detail-challenge-attempt-list">
@@ -1261,6 +1281,7 @@ export default function UploadGalleryDetailDialog({
                                       {isBestAttempt ? ' · Bester Versuch' : ''}
                                     </strong>
                                     <small>{formatDate(attempt.completedAt)}</small>
+                                    <small>Gewertet: cleaner Versuch gegen diese Vorlage.</small>
                                   </div>
                                   <div>
                                     <strong>{formatTime(attempt.time)} · {attempt.moves} Netto</strong>
@@ -1285,14 +1306,13 @@ export default function UploadGalleryDetailDialog({
                         <div className="gallery-detail-challenge-related-start-state">
                           <div className="gallery-detail-challenge-related-head">
                             <GitBranch aria-hidden="true" size={16} strokeWidth={2.4} />
-                            <span>Verwandte Startzustandslaeufe</span>
+                            <span>Weitere Laeufe dieses Startbretts</span>
                             <strong>
                               {series.relatedStartStateEntries.length} {series.relatedStartStateEntries.length === 1 ? 'Lauf' : 'Laeufe'}
                             </strong>
                           </div>
                           <p>
-                            Gleiches Startbrett wie die Vorlage, aber nicht Teil der Medaillenwertung. Dazu gehoeren
-                            auch Challenge-Abschluesse mit Hilfe.
+                            Gleiches Startbrett wie die Vorlage, aber nicht Teil der Medaillenwertung.
                           </p>
                           <button
                             type="button"
@@ -1330,6 +1350,7 @@ export default function UploadGalleryDetailDialog({
                                     <small>
                                       {formatDate(relatedEntry.completedAt)} - {formatAssistanceModeLabel(relatedEntry.assistanceMode)}
                                     </small>
+                                    <small>{getRelatedStartStateEntryComment(relatedEntry, canStartRelatedChallenge)}</small>
                                   </div>
                                 </div>
                               )

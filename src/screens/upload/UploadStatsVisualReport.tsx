@@ -199,6 +199,9 @@ interface TrendPoint {
   index: number
   difficultyKey: string
   date: string
+  dayKey: string
+  dayRunNumber: number
+  dayRunCount: number
   label: string
   difficulty: string
   actions: number | null
@@ -472,6 +475,17 @@ function formatShortDate(isoDate: string): string {
     day: '2-digit',
     month: '2-digit',
   })
+}
+
+function getLocalDateKey(isoDate: string): string {
+  const parsed = new Date(isoDate)
+  if (Number.isNaN(parsed.getTime())) return 'unknown'
+
+  return [
+    parsed.getFullYear(),
+    String(parsed.getMonth() + 1).padStart(2, '0'),
+    String(parsed.getDate()).padStart(2, '0'),
+  ].join('-')
 }
 
 function formatChartTooltipDate(isoDate: string): string {
@@ -939,14 +953,27 @@ function buildFavoriteDifficultyData(
 }
 
 function buildTrendPoints(entries: PuzzleCompletionRecord[]): TrendPoint[] {
+  const dayKeys = entries.map((entry) => getLocalDateKey(entry.completedAt))
+  const dayTotals = dayKeys.reduce<Map<string, number>>((totals, dayKey) => {
+    totals.set(dayKey, (totals.get(dayKey) ?? 0) + 1)
+    return totals
+  }, new Map())
+  const dayCounters = new Map<string, number>()
+
   return entries.map((entry, index) => {
     const corrections = entry.hasDetailedProfile ? getCompletionExtraMoves(entry) : null
+    const dayKey = dayKeys[index] ?? getLocalDateKey(entry.completedAt)
+    const dayRunNumber = (dayCounters.get(dayKey) ?? 0) + 1
+    dayCounters.set(dayKey, dayRunNumber)
 
     return {
       id: entry.id,
       index: index + 1,
       difficultyKey: getCompletionDifficultyKey(entry),
       date: entry.completedAt,
+      dayKey,
+      dayRunNumber,
+      dayRunCount: dayTotals.get(dayKey) ?? 1,
       label: formatShortDate(entry.completedAt),
       difficulty: formatDifficultyLabel(entry.config),
       actions: entry.hasDetailedProfile ? entry.actionMoves : null,
@@ -1294,6 +1321,41 @@ function getTrendTicks(points: Array<{ index: number }>): number[] {
   })
 }
 
+function getTrendAxisDomain(points: Array<{ index: number }>): [number, number] {
+  if (points.length === 0) return [0, 1]
+
+  const firstIndex = points[0]?.index ?? 1
+  const lastIndex = points[points.length - 1]?.index ?? firstIndex
+
+  return [
+    Math.max(0, firstIndex - 0.5),
+    lastIndex + 0.5,
+  ]
+}
+
+function getTrendAxisLabel(point: TrendPoint | undefined, totalPoints: number): string {
+  if (!point) return ''
+  if (totalPoints <= 3) return `Lauf ${point.index}`
+  if (point.dayRunCount <= 1) return point.label
+  return point.dayRunNumber === 1 ? point.label : `#${point.dayRunNumber}`
+}
+
+function getTrendAxisSummary(points: TrendPoint[]): string {
+  if (points.length === 0) return ''
+
+  const dayCount = new Set(points.map((point) => point.dayKey)).size
+  if (points.length === 1) {
+    return 'X-Achse: ein einzelner Lauf; Datum und Uhrzeit stehen im Tooltip.'
+  }
+
+  if (dayCount === 1) {
+    const dateLabel = points[0]?.label ?? 'diesem Tag'
+    return `X-Achse: ${points.length} Einzellaeufe am ${dateLabel}, als Lauf 1-${points.length} gezeigt.`
+  }
+
+  return `X-Achse: ${points.length} Einzellaeufe ueber ${dayCount} Tage; Wiederholungen am selben Tag erscheinen als #2, #3 ...`
+}
+
 function getTrendReferenceStats(
   points: TrendPoint[],
   metric: TrendMetric,
@@ -1351,6 +1413,16 @@ function formatTrendMovingAverage(value: number | null, metric: TrendMetric): st
 
   const roundedValue = Math.round(value * 10) / 10
   return `${roundedValue}`
+}
+
+function formatTrendDelta(fromValue: number | null, toValue: number | null, metric: TrendMetric): string | null {
+  if (fromValue === null || toValue === null) return null
+
+  const delta = toValue - fromValue
+  if (metric === 'time') return formatSeriesTimeDelta(delta)
+  if (delta === 0) return 'Gleich'
+
+  return `${Math.abs(delta)} Aktionen ${delta < 0 ? 'weniger' : 'mehr'}`
 }
 
 function getTrendDomain(): [number | string, number | string] {
@@ -1846,10 +1918,12 @@ export default function UploadStatsVisualReport({
     [trendMetric, trendPoints]
   )
   const trendTickLabels = useMemo(
-    () => new Map(trendPoints.map((point) => [point.index, point.label])),
+    () => new Map(trendPoints.map((point) => [point.index, getTrendAxisLabel(point, trendPoints.length)])),
     [trendPoints]
   )
   const trendTicks = useMemo(() => getTrendTicks(trendPoints), [trendPoints])
+  const trendXAxisDomain = useMemo(() => getTrendAxisDomain(trendPoints), [trendPoints])
+  const trendAxisSummary = useMemo(() => getTrendAxisSummary(trendPoints), [trendPoints])
   const assistanceSummary = useMemo(
     () => getDerivedAssistanceSummary(stats, completionHistory),
     [completionHistory, stats]
@@ -1974,6 +2048,13 @@ export default function UploadStatsVisualReport({
   const focusedTrendReferenceDisplay = getTrendReferenceDisplay(focusedTrendStats, visibleTrendValues)
   const trendFormatter = getTrendValueFormatter(trendMetric)
   const selectedTrend = TREND_METRICS.find((metric) => metric.id === trendMetric) ?? TREND_METRICS[0]
+  const compactTrendDelta = trendPoints.length >= 2 && trendPoints.length <= 3
+    ? formatTrendDelta(
+      getTrendMetricValue(trendPoints[0], trendMetric),
+      getTrendMetricValue(trendPoints[trendPoints.length - 1], trendMetric),
+      trendMetric
+    )
+    : null
   const averageQuality = averageScoreBreakdown?.score ?? null
   const solveTimeHistogram = useMemo(
     () => buildSolveTimeHistogram(rangedHistogramHistory, visibleTrendSeries, histogramMetric),
@@ -2497,6 +2578,35 @@ export default function UploadStatsVisualReport({
                   </span>
                 </div>
 
+                {trendPoints.length > 0 && trendPoints.length <= 3 ? (
+                  <div className="stats-trend-compact-runs" aria-label="Kompakter Einzellaufvergleich">
+                    <div className="stats-trend-compact-runs-list">
+                      {trendPoints.map((point) => {
+                        const metricValue = getTrendMetricValue(point, trendMetric)
+                        const seriesColor = trendSeriesColorMap.get(point.difficultyKey) ?? 'var(--primary-color)'
+
+                        return (
+                          <span
+                            key={point.id}
+                            className="stats-trend-compact-run"
+                            style={{ '--series-color': seriesColor } as CSSProperties}
+                          >
+                            <i aria-hidden="true" />
+                            <strong>Lauf {point.index}</strong>
+                            <span>{point.label}</span>
+                            <span>{trendFormatter(metricValue)}</span>
+                          </span>
+                        )
+                      })}
+                    </div>
+                    {compactTrendDelta ? (
+                      <p>
+                        <strong>Seit Lauf 1:</strong> {compactTrendDelta}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 {trendPoints.length === 0 || visibleTrendSeries.length === 0 ? (
                   <div className="stats-empty-state dashboard-empty-state">
                     <span className="empty-icon" aria-hidden="true"><Activity /></span>
@@ -2514,7 +2624,7 @@ export default function UploadStatsVisualReport({
                           tickLine={false}
                           axisLine={false}
                           allowDecimals={false}
-                          domain={['dataMin', 'dataMax']}
+                          domain={trendXAxisDomain}
                           ticks={trendTicks}
                           tickFormatter={(value) => trendTickLabels.get(Number(value)) ?? ''}
                         />
@@ -2634,6 +2744,7 @@ export default function UploadStatsVisualReport({
                 <div className="stats-visual-line-legend">
                   <span>{completionHistory.length} Laeufe gesamt</span>
                   <span>{visibleTrendSeries.length} von {trendSeriesOptions.length} Stufen sichtbar</span>
+                  {trendAxisSummary ? <span>{trendAxisSummary}</span> : null}
                   <span>{isMovingAverageVisible ? 'Rohlaeufe als Punkte, 5er-Trend als Linie' : 'Rohlaeufe mit geraden Verbindungen'}</span>
                   <span>{focusedTrendSeries ? `Fokus: ${focusedTrendSeries.label}` : 'Alle sichtbaren Stufen gleichwertig'}</span>
                 </div>
