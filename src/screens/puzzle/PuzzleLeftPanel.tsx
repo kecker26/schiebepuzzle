@@ -16,6 +16,7 @@ import {
   type GhostPreviewScope,
   type HeatmapMode,
   type PuzzleAssistanceMode,
+  type ChallengeMode,
 } from '../../types/index'
 import {
   deriveLiveChallengeForecast,
@@ -41,6 +42,7 @@ interface PuzzleLeftPanelProps {
   optimalMoveSummary: string
   isImprovingStartSolution?: boolean
   challengeTarget?: GalleryChallengeTarget | null
+  challengeMode?: ChallengeMode | null
   assistanceMode: PuzzleAssistanceMode
   elapsedTime: number
   progressMetrics: PuzzleProgressMetrics | null
@@ -59,6 +61,7 @@ interface PuzzleLeftPanelProps {
   ghostPreviewWeight: number
   ghostUsageCount: number
   ghostUsageDurationMs: number
+  heatmapUsageCount: number
   heatmapMode: HeatmapMode
   heatmapIntensity: number
   areHeatmapDistancesVisible: boolean
@@ -223,6 +226,7 @@ export default function PuzzleLeftPanel({
   optimalMoveSummary,
   isImprovingStartSolution = false,
   challengeTarget,
+  challengeMode = null,
   assistanceMode,
   elapsedTime,
   progressMetrics,
@@ -241,6 +245,7 @@ export default function PuzzleLeftPanel({
   ghostPreviewWeight,
   ghostUsageCount,
   ghostUsageDurationMs,
+  heatmapUsageCount,
   heatmapMode,
   heatmapIntensity,
   areHeatmapDistancesVisible,
@@ -279,7 +284,8 @@ export default function PuzzleLeftPanel({
     ? Math.max(0, progressMetrics.totalTiles - progressMetrics.correctTiles)
     : playableTileCount
   const progressStatusLabel = getProgressStatusLabel(progressMetrics?.progressPercent)
-  const areGameAidsLocked = Boolean(challengeTarget)
+  const effectiveChallengeMode = challengeMode ?? (challengeTarget ? 'medal' : null)
+  const areGameAidsLocked = effectiveChallengeMode === 'qualification' || effectiveChallengeMode === 'medal'
   const canUseBoardTools = progressMetrics !== null && !isPaused && !areGameAidsLocked
   const canTriggerSuggestion = canUseBoardTools && !isInteractionLocked
   const activeGhostPreviewMode =
@@ -289,12 +295,34 @@ export default function PuzzleLeftPanel({
   const challengeMovesDelta = challengeTarget ? moveCount - challengeTarget.moves : 0
   const challengeTimeDelta = challengeTarget ? elapsedTime - challengeTarget.time : 0
   const challengeForecast = challengeTarget
-    ? deriveLiveChallengeForecast({ moves: moveCount, time: elapsedTime, assistanceMode }, challengeTarget)
+    ? deriveLiveChallengeForecast({
+        moves: moveCount,
+        time: elapsedTime,
+        assistanceMode,
+        ghostUsageCount,
+        heatmapUsageCount,
+      }, challengeTarget)
     : null
   const challengeGoldTargets = challengeTarget ? getChallengeGoldTargets(challengeTarget) : null
   const challengeForecastLabel = challengeForecast?.medal
     ? formatChallengeMedalLabel(challengeForecast.medal)
     : 'Keine Medaille'
+  const challengeModeLabel =
+    effectiveChallengeMode === 'soft'
+      ? 'Geschaetzter Vergleich'
+      : effectiveChallengeMode === 'qualification'
+        ? 'Qualifikation'
+        : 'Medaillenlauf'
+  const challengeModeCopy =
+    effectiveChallengeMode === 'soft'
+      ? challengeForecast?.isClean
+        ? 'Moegliche Einstufung: Gold, wenn dieser Lauf clean bleibt.'
+        : 'Mit Hilfe nur Uebung; Vergleich bleibt informativ.'
+      : effectiveChallengeMode === 'qualification'
+        ? 'Ziel: echte Vorlage erstellen. Dieser Lauf vergibt noch keine Medaille.'
+        : challengeForecast?.isClean
+          ? 'Hilfen gesperrt: Medaillen bleiben erreichbar.'
+          : 'Keine Medaille mehr erreichbar; Lauf wird Uebung.'
 
   return (
     <AnimatedStaggerGroup
@@ -353,7 +381,7 @@ export default function PuzzleLeftPanel({
             >
               <span className="puzzle-challenge-badge-label">
                 <Trophy aria-hidden="true" size={14} strokeWidth={2.3} />
-                Live-Zielvergleich
+                {challengeModeLabel}
               </span>
               <AnimatedStateSwap
                 stateKey={challengeForecast?.medal ?? 'none'}
@@ -361,7 +389,11 @@ export default function PuzzleLeftPanel({
               >
                 <span className="puzzle-challenge-badge-status">
                   <Medal aria-hidden="true" size={18} strokeWidth={2.4} />
-                  Beste noch erreichbar: {challengeForecastLabel}
+                  {effectiveChallengeMode === 'qualification'
+                    ? 'Vorlage moeglich'
+                    : effectiveChallengeMode === 'soft'
+                      ? `Prognose: ${challengeForecastLabel}`
+                      : `Beste noch erreichbar: ${challengeForecastLabel}`}
                 </span>
               </AnimatedStateSwap>
               <span className={`puzzle-challenge-badge-detail${challengeForecast?.movesReached ? ' is-positive' : ' is-negative'}`}>
@@ -378,13 +410,13 @@ export default function PuzzleLeftPanel({
               <span className={`puzzle-challenge-badge-detail${challengeForecast?.isClean ? ' is-positive' : ' is-negative'}`}>
                 {challengeForecast?.isClean
                   ? challengeForecast?.goldAvailable
-                    ? 'Absolut clean: Medaillen bleiben erreichbar'
-                    : 'Gold und Diamant sind wegen des Solver-Optimums nicht erreichbar'
-                  : 'Hilfe genutzt: Keine Medaille mehr erreichbar; der Abschluss bleibt ein verwandter Uebungslauf'}
+                    ? challengeModeCopy
+                    : 'Gold und Diamant sind aktuell nicht erreichbar'
+                  : challengeModeCopy}
               </span>
               {challengeForecast?.goldAvailable && !challengeForecast.diamondAvailable ? (
                 <span className="puzzle-challenge-badge-detail is-muted">
-                  Diamant ist ohne exakte optimale Zugzahl nicht verfuegbar.
+                  Diamant braucht Zeit und Zuege mindestens 40 % unter der Vorlage.
                 </span>
               ) : null}
               <span className="puzzle-challenge-badge-detail is-muted">
@@ -544,7 +576,7 @@ export default function PuzzleLeftPanel({
               aria-keyshortcuts="H"
               data-puzzle-allow-hotkeys="true"
               data-app-tooltip={areGameAidsLocked
-                ? 'Im Medaillenlauf gesperrt.'
+                ? 'Im Zielmodus gesperrt.'
                 : 'Berechnet und markiert eine hilfreiche naechste Kachel. Zaehlt als Hilfe im Laufprofil.'}
               data-app-tooltip-align="start"
               reveal
@@ -568,7 +600,7 @@ export default function PuzzleLeftPanel({
               aria-keyshortcuts="Enter"
               data-puzzle-allow-hotkeys="true"
               data-app-tooltip={areGameAidsLocked
-                ? 'Im Medaillenlauf gesperrt.'
+                ? 'Im Zielmodus gesperrt.'
                 : 'Fuehrt den empfohlenen Zug aus. Wird als Auto-Zug in der Statistik erfasst.'}
               data-app-tooltip-align="end"
               reveal
@@ -617,7 +649,7 @@ export default function PuzzleLeftPanel({
             aria-keyshortcuts="Space"
             data-puzzle-allow-hotkeys="true"
             data-app-tooltip={areGameAidsLocked
-              ? 'Im Medaillenlauf gesperrt.'
+              ? 'Im Zielmodus gesperrt.'
               : isPreviewVisible
                 ? 'Referenzbild rechts ausblenden.'
                 : 'Referenzbild rechts anzeigen.'}
@@ -637,7 +669,7 @@ export default function PuzzleLeftPanel({
             aria-keyshortcuts="G"
             data-puzzle-allow-hotkeys="true"
             data-app-tooltip={areGameAidsLocked
-              ? 'Im Medaillenlauf gesperrt.'
+              ? 'Im Zielmodus gesperrt.'
               : isGhostPreviewVisible
                 ? 'Geisterbild vom Brett ausblenden.'
                 : 'Zielbild transparent ueber das Brett legen.'}
@@ -657,7 +689,7 @@ export default function PuzzleLeftPanel({
             aria-keyshortcuts="M"
             data-puzzle-allow-hotkeys="true"
             data-app-tooltip={areGameAidsLocked
-              ? 'Im Medaillenlauf gesperrt.'
+              ? 'Im Zielmodus gesperrt.'
               : isHeatmapOverlayVisible
                 ? 'Zugpotenzial und Heatmap ausblenden.'
                 : 'Bewegliche Kacheln nach ihrem Zugpotenzial bewerten.'}
@@ -677,7 +709,7 @@ export default function PuzzleLeftPanel({
             aria-keyshortcuts="N"
             data-puzzle-allow-hotkeys="true"
             data-app-tooltip={areGameAidsLocked
-              ? 'Im Medaillenlauf gesperrt.'
+              ? 'Im Zielmodus gesperrt.'
               : 'Kachelnummern kurz einblenden, um Positionen schneller abzugleichen.'}
             data-app-tooltip-align="end"
             reveal
@@ -693,7 +725,7 @@ export default function PuzzleLeftPanel({
             disabled={areGameAidsLocked || moveHistoryLength === 0 || isInteractionLocked}
             aria-keyshortcuts="Control+Z"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip={areGameAidsLocked ? 'Im Medaillenlauf gesperrt.' : 'Letzten Zug rueckgaengig machen.'}
+            data-app-tooltip={areGameAidsLocked ? 'Im Zielmodus gesperrt.' : 'Letzten Zug rueckgaengig machen.'}
             data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
@@ -708,7 +740,7 @@ export default function PuzzleLeftPanel({
             disabled={areGameAidsLocked || redoHistoryLength === 0 || isInteractionLocked}
             aria-keyshortcuts="Control+Y"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip={areGameAidsLocked ? 'Im Medaillenlauf gesperrt.' : 'Rueckgaengig gemachten Zug wiederholen.'}
+            data-app-tooltip={areGameAidsLocked ? 'Im Zielmodus gesperrt.' : 'Rueckgaengig gemachten Zug wiederholen.'}
             data-app-tooltip-align="end"
             reveal
             revealLevel="subtle"

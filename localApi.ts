@@ -251,6 +251,14 @@ interface StoredGalleryChallengeTarget {
   assistanceMode: StoredAssistanceMode
   optimalStartMoveCount?: number | null
   optimalStartMoveCountKind?: 'exact' | 'lower-bound' | 'unavailable'
+  synthetic?: boolean
+  estimate?: {
+    version: 1
+    method: 'heuristic-personal-v1'
+    heuristicScore: number
+    createdAt: string
+    personalMedianApplied: boolean
+  }
 }
 
 interface StoredSaveFile {
@@ -375,6 +383,9 @@ interface StoredGalleryEntry {
   imageTheme?: StoredImageThemePalette
   challengeTargetId?: string
   challengeMedal?: StoredChallengeMedal
+  estimatedChallengeTarget?: StoredGalleryChallengeTarget
+  challengeRunKind?: 'medal' | 'qualification'
+  qualificationResult?: 'created-template' | 'failed'
 }
 
 type StoredGalleryTagSource = 'gemini' | 'imported' | 'manual'
@@ -2005,6 +2016,7 @@ function sanitizeProgress(progress: unknown): StoredSaveProgress {
   const input = progress && typeof progress === 'object' ? (progress as Record<string, unknown>) : {}
   const moveCount = sanitizeCount(input.moveCount)
   const challengeTarget = sanitizeGalleryChallengeTarget(input.challengeTarget)
+  const challengeMode = sanitizeChallengeMode(input.challengeMode)
   const normalizedProgress: StoredSaveProgress = {
     ...input,
     moveCount,
@@ -2013,8 +2025,14 @@ function sanitizeProgress(progress: unknown): StoredSaveProgress {
   }
   if (challengeTarget) {
     normalizedProgress.challengeTarget = challengeTarget
+    if (challengeMode) {
+      normalizedProgress.challengeMode = challengeMode
+    } else if (challengeTarget.synthetic) {
+      normalizedProgress.challengeMode = 'soft'
+    }
   } else {
     delete normalizedProgress.challengeTarget
+    delete normalizedProgress.challengeMode
   }
   return normalizedProgress
 }
@@ -3426,6 +3444,43 @@ function sanitizeChallengeMedal(value: unknown): StoredChallengeMedal | undefine
     : undefined
 }
 
+function sanitizeChallengeRunKind(value: unknown): StoredGalleryEntry['challengeRunKind'] | undefined {
+  return value === 'medal' || value === 'qualification' ? value : undefined
+}
+
+function sanitizeChallengeMode(value: unknown): 'soft' | 'qualification' | 'medal' | undefined {
+  return value === 'soft' || value === 'qualification' || value === 'medal' ? value : undefined
+}
+
+function sanitizeQualificationResult(value: unknown): StoredGalleryEntry['qualificationResult'] | undefined {
+  return value === 'created-template' || value === 'failed' ? value : undefined
+}
+
+function sanitizeGalleryChallengeEstimate(value: unknown): StoredGalleryChallengeTarget['estimate'] | undefined {
+  if (!value || typeof value !== 'object') return undefined
+
+  const input = value as Record<string, unknown>
+  if (
+    input.version !== 1
+    || input.method !== 'heuristic-personal-v1'
+    || typeof input.heuristicScore !== 'number'
+    || !Number.isFinite(input.heuristicScore)
+    || typeof input.createdAt !== 'string'
+    || input.createdAt.length === 0
+    || typeof input.personalMedianApplied !== 'boolean'
+  ) {
+    return undefined
+  }
+
+  return {
+    version: 1,
+    method: 'heuristic-personal-v1',
+    heuristicScore: input.heuristicScore,
+    createdAt: input.createdAt,
+    personalMedianApplied: input.personalMedianApplied,
+  }
+}
+
 function sanitizeGalleryChallengeTarget(value: unknown): StoredGalleryChallengeTarget | undefined {
   if (!value || typeof value !== 'object') return undefined
 
@@ -3442,6 +3497,7 @@ function sanitizeGalleryChallengeTarget(value: unknown): StoredGalleryChallengeT
   const moves = sanitizeCount(input.moves)
   const optimalStartMoveCount = sanitizeOptionalCount(input.optimalStartMoveCount)
   const optimalStartMoveCountKind = sanitizeOptimalStartMoveCountKind(input.optimalStartMoveCountKind)
+  const estimate = sanitizeGalleryChallengeEstimate(input.estimate)
 
   return {
     entryId: input.entryId,
@@ -3456,6 +3512,8 @@ function sanitizeGalleryChallengeTarget(value: unknown): StoredGalleryChallengeT
         ? { optimalStartMoveCount }
         : {}),
     ...(optimalStartMoveCountKind ? { optimalStartMoveCountKind } : {}),
+    ...(input.synthetic === true ? { synthetic: true } : {}),
+    ...(estimate ? { estimate } : {}),
   }
 }
 
@@ -3781,6 +3839,9 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     imageTheme?: unknown
     challengeTargetId?: unknown
     challengeMedal?: unknown
+    estimatedChallengeTarget?: unknown
+    challengeRunKind?: unknown
+    qualificationResult?: unknown
   }
 
   if (typeof input.id !== 'string' || typeof input.completedAt !== 'string' || !isValidPuzzleConfig(input.config)) {
@@ -3800,6 +3861,9 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     ? input.challengeTargetId
     : undefined
   const challengeMedal = challengeTargetId ? sanitizeChallengeMedal(input.challengeMedal) : undefined
+  const estimatedChallengeTarget = sanitizeGalleryChallengeTarget(input.estimatedChallengeTarget)
+  const challengeRunKind = sanitizeChallengeRunKind(input.challengeRunKind)
+  const qualificationResult = sanitizeQualificationResult(input.qualificationResult)
 
   return {
     id: input.id,
@@ -3821,7 +3885,72 @@ function normalizeGalleryEntry(entry: unknown, assets: BackupAssetMap = {}): Sto
     ...(imageTheme ? { imageTheme } : {}),
     ...(challengeTargetId ? { challengeTargetId } : {}),
     ...(challengeMedal ? { challengeMedal } : {}),
+    ...(estimatedChallengeTarget ? { estimatedChallengeTarget } : {}),
+    ...(challengeRunKind ? { challengeRunKind } : {}),
+    ...(qualificationResult ? { qualificationResult } : {}),
   }
+}
+
+function isSyntheticGalleryChallengeReference(entry: StoredGalleryEntry): boolean {
+  return Boolean(
+    entry.challengeTargetId
+    && (
+      entry.estimatedChallengeTarget?.entryId === entry.challengeTargetId
+      || entry.challengeRunKind === 'qualification'
+      || entry.qualificationResult !== undefined
+    )
+  )
+}
+
+function reconcileGalleryChallengeReferences(entries: StoredGalleryEntry[]): StoredGalleryEntry[] {
+  const validEntryIds = new Set(entries.map((entry) => entry.id))
+
+  return entries.map((entry) => {
+    if (!entry.challengeTargetId || validEntryIds.has(entry.challengeTargetId) || isSyntheticGalleryChallengeReference(entry)) {
+      return entry
+    }
+
+    const nextEntry: StoredGalleryEntry = { ...entry }
+    delete nextEntry.challengeTargetId
+    delete nextEntry.challengeMedal
+    delete nextEntry.challengeRunKind
+    delete nextEntry.qualificationResult
+    return nextEntry
+  })
+}
+
+function hasDanglingGalleryChallengeReferences(payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object') return false
+
+  const input = payload as { entries?: unknown }
+  if (!Array.isArray(input.entries)) return false
+
+  const validEntryIds = new Set(
+    input.entries
+      .map((entry) => entry && typeof entry === 'object' ? (entry as { id?: unknown }).id : null)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0)
+  )
+
+  return input.entries.some((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+
+    const candidate = entry as {
+      challengeTargetId?: unknown
+      estimatedChallengeTarget?: { entryId?: unknown }
+      challengeRunKind?: unknown
+      qualificationResult?: unknown
+    }
+    const targetId = candidate.challengeTargetId
+    if (typeof targetId !== 'string' || targetId.trim().length === 0 || validEntryIds.has(targetId)) {
+      return false
+    }
+
+    return !(
+      candidate.estimatedChallengeTarget?.entryId === targetId
+      || candidate.challengeRunKind === 'qualification'
+      || candidate.qualificationResult !== undefined
+    )
+  })
 }
 
 function createGalleryFileFromCompletionHistory(
@@ -3846,12 +3975,13 @@ function normalizeGalleryFile(payload: unknown, assets: BackupAssetMap = {}): St
     lastUpdatedAt?: unknown
   }
 
-  const entries = Array.isArray(input.entries)
+  const normalizedEntries = Array.isArray(input.entries)
     ? input.entries
       .map((entry) => normalizeGalleryEntry(entry, assets))
       .filter((entry): entry is StoredGalleryEntry => entry !== null)
       .sort((a, b) => getIsoTimestampValue(b.completedAt) - getIsoTimestampValue(a.completedAt))
     : []
+  const entries = reconcileGalleryChallengeReferences(normalizedEntries)
 
   return {
     entries,
@@ -4132,7 +4262,11 @@ async function readGalleryFile(): Promise<StoredGalleryFile> {
 
   const rawGallery = await readJsonFile<StoredGalleryFile>(GALLERY_FILE)
   if (rawGallery) {
-    return normalizeGalleryFile(rawGallery)
+    const gallery = normalizeGalleryFile(rawGallery)
+    if (hasDanglingGalleryChallengeReferences(rawGallery)) {
+      await writeGalleryFile(gallery)
+    }
+    return gallery
   }
 
   const stats = await readStatsFile()
@@ -4909,6 +5043,9 @@ function validateGalleryPayload(payload: unknown): payload is {
   imageTheme?: StoredImageThemePalette | null
   challengeTargetId?: string
   challengeMedal?: StoredChallengeMedal
+  estimatedChallengeTarget?: StoredGalleryChallengeTarget
+  challengeRunKind?: StoredGalleryEntry['challengeRunKind']
+  qualificationResult?: StoredGalleryEntry['qualificationResult']
 } {
   if (!payload || typeof payload !== 'object') return false
 
@@ -4945,7 +5082,19 @@ function validateGalleryPayload(payload: unknown): payload is {
         )
       )
     ) &&
-    (input.challengeMedal === undefined || input.assistanceMode === 'clean')
+    (input.challengeMedal === undefined || input.assistanceMode === 'clean') &&
+    (
+      input.estimatedChallengeTarget === undefined
+      || sanitizeGalleryChallengeTarget(input.estimatedChallengeTarget) !== undefined
+    ) &&
+    (
+      input.challengeRunKind === undefined
+      || sanitizeChallengeRunKind(input.challengeRunKind) !== undefined
+    ) &&
+    (
+      input.qualificationResult === undefined
+      || sanitizeQualificationResult(input.qualificationResult) !== undefined
+    )
   )
 }
 
@@ -5083,7 +5232,7 @@ async function deleteGalleryEntries(entryIds: string[]): Promise<StoredGalleryFi
   }
 
   const nextGallery: StoredGalleryFile = {
-    entries: nextEntries,
+    entries: reconcileGalleryChallengeReferences(nextEntries),
     lastUpdatedAt: new Date().toISOString(),
   }
 
@@ -5843,6 +5992,9 @@ async function handleGalleryApi(
       const sourceImage = sanitizeOptionalPreviewImage(body.sourceImage) ?? previewImage
       const imageTheme = sanitizeImageThemePalette(body.imageTheme)
       const challengeMedal = sanitizeChallengeMedal(body.challengeMedal)
+      const estimatedChallengeTarget = sanitizeGalleryChallengeTarget(body.estimatedChallengeTarget)
+      const challengeRunKind = sanitizeChallengeRunKind(body.challengeRunKind)
+      const qualificationResult = sanitizeQualificationResult(body.qualificationResult)
       const entry: StoredGalleryEntry = {
         id: typeof body.id === 'string' && body.id.length > 0 ? body.id : randomUUID(),
         completedAt,
@@ -5862,6 +6014,9 @@ async function handleGalleryApi(
           ? { challengeTargetId: body.challengeTargetId }
           : {}),
         ...(challengeMedal ? { challengeMedal } : {}),
+        ...(estimatedChallengeTarget ? { estimatedChallengeTarget } : {}),
+        ...(challengeRunKind ? { challengeRunKind } : {}),
+        ...(qualificationResult ? { qualificationResult } : {}),
         aiTagging: {
           status: 'pending',
           provider: geminiGalleryConfig.provider,
@@ -5873,7 +6028,7 @@ async function handleGalleryApi(
       }
 
       const nextGallery: StoredGalleryFile = {
-        entries: [entry, ...gallery.entries.filter((existing) => existing.id !== entry.id)]
+        entries: reconcileGalleryChallengeReferences([entry, ...gallery.entries.filter((existing) => existing.id !== entry.id)])
           .sort((a, b) => getIsoTimestampValue(b.completedAt) - getIsoTimestampValue(a.completedAt)),
         lastUpdatedAt: nowIso,
       }

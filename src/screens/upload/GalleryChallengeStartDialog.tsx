@@ -6,8 +6,6 @@ import type { SolvedGalleryEntry } from '../../types/index.ts'
 import {
   formatChallengeMedalLabel,
   getChallengeMedalEmoji,
-  isChallengeDiamondAvailable,
-  isChallengeGoldAvailable,
 } from '../../utils/galleryChallenge.ts'
 import GalleryStartBoardPreview from './GalleryStartBoardPreview.tsx'
 import { formatTime } from './uploadUtils.ts'
@@ -22,7 +20,7 @@ const MEDAL_RULES = [
   { medal: 'bronze', rule: 'Genau ein Ziel strikt unterbieten' },
   { medal: 'silver', rule: 'Beide Ziele strikt unterbieten' },
   { medal: 'gold', rule: 'Beide Ziele um mindestens 20 % unterbieten' },
-  { medal: 'diamond', rule: 'Gold erreichen und exakt solver-optimal loesen' },
+  { medal: 'diamond', rule: 'Beide Ziele um mindestens 40 % unterbieten' },
 ] as const
 
 export default function GalleryChallengeStartDialog({
@@ -31,19 +29,6 @@ export default function GalleryChallengeStartDialog({
   onConfirm,
 }: GalleryChallengeStartDialogProps) {
   const startButtonRef = useRef<HTMLButtonElement>(null)
-  const challengeTarget = {
-    entryId: target.id,
-    completedAt: target.completedAt,
-    time: target.time,
-    moves: target.moves,
-    actionMoves: target.actionMoves,
-    assistanceMode: target.assistanceMode,
-    optimalStartMoveCount: target.replaySetup?.optimalStartMoveCount,
-    optimalStartMoveCountKind: target.replaySetup?.optimalStartMoveCountKind,
-  }
-  const diamondAvailable = isChallengeDiamondAvailable(challengeTarget)
-  const goldAvailable = isChallengeGoldAvailable(challengeTarget)
-
   return (
     <AnimatedDialog
       overlayClassName="gallery-challenge-start-overlay"
@@ -106,17 +91,6 @@ export default function GalleryChallengeStartDialog({
       <p className="gallery-challenge-start-note" role="note">
         Jede Medaille setzt einen absolut cleanen Lauf voraus.
       </p>
-
-      {!goldAvailable ? (
-        <p className="gallery-challenge-start-note" role="note">
-          Gold und Diamant sind fuer diese Vorlage nicht erreichbar: Das exakte Solver-Optimum liegt ueber dem
-          20-Prozent-Zugziel.
-        </p>
-      ) : !diamondAvailable ? (
-        <p className="gallery-challenge-start-note" role="note">
-          Diamant ist bei diesem Puzzle nicht verfuegbar, weil keine exakte optimale Zugzahl berechnet werden konnte.
-        </p>
-      ) : null}
 
       <div className="gallery-challenge-start-actions">
         <AnimatedButton className="secondary" onClick={onCancel}>Abbrechen</AnimatedButton>

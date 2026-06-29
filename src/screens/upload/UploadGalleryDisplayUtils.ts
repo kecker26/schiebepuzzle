@@ -265,6 +265,9 @@ export function getGalleryMedalHuntRecommendation(
 export interface GalleryChallengeSeries {
   targetId: string
   targetEntry: SolvedGalleryEntry | null
+  estimatedTarget: SolvedGalleryEntry['estimatedChallengeTarget'] | null
+  templateEntry: SolvedGalleryEntry | null
+  preTemplateEntries: SolvedGalleryEntry[]
   attempts: SolvedGalleryEntry[]
   relatedStartStateEntries: SolvedGalleryEntry[]
   medalHistory: GalleryChallengeMedalHistoryItem[]
@@ -398,6 +401,7 @@ export function buildGalleryStartStateSeries(
 
   for (const entry of entries) {
     if (excludedEntryIds.has(entry.id)) continue
+    if (entry.challengeTargetId) continue
 
     const startStateKey = getGalleryStartStateKey(entry)
     if (!startStateKey) continue
@@ -506,19 +510,28 @@ export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): Gall
   linkedEntriesByTarget.forEach((linkedEntries, targetId) => {
     allChallengeEntryIds.add(targetId)
     linkedEntries.forEach((entry) => {
-      if (entry.challengeMedal) allChallengeEntryIds.add(entry.id)
+      if (entry.challengeMedal || entry.estimatedChallengeTarget?.entryId === targetId) allChallengeEntryIds.add(entry.id)
     })
   })
 
   return Array.from(linkedEntriesByTarget.entries(), ([targetId, linkedEntries]) => {
     const attempts = linkedEntries.filter((entry) => entry.challengeMedal)
     const sortedAttempts = [...attempts].sort(compareChallengeAttempts)
-    const targetEntry = entriesById.get(targetId) ?? null
+    const estimatedTarget = linkedEntries.find((entry) => entry.estimatedChallengeTarget?.entryId === targetId)
+      ?.estimatedChallengeTarget ?? null
+    const templateEntry = linkedEntries.find((entry) => entry.qualificationResult === 'created-template') ?? null
+    const targetEntry = entriesById.get(targetId) ?? templateEntry ?? null
+    const preTemplateEntries = sortEntriesByLatest(
+      linkedEntries.filter((entry) => !entry.challengeMedal && entry.id !== templateEntry?.id)
+    )
     const bestAttempt = sortedAttempts[0] ?? null
 
     return {
       targetId,
       targetEntry,
+      estimatedTarget,
+      templateEntry,
+      preTemplateEntries,
       attempts: sortedAttempts,
       relatedStartStateEntries: getRelatedStartStateEntries(entries, targetEntry, allChallengeEntryIds),
       medalHistory: buildGalleryChallengeMedalHistory(attempts),
@@ -549,6 +562,12 @@ export function buildGalleryTimelineRelations(entries: SolvedGalleryEntry[]): Ga
       seriesNumber,
       series: challengeSeries,
     })
+    if (challengeSeries.targetEntry && challengeSeries.targetEntry.id !== challengeSeries.targetId) {
+      targetsByEntryId.set(challengeSeries.targetEntry.id, {
+        seriesNumber,
+        series: challengeSeries,
+      })
+    }
 
     const chronologicalAttempts = [...challengeSeries.attempts].sort(
       (a, b) => parseTimestamp(a.completedAt) - parseTimestamp(b.completedAt)

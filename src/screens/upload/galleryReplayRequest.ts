@@ -1,6 +1,6 @@
 import type { SolvedGalleryEntry } from '../../types/index'
 
-export type GalleryReplayMode = 'run' | 'practice' | 'motif'
+export type GalleryReplayMode = 'run' | 'qualification' | 'practice' | 'motif'
 
 export type GalleryReplayRequestHandler = (
   entry: SolvedGalleryEntry,

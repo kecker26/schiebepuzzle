@@ -106,6 +106,7 @@ interface PuzzleScreenProps {
   initialProgress?: PersistedPuzzleProgress | null
   initialReplaySetup?: GalleryReplaySetup | null
   challengeTarget?: GalleryChallengeTarget | null
+  challengeMode?: PersistedPuzzleProgress['challengeMode']
   onProgressChange?: (progress: PersistedPuzzleProgress | null) => void
   onWin: (stats: WinStats) => void
   onQuit: () => void
@@ -298,6 +299,7 @@ export default function PuzzleScreen({
   initialProgress,
   initialReplaySetup,
   challengeTarget,
+  challengeMode = null,
   onProgressChange,
   onWin,
   onQuit,
@@ -305,7 +307,8 @@ export default function PuzzleScreen({
   onRestart,
 }: PuzzleScreenProps) {
   const announceAccessibility = useAccessibilityAnnouncer()
-  const areGameAidsLocked = Boolean(challengeTarget)
+  const effectiveChallengeMode = challengeMode ?? (challengeTarget ? 'medal' : null)
+  const areGameAidsLocked = effectiveChallengeMode === 'qualification' || effectiveChallengeMode === 'medal'
   const puzzleRootRef = useRef<HTMLDivElement>(null)
   const initialProgressRef = useRef(initialProgress)
   const initialReplaySetupRef = useRef(initialReplaySetup)
@@ -1756,11 +1759,13 @@ export default function PuzzleScreen({
           reducedMovePath: [...reducedMovePathRef.current],
         },
         challengeTarget,
+        challengeMode: effectiveChallengeMode,
         historyLimit: PERSISTED_HISTORY_LIMIT,
       })
     )
   }, [
     challengeTarget,
+    effectiveChallengeMode,
     config,
     areHeatmapDistancesVisible,
     ghostPreviewWeight,
@@ -2838,6 +2843,7 @@ export default function PuzzleScreen({
             optimalMoveSummary={optimalMoveSummary}
             isImprovingStartSolution={isImprovingStartSolution}
             challengeTarget={challengeTarget}
+            challengeMode={effectiveChallengeMode}
             assistanceMode={deriveAssistanceModeFromRunMetrics(runMetrics)}
             elapsedTime={elapsedTime}
             progressMetrics={progressMetrics}
@@ -2856,6 +2862,7 @@ export default function PuzzleScreen({
             ghostPreviewWeight={ghostPreviewWeight}
             ghostUsageCount={runMetrics.ghostUsageCount ?? 0}
             ghostUsageDurationMs={runMetrics.ghostUsageDurationMs ?? 0}
+            heatmapUsageCount={runMetrics.heatmapUsageCount ?? 0}
             heatmapMode={heatmapMode}
             heatmapIntensity={heatmapIntensity}
             areHeatmapDistancesVisible={areHeatmapDistancesVisible}
@@ -2981,7 +2988,7 @@ export default function PuzzleScreen({
               </div>
               <p id={boardDescriptionId} className="visually-hidden">
                 {areGameAidsLocked
-                  ? 'Das Puzzlebrett ist der zentrale Spielbereich. Pfeiltasten oder WASD bewegen Kacheln und B holt den Fokus zurueck auf das Brett. Im Medaillenlauf sind die Spielhilfen gesperrt.'
+                  ? 'Das Puzzlebrett ist der zentrale Spielbereich. Pfeiltasten oder WASD bewegen Kacheln und B holt den Fokus zurueck auf das Brett. Im Zielmodus sind die Spielhilfen gesperrt.'
                   : 'Das Puzzlebrett ist der zentrale Spielbereich. Pfeiltasten oder WASD bewegen Kacheln, H zeigt einen Hinweis, Enter spielt den empfohlenen Zug und B holt den Fokus zurueck auf das Brett.'}
               </p>
               <p id={boardCaptionId} className="puzzle-board-caption" aria-live="polite">

@@ -100,6 +100,7 @@ import { type HistoryFilter, type UploadWorkspaceWindow } from './screens/upload
 import { useUploadImagePalette } from './screens/upload/uploadImagePalette.ts'
 import {
   AppState,
+  ChallengeMode,
   ChallengeResult,
   PersistedPuzzleProgress,
   PuzzleDataBackupFile,
@@ -126,6 +127,11 @@ import {
   isGalleryChallengeTargetEligible,
   isGalleryReplaySetupCompatible,
 } from './utils/galleryReplaySetup.ts'
+import {
+  createCropKey,
+  estimateGalleryChallengeTarget,
+  hasGallerySeriesForEstimatedTarget,
+} from './utils/puzzleEstimates.ts'
 
 const DEFAULT_CONFIG: PuzzleConfig = DEFAULT_PUZZLE_CONFIG
 const MAX_DISPLAYED_SAVED_GAMES = 30
@@ -142,6 +148,24 @@ function isCleanPersistedChallengeTarget(
   target: GalleryChallengeTarget | null | undefined
 ): target is GalleryChallengeTarget {
   return Boolean(target && target.assistanceMode === 'clean')
+}
+
+function createReplaySetupFromProgress(progress: PersistedPuzzleProgress): GalleryReplaySetup | null {
+  const startBoard = progress.puzzleState?.board
+  const emptyIndex = progress.puzzleState?.emptyIndex
+  if (!Array.isArray(startBoard) || typeof emptyIndex !== 'number') {
+    return null
+  }
+
+  return {
+    version: 1,
+    startBoard: [...startBoard],
+    emptyIndex,
+    shuffleMoves: [...(progress.solverProgress?.shuffleMoves ?? [])],
+    optimalStartMoveCount: progress.optimalStartMoveCount,
+    optimalStartMoveCountKind: progress.optimalStartMoveCountKind,
+    optimalStartMoveCountSolverVersion: progress.optimalStartMoveCountSolverVersion,
+  }
 }
 
 async function generateSavedGameTitleWithRetry(saveId: string): Promise<SavedGameSummary> {
@@ -391,8 +415,10 @@ export default function App() {
   const [pendingGalleryReplayUseFullImage, setPendingGalleryReplayUseFullImage] = useState<boolean | null>(null)
   const [pendingGalleryReplaySetup, setPendingGalleryReplaySetup] = useState<GalleryReplaySetup | null>(null)
   const [pendingGalleryChallengeTarget, setPendingGalleryChallengeTarget] = useState<GalleryChallengeTarget | null>(null)
+  const [pendingGalleryChallengeMode, setPendingGalleryChallengeMode] = useState<ChallengeMode | null>(null)
   const [activeGalleryReplaySetup, setActiveGalleryReplaySetup] = useState<GalleryReplaySetup | null>(null)
   const [activeGalleryChallengeTarget, setActiveGalleryChallengeTarget] = useState<GalleryChallengeTarget | null>(null)
+  const [activeGalleryChallengeMode, setActiveGalleryChallengeMode] = useState<ChallengeMode | null>(null)
   const [lastSessionSnapshot, setLastSessionSnapshot] = useState<LastSessionSnapshot | null>(() => readLastSessionSnapshot())
   const [uploadCommandRequest, setUploadCommandRequest] = useState<UploadCommandRequest | null>(null)
   const wasHelpOpenRef = useRef(false)
@@ -781,8 +807,10 @@ export default function App() {
     setPendingGalleryReplayUseFullImage(null)
     setPendingGalleryReplaySetup(null)
     setPendingGalleryChallengeTarget(null)
+    setPendingGalleryChallengeMode(null)
     setActiveGalleryReplaySetup(null)
     setActiveGalleryChallengeTarget(null)
+    setActiveGalleryChallengeMode(null)
   }, [])
 
   const restartPuzzleRun = useCallback(() => {
@@ -1207,7 +1235,7 @@ export default function App() {
       pendingSaveProgressRef.current = null
       pendingSaveStartedAtRef.current = 0
 
-      if (!shouldAutosavePuzzleRun(activeGalleryChallengeTarget)) {
+      if (!shouldAutosavePuzzleRun(activeGalleryChallengeTarget, activeGalleryChallengeMode)) {
         setHasPendingSaveChanges(false)
         return Promise.resolve()
       }
@@ -1249,7 +1277,7 @@ export default function App() {
         }
       })
     },
-    [activeGalleryChallengeTarget, enqueueSaveTask, persistSaveProgress]
+    [activeGalleryChallengeMode, activeGalleryChallengeTarget, enqueueSaveTask, persistSaveProgress]
   )
 
   const discardActiveMedalRunSave = useCallback(async (): Promise<boolean> => {
@@ -1293,7 +1321,7 @@ export default function App() {
       return true
     }
 
-    if (activeGalleryChallengeTarget) {
+    if (!shouldAutosavePuzzleRun(activeGalleryChallengeTarget, activeGalleryChallengeMode)) {
       return discardActiveMedalRunSave()
     }
 
@@ -1301,7 +1329,7 @@ export default function App() {
       keepalive: currentSaveIdRef.current !== null,
     })
     return true
-  }, [activeGalleryChallengeTarget, appState, discardActiveMedalRunSave, flushPendingSave])
+  }, [activeGalleryChallengeMode, activeGalleryChallengeTarget, appState, discardActiveMedalRunSave, flushPendingSave])
 
   const handleRestoreCropSession = useCallback(async () => {
     const snapshot = cropDraftSnapshotRef.current ?? cropDraftSnapshot
@@ -1455,6 +1483,11 @@ export default function App() {
       setActiveGalleryChallengeTarget(
         isCleanPersistedChallengeTarget(loaded.progress.challengeTarget)
           ? loaded.progress.challengeTarget
+          : null
+      )
+      setActiveGalleryChallengeMode(
+        isCleanPersistedChallengeTarget(loaded.progress.challengeTarget)
+          ? loaded.progress.challengeMode ?? (loaded.progress.challengeTarget.synthetic ? 'soft' : 'medal')
           : null
       )
       setIsRandomImage(false)
@@ -1830,10 +1863,12 @@ export default function App() {
     setCroppedImage(croppedSrc)
     setActiveGalleryReplaySetup(canStartGalleryChallenge ? pendingGalleryReplaySetup : null)
     setActiveGalleryChallengeTarget(canStartGalleryChallenge ? pendingGalleryChallengeTarget : null)
+    setActiveGalleryChallengeMode(canStartGalleryChallenge ? pendingGalleryChallengeMode ?? 'medal' : null)
     setPendingGalleryReplayConfig(null)
     setPendingGalleryReplayUseFullImage(null)
     setPendingGalleryReplaySetup(null)
     setPendingGalleryChallengeTarget(null)
+    setPendingGalleryChallengeMode(null)
     restartPuzzleRun()
     setAppState('playing')
   }
@@ -1841,7 +1876,37 @@ export default function App() {
   const handleProgressChange = useCallback(
     (progress: PersistedPuzzleProgress | null) => {
       setSavedProgress(progress)
-      if (!progress || !shouldAutosavePuzzleRun(activeGalleryChallengeTarget)) {
+      if (
+        progress
+        && progress.moveCount === 0
+        && !activeGalleryChallengeTarget
+        && !activeGalleryChallengeMode
+      ) {
+        const replaySetup = createReplaySetupFromProgress(progress)
+        const completedCropSnapshot = confirmedCropSnapshotRef.current ?? cropDraftSnapshotRef.current
+        const motifKey = completedCropSnapshot?.image ?? image ?? croppedImage ?? ''
+        if (
+          replaySetup
+          && motifKey
+          && isGalleryReplaySetupCompatible(replaySetup, config)
+        ) {
+          const softTarget = estimateGalleryChallengeTarget({
+            config,
+            motifKey,
+            cropKey: createCropKey({
+              cropTransform: completedCropSnapshot?.transform ?? null,
+              useFullImage: completedCropSnapshot?.useFullImage ?? false,
+            }),
+            replaySetup,
+            galleryEntries: gallery?.entries ?? [],
+          })
+          if (!hasGallerySeriesForEstimatedTarget(gallery?.entries ?? [], softTarget.entryId)) {
+            setActiveGalleryChallengeTarget(softTarget)
+            setActiveGalleryChallengeMode('soft')
+          }
+        }
+      }
+      if (!progress || !shouldAutosavePuzzleRun(activeGalleryChallengeTarget, activeGalleryChallengeMode)) {
         clearScheduledSave()
         return
       }
@@ -1851,7 +1916,16 @@ export default function App() {
       const sessionId = activeSessionRef.current
       scheduleSaveProgress(progress, sessionId)
     },
-    [activeGalleryChallengeTarget, clearScheduledSave, scheduleSaveProgress]
+    [
+      activeGalleryChallengeMode,
+      activeGalleryChallengeTarget,
+      clearScheduledSave,
+      config,
+      croppedImage,
+      gallery,
+      image,
+      scheduleSaveProgress,
+    ]
   )
 
   const createCompletionPayload = useCallback(
@@ -1900,7 +1974,20 @@ export default function App() {
         ...(challengeResult
           ? {
               challengeTargetId: challengeResult.targetId,
-              ...(challengeResult.medal ? { challengeMedal: challengeResult.medal } : {}),
+              ...(challengeResult.mode === 'medal' && challengeResult.medal
+                ? { challengeMedal: challengeResult.medal }
+                : {}),
+              ...(challengeResult.estimatedTarget
+                ? { estimatedChallengeTarget: challengeResult.estimatedTarget }
+                : {}),
+              ...(challengeResult.mode === 'medal'
+                ? { challengeRunKind: 'medal' as const }
+                : challengeResult.mode === 'qualification'
+                  ? { challengeRunKind: 'qualification' as const }
+                  : {}),
+              ...(challengeResult.qualificationResult
+                ? { qualificationResult: challengeResult.qualificationResult }
+                : {}),
             }
           : {}),
       }
@@ -1937,15 +2024,38 @@ export default function App() {
     (stats: WinStats) => {
       const completedConfig = { rows: config.rows, cols: config.cols }
       const completedSaveId = currentSaveIdRef.current
+      const forecastMedal = activeGalleryChallengeTarget
+        ? deriveChallengeMedal(stats, activeGalleryChallengeTarget)
+        : null
+      const createsTemplate =
+        Boolean(
+          activeGalleryChallengeTarget
+          && (activeGalleryChallengeMode === 'soft' || activeGalleryChallengeMode === 'qualification')
+          && forecastMedal
+        )
       const challengeResult: ChallengeResult | null = activeGalleryChallengeTarget
-        ? {
-            targetId: activeGalleryChallengeTarget.entryId,
-            medal: deriveChallengeMedal(stats, activeGalleryChallengeTarget),
-            previousBestMedal: getPreviousBestChallengeMedalForMotif(
-              gallery?.entries ?? [],
-              activeGalleryChallengeTarget.entryId
-            ),
-          }
+        ? activeGalleryChallengeMode === 'medal'
+          ? {
+              targetId: activeGalleryChallengeTarget.entryId,
+              medal: forecastMedal,
+              previousBestMedal: getPreviousBestChallengeMedalForMotif(
+                gallery?.entries ?? [],
+                activeGalleryChallengeTarget.entryId
+              ),
+              mode: 'medal',
+            }
+          : {
+              targetId: activeGalleryChallengeTarget.entryId,
+              medal: null,
+              previousBestMedal: null,
+              mode: activeGalleryChallengeMode ?? (activeGalleryChallengeTarget.synthetic ? 'soft' : 'qualification'),
+              qualificationResult: createsTemplate
+                ? 'created-template'
+                : activeGalleryChallengeMode === 'qualification'
+                  ? 'failed'
+                  : null,
+              estimatedTarget: activeGalleryChallengeTarget.synthetic ? activeGalleryChallengeTarget : null,
+            }
         : null
       const sessionId = beginSession()
 
@@ -2030,6 +2140,7 @@ export default function App() {
     },
     [
       beginSession,
+      activeGalleryChallengeMode,
       activeGalleryChallengeTarget,
       gallery,
       config,
@@ -2112,7 +2223,7 @@ export default function App() {
       : null
     const canStartGalleryChallenge = isGalleryChallengeTargetEligible(entry)
 
-    if ((mode === 'run' || mode === 'practice') && replaySetup) {
+    if ((mode === 'run' || mode === 'practice' || mode === 'qualification') && replaySetup) {
       scrollViewportToTop()
       const sessionId = beginSession()
       resetRunArtifacts()
@@ -2149,9 +2260,21 @@ export default function App() {
           setPendingGalleryReplayUseFullImage(null)
           setPendingGalleryReplaySetup(null)
           setPendingGalleryChallengeTarget(null)
+          setPendingGalleryChallengeMode(null)
           setActiveGalleryReplaySetup(replaySetup)
           setActiveGalleryChallengeTarget(
-            mode === 'run' && canStartGalleryChallenge ? createGalleryChallengeTarget(entry) : null
+            mode === 'run' && canStartGalleryChallenge
+              ? createGalleryChallengeTarget(entry)
+              : mode === 'qualification' && entry.estimatedChallengeTarget
+                ? entry.estimatedChallengeTarget
+                : null
+          )
+          setActiveGalleryChallengeMode(
+            mode === 'run' && canStartGalleryChallenge
+              ? 'medal'
+              : mode === 'qualification' && entry.estimatedChallengeTarget
+                ? 'qualification'
+                : null
           )
           setWinEffectTags(entry.tags ?? [])
           setConfig(entry.config)
@@ -2196,8 +2319,10 @@ export default function App() {
     setPendingGalleryReplayUseFullImage(mode === 'run' ? (entry.useFullImage ?? false) : null)
     setPendingGalleryReplaySetup(mode === 'run' ? replaySetup : null)
     setPendingGalleryChallengeTarget(mode === 'run' && replaySetup && canStartGalleryChallenge ? createGalleryChallengeTarget(entry) : null)
+    setPendingGalleryChallengeMode(mode === 'run' && replaySetup && canStartGalleryChallenge ? 'medal' : null)
     setActiveGalleryReplaySetup(null)
     setActiveGalleryChallengeTarget(null)
+    setActiveGalleryChallengeMode(null)
     setWinEffectTags(entry.tags ?? [])
     setConfig(entry.config)
     setImagePalette(entry.imageTheme ?? null)
@@ -2861,6 +2986,15 @@ export default function App() {
     setAppState('playing')
   }
 
+  const handleChallengeFollowUp = useCallback(() => {
+    if (!winGalleryEntry) {
+      setGalleryError('Die neue Vorlage ist noch nicht in der Galerie verfuegbar. Bitte kurz erneut versuchen.')
+      return
+    }
+
+    handleReplayGalleryEntry(winGalleryEntry, 'run')
+  }, [handleReplayGalleryEntry, setGalleryError, winGalleryEntry])
+
   const handleNextDifficulty = () => {
     const nextDifficulty = getNextDifficultyOption(config)
     if (!croppedImage || !nextDifficulty) return
@@ -3032,6 +3166,7 @@ export default function App() {
                       initialProgress={savedProgress}
                       initialReplaySetup={activeGalleryReplaySetup}
                       challengeTarget={activeGalleryChallengeTarget}
+                      challengeMode={activeGalleryChallengeMode}
                       onProgressChange={handleProgressChange}
                       onWin={handleWin}
                       onQuit={handleReset}
@@ -3074,10 +3209,13 @@ export default function App() {
             rejectedAiTags={winGalleryEntry?.rejectedAiTags}
             tagCategoryCatalog={winTagCategoryCatalog}
             challengeTarget={activeGalleryChallengeTarget}
+            challengeMode={activeGalleryChallengeMode}
             challengeMedal={winChallengeResult?.medal}
             challengePreviousBestMedal={winChallengeResult?.previousBestMedal}
+            challengeQualificationResult={winChallengeResult?.qualificationResult}
             onRetryStats={handleRetryStats}
             onReplaySameImage={handleReplaySameImage}
+            onChallengeFollowUp={handleChallengeFollowUp}
             onGoToSelectionScreen={handleReset}
             onChooseNewImage={handleGoToStartScreen}
             onNextDifficulty={handleNextDifficulty}
