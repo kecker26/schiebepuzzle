@@ -4886,6 +4886,39 @@ describe('keyboard smoke tests', () => {
     expect(within(screen.getByLabelText('Verlaufszeitraum waehlen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
   })
 
+  it('labels sparse same-day statistic trends as individual runs', () => {
+    const completionHistory = [
+      { ...createCompletionRecord('1', '2026-04-10T10:00:00.000Z'), actionMoves: 440 },
+      { ...createCompletionRecord('2', '2026-04-10T11:00:00.000Z'), actionMoves: 75 },
+    ]
+    const standardDifficultyStats = DIFFICULTY_OPTIONS.map((option) => ({ option, stats: null }))
+
+    const { container } = render(
+      <UploadStatsVisualReport
+        stats={null}
+        latestCompletion={completionHistory[1]}
+        favoriteDifficulty={null}
+        fastestDifficulty={null}
+        completionHistory={completionHistory}
+        filteredHistory={completionHistory}
+        historyFilter="all"
+        historyFilterOptions={[{ id: 'all', label: 'Alle Siege' }]}
+        standardDifficultyStats={standardDifficultyStats}
+        onHistoryFilterChange={vi.fn()}
+        onReloadView={vi.fn()}
+        onBackToStart={vi.fn()}
+        activeView="history"
+        onActiveViewChange={vi.fn()}
+      />
+    )
+
+    expect(screen.getByLabelText('Kompakter Einzellaufvergleich')).toBeTruthy()
+    expect(screen.getByText('Lauf 1')).toBeTruthy()
+    expect(screen.getByText('Lauf 2')).toBeTruthy()
+    expect(container.textContent).toContain('365 Aktionen weniger')
+    expect(container.textContent).toContain('X-Achse: 2 Einzellaeufe am 10.04., als Lauf 1-2 gezeigt.')
+  })
+
   it('renders the compact statistics history table without obsolete move columns or empty assistance details', () => {
     const cleanRun: PuzzleCompletionRecord = {
       ...createCompletionRecord('1', '2026-04-10T10:00:00.000Z'),

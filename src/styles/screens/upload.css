@@ -9721,6 +9721,65 @@
   font-weight: 900;
 }
 
+.stats-trend-compact-runs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0 2px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.stats-trend-compact-runs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.stats-trend-compact-run {
+  --series-color: var(--primary-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 7px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--series-color) 34%, var(--secondary-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--series-color) 12%, transparent), transparent 68%),
+    color-mix(in srgb, var(--surface-soft) 78%, transparent);
+  color: var(--text-secondary);
+  font-weight: 800;
+}
+
+.stats-trend-compact-run i {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--series-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--series-color) 16%, transparent);
+}
+
+.stats-trend-compact-run strong {
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stats-trend-compact-runs p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-weight: 800;
+}
+
+.stats-trend-compact-runs p strong {
+  color: var(--text-main);
+}
+
 .stats-visual-medal-trend-card {
   overflow: hidden;
 }

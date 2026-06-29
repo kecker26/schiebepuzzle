@@ -374,19 +374,20 @@ function getGalleryStartStateKey(entry: SolvedGalleryEntry): string | null {
 
 function getRelatedStartStateEntries(
   entries: SolvedGalleryEntry[],
-  targetEntry: SolvedGalleryEntry | null,
+  anchorEntry: SolvedGalleryEntry | null,
+  targetIds: ReadonlySet<string>,
   excludedEntryIds: ReadonlySet<string>
 ): SolvedGalleryEntry[] {
-  if (!targetEntry) return []
+  if (!anchorEntry) return []
 
-  const targetStartStateKey = getGalleryStartStateKey(targetEntry)
+  const targetStartStateKey = getGalleryStartStateKey(anchorEntry)
   if (!targetStartStateKey) return []
 
   return sortEntriesByLatest(
     entries.filter((entry) => {
       if (excludedEntryIds.has(entry.id)) return false
       if (entry.challengeTargetId) {
-        return entry.challengeTargetId === targetEntry.id && !entry.challengeMedal
+        return targetIds.has(entry.challengeTargetId) && !entry.challengeMedal
       }
       return getGalleryStartStateKey(entry) === targetStartStateKey
     })
@@ -506,25 +507,99 @@ export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): Gall
     }
   }
 
-  const allChallengeEntryIds = new Set<string>()
-  linkedEntriesByTarget.forEach((linkedEntries, targetId) => {
-    allChallengeEntryIds.add(targetId)
-    linkedEntries.forEach((entry) => {
-      if (entry.challengeMedal || entry.estimatedChallengeTarget?.entryId === targetId) allChallengeEntryIds.add(entry.id)
-    })
-  })
-
-  return Array.from(linkedEntriesByTarget.entries(), ([targetId, linkedEntries]) => {
-    const attempts = linkedEntries.filter((entry) => entry.challengeMedal)
-    const sortedAttempts = [...attempts].sort(compareChallengeAttempts)
+  const rawGroups = Array.from(linkedEntriesByTarget.entries(), ([targetId, linkedEntries]) => {
     const estimatedTarget = linkedEntries.find((entry) => entry.estimatedChallengeTarget?.entryId === targetId)
       ?.estimatedChallengeTarget ?? null
     const templateEntry = linkedEntries.find((entry) => entry.qualificationResult === 'created-template') ?? null
     const targetEntry = entriesById.get(targetId) ?? templateEntry ?? null
-    const preTemplateEntries = sortEntriesByLatest(
-      linkedEntries.filter((entry) => !entry.challengeMedal && entry.id !== templateEntry?.id)
+    const startStateAnchorEntry = targetEntry
+      ?? templateEntry
+      ?? linkedEntries.find((entry) => getGalleryStartStateKey(entry) !== null)
+      ?? null
+
+    return {
+      targetId,
+      linkedEntries,
+      estimatedTarget,
+      templateEntry,
+      targetEntry,
+      startStateAnchorEntry,
+      startStateKey: startStateAnchorEntry ? getGalleryStartStateKey(startStateAnchorEntry) : null,
+    }
+  })
+
+  const rawGroupsBySeries = new Map<string, typeof rawGroups>()
+  for (const rawGroup of rawGroups) {
+    const seriesKey = rawGroup.startStateKey
+      ? `start:${rawGroup.startStateKey}`
+      : `target:${rawGroup.targetId}`
+    const seriesGroups = rawGroupsBySeries.get(seriesKey)
+    if (seriesGroups) {
+      seriesGroups.push(rawGroup)
+    } else {
+      rawGroupsBySeries.set(seriesKey, [rawGroup])
+    }
+  }
+
+  const series = Array.from(rawGroupsBySeries.values(), (seriesGroups) => {
+    const targetIds = new Set(seriesGroups.map((group) => group.targetId))
+    const linkedEntries = Array.from(
+      seriesGroups
+        .flatMap((group) => group.linkedEntries)
+        .reduce((entriesByEntryId, entry) => entriesByEntryId.set(entry.id, entry), new Map<string, SolvedGalleryEntry>())
+        .values()
     )
+    const attempts = linkedEntries.filter((entry) => entry.challengeMedal)
+    const sortedAttempts = [...attempts].sort(compareChallengeAttempts)
+    const estimatedTarget = seriesGroups.find((group) => group.estimatedTarget)?.estimatedTarget ?? null
+    const templateEntry = seriesGroups.find((group) => group.templateEntry)?.templateEntry ?? null
+    const targetEntryCandidates = seriesGroups
+      .map((group) => group.targetEntry)
+      .filter((candidate): candidate is SolvedGalleryEntry => Boolean(candidate))
+      .sort((a, b) => {
+        const aHasDirectAttempts = linkedEntries.some((entry) => entry.challengeTargetId === a.id && entry.challengeMedal)
+        const bHasDirectAttempts = linkedEntries.some((entry) => entry.challengeTargetId === b.id && entry.challengeMedal)
+        if (aHasDirectAttempts !== bHasDirectAttempts) return aHasDirectAttempts ? -1 : 1
+
+        const aEligible = isGalleryChallengeTargetEligible(a)
+        const bEligible = isGalleryChallengeTargetEligible(b)
+        if (aEligible !== bEligible) return aEligible ? -1 : 1
+
+        return parseTimestamp(a.completedAt) - parseTimestamp(b.completedAt)
+      })
+    const targetEntry = targetEntryCandidates[0] ?? null
+    const targetId = targetEntry && targetIds.has(targetEntry.id)
+      ? targetEntry.id
+      : seriesGroups[0]?.targetId ?? targetEntry?.id ?? 'missing-target'
+    const startStateAnchorEntry = targetEntry
+      ?? templateEntry
+      ?? seriesGroups.find((group) => group.startStateAnchorEntry)?.startStateAnchorEntry
+      ?? null
+    const preTemplateEntries = sortEntriesByLatest(
+      linkedEntries.filter((entry) =>
+        !entry.challengeMedal
+        && entry.id !== templateEntry?.id
+        && entry.id !== targetEntry?.id
+        && (
+          Boolean(estimatedTarget && entry.estimatedChallengeTarget?.entryId === estimatedTarget.entryId)
+          || entry.challengeRunKind === 'qualification'
+        )
+      )
+    )
+    const excludedEntryIds = new Set<string>([
+      targetId,
+      ...(targetEntry ? [targetEntry.id] : []),
+      ...(templateEntry ? [templateEntry.id] : []),
+      ...preTemplateEntries.map((entry) => entry.id),
+      ...sortedAttempts.map((entry) => entry.id),
+    ])
     const bestAttempt = sortedAttempts[0] ?? null
+    const relatedStartStateEntries = getRelatedStartStateEntries(
+      entries,
+      startStateAnchorEntry,
+      targetIds,
+      excludedEntryIds
+    )
 
     return {
       targetId,
@@ -533,7 +608,7 @@ export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): Gall
       templateEntry,
       preTemplateEntries,
       attempts: sortedAttempts,
-      relatedStartStateEntries: getRelatedStartStateEntries(entries, targetEntry, allChallengeEntryIds),
+      relatedStartStateEntries,
       medalHistory: buildGalleryChallengeMedalHistory(attempts),
       bestAttempt,
       bestMedal: bestAttempt?.challengeMedal ?? null,
@@ -541,7 +616,9 @@ export function buildGalleryChallengeSeries(entries: SolvedGalleryEntry[]): Gall
         ? sortedAttempts.filter((attempt) => attempt.time < targetEntry.time || attempt.moves < targetEntry.moves).length
         : sortedAttempts.filter((attempt) => attempt.challengeMedal !== 'bronze').length,
     }
-  }).sort((a, b) => {
+  })
+
+  return series.sort((a, b) => {
     const medalRankDelta = (b.bestMedal ? getChallengeMedalRank(b.bestMedal) : 0)
       - (a.bestMedal ? getChallengeMedalRank(a.bestMedal) : 0)
     if (medalRankDelta !== 0) return medalRankDelta
