@@ -9,6 +9,8 @@ import {
   GalleryImageTag,
   GalleryChallengeTarget,
   ChallengeMedal,
+  ChallengeMode,
+  QualificationResult,
   PuzzleAssistanceMode,
   PuzzleConfig,
   RecordPuzzleCompletionResult,
@@ -46,10 +48,13 @@ interface WinDialogProps {
   rejectedAiTags?: string[]
   tagCategoryCatalog?: TagCategoryCatalog | null
   challengeTarget?: GalleryChallengeTarget | null
+  challengeMode?: ChallengeMode | null
   challengeMedal?: ChallengeMedal | null
   challengePreviousBestMedal?: ChallengeMedal | null
+  challengeQualificationResult?: QualificationResult | null
   onRetryStats: () => void
   onReplaySameImage: () => void
+  onChallengeFollowUp?: () => void
   onGoToSelectionScreen: () => void
   onChooseNewImage: () => void
   onNextDifficulty: () => void
@@ -231,9 +236,12 @@ export default function WinDialog({
   rejectedAiTags = [],
   tagCategoryCatalog = null,
   challengeTarget = null,
+  challengeMode = null,
   challengeMedal = null,
   challengePreviousBestMedal = null,
+  challengeQualificationResult = null,
   onReplaySameImage,
+  onChallengeFollowUp,
   onGoToSelectionScreen,
   onChooseNewImage,
   onNextDifficulty,
@@ -273,9 +281,22 @@ export default function WinDialog({
   const challengeMedalLabel = challengeMedal ? formatChallengeMedalLabel(challengeMedal) : null
   const isCleanChallengeRun = challengeTarget ? isChallengeCleanRun(stats) : false
   const challengeExplanation = challengeTarget
-    ? getChallengeMedalExplanation(stats, challengeTarget, challengeMedal)
+    ? challengeMode === 'soft'
+      ? challengeQualificationResult === 'created-template'
+        ? 'Echte Vorlage erstellt. Keine Medaille, weil dieser Lauf erst der neue Massstab ist.'
+        : isCleanChallengeRun
+          ? 'Noch keine Vorlage erstellt: Zeit und Zuege haben das geschaetzte Ziel nicht ausreichend unterboten.'
+          : `Dieser Lauf haette ${challengeMedalLabel ?? 'eine Einstufung'} erreichen koennen, zaehlt mit Hilfe aber nur als Uebung.`
+      : challengeMode === 'qualification'
+        ? challengeQualificationResult === 'created-template'
+          ? 'Echte Vorlage erstellt. Qualifikationen vergeben keine Medaille; ab jetzt zaehlt der Medaillenlauf gegen deine Vorlage.'
+          : isCleanChallengeRun
+            ? 'Qualifikation nicht geschafft: Zeit oder Zuege haben das geschaetzte Ziel nicht unterboten. Als Uebung unter "Vor dem echten Ziel" gespeichert.'
+            : 'Qualifikation nicht geschafft: Hilfe genutzt. Als Uebung unter "Vor dem echten Ziel" gespeichert.'
+        : getChallengeMedalExplanation(stats, challengeTarget, challengeMedal)
     : null
   const nextChallengeMedalGoal = challengeTarget
+    && (challengeMode === null || challengeMode === 'medal')
     ? getNextChallengeMedalGoal(stats, challengeTarget, challengeMedal)
     : null
   const challengeUpgradeLabel = challengeMedal
@@ -285,10 +306,34 @@ export default function WinDialog({
         ? `Aufstieg: ${formatChallengeMedalLabel(challengePreviousBestMedal)} zu ${challengeMedalLabel}`
         : `Medaille bestaetigt: ${challengeMedalLabel}`
     : challengeTarget
-      ? isCleanChallengeRun
-        ? 'Challenge abgeschlossen: keine Medaille'
-        : 'Mit Hilfe: als verwandter Uebungslauf gespeichert'
+      ? challengeQualificationResult === 'created-template'
+        ? 'Vorlage erstellt: jetzt Medaille jagen'
+        : challengeMode === 'soft'
+          ? 'Geschaetzter Vergleich abgeschlossen'
+          : challengeMode === 'qualification'
+            ? 'Qualifikation ohne Vorlage'
+            : isCleanChallengeRun
+              ? 'Challenge abgeschlossen: keine Medaille'
+              : 'Mit Hilfe: als verwandter Uebungslauf gespeichert'
       : null
+  const challengeSummaryKicker =
+    challengeMode === 'soft'
+      ? 'Geschaetzter Vergleich'
+      : challengeMode === 'qualification'
+        ? 'Qualifikation'
+        : isCleanChallengeRun
+          ? 'Medaillenlauf abgeschlossen'
+          : 'Uebung abgeschlossen'
+  const challengeSummaryTitle =
+    challengeQualificationResult === 'created-template'
+      ? 'Echte Vorlage erstellt'
+      : challengeMode === 'qualification'
+        ? 'Keine Vorlage erstellt'
+        : challengeMode === 'soft'
+          ? 'Vergleich gespeichert'
+          : challengeMedalLabel
+            ? `${challengeMedalLabel}-Medaille`
+            : 'Keine Medaille'
   const timeComparison = compareLowerIsBetterMetric(currentRun.time, previousRun?.time ?? null)
   const movesComparison = compareLowerIsBetterMetric(currentRun.moves, previousRun?.moves ?? null)
   const timeGapComparison = compareGapToBest(
@@ -493,9 +538,9 @@ export default function WinDialog({
             </div>
             <div className="win-challenge-copy">
               <span className="win-kicker">
-                {isCleanChallengeRun ? 'Challenge abgeschlossen' : 'Uebung abgeschlossen'}
+                {challengeSummaryKicker}
               </span>
-              <h3>{challengeMedalLabel ? `${challengeMedalLabel}-Medaille` : 'Keine Medaille'}</h3>
+              <h3>{challengeSummaryTitle}</h3>
               <p>{challengeExplanation}</p>
               {challengeUpgradeLabel ? (
                 <span className="win-challenge-upgrade">{challengeUpgradeLabel}</span>
@@ -598,17 +643,23 @@ export default function WinDialog({
         <AnimatedStaggerGroup className="win-actions" level="subtle">
           <AnimatedButton
             ref={replayButtonRef}
-            onClick={onReplaySameImage}
+            onClick={challengeQualificationResult === 'created-template' && onChallengeFollowUp
+              ? onChallengeFollowUp
+              : onReplaySameImage}
             onKeyDown={handleActionKeyDown}
             data-page-primary-focus="true"
             data-win-dialog-action="true"
             className="win-primary-btn"
-            data-app-tooltip="Gleiches Motiv erneut spielen und im Zuschnitt anpassen."
+            data-app-tooltip={challengeQualificationResult === 'created-template' && onChallengeFollowUp
+              ? 'Neue echte Vorlage direkt als Medaillenlauf starten.'
+              : 'Gleiches Motiv erneut spielen und im Zuschnitt anpassen.'}
             data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"
           >
-            Nochmal spielen
+            {challengeQualificationResult === 'created-template' && onChallengeFollowUp
+              ? 'Jetzt Medaille jagen'
+              : 'Nochmal spielen'}
           </AnimatedButton>
           <AnimatedStaggerGroup className="win-actions-secondary" level="subtle">
             <AnimatedButton

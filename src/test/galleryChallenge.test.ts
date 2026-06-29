@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import type { GalleryChallengeTarget, WinStats } from '../types/index.ts'
 import {
   deriveChallengeMedal,
+  getChallengeDiamondTargets,
   deriveLiveChallengeForecast,
   getBestChallengeMedal,
   getChallengeGoldTargets,
+  getChallengeMedalAvailability,
   getChallengeMedalExplanation,
   getNextChallengeMedalGoal,
   isChallengeDiamondAvailable,
@@ -27,6 +29,11 @@ const goldUnavailableTarget: GalleryChallengeTarget = {
   optimalStartMoveCount: 81,
 }
 
+const lowMoveTarget: GalleryChallengeTarget = {
+  ...target,
+  moves: 1,
+}
+
 function createStats(overrides: Partial<WinStats> = {}): WinStats {
   return {
     moves: 85,
@@ -45,20 +52,22 @@ describe('galleryChallenge', () => {
   it('berechnet die 20-Prozent-Ziele mit ganzzahligen Grenzwerten', () => {
     expect(getChallengeGoldTargets(target)).toEqual({ time: 96, moves: 80 })
     expect(getChallengeGoldTargets({ ...target, time: 121, moves: 101 })).toEqual({ time: 96, moves: 80 })
+    expect(getChallengeDiamondTargets(target)).toEqual({ time: 72, moves: 60 })
   })
 
-  it('vergibt Diamant nur fuer Gold plus exakte Solver-Optimalitaet', () => {
-    expect(deriveChallengeMedal(createStats({ moves: 70, time: 96 }), target)).toBe('diamond')
-    expect(deriveChallengeMedal(createStats({ moves: 70, time: 97 }), target)).toBe('silver')
+  it('vergibt Diamant bei 40 Prozent in beiden Zielen ohne Solver-Abhaengigkeit', () => {
+    expect(deriveChallengeMedal(createStats({ moves: 60, time: 72 }), target)).toBe('diamond')
+    expect(deriveChallengeMedal(createStats({ moves: 60, time: 73 }), target)).toBe('gold')
     expect(deriveChallengeMedal(createStats({ moves: 80, time: 96 }), target)).toBe('gold')
-    expect(deriveChallengeMedal(createStats({ moves: 70, time: 96, assistanceMode: 'hinted' }), target)).toBeNull()
+    expect(deriveChallengeMedal(createStats({ moves: 60, time: 72, assistanceMode: 'hinted' }), target)).toBeNull()
   })
 
-  it('vergibt keinen Diamanten fuer eine Solver-Untergrenze', () => {
-    expect(deriveChallengeMedal(createStats({ moves: 80, time: 96 }), {
+  it('ignoriert Solver-Untergrenzen fuer Diamant', () => {
+    expect(deriveChallengeMedal(createStats({ moves: 60, time: 72 }), {
       ...target,
       optimalStartMoveCountKind: 'lower-bound',
-    })).toBe('gold')
+      optimalStartMoveCount: 999,
+    })).toBe('diamond')
   })
 
   it('vergibt Gold ab 20 Prozent in beiden Zielen und Silber bei zwei kleineren Verbesserungen', () => {
@@ -98,7 +107,7 @@ describe('galleryChallenge', () => {
   })
 
   it('prognostiziert die aktuell erreichbare Medaille und Assistance-Deckelung', () => {
-    expect(deriveLiveChallengeForecast(createStats({ moves: 70, time: 96 }), target)).toMatchObject({
+    expect(deriveLiveChallengeForecast(createStats({ moves: 60, time: 72 }), target)).toMatchObject({
       medal: 'diamond',
       diamondAvailable: true,
       goldAvailable: true,
@@ -129,27 +138,54 @@ describe('galleryChallenge', () => {
       .toContain('kein Ziel')
   })
 
-  it('meldet Diamant nur bei einer exakten optimalen Zugzahl als verfuegbar', () => {
+  it('meldet Diamant fuer positive Zielwerte als verfuegbar', () => {
     expect(isChallengeDiamondAvailable(target)).toBe(true)
-    expect(isChallengeDiamondAvailable({ ...target, optimalStartMoveCountKind: 'lower-bound' })).toBe(false)
+    expect(isChallengeDiamondAvailable({ ...target, optimalStartMoveCountKind: 'lower-bound' })).toBe(true)
   })
 
-  it('markiert Gold und Diamant als unerreichbar, wenn das Solver-Optimum ueber dem Gold-Zugziel liegt', () => {
-    expect(isChallengeGoldAvailable(goldUnavailableTarget)).toBe(false)
-    expect(isChallengeDiamondAvailable(goldUnavailableTarget)).toBe(false)
+  it('markiert Gold und Diamant nicht mehr wegen Solver-Optimum als unerreichbar', () => {
+    expect(isChallengeGoldAvailable(goldUnavailableTarget)).toBe(true)
+    expect(isChallengeDiamondAvailable(goldUnavailableTarget)).toBe(true)
     expect(deriveChallengeMedal(createStats({ moves: 81, time: 96 }), goldUnavailableTarget)).toBe('silver')
     expect(deriveLiveChallengeForecast(createStats({ moves: 0, time: 0 }), goldUnavailableTarget)).toMatchObject({
-      medal: 'silver',
+      medal: 'diamond',
+      diamondAvailable: true,
+      goldAvailable: true,
+    })
+    expect(getNextChallengeMedalGoal(
+      createStats({ moves: 80, time: 96 }),
+      goldUnavailableTarget,
+      'gold'
+    )).toEqual({
+      medal: 'diamond',
+      label: '24 Sek. schneller bis zum 40-Prozent-Zeitziel + 20 Zuege weniger bis zum 40-Prozent-Zugziel',
+    })
+  })
+
+  it('sperrt Gold und Diamant, wenn das gerundete Zugziel mathematisch unerreichbar waere', () => {
+    expect(getChallengeGoldTargets(lowMoveTarget)).toEqual({ time: 96, moves: 0 })
+    expect(getChallengeDiamondTargets(lowMoveTarget)).toEqual({ time: 72, moves: 0 })
+    expect(getChallengeMedalAvailability(lowMoveTarget)).toEqual({
+      bronze: true,
+      silver: false,
+      gold: false,
+      diamond: false,
+    })
+    expect(isChallengeGoldAvailable(lowMoveTarget)).toBe(false)
+    expect(isChallengeDiamondAvailable(lowMoveTarget)).toBe(false)
+    expect(deriveChallengeMedal(createStats({ moves: 0, time: 0 }), lowMoveTarget)).toBe('bronze')
+    expect(deriveLiveChallengeForecast(createStats({ moves: 0, time: 0 }), lowMoveTarget)).toMatchObject({
+      medal: 'bronze',
       diamondAvailable: false,
       goldAvailable: false,
     })
     expect(getNextChallengeMedalGoal(
-      createStats({ moves: 81, time: 96 }),
-      goldUnavailableTarget,
-      'silver'
+      createStats({ moves: 1, time: 0 }),
+      lowMoveTarget,
+      'bronze'
     )).toEqual({
       medal: null,
-      label: 'Gold und Diamant sind fuer diese Vorlage nicht erreichbar: Das exakte Solver-Optimum liegt ueber dem 20-Prozent-Zugziel.',
+      label: 'Hoechste verfuegbare Medaillenstufe erreicht.',
     })
   })
 })

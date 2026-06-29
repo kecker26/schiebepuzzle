@@ -40,6 +40,7 @@ describe('puzzle medal run controls', () => {
         ghostPreviewWeight={56}
         ghostUsageCount={0}
         ghostUsageDurationMs={0}
+        heatmapUsageCount={0}
         heatmapMode="classic"
         heatmapIntensity={100}
         areHeatmapDistancesVisible={false}

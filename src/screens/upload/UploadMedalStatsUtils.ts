@@ -1,5 +1,6 @@
 import type { ChallengeMedal, PuzzleConfig, SolvedGalleryEntry } from '../../types/index.ts'
 import {
+  CHALLENGE_MEDAL_COLORS,
   formatChallengeMedalLabel,
   getChallengeMedalRank,
 } from '../../utils/galleryChallenge.ts'
@@ -8,12 +9,7 @@ import { buildGalleryChallengeSeries, getGalleryMotifKey } from './UploadGallery
 
 export const MEDAL_STATS_ORDER: ChallengeMedal[] = ['diamond', 'gold', 'silver', 'bronze']
 
-export const MEDAL_STATS_COLORS: Record<ChallengeMedal, string> = {
-  diamond: '#67e8f9',
-  gold: '#fbbf24',
-  silver: '#cbd5e1',
-  bronze: '#fb923c',
-}
+export const MEDAL_STATS_COLORS = CHALLENGE_MEDAL_COLORS
 
 export interface MedalDistributionDatum {
   key: ChallengeMedal

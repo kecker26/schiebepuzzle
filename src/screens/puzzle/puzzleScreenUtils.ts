@@ -29,7 +29,7 @@ export const GHOST_PREVIEW_WEIGHT_DEFAULT = 56
 export const HEATMAP_MODE_DEFAULT: HeatmapMode = 'classic'
 export const HEATMAP_INTENSITY_DEFAULT = 100
 export const HEATMAP_DELTA_LOOKBACK = 5
-export const MEDAL_RUN_LOCK_MESSAGE = 'Medaillenlauf aktiv – Spielhilfen sind gesperrt.'
+export const MEDAL_RUN_LOCK_MESSAGE = 'Zielmodus aktiv - Spielhilfen sind gesperrt.'
 
 export type HintResolutionSource = 'exact' | 'tracked' | 'greedy'
 export type HintDirection = PuzzleMoveDirection

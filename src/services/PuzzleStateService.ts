@@ -99,6 +99,7 @@ export function createPersistedPuzzleProgress({
   heatmapDistancesVisible = false,
   solverProgress,
   challengeTarget,
+  challengeMode,
   historyLimit = DEFAULT_PERSISTED_HISTORY_LIMIT,
 }: {
   state: PuzzleState
@@ -126,6 +127,7 @@ export function createPersistedPuzzleProgress({
   heatmapDistancesVisible?: boolean
   solverProgress?: SolverProgress
   challengeTarget?: GalleryChallengeTarget | null
+  challengeMode?: PersistedPuzzleProgress['challengeMode']
   historyLimit?: number
 }): PersistedPuzzleProgress {
   return {
@@ -161,5 +163,6 @@ export function createPersistedPuzzleProgress({
         }
       : undefined,
     challengeTarget: challengeTarget ? { ...challengeTarget } : undefined,
+    challengeMode: challengeMode ?? undefined,
   }
 }

@@ -3615,7 +3615,7 @@ describe('keyboard smoke tests', () => {
     expect(screen.queryByText('2 Versuche')).toBeNull()
     expect(screen.queryByText('1 mit verbessertem Zielwert')).toBeNull()
     expect(screen.getByText('Eigenstaendiger Lauf')).toBeTruthy()
-    expect(screen.getByText('Challenge-Serie 1')).toBeTruthy()
+    expect(screen.getByText('Medaillenserie 1')).toBeTruthy()
     expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
     expect(screen.getByText('Medaillen-Entwicklung')).toBeTruthy()
     expect(screen.getByLabelText('Medaillen-Entwicklung: Gold zu Bronze')).toBeTruthy()
@@ -3636,7 +3636,7 @@ describe('keyboard smoke tests', () => {
     expect(seriesBody).toBeTruthy()
     expect(collapseButton.getAttribute('aria-expanded')).toBe('true')
     fireEvent.click(collapseButton)
-    expect(screen.getByText('Challenge-Serie 1')).toBeTruthy()
+    expect(screen.getByText('Medaillenserie 1')).toBeTruthy()
     const expandButton = screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' })
     expect(expandButton.getAttribute('aria-expanded')).toBe('false')
     await waitFor(() => {
@@ -3650,7 +3650,7 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Vorlage herausfordern' }))
     expect(screen.getByText('Medaillen-Regeln')).toBeTruthy()
-    expect(screen.getByText(/Diamant ist bei diesem Puzzle nicht verfuegbar/)).toBeTruthy()
+    expect(screen.getByText('Beide Ziele um mindestens 40 % unterbieten')).toBeTruthy()
     const challengeOverlay = document.querySelector<HTMLElement>('.gallery-challenge-start-overlay')
     const detailOverlay = document.querySelector<HTMLElement>('.gallery-detail-overlay')
     expect(challengeOverlay).toBeTruthy()
@@ -3663,6 +3663,60 @@ describe('keyboard smoke tests', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Challenge starten' }))
     expect(onReplayEntry).toHaveBeenCalledWith(target, 'run')
     expect(screen.queryByRole('button', { name: /versuch.*herausfordern/i })).toBeNull()
+  })
+
+  it('shows the saved start board preview for estimated origin series without a real template', () => {
+    const estimatedChallengeTarget = {
+      entryId: 'synthetic:source:4x4:crop:start:estimate-v1',
+      completedAt: '2026-04-10T09:00:00.000Z',
+      time: 360,
+      moves: 180,
+      actionMoves: 180,
+      assistanceMode: 'clean' as const,
+      synthetic: true,
+      estimate: {
+        version: 1 as const,
+        method: 'heuristic-personal-v1' as const,
+        heuristicScore: 16,
+        createdAt: '2026-04-10T09:00:00.000Z',
+        personalMedianApplied: false,
+      },
+    }
+    const detailEntry = createGalleryDisplayEntry('24', '2026-04-12T12:00:00.000Z')
+    const softRun = {
+      ...createSolvedGalleryEntry('25', '2026-04-11T09:00:00.000Z'),
+      challengeTargetId: estimatedChallengeTarget.entryId,
+      estimatedChallengeTarget,
+      replaySetup: {
+        version: 1 as const,
+        startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+        emptyIndex: 15,
+        shuffleMoves: ['tile-15'],
+      },
+    }
+
+    detailEntry.motifReplaySummary = {
+      ...detailEntry.motifReplaySummary,
+      allEntries: [detailEntry.representativeEntry, softRun],
+      totalSolveCount: 2,
+      replayableSolveCount: 2,
+      bestChallengeMedal: null,
+      challengeSolveCount: 0,
+    }
+
+    render(
+      <UploadGalleryDetailDialog
+        entry={detailEntry}
+        onReplayEntry={vi.fn()}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Geschaetzte Ursprungserie 1')).toBeTruthy()
+    expect(screen.queryByText('Archiv')).toBeNull()
+    expect(document.querySelectorAll('.gallery-detail-challenge-start-board.has-start-board')).toHaveLength(1)
+    expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile')).toHaveLength(16)
+    expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile.is-empty')).toHaveLength(1)
   })
 
   it('assigns same-start-state practice runs to their challenge series', () => {
@@ -4122,8 +4176,8 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    expect(screen.getByText('Medaillenstatus')).toBeTruthy()
-    expect(screen.getByText(/Gold und Diamant sind fuer diese Vorlage nicht erreichbar/)).toBeTruthy()
+    expect(screen.getByText('Fuer Gold')).toBeTruthy()
+    expect(screen.getByText(/12 Sek. schneller bis zum 20-Prozent-Zeitziel/)).toBeTruthy()
   })
 
   it('moves through gallery detail tag actions with arrows', () => {

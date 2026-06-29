@@ -142,6 +142,7 @@ export interface PersistedPuzzleProgress {
   heatmapDistancesVisible?: boolean
   solverProgress?: SolverProgress
   challengeTarget?: GalleryChallengeTarget | null
+  challengeMode?: ChallengeMode | null
 }
 
 export interface PersistedPuzzleMeta {
@@ -257,6 +258,9 @@ export interface SolvedGalleryEntry {
   imageTheme?: ImageThemePalette
   challengeTargetId?: string
   challengeMedal?: ChallengeMedal
+  estimatedChallengeTarget?: GalleryChallengeTarget
+  challengeRunKind?: ChallengeRunKind
+  qualificationResult?: QualificationResult
 }
 
 export interface GalleryReplaySetup {
@@ -278,14 +282,30 @@ export interface GalleryChallengeTarget {
   assistanceMode: PuzzleAssistanceMode
   optimalStartMoveCount?: number | null
   optimalStartMoveCountKind?: OptimalStartMoveCountKind
+  synthetic?: boolean
+  estimate?: GalleryChallengeEstimate
 }
 
 export type ChallengeMedal = 'bronze' | 'silver' | 'gold' | 'diamond'
+export type ChallengeMode = 'soft' | 'qualification' | 'medal'
+export type ChallengeRunKind = 'medal' | 'qualification'
+export type QualificationResult = 'created-template' | 'failed'
+
+export interface GalleryChallengeEstimate {
+  version: 1
+  method: 'heuristic-personal-v1'
+  heuristicScore: number
+  createdAt: string
+  personalMedianApplied: boolean
+}
 
 export interface ChallengeResult {
   targetId: string
   medal: ChallengeMedal | null
   previousBestMedal?: ChallengeMedal | null
+  mode?: ChallengeMode
+  qualificationResult?: QualificationResult | null
+  estimatedTarget?: GalleryChallengeTarget | null
 }
 
 export type GalleryTagSource = 'gemini' | 'imported' | 'manual'
@@ -522,6 +542,9 @@ export interface RecordSolvedGalleryEntryPayload {
   imageTheme?: ImageThemePalette | null
   challengeTargetId?: string
   challengeMedal?: ChallengeMedal
+  estimatedChallengeTarget?: GalleryChallengeTarget
+  challengeRunKind?: ChallengeRunKind
+  qualificationResult?: QualificationResult
 }
 
 export interface AnalyzeSolvedGalleryEntryResult {

@@ -1,9 +1,10 @@
-import type { GalleryChallengeTarget } from '../types/index.ts'
+import type { ChallengeMode, GalleryChallengeTarget } from '../types/index.ts'
 
 export function shouldAutosavePuzzleRun(
-  challengeTarget: GalleryChallengeTarget | null | undefined
+  challengeTarget: GalleryChallengeTarget | null | undefined,
+  challengeMode: ChallengeMode | null | undefined = null
 ): boolean {
-  return !challengeTarget
+  return !challengeTarget || challengeMode === 'soft'
 }
 
 export type DiscardMedalRunSaveResult =

@@ -269,12 +269,12 @@ describe('UploadGalleryDisplayUtils', () => {
     })
     expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-medal'))).toHaveLength(1)
     expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-gold'))).toHaveLength(2)
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable'))).toHaveLength(2)
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable'))).toHaveLength(3)
     expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'near-upgrade'))).toEqual([silverEntry])
     expect(sortGalleryDisplayEntries(entries, 'upgrade-potential').map((entry) => entry.motifId)).toEqual([
+      'source-gold',
       'source-silver',
       'source-normal',
-      'source-gold',
     ])
   })
 
@@ -349,7 +349,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(progress?.label).toContain('Naechstes Ziel: Gold')
   })
 
-  it('markiert Diamant ohne exaktes Solver-Optimum als nicht verfuegbar', () => {
+  it('laesst Diamant ohne exaktes Solver-Optimum als naechstes Ziel offen', () => {
     const target = createGalleryEntry('target')
     const progress = getChallengeMedalProgress([
       target,
@@ -359,8 +359,8 @@ describe('UploadGalleryDisplayUtils', () => {
       }),
     ])
 
-    expect(progress?.nextMedal).toBeNull()
-    expect(progress?.stages[progress.stages.length - 1]).toEqual({ medal: 'diamond', status: 'unavailable' })
+    expect(progress?.nextMedal).toBe('diamond')
+    expect(progress?.stages[progress.stages.length - 1]).toEqual({ medal: 'diamond', status: 'next' })
   })
 
   it('bewahrt historische Goldmedaillen unter der neuen 20-Prozent-Regel', () => {
@@ -385,8 +385,30 @@ describe('UploadGalleryDisplayUtils', () => {
 
     expect(progress.currentMedal).toBe('gold')
     expect(progress.stages).toContainEqual({ medal: 'gold', status: 'current' })
-    expect(progress.stages).toContainEqual({ medal: 'diamond', status: 'unavailable' })
+    expect(progress.stages).toContainEqual({ medal: 'diamond', status: 'next' })
     expect(progress.label).not.toContain('Gold ist fuer die beste Vorlage nicht erreichbar')
+  })
+
+  it('markiert nicht erreichbare hoehere Medaillen im Fortschritt', () => {
+    const target = createGalleryEntry('target', {
+      moves: 1,
+    })
+    const progress = getChallengeMedalProgress([
+      target,
+      createGalleryEntry('bronze-attempt', {
+        challengeTargetId: target.id,
+        challengeMedal: 'bronze',
+        moves: 1,
+        time: 90,
+      }),
+    ])
+
+    expect(progress.currentMedal).toBe('bronze')
+    expect(progress.nextMedal).toBeNull()
+    expect(progress.stages).toContainEqual({ medal: 'silver', status: 'unavailable' })
+    expect(progress.stages).toContainEqual({ medal: 'gold', status: 'unavailable' })
+    expect(progress.stages).toContainEqual({ medal: 'diamond', status: 'unavailable' })
+    expect(progress.label).toContain('nicht erreichbar')
   })
 
   it('zeigt fuer Motive ohne Challenge-Medaille Bronze als erstes Ziel', () => {
@@ -545,6 +567,50 @@ describe('UploadGalleryDisplayUtils', () => {
       attempts: [],
     })
     expect(series[0].relatedStartStateEntries.map((entry) => entry.id)).toEqual(['assisted-challenge-run'])
+  })
+
+  it('gruppiert Laeufe mit gleicher synthetischer Ziel-ID als geschaetzte Ursprungserie', () => {
+    const estimatedChallengeTarget = {
+      entryId: 'synthetic:source:4x4:crop:board:estimate-v1',
+      completedAt: '2026-04-20T12:00:00.000Z',
+      time: 360,
+      moves: 180,
+      actionMoves: 180,
+      assistanceMode: 'clean' as const,
+      synthetic: true,
+      estimate: {
+        version: 1 as const,
+        method: 'heuristic-personal-v1' as const,
+        heuristicScore: 24,
+        createdAt: '2026-04-20T12:00:00.000Z',
+        personalMedianApplied: false,
+      },
+    }
+    const failedQualification = createGalleryEntry('failed-qualification', {
+      challengeTargetId: estimatedChallengeTarget.entryId,
+      estimatedChallengeTarget,
+      challengeRunKind: 'qualification',
+      qualificationResult: 'failed',
+    })
+    const template = createGalleryEntry('created-template', {
+      completedAt: '2026-04-21T12:00:00.000Z',
+      challengeTargetId: estimatedChallengeTarget.entryId,
+      estimatedChallengeTarget,
+      qualificationResult: 'created-template',
+      assistanceMode: 'clean',
+    })
+
+    const [series] = buildGalleryChallengeSeries([failedQualification, template])
+
+    expect(series).toMatchObject({
+      targetId: estimatedChallengeTarget.entryId,
+      estimatedTarget: { synthetic: true },
+      templateEntry: { id: 'created-template' },
+      targetEntry: { id: 'created-template' },
+      attempts: [],
+      bestMedal: null,
+    })
+    expect(series.preTemplateEntries.map((entry) => entry.id)).toEqual(['failed-qualification'])
   })
 
   it('erkennt bestaetigte Medaillen und Aufstiege chronologisch', () => {
@@ -749,6 +815,24 @@ describe('UploadGalleryDisplayUtils', () => {
     ])
 
     expect(buildGalleryStartStateSeries([target, challengeAttempt], excluded)).toEqual([])
+  })
+
+  it('erstellt fuer gescheiterte Qualifikationen keine neutrale Startzustand-Serie', () => {
+    const replaySetup = {
+      version: 1,
+      startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+      emptyIndex: 15,
+      shuffleMoves: ['tile-15'],
+    } satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
+    const failedQualification = createGalleryEntry('failed-qualification', {
+      replaySetup,
+      assistanceMode: 'clean',
+      challengeTargetId: 'synthetic:source:4x4:crop:board:estimate-v1',
+      challengeRunKind: 'qualification',
+      qualificationResult: 'failed',
+    })
+
+    expect(buildGalleryStartStateSeries([failedQualification])).toEqual([])
   })
 
   it('markiert Motive ohne gespeichertes Bild defensiv als nicht replaybar', () => {

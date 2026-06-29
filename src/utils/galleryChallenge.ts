@@ -13,8 +13,24 @@ const CHALLENGE_MEDAL_RANK: Record<ChallengeMedal, number> = {
   diamond: 4,
 }
 
+const CHALLENGE_MEDALS_ASCENDING: ChallengeMedal[] = ['bronze', 'silver', 'gold', 'diamond']
+const MIN_REACHABLE_MOVE_COUNT = 1
+
 export const CHALLENGE_GOLD_IMPROVEMENT_PERCENT = 20
 const CHALLENGE_GOLD_TARGET_FACTOR = (100 - CHALLENGE_GOLD_IMPROVEMENT_PERCENT) / 100
+export const CHALLENGE_DIAMOND_IMPROVEMENT_PERCENT = 40
+const CHALLENGE_DIAMOND_TARGET_FACTOR = (100 - CHALLENGE_DIAMOND_IMPROVEMENT_PERCENT) / 100
+
+type ChallengeTargetMetrics = Pick<GalleryChallengeTarget, 'time' | 'moves'>
+
+export type ChallengeMedalAvailability = Record<ChallengeMedal, boolean>
+
+export const CHALLENGE_MEDAL_COLORS: Record<ChallengeMedal, string> = {
+  diamond: '#67e8f9',
+  gold: '#fbbf24',
+  silver: '#cbd5e1',
+  bronze: '#fb923c',
+}
 
 export function getChallengeGoldTargets(target: Pick<GalleryChallengeTarget, 'time' | 'moves'>): {
   time: number
@@ -26,8 +42,44 @@ export function getChallengeGoldTargets(target: Pick<GalleryChallengeTarget, 'ti
   }
 }
 
+export function getChallengeDiamondTargets(target: Pick<GalleryChallengeTarget, 'time' | 'moves'>): {
+  time: number
+  moves: number
+} {
+  return {
+    time: Math.floor(target.time * CHALLENGE_DIAMOND_TARGET_FACTOR),
+    moves: Math.floor(target.moves * CHALLENGE_DIAMOND_TARGET_FACTOR),
+  }
+}
+
 export function getChallengeMedalRank(medal: ChallengeMedal): number {
   return CHALLENGE_MEDAL_RANK[medal]
+}
+
+function canBeatChallengeTime(target: ChallengeTargetMetrics): boolean {
+  return Number.isFinite(target.time) && target.time > 0
+}
+
+function canBeatChallengeMoves(target: ChallengeTargetMetrics): boolean {
+  return Number.isFinite(target.moves) && target.moves > MIN_REACHABLE_MOVE_COUNT
+}
+
+export function getChallengeMedalAvailability(target: ChallengeTargetMetrics): ChallengeMedalAvailability {
+  const goldTargets = getChallengeGoldTargets(target)
+  const diamondTargets = getChallengeDiamondTargets(target)
+  const canBeatTime = canBeatChallengeTime(target)
+  const canBeatMoves = canBeatChallengeMoves(target)
+
+  return {
+    bronze: canBeatTime || canBeatMoves,
+    silver: canBeatTime && canBeatMoves,
+    gold: canBeatTime && goldTargets.moves >= MIN_REACHABLE_MOVE_COUNT,
+    diamond: canBeatTime && diamondTargets.moves >= MIN_REACHABLE_MOVE_COUNT,
+  }
+}
+
+function isChallengeMedalAvailable(target: ChallengeTargetMetrics, medal: ChallengeMedal): boolean {
+  return getChallengeMedalAvailability(target)[medal]
 }
 
 export function deriveChallengeMedal(
@@ -35,21 +87,21 @@ export function deriveChallengeMedal(
   target: GalleryChallengeTarget
 ): ChallengeMedal | null {
   const isClean = isChallengeCleanRun(stats)
-  const beatTime = stats.time < target.time
-  const beatMoves = stats.moves < target.moves
+  const availability = getChallengeMedalAvailability(target)
+  const beatTime = canBeatChallengeTime(target) && stats.time < target.time
+  const beatMoves = canBeatChallengeMoves(target) && stats.moves < target.moves
   const goldTargets = getChallengeGoldTargets(target)
+  const diamondTargets = getChallengeDiamondTargets(target)
   const reachedGoldTime = stats.time <= goldTargets.time
   const reachedGoldMoves = stats.moves <= goldTargets.moves
-  const reachedExactOptimal =
-    target.optimalStartMoveCountKind === 'exact'
-    && typeof target.optimalStartMoveCount === 'number'
-    && stats.moves <= target.optimalStartMoveCount
+  const reachedDiamondTime = stats.time <= diamondTargets.time
+  const reachedDiamondMoves = stats.moves <= diamondTargets.moves
 
   if (!isClean) return null
-  if (reachedGoldTime && reachedGoldMoves && reachedExactOptimal) return 'diamond'
-  if (reachedGoldTime && reachedGoldMoves) return 'gold'
-  if (beatTime && beatMoves) return 'silver'
-  if (beatTime || beatMoves) return 'bronze'
+  if (availability.diamond && reachedDiamondTime && reachedDiamondMoves) return 'diamond'
+  if (availability.gold && reachedGoldTime && reachedGoldMoves) return 'gold'
+  if (availability.silver && beatTime && beatMoves) return 'silver'
+  if (availability.bronze && (beatTime || beatMoves)) return 'bronze'
   return null
 }
 
@@ -67,20 +119,11 @@ export interface LiveChallengeForecast {
 }
 
 export function isChallengeDiamondAvailable(target: GalleryChallengeTarget): boolean {
-  return target.optimalStartMoveCountKind === 'exact'
-    && typeof target.optimalStartMoveCount === 'number'
-    && isChallengeGoldAvailable(target)
+  return isChallengeMedalAvailable(target, 'diamond')
 }
 
 export function isChallengeGoldAvailable(target: GalleryChallengeTarget): boolean {
-  if (
-    target.optimalStartMoveCountKind !== 'exact'
-    || typeof target.optimalStartMoveCount !== 'number'
-  ) {
-    return true
-  }
-
-  return getChallengeGoldTargets(target).moves >= target.optimalStartMoveCount
+  return isChallengeMedalAvailable(target, 'gold')
 }
 
 export function deriveLiveChallengeForecast(
@@ -94,30 +137,30 @@ export function deriveLiveChallengeForecast(
   target: GalleryChallengeTarget
 ): LiveChallengeForecast {
   const isClean = isChallengeCleanRun(metrics)
-  const timeReached = metrics.time <= target.time
-  const movesReached = metrics.moves <= target.moves
-  const timeBeaten = metrics.time < target.time
-  const movesBeaten = metrics.moves < target.moves
+  const availability = getChallengeMedalAvailability(target)
+  const timeReached = canBeatChallengeTime(target) && metrics.time <= target.time
+  const movesReached = canBeatChallengeMoves(target) && metrics.moves <= target.moves
+  const timeBeaten = canBeatChallengeTime(target) && metrics.time < target.time
+  const movesBeaten = canBeatChallengeMoves(target) && metrics.moves < target.moves
   const goldTargets = getChallengeGoldTargets(target)
+  const diamondTargets = getChallengeDiamondTargets(target)
   const goldTimeReached = metrics.time <= goldTargets.time
   const goldMovesReached = metrics.moves <= goldTargets.moves
-  const diamondAvailable = isChallengeDiamondAvailable(target)
-  const goldAvailable = isChallengeGoldAvailable(target)
-  const canStillReachExactOptimal =
-    diamondAvailable
-    && typeof target.optimalStartMoveCount === 'number'
-    && metrics.moves <= target.optimalStartMoveCount
+  const diamondTimeReached = metrics.time <= diamondTargets.time
+  const diamondMovesReached = metrics.moves <= diamondTargets.moves
+  const diamondAvailable = availability.diamond
+  const goldAvailable = availability.gold
 
   const medal =
     !isClean
       ? null
-      : diamondAvailable && goldTimeReached && goldMovesReached && canStillReachExactOptimal
+      : availability.diamond && diamondTimeReached && diamondMovesReached
       ? 'diamond'
-      : goldAvailable && goldTimeReached && goldMovesReached
+      : availability.gold && goldTimeReached && goldMovesReached
         ? 'gold'
-        : timeBeaten && movesBeaten
+        : availability.silver && timeBeaten && movesBeaten
           ? 'silver'
-          : timeBeaten || movesBeaten
+          : availability.bronze && (timeBeaten || movesBeaten)
             ? 'bronze'
             : null
 
@@ -146,27 +189,42 @@ export function getNextChallengeMedalGoal(
   medal: ChallengeMedal | null
 ): ChallengeMedalGoal {
   const isClean = isChallengeCleanRun(stats)
+  const availability = getChallengeMedalAvailability(target)
+  const currentRank = medal ? getChallengeMedalRank(medal) : 0
+  const nextAvailableMedal = CHALLENGE_MEDALS_ASCENDING.find(
+    (candidate) => getChallengeMedalRank(candidate) > currentRank && availability[candidate]
+  ) ?? null
   const timeGapToBeat = Math.max(0, stats.time - target.time + 1)
   const movesGapToBeat = Math.max(0, stats.moves - target.moves + 1)
   const goldTargets = getChallengeGoldTargets(target)
+  const diamondTargets = getChallengeDiamondTargets(target)
   const timeGapToGold = Math.max(0, stats.time - goldTargets.time)
   const movesGapToGold = Math.max(0, stats.moves - goldTargets.moves)
-  const exactOptimalGap =
-    typeof target.optimalStartMoveCount === 'number'
-      ? Math.max(0, stats.moves - target.optimalStartMoveCount)
-      : 0
+  const timeGapToDiamond = Math.max(0, stats.time - diamondTargets.time)
+  const movesGapToDiamond = Math.max(0, stats.moves - diamondTargets.moves)
 
   if (!isClean) {
     return {
-      medal: 'bronze',
-      label: 'Ohne Hilfe neu starten. Medaillen werden nur fuer absolut cleane Laeufe vergeben.',
+      medal: nextAvailableMedal,
+      label: nextAvailableMedal
+        ? 'Ohne Hilfe neu starten. Medaillen werden nur fuer absolut cleane Laeufe vergeben.'
+        : 'Diese Vorlage enthaelt keine erreichbaren Medaillenziele.',
     }
   }
 
-  if (medal === null) {
+  if (!nextAvailableMedal) {
+    return {
+      medal: null,
+      label: medal === null
+        ? 'Diese Vorlage enthaelt keine erreichbaren Medaillenziele.'
+        : 'Hoechste verfuegbare Medaillenstufe erreicht.',
+    }
+  }
+
+  if (nextAvailableMedal === 'bronze') {
     const bronzeRequirements = [
-      timeGapToBeat > 0 ? `${timeGapToBeat} Sek. schneller` : null,
-      movesGapToBeat > 0 ? `${movesGapToBeat} ${movesGapToBeat === 1 ? 'Zug' : 'Zuege'} weniger` : null,
+      canBeatChallengeTime(target) && timeGapToBeat > 0 ? `${timeGapToBeat} Sek. schneller` : null,
+      canBeatChallengeMoves(target) && movesGapToBeat > 0 ? `${movesGapToBeat} ${movesGapToBeat === 1 ? 'Zug' : 'Zuege'} weniger` : null,
     ].filter((requirement): requirement is string => requirement !== null)
 
     return {
@@ -175,36 +233,21 @@ export function getNextChallengeMedalGoal(
     }
   }
 
-  if (medal === 'diamond') {
-    return { medal: null, label: 'Hoechste Medaillenstufe erreicht.' }
-  }
-
-  if (medal === 'gold') {
-    if (!isChallengeDiamondAvailable(target)) {
-      return {
-        medal: null,
-        label: isChallengeGoldAvailable(target)
-          ? 'Diamant ist fuer dieses Puzzle nicht verfuegbar, weil keine exakte optimale Zugzahl berechnet werden konnte.'
-          : 'Diamant ist nicht erreichbar, weil das exakte Solver-Optimum ueber dem 20-Prozent-Zugziel liegt.',
-      }
-    }
+  if (nextAvailableMedal === 'diamond') {
+    const requirements = [
+      timeGapToDiamond > 0 ? `${timeGapToDiamond} Sek. schneller bis zum 40-Prozent-Zeitziel` : null,
+      movesGapToDiamond > 0 ? `${movesGapToDiamond} ${movesGapToDiamond === 1 ? 'Zug' : 'Zuege'} weniger bis zum 40-Prozent-Zugziel` : null,
+    ].filter((requirement): requirement is string => requirement !== null)
 
     return {
       medal: 'diamond',
-      label: exactOptimalGap > 0
-        ? `${exactOptimalGap} ${exactOptimalGap === 1 ? 'Zug' : 'Zuege'} weniger bis zur exakt optimalen Loesung.`
-        : 'Gold-Ziele halten und exakt solver-optimal loesen.',
+      label: requirements.length > 0
+        ? requirements.join(' + ')
+        : 'Zeit und Zuege jeweils um mindestens 40 % unterbieten.',
     }
   }
 
-  if (medal === 'silver') {
-    if (!isChallengeGoldAvailable(target)) {
-      return {
-        medal: null,
-        label: 'Gold und Diamant sind fuer diese Vorlage nicht erreichbar: Das exakte Solver-Optimum liegt ueber dem 20-Prozent-Zugziel.',
-      }
-    }
-
+  if (nextAvailableMedal === 'gold') {
     const requirements = [
       timeGapToGold > 0 ? `${timeGapToGold} Sek. schneller bis zum 20-Prozent-Zeitziel` : null,
       movesGapToGold > 0 ? `${movesGapToGold} ${movesGapToGold === 1 ? 'Zug' : 'Zuege'} weniger bis zum 20-Prozent-Zugziel` : null,
@@ -219,8 +262,8 @@ export function getNextChallengeMedalGoal(
   }
 
   const silverRequirements = [
-    timeGapToBeat > 0 ? `${timeGapToBeat} Sek. schneller bis unter das Zeitziel` : null,
-    movesGapToBeat > 0 ? `${movesGapToBeat} ${movesGapToBeat === 1 ? 'Zug' : 'Zuege'} weniger bis unter das Zugziel` : null,
+    canBeatChallengeTime(target) && timeGapToBeat > 0 ? `${timeGapToBeat} Sek. schneller bis unter das Zeitziel` : null,
+    canBeatChallengeMoves(target) && movesGapToBeat > 0 ? `${movesGapToBeat} ${movesGapToBeat === 1 ? 'Zug' : 'Zuege'} weniger bis unter das Zugziel` : null,
   ].filter((requirement): requirement is string => requirement !== null)
 
   return {
@@ -231,14 +274,17 @@ export function getNextChallengeMedalGoal(
 
 export function getChallengeMedalExplanation(
   stats: WinStats,
-  _target: GalleryChallengeTarget,
+  target: GalleryChallengeTarget,
   medal: ChallengeMedal | null
 ): string {
   if (!isChallengeCleanRun(stats)) {
     return 'Mit Hilfe abgeschlossen: Dieser Lauf bleibt eine Uebung und erhaelt keine Medaille.'
   }
+  if (!CHALLENGE_MEDALS_ASCENDING.some((candidate) => getChallengeMedalAvailability(target)[candidate])) {
+    return 'Challenge abgeschlossen, aber diese Vorlage enthaelt keine erreichbaren Medaillenziele.'
+  }
   if (medal === null) return 'Challenge abgeschlossen, aber kein Ziel der Vorlage strikt unterboten.'
-  if (medal === 'diamond') return 'Clean, beide Ziele um mindestens 20 % unterboten und exakt solver-optimal.'
+  if (medal === 'diamond') return 'Clean geloest und beide Ziele um mindestens 40 % unterboten.'
   if (medal === 'gold') return 'Clean geloest und beide Ziele um mindestens 20 % unterboten.'
   if (medal === 'silver') return 'Clean geloest und beide Ziele der Vorlage strikt unterboten.'
   return 'Clean geloest und genau ein Ziel der Vorlage strikt unterboten.'
@@ -329,12 +375,23 @@ export interface ChallengeMedalProgress {
   label: string
 }
 
-const CHALLENGE_MEDALS_ASCENDING: ChallengeMedal[] = ['bronze', 'silver', 'gold', 'diamond']
-
 export function getChallengeMedalProgress(
   entries: Pick<SolvedGalleryEntry, 'id' | 'time' | 'moves' | 'challengeMedal' | 'challengeTargetId' | 'replaySetup'>[]
 ): ChallengeMedalProgress {
-  const currentMedal = getBestChallengeMedal(entries)
+  let bestMedalEntry: Pick<SolvedGalleryEntry, 'id' | 'time' | 'moves' | 'challengeMedal' | 'challengeTargetId' | 'replaySetup'> | null = null
+
+  for (const entry of entries) {
+    const medal = entry.challengeMedal
+    if (!medal) continue
+    if (
+      !bestMedalEntry?.challengeMedal
+      || getChallengeMedalRank(medal) > getChallengeMedalRank(bestMedalEntry.challengeMedal)
+    ) {
+      bestMedalEntry = entry
+    }
+  }
+
+  const currentMedal = bestMedalEntry?.challengeMedal ?? null
   if (!currentMedal) {
     return {
       currentMedal: null,
@@ -347,29 +404,15 @@ export function getChallengeMedalProgress(
     }
   }
 
-  const bestAttempt = entries.find((entry) => entry.challengeMedal === currentMedal)
-  const targetEntry = bestAttempt?.challengeTargetId
-    ? entries.find((entry) => entry.id === bestAttempt.challengeTargetId)
+  const target = bestMedalEntry?.challengeTargetId
+    ? entries.find((entry) => entry.id === bestMedalEntry?.challengeTargetId)
     : null
-  const exactOptimalMoveCount = targetEntry?.replaySetup?.optimalStartMoveCount
-  const hasExactOptimal =
-    targetEntry?.replaySetup?.optimalStartMoveCountKind === 'exact'
-    && typeof exactOptimalMoveCount === 'number'
-  const unavailableMedals = new Set<ChallengeMedal>()
-
-  if (targetEntry && !hasExactOptimal) {
-    unavailableMedals.add('diamond')
-  }
-
-  if (
-    targetEntry
-    && hasExactOptimal
-    && typeof exactOptimalMoveCount === 'number'
-    && getChallengeGoldTargets(targetEntry).moves < exactOptimalMoveCount
-  ) {
-    unavailableMedals.add('gold')
-    unavailableMedals.add('diamond')
-  }
+  const targetAvailability = target ? getChallengeMedalAvailability(target) : null
+  const unavailableMedals = new Set<ChallengeMedal>(
+    targetAvailability
+      ? CHALLENGE_MEDALS_ASCENDING.filter((medal) => !targetAvailability[medal])
+      : []
+  )
 
   const currentRank = getChallengeMedalRank(currentMedal)
   const nextMedal = CHALLENGE_MEDALS_ASCENDING.find(
