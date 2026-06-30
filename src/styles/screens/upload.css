@@ -9228,6 +9228,16 @@
   filter: drop-shadow(0 8px 12px color-mix(in srgb, currentColor 14%, transparent));
 }
 
+.stats-trend-medal-reference {
+  filter: drop-shadow(0 6px 10px rgba(2, 6, 23, 0.34));
+}
+
+.stats-trend-medal-reference-label {
+  paint-order: stroke;
+  stroke: rgba(2, 6, 23, 0.72);
+  stroke-width: 3px;
+}
+
 .stats-recharts-histogram-frame {
   min-height: 320px;
 }
@@ -9302,6 +9312,24 @@
   color: #cbd5e1;
   font-size: 11px;
   line-height: 1.35;
+}
+
+.stats-recharts-tooltip-medal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 2px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.16);
+  color: #fde68a;
+  font-weight: 850;
+}
+
+.stats-recharts-tooltip-medal i {
+  font-style: normal;
+  line-height: 1;
 }
 
 .stats-recharts-tooltip-list {

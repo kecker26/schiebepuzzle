@@ -1062,7 +1062,9 @@ export default function UploadGalleryDetailDialog({
                           </strong>
                           {estimatedTarget ? (
                             <small className="gallery-detail-challenge-origin">
-                              Enthaelt die geschaetzte Vorphase und die echte Vorlage dieses Startbretts.
+                              {target
+                                ? 'Enthaelt die geschaetzte Vorphase und die echte Vorlage dieses Startbretts.'
+                                : 'Enthaelt die geschaetzte Vorphase dieses Startbretts; eine echte Vorlage fehlt noch.'}
                             </small>
                           ) : null}
                           {targetOrigin ? (
@@ -1117,7 +1119,7 @@ export default function UploadGalleryDetailDialog({
                             <span className="gallery-detail-challenge-target-icon" aria-hidden="true">
                               <Target size={17} strokeWidth={2.5} />
                             </span>
-                            <span>{isEstimatedOriginSeries ? 'Echte Vorlage' : 'Vorlage dieser Serie'}</span>
+                            <span>{isEstimatedOriginSeries ? (target ? 'Echte Vorlage' : 'Geschaetztes Ziel') : 'Vorlage dieser Serie'}</span>
                           </div>
                           {target ? (
                             <div className="gallery-detail-challenge-target-metrics" aria-label="Werte der Challenge-Vorlage">
@@ -1131,7 +1133,7 @@ export default function UploadGalleryDetailDialog({
                               </span>
                             </div>
                           ) : estimatedTarget ? (
-                            <div className="gallery-detail-challenge-target-metrics" aria-label="Werte der geschaetzten Vorlage">
+                            <div className="gallery-detail-challenge-target-metrics" aria-label="Werte des geschaetzten Ziels">
                               <span>
                                 <small>Zielzeit</small>
                                 <strong>{formatTime(estimatedTarget.time)}</strong>
@@ -1200,6 +1202,19 @@ export default function UploadGalleryDetailDialog({
                             <strong>{series.preTemplateEntries.length}</strong>
                           </div>
                           <p>Laeufe aus der geschaetzten Phase, bevor dieses Startbrett eine echte Vorlage hatte.</p>
+                          {isEstimatedOriginSeries && !target && qualificationEntry ? (
+                            <button
+                              type="button"
+                              className="gallery-detail-challenge-related-action is-shared"
+                              onClick={() => onReplayEntry(qualificationEntry, 'practice')}
+                              onKeyDown={handleActionKeyDown}
+                              aria-label={`Startzustand der Challenge-Serie ${seriesIndex + 1} als Uebung starten`}
+                              data-app-tooltip="Spielt den gespeicherten Startzustand frei als Uebung ohne Qualifikation und ohne Medaille."
+                              data-app-tooltip-position="top"
+                            >
+                              Startzustand ueben
+                            </button>
+                          ) : null}
                           <div className="gallery-detail-challenge-related-list">
                             {series.preTemplateEntries.map((preTemplateEntry) => (
                               <div key={preTemplateEntry.id} className="gallery-detail-challenge-related-row">
@@ -1302,7 +1317,7 @@ export default function UploadGalleryDetailDialog({
                         </div>
                       </div>
 
-                      {series.relatedStartStateEntries.length > 0 ? (
+                      {relatedPracticeEntry ? (
                         <div className="gallery-detail-challenge-related-start-state">
                           <div className="gallery-detail-challenge-related-head">
                             <GitBranch aria-hidden="true" size={16} strokeWidth={2.4} />
@@ -1322,7 +1337,9 @@ export default function UploadGalleryDetailDialog({
                               if (relatedPracticeEntry) onReplayEntry(relatedPracticeEntry, 'practice')
                             }}
                             onKeyDown={handleActionKeyDown}
-                            aria-label="Gemeinsamen Startzustand der verwandten Laeufe ueben"
+                            aria-label={series.relatedStartStateEntries.length > 0
+                              ? 'Gemeinsamen Startzustand der verwandten Laeufe ueben'
+                              : `Startzustand der Challenge-Serie ${seriesIndex + 1} als Uebung starten`}
                             data-app-tooltip={relatedPracticeEntry
                               ? 'Spielt den gemeinsamen gespeicherten Startzustand als Uebung ohne Medaille.'
                               : 'Gemeinsamer Startzustand ohne verfuegbare Bilddaten.'}
@@ -1331,7 +1348,7 @@ export default function UploadGalleryDetailDialog({
                             Startzustand ueben
                           </button>
                           <div className="gallery-detail-challenge-related-list">
-                            {series.relatedStartStateEntries.map((relatedEntry) => {
+                            {series.relatedStartStateEntries.length > 0 ? series.relatedStartStateEntries.map((relatedEntry) => {
                               const canStartRelatedChallenge = isGalleryChallengeTargetEligible(relatedEntry)
                               const relatedRole = relatedEntry.id === startStateFamilyOriginId
                                 ? 'Verwandter Ursprung'
@@ -1354,7 +1371,11 @@ export default function UploadGalleryDetailDialog({
                                   </div>
                                 </div>
                               )
-                            })}
+                            }) : (
+                              <div className="gallery-detail-start-state-empty-runs" role="status">
+                                Noch keine Uebungslaeufe fuer diesen Startzustand.
+                              </div>
+                            )}
                           </div>
                         </div>
                       ) : null}

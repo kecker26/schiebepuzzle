@@ -21,6 +21,7 @@ import {
   LineChart,
   Pie,
   PieChart,
+  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -212,6 +213,7 @@ interface TrendPoint {
   hints: number | null
   autoMoves: number | null
   runType: string
+  challengeMedal: ChallengeMedal | null
 }
 
 interface TrendDifficultySeries {
@@ -226,6 +228,21 @@ interface TrendSeriesChartPoint {
   value: number
   movingAverage: number | null
   source: TrendPoint
+}
+
+interface TrendDotProps {
+  cx?: number | string
+  cy?: number | string
+  r?: number | string
+  stroke?: string
+  payload?: TrendSeriesChartPoint
+}
+
+interface TrendMedalMarker {
+  id: string
+  index: number
+  value: number
+  medal: ChallengeMedal
 }
 
 interface TrendReferenceStats {
@@ -333,6 +350,7 @@ const HISTORY_RANGES: Array<{
 const TREND_MOVING_AVERAGE_WINDOW = 5
 const TREND_CHART_HEIGHT = 340
 const TREND_REFERENCE_LABEL_COLLISION_DISTANCE = 24
+const TREND_MEDAL_MATCH_WINDOW_MS = 60_000
 const HISTOGRAM_CORE_BUCKET_STEP = 15
 const HISTOGRAM_CORE_SHARE = 0.7
 const HISTOGRAM_TAIL_BUCKET_STEPS = [30, 30, 60, 60, 120, 120, 300, 300, 600, 600, 1200, 1200, 1800, 3600]
@@ -952,7 +970,74 @@ function buildFavoriteDifficultyData(
   return data
 }
 
-function buildTrendPoints(entries: PuzzleCompletionRecord[]): TrendPoint[] {
+function getCompletionMedalMatchKey(
+  entry: Pick<PuzzleCompletionRecord | SolvedGalleryEntry, 'config' | 'moves' | 'time' | 'actionMoves' | 'assistanceMode' | 'hasDetailedProfile'>
+): string {
+  return [
+    `${entry.config.rows}x${entry.config.cols}`,
+    entry.moves,
+    entry.time,
+    entry.actionMoves,
+    entry.assistanceMode,
+    entry.hasDetailedProfile ? 'profiled' : 'legacy',
+  ].join('|')
+}
+
+function buildTrendMedalIndex(
+  completionEntries: PuzzleCompletionRecord[],
+  galleryEntries: SolvedGalleryEntry[]
+): Map<string, ChallengeMedal> {
+  const medalEntries = galleryEntries.filter(
+    (entry): entry is SolvedGalleryEntry & { challengeMedal: ChallengeMedal } => Boolean(entry.challengeMedal)
+  )
+
+  if (completionEntries.length === 0 || medalEntries.length === 0) {
+    return new Map()
+  }
+
+  const medalsByGalleryId = new Map(medalEntries.map((entry) => [entry.id, entry.challengeMedal]))
+  const medalsByCompletionId = new Map<string, ChallengeMedal>()
+
+  completionEntries.forEach((entry) => {
+    const directMedal = medalsByGalleryId.get(entry.id)
+    if (directMedal) {
+      medalsByCompletionId.set(entry.id, directMedal)
+      return
+    }
+
+    const entryMatchKey = getCompletionMedalMatchKey(entry)
+    const entryCompletedAt = Date.parse(entry.completedAt)
+    let bestMedal: ChallengeMedal | null = null
+    let bestDistanceMs = Number.POSITIVE_INFINITY
+
+    medalEntries.forEach((galleryEntry) => {
+      if (getCompletionMedalMatchKey(galleryEntry) !== entryMatchKey) return
+
+      const galleryCompletedAt = Date.parse(galleryEntry.completedAt)
+      const distanceMs = Number.isNaN(entryCompletedAt) || Number.isNaN(galleryCompletedAt)
+        ? 0
+        : Math.abs(entryCompletedAt - galleryCompletedAt)
+
+      if (distanceMs > TREND_MEDAL_MATCH_WINDOW_MS) return
+
+      if (distanceMs < bestDistanceMs) {
+        bestMedal = galleryEntry.challengeMedal
+        bestDistanceMs = distanceMs
+      }
+    })
+
+    if (bestMedal) {
+      medalsByCompletionId.set(entry.id, bestMedal)
+    }
+  })
+
+  return medalsByCompletionId
+}
+
+function buildTrendPoints(
+  entries: PuzzleCompletionRecord[],
+  medalsByCompletionId: Map<string, ChallengeMedal> = new Map()
+): TrendPoint[] {
   const dayKeys = entries.map((entry) => getLocalDateKey(entry.completedAt))
   const dayTotals = dayKeys.reduce<Map<string, number>>((totals, dayKey) => {
     totals.set(dayKey, (totals.get(dayKey) ?? 0) + 1)
@@ -984,6 +1069,7 @@ function buildTrendPoints(entries: PuzzleCompletionRecord[]): TrendPoint[] {
       hints: entry.hasDetailedProfile ? entry.hintCount : null,
       autoMoves: entry.hasDetailedProfile ? entry.suggestedMoveCount : null,
       runType: entry.hasDetailedProfile ? formatAssistanceModeLabel(entry.assistanceMode) : 'Legacy',
+      challengeMedal: medalsByCompletionId.get(entry.id) ?? null,
     }
   })
 }
@@ -1692,6 +1778,28 @@ function renderFavoriteDifficultyChart(data: FavoriteDifficultyDatum[]) {
   )
 }
 
+function renderTrendDot({ cx, cy, r, stroke, payload }: TrendDotProps) {
+  if (typeof cx !== 'number' || typeof cy !== 'number') return null
+
+  const medal = payload?.source.challengeMedal ?? null
+  const parsedRadius = typeof r === 'number' ? r : typeof r === 'string' ? Number.parseFloat(r) : null
+  const pointRadius = parsedRadius && Number.isFinite(parsedRadius) ? parsedRadius : 4
+  const dotColor = stroke ?? 'currentColor'
+
+  return (
+    <g className={`stats-trend-dot${medal ? ` has-medal is-${medal}` : ''}`}>
+      <circle
+        cx={cx}
+        cy={cy}
+        r={pointRadius}
+        fill={dotColor}
+        stroke={dotColor}
+        strokeWidth={medal ? 2 : 1}
+      />
+    </g>
+  )
+}
+
 function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: TrendMetric) {
   if (!active || !payload || payload.length === 0) return null
 
@@ -1710,6 +1818,12 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
         <strong>{point.difficulty}</strong>
         <span>{formatChartTooltipDate(point.date)}</span>
         <span>{point.runType}</span>
+        {point.challengeMedal ? (
+          <span className="stats-recharts-tooltip-medal">
+            <i aria-hidden="true">{getChallengeMedalEmoji(point.challengeMedal)}</i>
+            {formatChallengeMedalLabel(point.challengeMedal)}-Lauf
+          </span>
+        ) : null}
         <div className="stats-recharts-tooltip-list">
           <span>
             <i aria-hidden="true" style={{ backgroundColor: visiblePayload[0]?.color ?? 'currentColor' }} />
@@ -1912,7 +2026,14 @@ export default function UploadStatsVisualReport({
     () => getHistoryRangeEntries(completionHistory, histogramRange),
     [completionHistory, histogramRange]
   )
-  const trendPoints = useMemo(() => buildTrendPoints(rangedTrendHistory), [rangedTrendHistory])
+  const trendMedalsByCompletionId = useMemo(
+    () => buildTrendMedalIndex(completionHistory, gallery?.entries ?? []),
+    [completionHistory, gallery]
+  )
+  const trendPoints = useMemo(
+    () => buildTrendPoints(rangedTrendHistory, trendMedalsByCompletionId),
+    [rangedTrendHistory, trendMedalsByCompletionId]
+  )
   const trendSeriesChartPoints = useMemo(
     () => buildTrendSeriesChartPoints(trendPoints, trendMetric),
     [trendMetric, trendPoints]
@@ -2044,6 +2165,16 @@ export default function UploadStatsVisualReport({
   const focusedTrendStats = getTrendReferenceStats(trendPoints, trendMetric, focusedTrendSeries?.key ?? null)
   const visibleTrendValues = visibleTrendSeries.flatMap((series) =>
     (trendSeriesChartPoints[series.key] ?? []).map((point) => point.value)
+  )
+  const medalTrendMarkers = visibleTrendSeries.flatMap<TrendMedalMarker>((series) =>
+    (trendSeriesChartPoints[series.key] ?? [])
+      .filter((point) => point.source.challengeMedal !== null)
+      .map((point) => ({
+        id: point.id,
+        index: point.index,
+        value: point.value,
+        medal: point.source.challengeMedal as ChallengeMedal,
+      }))
   )
   const focusedTrendReferenceDisplay = getTrendReferenceDisplay(focusedTrendStats, visibleTrendValues)
   const trendFormatter = getTrendValueFormatter(trendMetric)
@@ -2616,7 +2747,7 @@ export default function UploadStatsVisualReport({
                 ) : (
                   <div className="stats-recharts-line-frame">
                     <ResponsiveContainer width="100%" height={340}>
-                      <LineChart margin={{ top: 18, right: 22, left: 4, bottom: 12 }}>
+                      <LineChart margin={{ top: 30, right: 22, left: 4, bottom: 12 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis
                           dataKey="index"
@@ -2703,12 +2834,7 @@ export default function UploadStatsVisualReport({
                               stroke={line.color}
                               strokeWidth={isMovingAverageVisible ? 0 : isFocused ? 3 : 2}
                               opacity={rawOpacity}
-                              dot={{
-                                r: isFocused ? 4 : 3,
-                                fill: line.color,
-                                stroke: line.color,
-                                strokeWidth: isFocused ? 2 : 1,
-                              }}
+                              dot={renderTrendDot}
                               activeDot={{ r: 6, strokeWidth: 2 }}
                             />
                           )
@@ -2733,6 +2859,27 @@ export default function UploadStatsVisualReport({
                             />
                           )
                         }) : null}
+                        {medalTrendMarkers.map((marker) => (
+                          <ReferenceDot
+                            key={`trend-medal-${marker.id}-${marker.medal}`}
+                            x={marker.index}
+                            y={marker.value}
+                            r={7}
+                            fill={MEDAL_STATS_COLORS[marker.medal]}
+                            stroke="rgba(255, 255, 255, 0.82)"
+                            strokeWidth={1.5}
+                            className={`stats-trend-medal-reference is-${marker.medal}`}
+                            ifOverflow="visible"
+                            label={{
+                              value: getChallengeMedalEmoji(marker.medal),
+                              position: 'top',
+                              fill: 'var(--text-main)',
+                              fontSize: 13,
+                              fontWeight: 900,
+                              className: 'stats-trend-medal-reference-label',
+                            }}
+                          />
+                        ))}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -2744,6 +2891,9 @@ export default function UploadStatsVisualReport({
                 <div className="stats-visual-line-legend">
                   <span>{completionHistory.length} Laeufe gesamt</span>
                   <span>{visibleTrendSeries.length} von {trendSeriesOptions.length} Stufen sichtbar</span>
+                  {medalTrendMarkers.length > 0 ? (
+                    <span>{medalTrendMarkers.length} {medalTrendMarkers.length === 1 ? 'Medaillenlauf' : 'Medaillenlaeufe'} im Diagramm markiert</span>
+                  ) : null}
                   {trendAxisSummary ? <span>{trendAxisSummary}</span> : null}
                   <span>{isMovingAverageVisible ? 'Rohlaeufe als Punkte, 5er-Trend als Linie' : 'Rohlaeufe mit geraden Verbindungen'}</span>
                   <span>{focusedTrendSeries ? `Fokus: ${focusedTrendSeries.label}` : 'Alle sichtbaren Stufen gleichwertig'}</span>
