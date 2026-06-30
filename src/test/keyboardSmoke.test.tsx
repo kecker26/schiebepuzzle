@@ -3611,15 +3611,15 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    expect(screen.getByText('Challenge-Serien')).toBeTruthy()
+    expect(screen.getByText('Challenge-Startzustand-Serien')).toBeTruthy()
     expect(screen.queryByText('2 Versuche')).toBeNull()
     expect(screen.queryByText('1 mit verbessertem Zielwert')).toBeNull()
     expect(screen.getByText('Eigenstaendiger Lauf')).toBeTruthy()
-    expect(screen.getByText('Medaillenserie 1')).toBeTruthy()
+    expect(screen.getByText('Startzustand-Serie 1')).toBeTruthy()
     expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
     expect(screen.getByText('Medaillen-Entwicklung')).toBeTruthy()
     expect(screen.getByLabelText('Medaillen-Entwicklung: Gold zu Bronze')).toBeTruthy()
-    expect(screen.getByText('Zugehoerige Versuche')).toBeTruthy()
+    expect(screen.getByText('Medaillenlaeufe')).toBeTruthy()
     expect(screen.getByText('Versuch 1 von 2')).toBeTruthy()
     expect(screen.getByText('Versuch 2 von 2')).toBeTruthy()
     const attemptRows = document.querySelectorAll<HTMLElement>('.gallery-detail-challenge-attempt')
@@ -3630,13 +3630,20 @@ describe('keyboard smoke tests', () => {
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile')).toHaveLength(16)
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile.is-empty')).toHaveLength(1)
     expect(screen.getByText(/Gold · Bester Versuch/)).toBeTruthy()
+    expect(screen.getByText('Noch keine Uebungslaeufe fuer diesen Startzustand.')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Startzustand der Challenge-Serie 1 als Uebung starten',
+    }))
+    expect(onReplayEntry).toHaveBeenCalledWith(target, 'practice')
+    onReplayEntry.mockClear()
 
     const collapseButton = screen.getByRole('button', { name: 'Challenge-Serie 1 einklappen' })
     const seriesBody = document.getElementById(collapseButton.getAttribute('aria-controls') ?? '')
     expect(seriesBody).toBeTruthy()
     expect(collapseButton.getAttribute('aria-expanded')).toBe('true')
     fireEvent.click(collapseButton)
-    expect(screen.getByText('Medaillenserie 1')).toBeTruthy()
+    expect(screen.getByText('Startzustand-Serie 1')).toBeTruthy()
     const expandButton = screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' })
     expect(expandButton.getAttribute('aria-expanded')).toBe('false')
     await waitFor(() => {
@@ -3666,6 +3673,7 @@ describe('keyboard smoke tests', () => {
   })
 
   it('shows the saved start board preview for estimated origin series without a real template', () => {
+    const onReplayEntry = vi.fn()
     const estimatedChallengeTarget = {
       entryId: 'synthetic:source:4x4:crop:start:estimate-v1',
       completedAt: '2026-04-10T09:00:00.000Z',
@@ -3707,16 +3715,26 @@ describe('keyboard smoke tests', () => {
     render(
       <UploadGalleryDetailDialog
         entry={detailEntry}
-        onReplayEntry={vi.fn()}
+        onReplayEntry={onReplayEntry}
         onClose={vi.fn()}
       />
     )
 
-    expect(screen.getByText('Geschaetzte Ursprungserie 1')).toBeTruthy()
+    expect(screen.getByText('Startzustand-Serie 1')).toBeTruthy()
+    expect(screen.getByText(/Gestartet mit geschaetztem Ziel/)).toBeTruthy()
+    expect(screen.getByText('Geschaetztes Ziel')).toBeTruthy()
+    expect(screen.getByLabelText('Werte des geschaetzten Ziels')).toBeTruthy()
+    expect(screen.queryByText('Echte Vorlage')).toBeNull()
+    expect(screen.queryByText(/und die echte Vorlage dieses Startbretts/)).toBeNull()
     expect(screen.queryByText('Archiv')).toBeNull()
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board.has-start-board')).toHaveLength(1)
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile')).toHaveLength(16)
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile.is-empty')).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Startzustand der Challenge-Serie 1 als Uebung starten',
+    }))
+    expect(onReplayEntry).toHaveBeenCalledWith(softRun, 'practice')
   })
 
   it('assigns same-start-state practice runs to their challenge series', () => {
@@ -3765,13 +3783,13 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    expect(screen.getByText('Challenge-Serien')).toBeTruthy()
-    expect(screen.getByText('Verwandte Startzustandslaeufe')).toBeTruthy()
+    expect(screen.getByText('Challenge-Startzustand-Serien')).toBeTruthy()
+    expect(screen.getByText('Weitere Laeufe dieses Startbretts')).toBeTruthy()
     expect(screen.getByText('Verwandter Ursprung')).toBeTruthy()
     expect(screen.getByText(/nicht Teil der Medaillenwertung/i)).toBeTruthy()
     expect(Boolean(
-      screen.getByText('Zugehoerige Versuche').compareDocumentPosition(
-        screen.getByText('Verwandte Startzustandslaeufe')
+      screen.getByText('Medaillenlaeufe').compareDocumentPosition(
+        screen.getByText('Weitere Laeufe dieses Startbretts')
       ) & Node.DOCUMENT_POSITION_FOLLOWING
     )).toBe(true)
     expect(screen.queryByText('Startzustand-Serien')).toBeNull()
@@ -3972,7 +3990,7 @@ describe('keyboard smoke tests', () => {
       assistanceMode: 'clean' as const,
       replaySetup: {
         version: 1 as const,
-        startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
+        startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0, 14, 15],
         emptyIndex: 15,
         shuffleMoves: ['tile-15'],
       },
@@ -4016,10 +4034,17 @@ describe('keyboard smoke tests', () => {
       screen.getByRole('button', { name: 'Challenge-Serie 1 einklappen' }),
       screen.getByRole('button', { name: 'Challenge-Serie 2 einklappen' }),
     ]
+    const practiceButtons = [
+      screen.getByRole('button', { name: 'Startzustand der Challenge-Serie 1 als Uebung starten' }),
+      screen.getByRole('button', { name: 'Startzustand der Challenge-Serie 2 als Uebung starten' }),
+    ]
     expect(challengeButtons).toHaveLength(2)
 
     challengeButtons[0]!.focus()
     fireEvent.keyDown(challengeButtons[0]!, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(practiceButtons[0])
+
+    fireEvent.keyDown(practiceButtons[0]!, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(collapseButtons[1])
 
     fireEvent.keyDown(collapseButtons[1]!, { key: 'ArrowDown' })
@@ -4029,7 +4054,7 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(collapseButtons[0])
 
     fireEvent.keyDown(collapseButtons[0]!, { key: 'End' })
-    expect(document.activeElement).toBe(challengeButtons[1])
+    expect(document.activeElement).toBe(practiceButtons[1])
   })
 
   it('erklaert eine assistierte Challenge als medaillenlosen verwandten Uebungslauf', () => {
@@ -4917,6 +4942,63 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Lauf 2')).toBeTruthy()
     expect(container.textContent).toContain('365 Aktionen weniger')
     expect(container.textContent).toContain('X-Achse: 2 Einzellaeufe am 10.04., als Lauf 1-2 gezeigt.')
+  })
+
+  it('marks medal runs directly on the statistics trend points', () => {
+    const medalCompletion = {
+      ...createCompletionRecord('1', '2026-04-10T10:00:00.000Z'),
+      moves: 80,
+      time: 120,
+      actionMoves: 90,
+      assistanceMode: 'clean' as const,
+      hintCount: 0,
+    }
+    const normalCompletion = {
+      ...createCompletionRecord('2', '2026-04-10T11:00:00.000Z'),
+      moves: 95,
+      time: 150,
+      actionMoves: 105,
+      assistanceMode: 'clean' as const,
+      hintCount: 0,
+    }
+    const galleryMedalEntry = {
+      ...createSolvedGalleryEntry('gallery-medal-run', '2026-04-10T10:00:15.000Z'),
+      config: medalCompletion.config,
+      moves: medalCompletion.moves,
+      time: medalCompletion.time,
+      actionMoves: medalCompletion.actionMoves,
+      assistanceMode: medalCompletion.assistanceMode,
+      hasDetailedProfile: medalCompletion.hasDetailedProfile,
+      challengeMedal: 'gold' as const,
+    }
+    const standardDifficultyStats = DIFFICULTY_OPTIONS.map((option) => ({ option, stats: null }))
+
+    const { container } = render(
+      <UploadStatsVisualReport
+        stats={null}
+        gallery={{
+          entries: [galleryMedalEntry],
+          totalEntries: 1,
+          lastCompletedAt: galleryMedalEntry.completedAt,
+          lastUpdatedAt: galleryMedalEntry.completedAt,
+        }}
+        latestCompletion={medalCompletion}
+        favoriteDifficulty={null}
+        fastestDifficulty={null}
+        completionHistory={[medalCompletion, normalCompletion]}
+        filteredHistory={[medalCompletion, normalCompletion]}
+        historyFilter="all"
+        historyFilterOptions={[{ id: 'all', label: 'Alle Siege' }]}
+        standardDifficultyStats={standardDifficultyStats}
+        onHistoryFilterChange={vi.fn()}
+        onReloadView={vi.fn()}
+        onBackToStart={vi.fn()}
+        activeView="history"
+        onActiveViewChange={vi.fn()}
+      />
+    )
+
+    expect(container.textContent).toContain('1 Medaillenlauf im Diagramm markiert')
   })
 
   it('renders the compact statistics history table without obsolete move columns or empty assistance details', () => {
