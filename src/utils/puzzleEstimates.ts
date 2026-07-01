@@ -4,6 +4,7 @@ import type {
   PuzzleConfig,
   SolvedGalleryEntry,
 } from '../types/index.ts'
+import { isChallengeCleanRun } from './galleryChallenge.ts'
 
 export interface PuzzleEstimateContext {
   config: PuzzleConfig
@@ -25,26 +26,16 @@ const HEURISTIC_WEIGHT = 0.65
 const PERSONAL_MEDIAN_WEIGHT = 0.35
 const PERSONAL_MEDIAN_MIN_RUNS = 5
 const PERSONAL_MEDIAN_CAP = 0.25
-const DEFAULT_HEURISTIC_HEADROOM_CAP = 0.4
 
 const ESTIMATE_FLOORS: Record<string, PuzzleEstimateFloor> = {
-  '3x3': { moves: 60, time: 90 },
-  '4x4': { moves: 180, time: 360 },
-  '5x5': { moves: 360, time: 900 },
-  '6x6': { moves: 600, time: 1800 },
+  '3x3': { moves: 66, time: 99 },
+  '4x4': { moves: 132, time: 220 },
+  '5x5': { moves: 234, time: 434 },
+  '6x6': { moves: 391, time: 720 },
 }
 
 function getConfigKey(config: PuzzleConfig): string {
   return `${config.rows}x${config.cols}`
-}
-
-function getHeuristicHeadroomCap(config: PuzzleConfig): number {
-  const key = getConfigKey(config)
-  if (key === '3x3') return 0.25
-  if (key === '4x4') return 0.4
-  if (key === '5x5') return 0.6
-  if (key === '6x6') return 0.75
-  return DEFAULT_HEURISTIC_HEADROOM_CAP
 }
 
 export function getPuzzleEstimateFloor(config: PuzzleConfig): PuzzleEstimateFloor {
@@ -140,18 +131,61 @@ function getMisplacedTileCount(board: number[], config: PuzzleConfig): number {
   return board.filter((tileValue, index) => tileValue !== emptyTile && tileValue !== index).length
 }
 
-function getMaxHeuristicScore(config: PuzzleConfig): number {
-  const playableTileCount = Math.max(0, config.rows * config.cols - 1)
-  const maxTileDistance = Math.max(1, config.rows + config.cols - 2)
-  return playableTileCount * maxTileDistance + playableTileCount * 1.5
-}
-
 function getPersonalCleanRuns(entries: SolvedGalleryEntry[], config: PuzzleConfig): SolvedGalleryEntry[] {
   return entries.filter((entry) =>
     entry.config.rows === config.rows
     && entry.config.cols === config.cols
     && entry.assistanceMode === 'clean'
     && entry.hasDetailedProfile
+  )
+}
+
+function createSyntheticChallengeTargetIdForEntry(entry: SolvedGalleryEntry): string | null {
+  if (!entry.replaySetup) return null
+
+  const motifKey = entry.sourceImage ?? entry.previewImage ?? ''
+  if (!motifKey) return null
+
+  return createSyntheticChallengeTargetId({
+    motifKey,
+    config: entry.config,
+    cropKey: createCropKey({
+      cropTransform: entry.cropTransform ?? null,
+      useFullImage: entry.useFullImage ?? false,
+    }),
+    replaySetup: entry.replaySetup,
+  })
+}
+
+export function isCleanGalleryRunBeatingEstimatedTarget(
+  entry: SolvedGalleryEntry,
+  target: GalleryChallengeTarget
+): boolean {
+  if (!target.synthetic || !entry.hasDetailedProfile) return false
+  if (createSyntheticChallengeTargetIdForEntry(entry) !== target.entryId) return false
+
+  return isCleanRunBeatingEstimatedTarget({
+    moves: entry.moves,
+    time: entry.time,
+    assistanceMode: entry.assistanceMode,
+  }, target)
+}
+
+export function isCleanRunBeatingEstimatedTarget(
+  metrics: {
+    moves: number
+    time: number
+    assistanceMode: SolvedGalleryEntry['assistanceMode']
+    ghostUsageCount?: number
+    heatmapUsageCount?: number
+  },
+  target: GalleryChallengeTarget
+): boolean {
+  return Boolean(
+    target.synthetic
+    && isChallengeCleanRun(metrics)
+    && metrics.time < target.time
+    && metrics.moves < target.moves
   )
 }
 
@@ -167,10 +201,8 @@ export function estimateGalleryChallengeTarget({
   const manhattanScore = getTileManhattanScore(replaySetup.startBoard, config)
   const misplacedTiles = getMisplacedTileCount(replaySetup.startBoard, config)
   const heuristicScore = manhattanScore + misplacedTiles * 1.5
-  const heuristicRatio = Math.min(1, Math.max(0, heuristicScore / getMaxHeuristicScore(config)))
-  const heuristicHeadroom = heuristicRatio * getHeuristicHeadroomCap(config)
-  const heuristicMoves = Math.max(floor.moves, Math.round(floor.moves * (1 + heuristicHeadroom)))
-  const heuristicTime = Math.max(floor.time, Math.round(floor.time * (1 + heuristicHeadroom)))
+  const heuristicMoves = floor.moves
+  const heuristicTime = floor.time
 
   const personalRuns = getPersonalCleanRuns(galleryEntries, config)
   const medianMoves = median(personalRuns.map((entry) => entry.moves))
@@ -181,22 +213,16 @@ export function estimateGalleryChallengeTarget({
     && medianTime !== null
 
   const moves = personalMedianApplied
-    ? Math.max(
-        floor.moves,
-        Math.round(clampPersonalBlend(
-          heuristicMoves * HEURISTIC_WEIGHT + medianMoves * PERSONAL_MEDIAN_WEIGHT,
-          heuristicMoves
-        ))
-      )
+    ? Math.max(1, Math.round(clampPersonalBlend(
+      heuristicMoves * HEURISTIC_WEIGHT + medianMoves * PERSONAL_MEDIAN_WEIGHT,
+      heuristicMoves
+    )))
     : heuristicMoves
   const time = personalMedianApplied
-    ? Math.max(
-        floor.time,
-        Math.round(clampPersonalBlend(
-          heuristicTime * HEURISTIC_WEIGHT + medianTime * PERSONAL_MEDIAN_WEIGHT,
-          heuristicTime
-        ))
-      )
+    ? Math.max(1, Math.round(clampPersonalBlend(
+      heuristicTime * HEURISTIC_WEIGHT + medianTime * PERSONAL_MEDIAN_WEIGHT,
+      heuristicTime
+    )))
     : heuristicTime
 
   return {
@@ -221,10 +247,12 @@ export function estimateGalleryChallengeTarget({
 
 export function hasGallerySeriesForEstimatedTarget(
   entries: SolvedGalleryEntry[],
-  syntheticTargetId: string
+  estimatedTarget: string | GalleryChallengeTarget
 ): boolean {
+  const syntheticTargetId = typeof estimatedTarget === 'string' ? estimatedTarget : estimatedTarget.entryId
   return entries.some((entry) =>
     entry.challengeTargetId === syntheticTargetId
     || entry.estimatedChallengeTarget?.entryId === syntheticTargetId
+    || (typeof estimatedTarget !== 'string' && isCleanGalleryRunBeatingEstimatedTarget(entry, estimatedTarget))
   )
 }

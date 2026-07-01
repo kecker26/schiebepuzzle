@@ -131,6 +131,7 @@ import {
   createCropKey,
   estimateGalleryChallengeTarget,
   hasGallerySeriesForEstimatedTarget,
+  isCleanRunBeatingEstimatedTarget,
 } from './utils/puzzleEstimates.ts'
 
 const DEFAULT_CONFIG: PuzzleConfig = DEFAULT_PUZZLE_CONFIG
@@ -1900,7 +1901,7 @@ export default function App() {
             replaySetup,
             galleryEntries: gallery?.entries ?? [],
           })
-          if (!hasGallerySeriesForEstimatedTarget(gallery?.entries ?? [], softTarget.entryId)) {
+          if (!hasGallerySeriesForEstimatedTarget(gallery?.entries ?? [], softTarget)) {
             setActiveGalleryChallengeTarget(softTarget)
             setActiveGalleryChallengeMode('soft')
           }
@@ -2030,8 +2031,9 @@ export default function App() {
       const createsTemplate =
         Boolean(
           activeGalleryChallengeTarget
+          && activeGalleryChallengeTarget.synthetic
           && (activeGalleryChallengeMode === 'soft' || activeGalleryChallengeMode === 'qualification')
-          && forecastMedal
+          && isCleanRunBeatingEstimatedTarget(stats, activeGalleryChallengeTarget)
         )
       const challengeResult: ChallengeResult | null = activeGalleryChallengeTarget
         ? activeGalleryChallengeMode === 'medal'

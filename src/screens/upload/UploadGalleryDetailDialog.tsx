@@ -99,6 +99,21 @@ function getCompletedAtTimestamp(entry: SolvedGalleryEntry): number {
   return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp
 }
 
+function getBestRunEntry(entries: Array<SolvedGalleryEntry | null | undefined>): SolvedGalleryEntry | null {
+  const uniqueEntries = Array.from(
+    entries
+      .filter((candidate): candidate is SolvedGalleryEntry => Boolean(candidate))
+      .reduce((entriesById, candidate) => entriesById.set(candidate.id, candidate), new Map<string, SolvedGalleryEntry>())
+      .values()
+  )
+
+  return uniqueEntries.sort((a, b) => {
+    if (a.time !== b.time) return a.time - b.time
+    if (a.moves !== b.moves) return a.moves - b.moves
+    return getCompletedAtTimestamp(b) - getCompletedAtTimestamp(a)
+  })[0] ?? null
+}
+
 export default function UploadGalleryDetailDialog({
   entry,
   onReplayEntry,
@@ -119,8 +134,8 @@ export default function UploadGalleryDetailDialog({
   const collectButtonRef = useRef<HTMLButtonElement>(null)
   const [manualTagInput, setManualTagInput] = useState('')
   const [pendingChallengeTarget, setPendingChallengeTarget] = useState<SolvedGalleryEntry | null>(null)
-  const [collapsedChallengeSeriesIds, setCollapsedChallengeSeriesIds] = useState<Set<string>>(() => new Set())
-  const [collapsedStartStateSeriesIds, setCollapsedStartStateSeriesIds] = useState<Set<string>>(() => new Set())
+  const [expandedChallengeSeriesIds, setExpandedChallengeSeriesIds] = useState<Set<string>>(() => new Set())
+  const [expandedStartStateSeriesIds, setExpandedStartStateSeriesIds] = useState<Set<string>>(() => new Set())
   const representativeEntry = entry.representativeEntry
   const detailImage = representativeEntry.sourceImage ?? representativeEntry.previewImage
   const storedPalette = useMemo(() => findStoredDetailPalette(entry), [entry])
@@ -213,7 +228,7 @@ export default function UploadGalleryDetailDialog({
   )
 
   const toggleStartStateSeries = useCallback((seriesId: string) => {
-    setCollapsedStartStateSeriesIds((currentIds) => {
+    setExpandedStartStateSeriesIds((currentIds) => {
       const nextIds = new Set(currentIds)
       if (nextIds.has(seriesId)) {
         nextIds.delete(seriesId)
@@ -225,7 +240,7 @@ export default function UploadGalleryDetailDialog({
   }, [])
 
   const toggleChallengeSeries = useCallback((targetId: string) => {
-    setCollapsedChallengeSeriesIds((currentIds) => {
+    setExpandedChallengeSeriesIds((currentIds) => {
       const nextIds = new Set(currentIds)
       if (nextIds.has(targetId)) {
         nextIds.delete(targetId)
@@ -473,7 +488,7 @@ export default function UploadGalleryDetailDialog({
 
   const renderStartStateSeries = (series: GalleryStartStateSeries, seriesIndex: number) => {
     const seriesNumber = seriesIndex + 1
-    const isCollapsed = collapsedStartStateSeriesIds.has(series.seriesId)
+    const isCollapsed = !expandedStartStateSeriesIds.has(series.seriesId)
     const seriesBodyId = `gallery-detail-start-state-series-body-${seriesIndex}`
     const practiceEntry = [series.cleanAnchorEntry, series.latestEntry, ...series.entries].find(
       (candidate): candidate is SolvedGalleryEntry => Boolean(
@@ -496,6 +511,7 @@ export default function UploadGalleryDetailDialog({
       if (a.moves !== b.moves) return a.moves - b.moves
       return getCompletedAtTimestamp(b) - getCompletedAtTimestamp(a)
     })
+    const bestRunEntry = getBestRunEntry(series.entries)
     const runCountLabel = `${series.entries.length} ${series.entries.length === 1 ? 'Lauf' : 'Laeufe'}`
 
     return (
@@ -513,6 +529,11 @@ export default function UploadGalleryDetailDialog({
             <small className="gallery-detail-start-state-summary">
               Gemeinsames gespeichertes Startbrett ohne Challenge-Serienbezug.
             </small>
+            {bestRunEntry ? (
+              <small className="gallery-detail-series-best-run">
+                Bester Lauf: {formatTime(bestRunEntry.time)} - {bestRunEntry.moves} Zuege
+              </small>
+            ) : null}
           </div>
           <div className="gallery-detail-challenge-card-actions">
             <span className={`gallery-detail-start-state-badge${series.cleanAnchorEntry ? ' is-clean' : ''}`}>
@@ -998,7 +1019,7 @@ export default function UploadGalleryDetailDialog({
                   const estimatedTarget = series.estimatedTarget
                   const isEstimatedOriginSeries = Boolean(estimatedTarget?.synthetic)
                   const bestAttempt = series.bestAttempt
-                  const isCollapsed = collapsedChallengeSeriesIds.has(series.targetId)
+                  const isCollapsed = !expandedChallengeSeriesIds.has(series.targetId)
                   const seriesBodyId = `gallery-detail-challenge-series-body-${seriesIndex}`
                   const targetOrigin = timelineRelations.attemptsByEntryId.get(series.targetId) ?? null
                   const canReplayTargetStart = Boolean(
@@ -1039,6 +1060,12 @@ export default function UploadGalleryDetailDialog({
                       && (candidate.sourceImage ?? candidate.previewImage)
                     )
                   ) ?? null
+                  const bestRunEntry = getBestRunEntry([
+                    target,
+                    ...series.attempts,
+                    ...series.preTemplateEntries,
+                    ...series.relatedStartStateEntries,
+                  ])
 
                   return (
                     <article
@@ -1070,6 +1097,11 @@ export default function UploadGalleryDetailDialog({
                           {targetOrigin ? (
                             <small className="gallery-detail-challenge-origin">
                               Entstanden aus Versuch {targetOrigin.attemptNumber} der Challenge-Serie {targetOrigin.seriesNumber}.
+                            </small>
+                          ) : null}
+                          {bestRunEntry ? (
+                            <small className="gallery-detail-series-best-run">
+                              Bester Lauf: {formatTime(bestRunEntry.time)} - {bestRunEntry.moves} Zuege
                             </small>
                           ) : null}
                         </div>

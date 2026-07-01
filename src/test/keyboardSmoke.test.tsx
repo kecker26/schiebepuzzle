@@ -3616,6 +3616,14 @@ describe('keyboard smoke tests', () => {
     expect(screen.queryByText('1 mit verbessertem Zielwert')).toBeNull()
     expect(screen.getByText('Eigenstaendiger Lauf')).toBeTruthy()
     expect(screen.getByText('Startzustand-Serie 1')).toBeTruthy()
+    expect(screen.getByText((_, element) => element?.textContent === 'Bester Lauf: 1:45 - 36 Zuege')).toBeTruthy()
+    const initialExpandButton = screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' })
+    expect(initialExpandButton.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText('Vorlage dieser Serie')).toBeNull()
+    fireEvent.click(initialExpandButton)
+    await waitFor(() => {
+      expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
+    })
     expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
     expect(screen.getByText('Medaillen-Entwicklung')).toBeTruthy()
     expect(screen.getByLabelText('Medaillen-Entwicklung: Gold zu Bronze')).toBeTruthy()
@@ -3722,6 +3730,8 @@ describe('keyboard smoke tests', () => {
 
     expect(screen.getByText('Startzustand-Serie 1')).toBeTruthy()
     expect(screen.getByText(/Gestartet mit geschaetztem Ziel/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' }).getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' }))
     expect(screen.getByText('Geschaetztes Ziel')).toBeTruthy()
     expect(screen.getByLabelText('Werte des geschaetzten Ziels')).toBeTruthy()
     expect(screen.queryByText('Echte Vorlage')).toBeNull()
@@ -3784,6 +3794,7 @@ describe('keyboard smoke tests', () => {
     )
 
     expect(screen.getByText('Challenge-Startzustand-Serien')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' }))
     expect(screen.getByText('Weitere Laeufe dieses Startbretts')).toBeTruthy()
     expect(screen.getByText('Verwandter Ursprung')).toBeTruthy()
     expect(screen.getByText(/nicht Teil der Medaillenwertung/i)).toBeTruthy()
@@ -3836,6 +3847,11 @@ describe('keyboard smoke tests', () => {
 
     expect(screen.getByText('Startzustand-Serien')).toBeTruthy()
     expect(screen.getByText('Cleane Vorlage')).toBeTruthy()
+    expect(screen.getByText((_, element) =>
+      Boolean(element?.classList.contains('gallery-detail-series-best-run') && element.textContent?.startsWith('Bester Lauf: '))
+    )).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' }).getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' }))
     expect(screen.getByText('Uebungslaeufe fuer diesen Startzustand')).toBeTruthy()
     expect(screen.getByText('Noch keine Uebungslaeufe fuer diesen Startzustand.')).toBeTruthy()
     expect(document.querySelectorAll('.gallery-detail-start-state-run')).toHaveLength(0)
@@ -3891,6 +3907,7 @@ describe('keyboard smoke tests', () => {
 
     expect(screen.getByText('Startzustand-Serien')).toBeTruthy()
     expect(screen.getAllByText('Startzustand-Serie 1')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' }))
     expect(screen.getByText('Gemeinsamer Startzustand')).toBeTruthy()
     expect(screen.getByText('Zugehoerige Laeufe')).toBeTruthy()
     expect(screen.getAllByText('Ursprung').length).toBeGreaterThanOrEqual(1)
@@ -3953,6 +3970,8 @@ describe('keyboard smoke tests', () => {
 
     expect(screen.getByText('Startzustand-Serien')).toBeTruthy()
     expect(screen.getByText('Cleane Vorlage')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' }).getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' }))
     expect(screen.getByText('Uebungslauf 1')).toBeTruthy()
     expect(screen.getByText('Uebungslaeufe fuer diesen Startzustand')).toBeTruthy()
     expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
@@ -4028,6 +4047,9 @@ describe('keyboard smoke tests', () => {
         onClose={vi.fn()}
       />
     )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Challenge-Serie 2 ausklappen' }))
 
     const challengeButtons = screen.getAllByRole('button', { name: 'Vorlage herausfordern' })
     const collapseButtons = [

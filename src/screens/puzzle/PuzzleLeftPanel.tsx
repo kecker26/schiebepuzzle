@@ -316,12 +316,16 @@ export default function PuzzleLeftPanel({
   const challengeModeCopy =
     effectiveChallengeMode === 'soft'
       ? challengeForecast?.isClean
-        ? 'Moegliche Einstufung: Gold, wenn dieser Lauf clean bleibt.'
+        ? challengeForecast.medal
+          ? `Moegliche Einstufung: ${challengeForecastLabel}, wenn dieser Lauf clean bleibt.`
+          : 'Aktuell keine Einstufung; mindestens ein Ziel muss strikt unterboten werden.'
         : 'Mit Hilfe nur Uebung; Vergleich bleibt informativ.'
       : effectiveChallengeMode === 'qualification'
         ? 'Ziel: echte Vorlage erstellen. Dieser Lauf vergibt noch keine Medaille.'
         : challengeForecast?.isClean
-          ? 'Hilfen gesperrt: Medaillen bleiben erreichbar.'
+          ? challengeForecast.medal
+            ? `${challengeForecastLabel} bleibt erreichbar, solange der Lauf clean bleibt.`
+            : 'Keine Medaille mehr erreichbar; Lauf wird Uebung.'
           : 'Keine Medaille mehr erreichbar; Lauf wird Uebung.'
 
   return (
@@ -408,11 +412,7 @@ export default function PuzzleLeftPanel({
                 </span>
               ) : null}
               <span className={`puzzle-challenge-badge-detail${challengeForecast?.isClean ? ' is-positive' : ' is-negative'}`}>
-                {challengeForecast?.isClean
-                  ? challengeForecast?.goldAvailable
-                    ? challengeModeCopy
-                    : 'Gold und Diamant sind aktuell nicht erreichbar'
-                  : challengeModeCopy}
+                {challengeModeCopy}
               </span>
               {challengeForecast?.goldAvailable && !challengeForecast.diamondAvailable ? (
                 <span className="puzzle-challenge-badge-detail is-muted">
