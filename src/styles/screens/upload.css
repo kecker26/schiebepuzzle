@@ -6702,6 +6702,12 @@
   font-weight: 800;
 }
 
+.gallery-detail-series-best-run {
+  color: color-mix(in srgb, var(--gallery-challenge-color) 78%, var(--text-main));
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .gallery-detail-challenge-medal {
   display: grid;
   place-items: center;
