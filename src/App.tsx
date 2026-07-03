@@ -100,6 +100,7 @@ import { type HistoryFilter, type UploadWorkspaceWindow } from './screens/upload
 import { useUploadImagePalette } from './screens/upload/uploadImagePalette.ts'
 import {
   AppState,
+  ChallengeMedal,
   ChallengeMode,
   ChallengeResult,
   PersistedPuzzleProgress,
@@ -109,6 +110,8 @@ import {
   GalleryChallengeTarget,
   GalleryImageTag,
   GalleryReplaySetup,
+  PuzzleAssistanceMode,
+  PuzzleRunMetrics,
   RecordPuzzleCompletionPayload,
   RecordPuzzleCompletionResult,
   RecordSolvedGalleryEntryPayload,
@@ -120,7 +123,12 @@ import {
   ImageCollections,
   WinStats,
 } from './types/index'
-import { deriveChallengeMedal, getPreviousBestChallengeMedalForMotif } from './utils/galleryChallenge.ts'
+import {
+  deriveChallengeMedal,
+  formatChallengeMedalLabel,
+  getNextChallengeMedalGoal,
+  getPreviousBestChallengeMedalForMotif,
+} from './utils/galleryChallenge.ts'
 import { DEFAULT_PUZZLE_CONFIG, getNextDifficultyOption } from './utils/puzzleDifficulty.ts'
 import {
   createGalleryChallengeTarget,
@@ -133,11 +141,19 @@ import {
   hasGallerySeriesForEstimatedTarget,
   isCleanRunBeatingEstimatedTarget,
 } from './utils/puzzleEstimates.ts'
+import { buildMedalDistribution } from './screens/upload/UploadMedalStatsUtils.ts'
+import {
+  buildGalleryDisplayEntries,
+  getGalleryMedalHuntStatus,
+  matchesGalleryMedalHuntFilter,
+  sortGalleryDisplayEntries,
+} from './screens/upload/UploadGalleryDisplayUtils.ts'
 
 const DEFAULT_CONFIG: PuzzleConfig = DEFAULT_PUZZLE_CONFIG
 const MAX_DISPLAYED_SAVED_GAMES = 30
 const SAVE_DEBOUNCE_MS = 3000
 const SAVE_TITLE_RETRY_DELAYS_MS = [0, 30000, 120000]
+const START_SCREEN_MEDAL_ORDER: ChallengeMedal[] = ['bronze', 'silver', 'gold', 'diamond']
 
 function waitFor(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -149,6 +165,56 @@ function isCleanPersistedChallengeTarget(
   target: GalleryChallengeTarget | null | undefined
 ): target is GalleryChallengeTarget {
   return Boolean(target && target.assistanceMode === 'clean')
+}
+
+function getRunMetricsWithDefaults(save: SavedGameSummary): PuzzleRunMetrics {
+  return {
+    actionMoves: save.runMetrics?.actionMoves ?? save.moves,
+    undoCount: save.runMetrics?.undoCount ?? 0,
+    redoCount: save.runMetrics?.redoCount ?? 0,
+    hintCount: save.runMetrics?.hintCount ?? 0,
+    suggestedMoveCount: save.runMetrics?.suggestedMoveCount ?? 0,
+    ghostUsageCount: save.runMetrics?.ghostUsageCount ?? 0,
+    ghostUsageDurationMs: save.runMetrics?.ghostUsageDurationMs ?? 0,
+    ghostUsageByMode: save.runMetrics?.ghostUsageByMode,
+    heatmapUsageCount: save.runMetrics?.heatmapUsageCount ?? 0,
+    heatmapUsageDurationMs: save.runMetrics?.heatmapUsageDurationMs ?? 0,
+    heatmapUsageByMode: save.runMetrics?.heatmapUsageByMode,
+  }
+}
+
+function deriveAssistanceModeFromRunMetrics(runMetrics: PuzzleRunMetrics): PuzzleAssistanceMode {
+  if (runMetrics.suggestedMoveCount > 0) return 'auto-assisted'
+  if (
+    runMetrics.hintCount > 0
+    || (runMetrics.ghostUsageCount ?? 0) > 0
+    || (runMetrics.heatmapUsageCount ?? 0) > 0
+  ) return 'hinted'
+  return 'clean'
+}
+
+function formatResumeChallengeGoalRequirement(label: string): string {
+  return /^\d/.test(label) ? `noch ${label}` : label
+}
+
+function getSavedGameResumeChallengeDetail(save: SavedGameSummary): string | null {
+  if (!isCleanPersistedChallengeTarget(save.challengeTarget)) {
+    return null
+  }
+
+  const runMetrics = getRunMetricsWithDefaults(save)
+  const goal = getNextChallengeMedalGoal({
+    ...runMetrics,
+    moves: save.moves,
+    time: save.elapsedTime,
+    assistanceMode: deriveAssistanceModeFromRunMetrics(runMetrics),
+  }, save.challengeTarget, null)
+
+  if (!goal.medal) {
+    return null
+  }
+
+  return `${formatChallengeMedalLabel(goal.medal)} moeglich - ${formatResumeChallengeGoalRequirement(goal.label)}`
 }
 
 function createReplaySetupFromProgress(progress: PersistedPuzzleProgress): GalleryReplaySetup | null {
@@ -342,6 +408,7 @@ type StartResumeCandidate =
       save: SavedGameSummary
       label: string
       detail: string
+      medalDetail?: string | null
     }
   | {
       kind: 'crop'
@@ -2382,10 +2449,14 @@ export default function App() {
     })
   }, [])
 
-  const handleOpenUploadSurface = useCallback(async (action: UploadCommandRequestAction) => {
+  const handleOpenUploadSurface = useCallback(async (
+    request: UploadCommandRequestAction | Omit<UploadCommandRequest, 'id'>
+  ) => {
+    const commandRequest = typeof request === 'string' ? { action: request } : request
+
     if (appState === 'welcome') {
       handleEnterApp()
-      issueUploadCommand({ action })
+      issueUploadCommand(commandRequest)
       return
     }
 
@@ -2393,8 +2464,12 @@ export default function App() {
       await navigateToTopLevelScreen('idle')
     }
 
-    issueUploadCommand({ action })
+    issueUploadCommand(commandRequest)
   }, [appState, handleEnterApp, issueUploadCommand, navigateToTopLevelScreen])
+
+  const handleGoToSelectionScreen = useCallback(() => {
+    void handleOpenUploadSurface('focus-start')
+  }, [handleOpenUploadSurface])
 
   const handleRestoreUploadSession = useCallback(async (
     activeWindow: UploadWorkspaceWindow,
@@ -2495,6 +2570,7 @@ export default function App() {
         save: resumeSave,
         label: 'Letzte Sitzung fortsetzen',
         detail: `${resumeSave.name} - ${resumeSave.config.rows}x${resumeSave.config.cols} - ${formatCommandTime(resumeSave.elapsedTime)}`,
+        medalDetail: getSavedGameResumeChallengeDetail(resumeSave),
       }
     }
 
@@ -2542,6 +2618,7 @@ export default function App() {
         save: latestSavedGame,
         label: 'Letzte Sitzung fortsetzen',
         detail: `${latestSavedGame.name} - ${latestSavedGame.config.rows}x${latestSavedGame.config.cols} - ${formatCommandTime(latestSavedGame.elapsedTime)}`,
+        medalDetail: getSavedGameResumeChallengeDetail(latestSavedGame),
       }
     }
 
@@ -2557,6 +2634,45 @@ export default function App() {
       return Date.parse(entry.completedAt) > Date.parse(latest.completedAt) ? entry : latest
     }, null) ?? null
   ), [gallery])
+
+  const startScreenMedalCounts = useMemo(() => {
+    const distribution = buildMedalDistribution(gallery?.entries ?? [])
+    const countsByMedal = new Map(distribution.map((item) => [item.key, item.value]))
+
+    return START_SCREEN_MEDAL_ORDER.map((medal) => ({
+      medal,
+      count: countsByMedal.get(medal) ?? 0,
+    }))
+  }, [gallery])
+
+  const startScreenMedalHuntAction = useMemo(() => {
+    const entries = gallery?.entries ?? []
+    if (entries.length === 0) return null
+
+    const upgradeCandidates = sortGalleryDisplayEntries(
+      buildGalleryDisplayEntries(entries, {
+        difficultyFilter: 'all',
+        assistanceFilter: 'all',
+      }).filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable')),
+      'upgrade-potential'
+    )
+    const candidate = upgradeCandidates[0]
+    if (!candidate) return null
+
+    const status = getGalleryMedalHuntStatus(candidate)
+    if (!status.nextMedal) return null
+
+    const targetMedal = status.nextMedal
+    const targetMedalCount = upgradeCandidates.filter((entry) => (
+      getGalleryMedalHuntStatus(entry).nextMedal === targetMedal
+    )).length
+
+    return {
+      medal: targetMedal,
+      label: `${formatChallengeMedalLabel(targetMedal)}-Chance: ${targetMedalCount} ${targetMedalCount === 1 ? 'Motiv' : 'Motive'}`,
+      detail: 'Gefiltert: noch upgradefaehig, sortiert nach Naehe zum naechsten Ziel.',
+    }
+  }, [gallery])
 
   const handleResumeLastSession = useCallback(async () => {
     if (!startResumeCandidate) {
@@ -2599,6 +2715,17 @@ export default function App() {
 
     handleReplayGalleryEntry(latestGalleryEntry)
   }, [handleReplayGalleryEntry, latestGalleryEntry, prepareToLeavePlayingRun])
+
+  const handleOpenStartScreenMedalFilter = useCallback((medal: ChallengeMedal) => {
+    void handleOpenUploadSurface({
+      action: 'open-gallery',
+      medalFilter: medal,
+    })
+  }, [handleOpenUploadSurface])
+
+  const handleOpenStartScreenMedalHunt = useCallback(() => {
+    void handleOpenUploadSurface('open-medal-hunt')
+  }, [handleOpenUploadSurface])
 
   const latestPlayedPaletteCandidate = useMemo<{
     palette: ImageThemePalette | null
@@ -3018,6 +3145,8 @@ export default function App() {
             <StartScreen
               onStart={handleEnterApp}
               onResumeSession={startResumeCandidate ? handleResumeLastSession : undefined}
+              onOpenGalleryMedalFilter={handleOpenStartScreenMedalFilter}
+              onOpenMedalHuntRecommendation={startScreenMedalHuntAction ? handleOpenStartScreenMedalHunt : undefined}
               onQuit={handleQuitApp}
               onOpenHelp={openHelp}
               quitHint={quitHint}
@@ -3027,6 +3156,9 @@ export default function App() {
               registerAppContextMenuHandler={registerAppContextMenuHandler}
               resumeActionLabel={startResumeCandidate?.label ?? null}
               resumeActionDetail={startResumeCandidate?.detail ?? null}
+              resumeActionMedalDetail={startResumeCandidate?.kind === 'save' ? startResumeCandidate.medalDetail ?? null : null}
+              medalCounts={startScreenMedalCounts}
+              medalHuntAction={startScreenMedalHuntAction}
               savedGamesCount={savedGames.length}
               solvedCount={statsOverview?.totalSolved ?? 0}
               galleryCount={gallery?.entries.length ?? 0}
@@ -3218,7 +3350,7 @@ export default function App() {
             onRetryStats={handleRetryStats}
             onReplaySameImage={handleReplaySameImage}
             onChallengeFollowUp={handleChallengeFollowUp}
-            onGoToSelectionScreen={handleReset}
+            onGoToSelectionScreen={handleGoToSelectionScreen}
             onChooseNewImage={handleGoToStartScreen}
             onNextDifficulty={handleNextDifficulty}
           />

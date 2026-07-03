@@ -15,7 +15,8 @@ import type {
   TagCategoryIconId,
   TagCategorySuggestion,
 } from '../../services/tagCategories/tagCategoryTypes.ts'
-import { ImageCollection, SolvedGallery, SolvedGalleryEntry } from '../../types/index'
+import { ChallengeMedal, ImageCollection, SolvedGallery, SolvedGalleryEntry } from '../../types/index'
+import { formatChallengeMedalLabel, getChallengeMedalEmoji } from '../../utils/galleryChallenge.ts'
 import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import UploadConfirmDialog from './UploadConfirmDialog.tsx'
 import UploadGalleryCard from './UploadGalleryCard.tsx'
@@ -31,6 +32,8 @@ import {
   buildGalleryMedalCollection,
   formatGallerySolveCount,
   GalleryDisplayEntry,
+  getGalleryMedalHuntSortRank,
+  getGalleryMedalHuntStatus,
   getGalleryMotifKey,
   getSimilarGalleryEntries,
   GalleryMedalFilter,
@@ -58,6 +61,9 @@ interface UploadGalleryPanelProps {
   onReplayEntry: GalleryReplayRequestHandler
   onFetchRandomImage?: (query?: string) => Promise<void> | void
   requestedTagFilterLabel?: string | null
+  resetGalleryViewId?: number | null
+  requestedMedalFilter?: GalleryMedalFilter | null
+  requestedMedalFilterId?: number | null
   requestedMedalHuntFilter?: GalleryMedalHuntFilter | null
   requestedMedalHuntFilterId?: number | null
   onDeleteEntries: (entryIds: string[]) => Promise<void>
@@ -87,8 +93,15 @@ interface PendingGalleryDeletionRequest extends PendingGalleryDeletionFocus {
 }
 
 type GalleryToolbarFocusTarget = 'difficulty' | 'assistance' | 'medal-hunt' | 'sort'
+type GalleryGridItem =
+  | { type: 'medal-heading'; medal: ChallengeMedal; count: number }
+  | { type: 'entry'; entry: GalleryDisplayEntry }
 
 const GALLERY_MOTIFS_PER_PAGE = 9
+
+function shouldShowMedalHuntGroups(medalHuntFilter: GalleryMedalHuntFilter, sortOption: GallerySortOption): boolean {
+  return medalHuntFilter !== 'all' || sortOption === 'upgrade-potential'
+}
 
 export function getGalleryTagKey(label: string): string {
   return label.trim().toLocaleLowerCase('de-DE')
@@ -145,6 +158,9 @@ export default function UploadGalleryPanel({
   onReplayEntry,
   onFetchRandomImage = async () => undefined,
   requestedTagFilterLabel = null,
+  resetGalleryViewId = null,
+  requestedMedalFilter = null,
+  requestedMedalFilterId = null,
   requestedMedalHuntFilter = null,
   requestedMedalHuntFilterId = null,
   onDeleteEntries,
@@ -200,6 +216,18 @@ export default function UploadGalleryPanel({
   const pendingDeletionFocusRef = useRef<PendingGalleryDeletionFocus | null>(null)
   const pendingCancelFocusRef = useRef<Pick<PendingGalleryDeletionFocus, 'entryId' | 'action'> | null>(null)
   const pendingToolbarFocusRef = useRef<GalleryToolbarFocusTarget | null>(null)
+
+  const resetGalleryView = useCallback((focusTarget: GalleryToolbarFocusTarget | null = 'difficulty') => {
+    pendingToolbarFocusRef.current = focusTarget
+    setCurrentPage(1)
+    setDifficultyFilter('all')
+    setAssistanceFilter('all')
+    setMedalFilter('all')
+    setMedalHuntFilter('all')
+    setTagFilters([])
+    setSortOption('latest')
+    setSelectedEntry(null)
+  }, [])
 
   const difficultyOptions = useMemo(() => getGalleryDifficultyFilterOptions(), [])
   const galleryGroups = useMemo(() => buildGalleryDisplayGroups(entries), [entries])
@@ -322,6 +350,46 @@ export default function UploadGalleryPanel({
     const startIndex = (activeGalleryPage - 1) * GALLERY_MOTIFS_PER_PAGE
     return visibleEntries.slice(startIndex, startIndex + GALLERY_MOTIFS_PER_PAGE)
   }, [activeGalleryPage, visibleEntries])
+  const medalHuntGroupCounts = useMemo(() => {
+    const counts = new Map<ChallengeMedal, number>()
+
+    for (const entry of visibleEntries) {
+      const nextMedal = getGalleryMedalHuntStatus(entry).nextMedal
+      if (!nextMedal || getGalleryMedalHuntSortRank(nextMedal) === Number.POSITIVE_INFINITY) continue
+      counts.set(nextMedal, (counts.get(nextMedal) ?? 0) + 1)
+    }
+
+    return counts
+  }, [visibleEntries])
+  const galleryGridItems = useMemo<GalleryGridItem[]>(() => {
+    if (!shouldShowMedalHuntGroups(medalHuntFilter, sortOption)) {
+      return pagedVisibleEntries.map((entry) => ({ type: 'entry', entry }))
+    }
+
+    const items: GalleryGridItem[] = []
+    let previousMedal: ChallengeMedal | null = null
+
+    for (const entry of pagedVisibleEntries) {
+      const nextMedal = getGalleryMedalHuntStatus(entry).nextMedal
+      const shouldRenderHeading =
+        nextMedal
+        && getGalleryMedalHuntSortRank(nextMedal) !== Number.POSITIVE_INFINITY
+        && nextMedal !== previousMedal
+
+      if (shouldRenderHeading) {
+        items.push({
+          type: 'medal-heading',
+          medal: nextMedal,
+          count: medalHuntGroupCounts.get(nextMedal) ?? 0,
+        })
+      }
+
+      items.push({ type: 'entry', entry })
+      previousMedal = nextMedal ?? previousMedal
+    }
+
+    return items
+  }, [medalHuntFilter, medalHuntGroupCounts, pagedVisibleEntries, sortOption])
   const activeTagOption = useMemo(
     () => tagFilters.length === 1 ? tagOptions.find((option) => option.id === tagFilters[0]) ?? null : null,
     [tagFilters, tagOptions]
@@ -393,24 +461,41 @@ export default function UploadGalleryPanel({
   }, [tagFilters, tagOptions])
 
   useEffect(() => {
+    if (resetGalleryViewId === null) return
+
+    resetGalleryView('difficulty')
+  }, [resetGalleryView, resetGalleryViewId])
+
+  useEffect(() => {
     if (!requestedTagFilterLabel) return
 
     const requestedTagFilters = getRequestedGalleryTagFilters(requestedTagFilterLabel)
     if (requestedTagFilters.length === 0) return
 
+    resetGalleryView('difficulty')
     pendingToolbarFocusRef.current = 'difficulty'
     setCurrentPage(1)
     setTagFilters(requestedTagFilters)
-  }, [requestedTagFilterLabel])
+  }, [requestedTagFilterLabel, resetGalleryView])
+
+  useEffect(() => {
+    if (!requestedMedalFilter || requestedMedalFilterId === null) return
+
+    resetGalleryView('difficulty')
+    setCurrentPage(1)
+    setMedalFilter(requestedMedalFilter)
+    setMedalHuntFilter('all')
+  }, [requestedMedalFilter, requestedMedalFilterId, resetGalleryView])
 
   useEffect(() => {
     if (!requestedMedalHuntFilter || requestedMedalHuntFilterId === null) return
 
+    resetGalleryView('medal-hunt')
     pendingToolbarFocusRef.current = 'medal-hunt'
     setCurrentPage(1)
     setMedalHuntFilter(requestedMedalHuntFilter)
     setSortOption('upgrade-potential')
-  }, [requestedMedalHuntFilter, requestedMedalHuntFilterId])
+  }, [requestedMedalHuntFilter, requestedMedalHuntFilterId, resetGalleryView])
 
   useEffect(() => {
     if (!selectedEntry) return
@@ -668,14 +753,7 @@ export default function UploadGalleryPanel({
   }, [])
 
   function handleResetFilters() {
-    pendingToolbarFocusRef.current = 'difficulty'
-    setCurrentPage(1)
-    setDifficultyFilter('all')
-    setAssistanceFilter('all')
-    setMedalFilter('all')
-    setMedalHuntFilter('all')
-    setTagFilters([])
-    setSortOption('latest')
+    resetGalleryView('difficulty')
   }
 
   const handleDeleteEntryRequest = useCallback((entry: GalleryDisplayEntry) => {
@@ -1015,23 +1093,40 @@ export default function UploadGalleryPanel({
                   />
                 ) : (
                   <div className="gallery-grid" aria-label="Galerie geloester Spiele">
-                    {pagedVisibleEntries.map((entry) => (
-                      <UploadGalleryCard
-                        key={entry.id}
-                        entry={entry}
-                        showMedalHuntHint={medalHuntFilter !== 'all' || sortOption === 'upgrade-potential'}
-                        onOpenDetails={setSelectedEntry}
-                        onCollectEntry={handleCollectEntryRequest}
-                        onTagFilter={handleTagFilterRequest}
-                        onRetryTagging={handleRetryTagging}
-                        onAddSuggestedCollection={handleAddSuggestedCollection}
-                        collections={collections}
-                        suggestedCollectionBusyKey={suggestedCollectionBusyKey}
-                        retryingTagEntryId={retryingTagEntryId}
-                        onDeleteEntry={handleDeleteEntryRequest}
-                        isDeleting={deletingEntryId === entry.id}
-                      />
-                    ))}
+                    {galleryGridItems.map((item) => {
+                      if (item.type === 'medal-heading') {
+                        return (
+                          <div
+                            key={`medal-heading-${item.medal}-${activeGalleryPage}`}
+                            className={`gallery-medal-hunt-heading is-${item.medal}`}
+                            role="presentation"
+                          >
+                            <span aria-hidden="true">{getChallengeMedalEmoji(item.medal)}</span>
+                            <strong>{formatChallengeMedalLabel(item.medal)}-Aufstieg</strong>
+                            <small>{item.count} {item.count === 1 ? 'Motiv' : 'Motive'} - sortiert nach fehlender Zeit und Zugzahl</small>
+                          </div>
+                        )
+                      }
+
+                      const entry = item.entry
+                      return (
+                        <UploadGalleryCard
+                          key={entry.id}
+                          entry={entry}
+                          showMedalHuntHint={shouldShowMedalHuntGroups(medalHuntFilter, sortOption)}
+                          onOpenDetails={setSelectedEntry}
+                          onCollectEntry={handleCollectEntryRequest}
+                          onTagFilter={handleTagFilterRequest}
+                          onRetryTagging={handleRetryTagging}
+                          onAddSuggestedCollection={handleAddSuggestedCollection}
+                          collections={collections}
+                          suggestedCollectionBusyKey={suggestedCollectionBusyKey}
+                          retryingTagEntryId={retryingTagEntryId}
+                          onDeleteEntry={handleDeleteEntryRequest}
+                          isDeleting={deletingEntryId === entry.id}
+                        />
+                      )
+                    })}
                   </div>
                 )}
               </AnimatedStateSwap>

@@ -8,6 +8,7 @@ import {
   buildGalleryStartStateRelations,
   buildGalleryStartStateSeries,
   buildGalleryTimelineRelations,
+  getGalleryMedalHuntSortRank,
   getGalleryMedalHuntStatus,
   getGalleryMedalHuntRecommendation,
   getSimilarGalleryEntries,
@@ -231,6 +232,36 @@ describe('UploadGalleryDisplayUtils', () => {
           moves: 33,
           time: 81,
         }),
+        createGalleryEntry('bronze-fast-target', {
+          sourceImage: 'source-bronze-fast',
+          previewImage: 'preview-bronze-fast',
+          moves: 40,
+          time: 100,
+        }),
+        createGalleryEntry('bronze-fast-attempt', {
+          sourceImage: 'source-bronze-fast',
+          previewImage: 'preview-bronze-fast',
+          challengeTargetId: 'bronze-fast-target',
+          challengeMedal: 'bronze',
+          assistanceMode: 'clean',
+          moves: 60,
+          time: 130,
+        }),
+        createGalleryEntry('bronze-slow-target', {
+          sourceImage: 'source-bronze-slow',
+          previewImage: 'preview-bronze-slow',
+          moves: 40,
+          time: 100,
+        }),
+        createGalleryEntry('bronze-slow-attempt', {
+          sourceImage: 'source-bronze-slow',
+          previewImage: 'preview-bronze-slow',
+          challengeTargetId: 'bronze-slow-target',
+          challengeMedal: 'bronze',
+          assistanceMode: 'clean',
+          moves: 50,
+          time: 135,
+        }),
         createGalleryEntry('gold-target', {
           sourceImage: 'source-gold',
           previewImage: 'preview-gold',
@@ -264,18 +295,22 @@ describe('UploadGalleryDisplayUtils', () => {
       ? getGalleryMedalHuntRecommendation(getGalleryMedalHuntStatus(silverEntry))
       : null
     ).toMatchObject({
-      label: 'Sehr nah am Upgrade',
+      label: 'Zeit: 1 Sek. schneller',
+      detail: 'Zuege: 1 Zug weniger',
       tone: 'near',
     })
     expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-medal'))).toHaveLength(1)
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-gold'))).toHaveLength(2)
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable'))).toHaveLength(3)
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-gold'))).toHaveLength(4)
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable'))).toHaveLength(4)
     expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'near-upgrade'))).toEqual([silverEntry])
     expect(sortGalleryDisplayEntries(entries, 'upgrade-potential').map((entry) => entry.motifId)).toEqual([
-      'source-gold',
-      'source-silver',
       'source-normal',
+      'source-bronze-fast',
+      'source-bronze-slow',
+      'source-silver',
+      'source-gold',
     ])
+    expect(getGalleryMedalHuntSortRank('bronze')).toBe(0)
   })
 
   it('beschreibt neue, offene und abgeschlossene Medaillen-Jagden verstaendlich', () => {

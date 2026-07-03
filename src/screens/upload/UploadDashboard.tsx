@@ -51,6 +51,7 @@ import type { GalleryReplayRequestHandler } from './galleryReplayRequest.ts'
 
 interface UploadDashboardProps {
   activeWindow: Exclude<UploadWorkspaceWindow, 'start'>
+  galleryResetRequestId?: number | null
   commandRequest?: UploadCommandRequest | null
   paletteStyle?: CSSProperties
   savedGames: SavedGameSummary[]
@@ -121,6 +122,7 @@ function getDashboardMetricIconName(label: string): UploadScreenIconName {
 
 export default function UploadDashboard({
   activeWindow,
+  galleryResetRequestId = null,
   commandRequest,
   paletteStyle,
   savedGames,
@@ -844,6 +846,9 @@ export default function UploadDashboard({
                       onReplayEntry={onReplayGalleryEntry}
                       onFetchRandomImage={onFetchRandomImage}
                       requestedTagFilterLabel={requestedGalleryTagFilterLabel}
+                      resetGalleryViewId={galleryResetRequestId}
+                      requestedMedalFilter={commandRequest?.medalFilter ?? null}
+                      requestedMedalFilterId={commandRequest?.medalFilter ? commandRequest.id : null}
                       requestedMedalHuntFilter={
                         commandRequest?.action === 'open-medal-hunt' ? 'upgradeable' : null
                       }
