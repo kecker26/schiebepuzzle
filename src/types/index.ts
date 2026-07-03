@@ -204,6 +204,9 @@ export interface SavedGameSummary {
   config: PuzzleConfig
   moves: number
   elapsedTime: number
+  runMetrics?: PuzzleRunMetrics
+  challengeTarget?: GalleryChallengeTarget | null
+  challengeMode?: ChallengeMode | null
   imageFingerprint?: string
   titleSource?: SavedGameTitleSource
   aiTitle?: SavedGameAiTitle

@@ -28,7 +28,6 @@ export type GalleryMedalHuntFilter =
   | 'no-medal'
   | 'no-gold'
   | 'upgradeable'
-  | 'near-upgrade'
 export type GallerySortOption =
   | 'latest'
   | 'oldest'
@@ -512,7 +511,6 @@ export const GALLERY_MEDAL_HUNT_FILTER_OPTIONS: GallerySelectOption<GalleryMedal
   { id: 'no-medal', label: 'Ohne Medaille' },
   { id: 'no-gold', label: 'Ohne Gold oder Diamant' },
   { id: 'upgradeable', label: 'Noch upgradefaehig' },
-  { id: 'near-upgrade', label: 'Nahe am naechsten Upgrade' },
 ]
 
 export const GALLERY_SORT_OPTIONS: GallerySelectOption<GallerySortOption>[] = [

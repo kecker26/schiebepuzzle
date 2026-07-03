@@ -104,6 +104,9 @@ interface UploadScreenProps {
 
 type WorkspaceNavFocusTarget = Exclude<UploadWorkspaceWindow, 'start'>
 type StartFocusTarget = 'primaryUploadCard' | WorkspaceNavFocusTarget
+interface UploadWindowChangeOptions {
+  resetGalleryView?: boolean
+}
 
 function hasDraggedFiles(dataTransfer: DataTransfer | null | undefined): boolean {
   if (!dataTransfer) return false
@@ -233,6 +236,7 @@ export default function UploadScreen({
   const [error, setError] = useState<string | null>(null)
   const [isDragActive, setIsDragActive] = useState(false)
   const [activeWindow, setActiveWindow] = useState<UploadWorkspaceWindow>('start')
+  const [galleryResetRequestId, setGalleryResetRequestId] = useState<number | null>(null)
   const [isWorkspaceExiting, setIsWorkspaceExiting] = useState(false)
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
   const [loadingSaveId, setLoadingSaveId] = useState<string | null>(null)
@@ -742,7 +746,10 @@ export default function UploadScreen({
     handleWindowChange('collections')
   }
 
-  const handleWindowChange = useCallback((window: UploadWorkspaceWindow) => {
+  const handleWindowChange = useCallback((
+    window: UploadWorkspaceWindow,
+    options: UploadWindowChangeOptions = {}
+  ) => {
     if (selectionImageRequestLockRef.current || isSelectionImageRequestBusy) return
 
     if (window === 'start') {
@@ -757,6 +764,15 @@ export default function UploadScreen({
 
     pendingStartFocusRef.current = null
     setIsWorkspaceExiting(false)
+    if (
+      window === 'gallery'
+      && (
+        options.resetGalleryView === true
+        || (options.resetGalleryView !== false && activeWindow !== 'gallery')
+      )
+    ) {
+      setGalleryResetRequestId((current) => (current ?? 0) + 1)
+    }
     setActiveWindow(window)
   }, [activeWindow, isSelectionImageRequestBusy, scheduleSelectionViewportAlignment])
 
@@ -963,13 +979,13 @@ export default function UploadScreen({
         handleWindowChange('stats')
         return
       case 'open-gallery':
-        handleWindowChange('gallery')
+        handleWindowChange('gallery', { resetGalleryView: true })
         return
       case 'open-medal-stats':
         handleWindowChange('stats')
         return
       case 'open-medal-hunt':
-        handleWindowChange('gallery')
+        handleWindowChange('gallery', { resetGalleryView: false })
         return
       case 'open-collections':
         handleWindowChange('collections')
@@ -985,7 +1001,7 @@ export default function UploadScreen({
           return
         }
 
-        handleWindowChange(commandRequest.window ?? 'start')
+        handleWindowChange(commandRequest.window ?? 'start', { resetGalleryView: false })
         return
       case 'export-backup':
         void handleExportBackupRequest()
@@ -1527,6 +1543,7 @@ export default function UploadScreen({
           {!isWorkspaceExiting && activeWindow !== 'start' && (
             <UploadDashboard
               activeWindow={activeWindow}
+              galleryResetRequestId={galleryResetRequestId}
               commandRequest={commandRequest}
               paletteStyle={paletteStyle}
               savedGames={savedGames}

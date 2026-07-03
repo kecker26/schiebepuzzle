@@ -80,7 +80,7 @@
 .start-screen-hero-panel {
   position: relative;
   display: grid;
-  gap: clamp(16px, 2vw, 22px);
+  gap: 12px;
   width: 100%;
   padding: clamp(18px, 2.2vw, 28px);
   border-radius: 30px;
@@ -115,6 +115,7 @@
   position: relative;
   display: grid;
   gap: 10px;
+  margin-bottom: clamp(4px, 1vw, 10px);
   max-width: 66ch;
   z-index: 1;
 }
@@ -276,6 +277,16 @@
   overflow-wrap: anywhere;
 }
 
+.start-screen-resume-medal-detail {
+  width: fit-content;
+  max-width: 100%;
+  color: color-mix(in srgb, var(--primary-color) 88%, var(--text-main));
+  font-size: 0.78rem;
+  line-height: 1.35;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
 .start-screen-resume-palette {
   display: inline-flex;
   align-items: center;
@@ -313,13 +324,16 @@
   position: relative;
   z-index: 1;
   padding-top: 2px;
+  display: grid;
+  gap: 12px;
 }
 
 .start-screen-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  align-items: center;
+  align-items: stretch;
+  width: 100%;
 }
 
 .start-screen-button {
@@ -334,6 +348,7 @@
   border-radius: 999px;
   padding: 11px 20px;
   min-width: 150px;
+  width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -409,6 +424,113 @@
   box-shadow: var(--secondary-shadow);
 }
 
+.start-screen-medal-hunt-button {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-size: 220px;
+  --glow-color-hover: color-mix(in srgb, var(--image-glow) 22%, transparent);
+  position: relative;
+  isolation: isolate;
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 28%, var(--secondary-border));
+  border-radius: 18px;
+  padding: 10px 13px;
+  min-width: min(100%, 270px);
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--image-glow) 52%, transparent) 0%, transparent 42%),
+    color-mix(in srgb, var(--surface-elevated) 72%, var(--image-accent-soft));
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 14px 28px color-mix(in srgb, var(--primary-color) 14%, transparent);
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+  overflow: hidden;
+}
+
+.start-screen-medal-hunt-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-size) circle at var(--glow-x) var(--glow-y),
+    var(--glow-color-hover),
+    transparent 62%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+}
+
+.start-screen-medal-hunt-button:hover::before,
+.start-screen-medal-hunt-button:focus-visible::before {
+  opacity: 1;
+}
+
+.start-screen-medal-hunt-button > * {
+  position: relative;
+  z-index: 1;
+}
+
+.start-screen-medal-hunt-button:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary-color) 48%, var(--secondary-border));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 18px 34px color-mix(in srgb, var(--primary-color) 20%, transparent);
+}
+
+.start-screen-medal-hunt-button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), 0 18px 34px color-mix(in srgb, var(--primary-color) 20%, transparent);
+}
+
+.start-screen-medal-hunt-emoji {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 13px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 24%, transparent);
+  background: color-mix(in srgb, var(--surface-soft) 74%, var(--image-accent-soft));
+  font-size: 1.25rem;
+}
+
+.start-screen-medal-hunt-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.start-screen-medal-hunt-copy strong {
+  font-size: 0.82rem;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.start-screen-medal-hunt-copy span {
+  color: var(--text-main);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  font-weight: 780;
+}
+
+.start-screen-medal-hunt-copy small {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
 .start-screen-button-secondary:hover {
   background: var(--secondary-bg-hover);
   box-shadow: var(--secondary-shadow-hover);
@@ -438,7 +560,11 @@
 .start-screen-progress-panel {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr);
+  grid-template-areas:
+    "stats shortcuts"
+    "medals medals"
+    "features features";
   gap: 12px;
   align-items: stretch;
   padding: 12px;
@@ -459,9 +585,84 @@
 }
 
 .start-screen-stat-row {
+  grid-area: stats;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.start-screen-medal-row {
+  grid-area: medals;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.start-screen-medal-chip {
+  appearance: none;
+  min-width: 58px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid color-mix(in srgb, var(--image-radiance-border) 54%, var(--secondary-border));
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, currentColor 16%, transparent) 0%, transparent 58%),
+    color-mix(in srgb, var(--surface-elevated) 68%, var(--image-accent-soft));
+  color: var(--text-main);
+  font: inherit;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 18px color-mix(in srgb, currentColor 8%, transparent);
+  transition: transform 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.start-screen-medal-chip.is-bronze {
+  color: #fb923c;
+}
+
+.start-screen-medal-chip.is-silver {
+  color: #cbd5e1;
+}
+
+.start-screen-medal-chip.is-gold {
+  color: #fbbf24;
+}
+
+.start-screen-medal-chip.is-diamond {
+  color: #67e8f9;
+}
+
+.start-screen-medal-chip.is-empty {
+  opacity: 0.58;
+}
+
+.start-screen-medal-chip:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, currentColor 46%, var(--secondary-border));
+}
+
+.start-screen-medal-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), 0 8px 18px color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.start-screen-medal-chip span {
+  font-size: 1.02rem;
+  line-height: 1;
+}
+
+.start-screen-medal-chip strong {
+  color: var(--text-main);
+  font-size: 0.86rem;
+  line-height: 1;
+  font-weight: 900;
 }
 
 .start-screen-stat-tile {
@@ -524,7 +725,9 @@
 }
 
 .start-screen-shortcuts {
-  min-width: min(248px, 28vw);
+  grid-area: shortcuts;
+  min-width: 0;
+  min-height: 108px;
   display: grid;
   align-content: center;
   gap: 8px;
@@ -572,7 +775,7 @@
 }
 
 .start-screen-feature-overview {
-  grid-column: 1 / -1;
+  grid-area: features;
   display: grid;
   gap: 10px;
   padding-top: 12px;
@@ -818,11 +1021,20 @@
 @media (max-width: 860px) {
   .start-screen-progress-panel {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "stats"
+      "shortcuts"
+      "medals"
+      "features";
+  }
+
+  .start-screen-medal-row {
+    grid-area: medals;
   }
 
   .start-screen-shortcuts {
-    min-width: 0;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: auto;
   }
 
   .start-screen-feature-list {
@@ -862,11 +1074,15 @@
   }
 
   .start-screen-actions {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
     width: 100%;
   }
 
   .start-screen-button {
+    width: 100%;
+  }
+
+  .start-screen-medal-hunt-button {
     width: 100%;
   }
 
@@ -876,6 +1092,11 @@
 
   .start-screen-stat-tile {
     min-height: 86px;
+  }
+
+  .start-screen-medal-chip {
+    flex: 1 1 0;
+    min-width: 68px;
   }
 
   .start-screen-shortcuts {

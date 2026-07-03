@@ -8,6 +8,7 @@ import {
   buildGalleryStartStateRelations,
   buildGalleryStartStateSeries,
   buildGalleryTimelineRelations,
+  getGalleryMedalHuntSortRank,
   getGalleryMedalHuntStatus,
   getGalleryMedalHuntRecommendation,
   getSimilarGalleryEntries,
@@ -37,6 +38,15 @@ function createGalleryEntry(
     ...overrides,
   }
 }
+
+const replaySetup = {
+  version: 1,
+  startBoard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  emptyIndex: 15,
+  shuffleMoves: ['tile-14'],
+  optimalStartMoveCount: 1,
+  optimalStartMoveCountKind: 'exact',
+} satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
 
 describe('UploadGalleryDisplayUtils', () => {
   it('verknuepft gleiche Motive ueber mehrere Schwierigkeitsstufen fuer Replay-Metadaten', () => {
@@ -231,6 +241,36 @@ describe('UploadGalleryDisplayUtils', () => {
           moves: 33,
           time: 81,
         }),
+        createGalleryEntry('bronze-fast-target', {
+          sourceImage: 'source-bronze-fast',
+          previewImage: 'preview-bronze-fast',
+          moves: 40,
+          time: 100,
+        }),
+        createGalleryEntry('bronze-fast-attempt', {
+          sourceImage: 'source-bronze-fast',
+          previewImage: 'preview-bronze-fast',
+          challengeTargetId: 'bronze-fast-target',
+          challengeMedal: 'bronze',
+          assistanceMode: 'clean',
+          moves: 60,
+          time: 130,
+        }),
+        createGalleryEntry('bronze-slow-target', {
+          sourceImage: 'source-bronze-slow',
+          previewImage: 'preview-bronze-slow',
+          moves: 40,
+          time: 100,
+        }),
+        createGalleryEntry('bronze-slow-attempt', {
+          sourceImage: 'source-bronze-slow',
+          previewImage: 'preview-bronze-slow',
+          challengeTargetId: 'bronze-slow-target',
+          challengeMedal: 'bronze',
+          assistanceMode: 'clean',
+          moves: 50,
+          time: 135,
+        }),
         createGalleryEntry('gold-target', {
           sourceImage: 'source-gold',
           previewImage: 'preview-gold',
@@ -240,6 +280,12 @@ describe('UploadGalleryDisplayUtils', () => {
           previewImage: 'preview-gold',
           challengeTargetId: 'gold-target',
           challengeMedal: 'gold',
+        }),
+        createGalleryEntry('bronze-candidate', {
+          sourceImage: 'source-bronze-candidate',
+          previewImage: 'preview-bronze-candidate',
+          assistanceMode: 'clean',
+          replaySetup,
         }),
         createGalleryEntry('normal-run', {
           sourceImage: 'source-normal',
@@ -264,18 +310,30 @@ describe('UploadGalleryDisplayUtils', () => {
       ? getGalleryMedalHuntRecommendation(getGalleryMedalHuntStatus(silverEntry))
       : null
     ).toMatchObject({
-      label: 'Sehr nah am Upgrade',
+      label: 'Zeit: 1 Sek. schneller',
+      detail: 'Zuege: 1 Zug weniger',
       tone: 'near',
     })
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-medal'))).toHaveLength(1)
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-gold'))).toHaveLength(2)
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable'))).toHaveLength(3)
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'near-upgrade'))).toEqual([silverEntry])
+    const bronzeCandidate = entries.find((entry) => entry.motifId === 'source-bronze-candidate')
+    expect(bronzeCandidate).toBeDefined()
+    expect(bronzeCandidate ? getGalleryMedalHuntStatus(bronzeCandidate) : null).toMatchObject({
+      bestMedal: null,
+      nextMedal: 'bronze',
+      upgradeable: true,
+      nearUpgrade: true,
+    })
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-medal'))).toHaveLength(2)
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-gold'))).toHaveLength(5)
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable'))).toHaveLength(5)
     expect(sortGalleryDisplayEntries(entries, 'upgrade-potential').map((entry) => entry.motifId)).toEqual([
-      'source-gold',
+      'source-bronze-candidate',
+      'source-bronze-fast',
+      'source-bronze-slow',
       'source-silver',
+      'source-gold',
       'source-normal',
     ])
+    expect(getGalleryMedalHuntSortRank('bronze')).toBe(0)
   })
 
   it('beschreibt neue, offene und abgeschlossene Medaillen-Jagden verstaendlich', () => {

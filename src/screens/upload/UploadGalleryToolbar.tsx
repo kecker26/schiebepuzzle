@@ -94,13 +94,11 @@ export default function UploadGalleryToolbar({
   const medalHuntSummary = medalHuntFilter !== 'all'
     ? {
         title: activeMedalHuntOption?.label ?? 'Medaillen-Jagd',
-        detail: medalHuntFilter === 'near-upgrade'
-          ? 'Die Karten zeigen deine aussichtsreichsten direkten Upgrades.'
-          : medalHuntFilter === 'no-medal'
-            ? 'Diese Motive warten noch auf ihre erste Challenge-Medaille.'
-            : medalHuntFilter === 'no-gold'
-              ? 'Diese Motive haben noch keine Gold- oder Diamant-Medaille.'
-              : 'Diese Motive besitzen noch eine erreichbare naechste Medaillenstufe.',
+        detail: medalHuntFilter === 'no-medal'
+          ? 'Diese Motive warten noch auf ihre erste Challenge-Medaille.'
+          : medalHuntFilter === 'no-gold'
+            ? 'Diese Motive haben noch keine Gold- oder Diamant-Medaille.'
+            : 'Diese Motive besitzen noch eine erreichbare naechste Medaillenstufe.',
       }
     : isUpgradePotentialSort
       ? {

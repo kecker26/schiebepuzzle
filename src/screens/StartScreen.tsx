@@ -11,12 +11,26 @@ import AnimatedStaggerGroup from '../motion/AnimatedStaggerGroup.tsx'
 import StartScreenIcon from '../components/StartScreenIcon.tsx'
 import StartScreenAnimatedBoard from '../components/StartScreenAnimatedBoard.tsx'
 import { shouldPreserveNativeContextMenu } from '../utils/contextWindow.ts'
-import type { ImageThemePalette } from '../types/index.ts'
+import type { ChallengeMedal, ImageThemePalette } from '../types/index.ts'
 import { useUploadImagePalette } from './upload/uploadImagePalette.ts'
+import { formatChallengeMedalLabel, getChallengeMedalEmoji } from '../utils/galleryChallenge.ts'
+
+interface StartScreenMedalCount {
+  medal: ChallengeMedal
+  count: number
+}
+
+interface StartScreenMedalHuntAction {
+  medal: ChallengeMedal | null
+  label: string
+  detail: string
+}
 
 interface StartScreenProps {
   onStart: () => void
   onResumeSession?: () => void
+  onOpenGalleryMedalFilter?: (medal: ChallengeMedal) => void
+  onOpenMedalHuntRecommendation?: () => void
   onQuit: () => void
   onOpenHelp: () => void
   quitHint: string | null
@@ -26,6 +40,9 @@ interface StartScreenProps {
   registerAppContextMenuHandler: (handler: AppContextMenuHandler | null) => void
   resumeActionLabel?: string | null
   resumeActionDetail?: string | null
+  resumeActionMedalDetail?: string | null
+  medalCounts?: StartScreenMedalCount[]
+  medalHuntAction?: StartScreenMedalHuntAction | null
   savedGamesCount: number
   solvedCount: number
   galleryCount: number
@@ -159,6 +176,8 @@ function StartScreenFallbackIllustration() {
 export default function StartScreen({
   onStart,
   onResumeSession,
+  onOpenGalleryMedalFilter,
+  onOpenMedalHuntRecommendation,
   onQuit,
   onOpenHelp,
   quitHint,
@@ -168,6 +187,9 @@ export default function StartScreen({
   registerAppContextMenuHandler,
   resumeActionLabel = null,
   resumeActionDetail = null,
+  resumeActionMedalDetail = null,
+  medalCounts = [],
+  medalHuntAction = null,
   savedGamesCount,
   solvedCount,
   galleryCount,
@@ -176,6 +198,8 @@ export default function StartScreen({
   const resumeDetailId = useId()
   const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null)
   const hasResumeAction = Boolean(onResumeSession && resumeActionLabel)
+  const hasMedalCounts = medalCounts.length > 0
+  const hasMedalHuntAction = Boolean(medalHuntAction && onOpenMedalHuntRecommendation)
   const { activePalette, paletteStyle } = useUploadImagePalette({
     paletteSource: startPaletteSource ?? heroImage,
     storedPalette: startPalette,
@@ -314,6 +338,9 @@ export default function StartScreen({
                   {resumeActionDetail && (
                     <span id={resumeDetailId} className="start-screen-resume-detail">{resumeActionDetail}</span>
                   )}
+                  {resumeActionMedalDetail && (
+                    <span className="start-screen-resume-medal-detail">{resumeActionMedalDetail}</span>
+                  )}
                 </span>
                 {activePalette && (
                   <span className="start-screen-resume-palette" aria-hidden="true">
@@ -326,6 +353,27 @@ export default function StartScreen({
             )}
 
             <div className="start-screen-actions-block">
+              {hasMedalHuntAction && medalHuntAction && (
+                <AnimatedButton
+                  className="start-screen-medal-hunt-button"
+                  onClick={onOpenMedalHuntRecommendation}
+                  data-app-tooltip="Oeffnet die Galerie gefiltert nach upgradefaehigen Motiven und sortiert nach Upgrade-Potenzial."
+                  data-app-tooltip-align="start"
+                  reveal
+                  revealLevel="subtle"
+                >
+                  <span className="start-screen-medal-hunt-emoji" aria-hidden="true">
+                    {medalHuntAction.medal ? getChallengeMedalEmoji(medalHuntAction.medal) : '*'}
+                  </span>
+                  <span className="start-screen-medal-hunt-copy">
+                    <strong>Medaillen-Jagd</strong>
+                    <span>
+                      {medalHuntAction.label}
+                    </span>
+                    <small>{medalHuntAction.detail}</small>
+                  </span>
+                </AnimatedButton>
+              )}
               <AnimatedStaggerGroup
                 className="start-screen-actions"
                 level="subtle"
@@ -380,6 +428,28 @@ export default function StartScreen({
                 </AnimatedReveal>
               ))}
             </AnimatedStaggerGroup>
+
+            {hasMedalCounts && (
+              <div className="start-screen-medal-row" aria-label="Challenge-Medaillen nach bester Motiv-Stufe">
+                {medalCounts.map((item) => {
+                  const label = formatChallengeMedalLabel(item.medal)
+                  return (
+                    <button
+                      key={item.medal}
+                      type="button"
+                      className={`start-screen-medal-chip is-${item.medal}${item.count === 0 ? ' is-empty' : ''}`}
+                      onClick={() => onOpenGalleryMedalFilter?.(item.medal)}
+                      aria-label={`Galerie nach ${label} filtern: ${item.count} ${item.count === 1 ? 'Motiv' : 'Motive'}`}
+                      data-app-tooltip={`Galerie mit ${label}-Motiven oeffnen.`}
+                      data-app-tooltip-align="start"
+                    >
+                      <span aria-hidden="true">{getChallengeMedalEmoji(item.medal)}</span>
+                      <strong>{item.count}</strong>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             <div className="start-screen-shortcuts" aria-label="Shortcuts">
               <div className="start-screen-shortcut">

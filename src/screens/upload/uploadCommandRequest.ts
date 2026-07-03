@@ -1,4 +1,5 @@
 import type { HistoryFilter, UploadWorkspaceWindow } from './uploadUtils.ts'
+import type { GalleryMedalFilter } from './UploadGalleryDisplayUtils.ts'
 
 export type UploadCommandRequestAction =
   | 'focus-start'
@@ -17,4 +18,5 @@ export interface UploadCommandRequest {
   action: UploadCommandRequestAction
   window?: UploadWorkspaceWindow
   historyFilter?: HistoryFilter
+  medalFilter?: GalleryMedalFilter
 }

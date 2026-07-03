@@ -303,6 +303,9 @@ interface SaveSummary {
   config: StoredPuzzleConfig
   moves: number
   elapsedTime: number
+  runMetrics?: StoredRunMetrics
+  challengeTarget?: StoredGalleryChallengeTarget | null
+  challengeMode?: 'soft' | 'qualification' | 'medal' | null
   imageFingerprint?: string
   titleSource?: StoredSaveTitleSource
   aiTitle?: StoredSaveAiTitle
@@ -2096,6 +2099,9 @@ function toSummary(save: Pick<StoredSaveFile, 'id' | 'name' | 'createdAt' | 'upd
     config: save.config,
     moves: sanitizeCount(save.progress?.moveCount),
     elapsedTime: sanitizeCount(save.progress?.elapsedTime),
+    ...(save.progress?.runMetrics ? { runMetrics: save.progress.runMetrics } : {}),
+    ...(save.progress?.challengeTarget ? { challengeTarget: save.progress.challengeTarget as StoredGalleryChallengeTarget } : {}),
+    ...(save.progress?.challengeMode ? { challengeMode: save.progress.challengeMode as 'soft' | 'qualification' | 'medal' } : {}),
     ...(imageFingerprint ? { imageFingerprint } : {}),
     ...(titleSource ? { titleSource } : {}),
     ...(aiTitle ? { aiTitle } : {}),
