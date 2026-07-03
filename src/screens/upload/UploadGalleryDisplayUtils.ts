@@ -187,6 +187,10 @@ function formatMedalHuntGap(status: GalleryMedalHuntStatus): string | null {
   return `${formatMissingTime(status.missingTimeSeconds)} / ${formatMissingMoves(status.missingMoves)}`
 }
 
+function hasBronzeChallengeCandidate(entries: SolvedGalleryEntry[]): boolean {
+  return entries.some(isGalleryChallengeTargetEligible)
+}
+
 export function getGalleryMedalHuntSortRank(medal: ChallengeMedal | null): number {
   return medal ? MEDAL_HUNT_SORT_RANK[medal] ?? Number.POSITIVE_INFINITY : Number.POSITIVE_INFINITY
 }
@@ -197,7 +201,8 @@ export function getGalleryMedalHuntStatus(
   const allEntries = entry.motifReplaySummary.allEntries
   const progress = getChallengeMedalProgress(allEntries)
   const bestMedal = progress.currentMedal
-  const nextMedal = progress.nextMedal
+  const hasBronzeCandidate = !bestMedal && hasBronzeChallengeCandidate(allEntries)
+  const nextMedal = bestMedal || hasBronzeCandidate ? progress.nextMedal : null
   const hasStarted = bestMedal !== null
   const upgradeable = nextMedal !== null
   let proximityScore: number | null = null
@@ -224,7 +229,7 @@ export function getGalleryMedalHuntStatus(
     nextMedal,
     hasStarted,
     upgradeable,
-    nearUpgrade: proximityScore !== null && proximityScore <= 0.2,
+    nearUpgrade: hasBronzeCandidate || (proximityScore !== null && proximityScore <= 0.2),
     proximityScore,
     missingTimeSeconds,
     missingMoves,
@@ -241,8 +246,7 @@ export function matchesGalleryMedalHuntFilter(
   if (filter === 'no-medal') return !status.hasStarted
   if (filter === 'no-gold') return status.bestMedal === null
     || getChallengeMedalRank(status.bestMedal) < getChallengeMedalRank('gold')
-  if (filter === 'near-upgrade') return status.nearUpgrade
-  return status.hasStarted && status.upgradeable
+  return status.upgradeable
 }
 
 export function getGalleryMedalHuntRecommendation(

@@ -39,6 +39,15 @@ function createGalleryEntry(
   }
 }
 
+const replaySetup = {
+  version: 1,
+  startBoard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  emptyIndex: 15,
+  shuffleMoves: ['tile-14'],
+  optimalStartMoveCount: 1,
+  optimalStartMoveCountKind: 'exact',
+} satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
+
 describe('UploadGalleryDisplayUtils', () => {
   it('verknuepft gleiche Motive ueber mehrere Schwierigkeitsstufen fuer Replay-Metadaten', () => {
     const entries = buildGalleryDisplayEntries(
@@ -272,6 +281,12 @@ describe('UploadGalleryDisplayUtils', () => {
           challengeTargetId: 'gold-target',
           challengeMedal: 'gold',
         }),
+        createGalleryEntry('bronze-candidate', {
+          sourceImage: 'source-bronze-candidate',
+          previewImage: 'preview-bronze-candidate',
+          assistanceMode: 'clean',
+          replaySetup,
+        }),
         createGalleryEntry('normal-run', {
           sourceImage: 'source-normal',
           previewImage: 'preview-normal',
@@ -299,16 +314,24 @@ describe('UploadGalleryDisplayUtils', () => {
       detail: 'Zuege: 1 Zug weniger',
       tone: 'near',
     })
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-medal'))).toHaveLength(1)
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-gold'))).toHaveLength(4)
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable'))).toHaveLength(4)
-    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'near-upgrade'))).toEqual([silverEntry])
+    const bronzeCandidate = entries.find((entry) => entry.motifId === 'source-bronze-candidate')
+    expect(bronzeCandidate).toBeDefined()
+    expect(bronzeCandidate ? getGalleryMedalHuntStatus(bronzeCandidate) : null).toMatchObject({
+      bestMedal: null,
+      nextMedal: 'bronze',
+      upgradeable: true,
+      nearUpgrade: true,
+    })
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-medal'))).toHaveLength(2)
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'no-gold'))).toHaveLength(5)
+    expect(entries.filter((entry) => matchesGalleryMedalHuntFilter(entry, 'upgradeable'))).toHaveLength(5)
     expect(sortGalleryDisplayEntries(entries, 'upgrade-potential').map((entry) => entry.motifId)).toEqual([
-      'source-normal',
+      'source-bronze-candidate',
       'source-bronze-fast',
       'source-bronze-slow',
       'source-silver',
       'source-gold',
+      'source-normal',
     ])
     expect(getGalleryMedalHuntSortRank('bronze')).toBe(0)
   })

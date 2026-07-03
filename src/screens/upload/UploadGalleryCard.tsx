@@ -215,9 +215,11 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
     onCollectEntry?.(entry)
   }, [entry, onCollectEntry])
 
+  const isMedalHuntCompact = showMedalHuntHint
+
   return (
     <article
-      className="gallery-card"
+      className={`gallery-card${isMedalHuntCompact ? ' is-medal-hunt-compact' : ''}`}
       style={cardPaletteStyle}
       data-image-mood={activePalette?.mood}
       data-image-palette-source={activePalette?.source}
@@ -306,14 +308,17 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             <span className="gallery-card-medal-hunt-icon" aria-hidden="true">
               {medalHuntStatus.nextMedal ? getChallengeMedalEmoji(medalHuntStatus.nextMedal) : '\u2713'}
             </span>
-            <span className="gallery-card-medal-hunt-copy">
+            <span className={`gallery-card-medal-hunt-copy${medalHuntStatus.nextMedal ? ' has-medal-target' : ''}`}>
               <small>Jagd-Ziel</small>
-              <strong>
-                {medalHuntStatus.nextMedal
-                  ? `${formatChallengeMedalLabel(medalHuntStatus.nextMedal)}: ${medalHuntRecommendation.label}`
-                  : medalHuntRecommendation.label}
+              <strong className="gallery-card-medal-hunt-title">
+                {medalHuntStatus.nextMedal ? (
+                  <span className="gallery-card-medal-hunt-medal">
+                    {formatChallengeMedalLabel(medalHuntStatus.nextMedal)}
+                  </span>
+                ) : null}
+                <span className="gallery-card-medal-hunt-goal">{medalHuntRecommendation.label}</span>
               </strong>
-              <span>{medalHuntRecommendation.detail}</span>
+              <span className="gallery-card-medal-hunt-detail">{medalHuntRecommendation.detail}</span>
             </span>
           </div>
         ) : null}
@@ -346,7 +351,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
               </div>
             ) : null}
 
-            {collectionSuggestions.length > 0 ? (
+            {!isMedalHuntCompact && collectionSuggestions.length > 0 ? (
               <div className="gallery-card-ai-suggestions">
                 {collectionSuggestions.map(({ reason, collection, source }) => {
                   if (!collection) return null
@@ -405,38 +410,42 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             <UploadScreenIcon name="playCircle" className="gallery-card-action-icon" />
             <span>Details</span>
           </button>
-          <button
-            type="button"
-            className="secondary"
-            data-gallery-action="collect"
-            data-gallery-entry-id={entry.id}
-            {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
-            onClick={handleCollect}
-            onKeyDown={handleActionKeyDown}
-            disabled={isDeleting || !onCollectEntry}
-            aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} zu einer Sammlung hinzufuegen`}
-            data-app-tooltip="Motiv zu einer bestehenden oder neuen Sammlung hinzufuegen."
-            data-app-tooltip-position="top"
-          >
-            <UploadScreenIcon name="folderHeart" className="gallery-card-action-icon" />
-            <span>Sammeln</span>
-          </button>
-          <button
-            type="button"
-            className="secondary gallery-card-delete-button"
-            data-gallery-action="delete"
-            data-gallery-entry-id={entry.id}
-            {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
-            onClick={handleDelete}
-            onKeyDown={handleActionKeyDown}
-            disabled={isDeleting}
-            aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} loeschen`}
-            data-app-tooltip="Galerie-Eintrag aus der lokalen Galerie loeschen."
-            data-app-tooltip-position="top"
-          >
-            <UploadScreenIcon name="trash" className="gallery-card-action-icon" />
-            <span>{isDeleting ? <BusyIndicator label="Loesche ..." /> : 'Loeschen'}</span>
-          </button>
+          {!isMedalHuntCompact ? (
+            <>
+              <button
+                type="button"
+                className="secondary"
+                data-gallery-action="collect"
+                data-gallery-entry-id={entry.id}
+                {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
+                onClick={handleCollect}
+                onKeyDown={handleActionKeyDown}
+                disabled={isDeleting || !onCollectEntry}
+                aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} zu einer Sammlung hinzufuegen`}
+                data-app-tooltip="Motiv zu einer bestehenden oder neuen Sammlung hinzufuegen."
+                data-app-tooltip-position="top"
+              >
+                <UploadScreenIcon name="folderHeart" className="gallery-card-action-icon" />
+                <span>Sammeln</span>
+              </button>
+              <button
+                type="button"
+                className="secondary gallery-card-delete-button"
+                data-gallery-action="delete"
+                data-gallery-entry-id={entry.id}
+                {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-card' }}
+                onClick={handleDelete}
+                onKeyDown={handleActionKeyDown}
+                disabled={isDeleting}
+                aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} loeschen`}
+                data-app-tooltip="Galerie-Eintrag aus der lokalen Galerie loeschen."
+                data-app-tooltip-position="top"
+              >
+                <UploadScreenIcon name="trash" className="gallery-card-action-icon" />
+                <span>{isDeleting ? <BusyIndicator label="Loesche ..." /> : 'Loeschen'}</span>
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
     </article>

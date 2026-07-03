@@ -170,6 +170,7 @@ export default function UploadDashboard({
   const [statsViewReloadKey, setStatsViewReloadKey] = useState(0)
   const [statsVisualView, setStatsVisualView] = useState<VisualStatsView>('overview')
   const [requestedGalleryTagFilterLabel, setRequestedGalleryTagFilterLabel] = useState<string | null>(null)
+  const [consumedGalleryCommandRequestId, setConsumedGalleryCommandRequestId] = useState<number | null>(null)
   const startNavButtonRef = useRef<HTMLButtonElement>(null)
   const savedGamesNavButtonRef = useRef<HTMLButtonElement>(null)
   const statsNavButtonRef = useRef<HTMLButtonElement>(null)
@@ -209,6 +210,9 @@ export default function UploadDashboard({
   const isStatsWindow = activeWindow === 'stats'
   const isGalleryWindow = activeWindow === 'gallery'
   const isCollectionsWindow = activeWindow === 'collections'
+  const galleryCommandRequest = isGalleryWindow && commandRequest?.id !== consumedGalleryCommandRequestId
+    ? commandRequest
+    : null
   const hasGalleryEntries = galleryEntriesCount > 0
   const shouldReduceMotion = useReducedMotionPreference()
   const staggerItemVariants = getStaggerItemVariants(shouldReduceMotion)
@@ -228,6 +232,18 @@ export default function UploadDashboard({
       setStatsVisualView('medals')
     }
   }, [commandRequest])
+
+  useEffect(() => {
+    if (!isGalleryWindow || !galleryCommandRequest) return
+    if (
+      galleryCommandRequest.action !== 'open-gallery'
+      && galleryCommandRequest.action !== 'open-medal-hunt'
+    ) {
+      return
+    }
+
+    setConsumedGalleryCommandRequestId(galleryCommandRequest.id)
+  }, [galleryCommandRequest, isGalleryWindow])
   const handleEditGalleryEntryTags = useCallback(async (
     entryIds: string[],
     add: string[] = [],
@@ -847,13 +863,13 @@ export default function UploadDashboard({
                       onFetchRandomImage={onFetchRandomImage}
                       requestedTagFilterLabel={requestedGalleryTagFilterLabel}
                       resetGalleryViewId={galleryResetRequestId}
-                      requestedMedalFilter={commandRequest?.medalFilter ?? null}
-                      requestedMedalFilterId={commandRequest?.medalFilter ? commandRequest.id : null}
+                      requestedMedalFilter={galleryCommandRequest?.medalFilter ?? null}
+                      requestedMedalFilterId={galleryCommandRequest?.medalFilter ? galleryCommandRequest.id : null}
                       requestedMedalHuntFilter={
-                        commandRequest?.action === 'open-medal-hunt' ? 'upgradeable' : null
+                        galleryCommandRequest?.action === 'open-medal-hunt' ? 'upgradeable' : null
                       }
                       requestedMedalHuntFilterId={
-                        commandRequest?.action === 'open-medal-hunt' ? commandRequest.id : null
+                        galleryCommandRequest?.action === 'open-medal-hunt' ? galleryCommandRequest.id : null
                       }
                       onDeleteEntries={onDeleteGalleryEntries}
                       onUpdateTags={onUpdateGalleryTags}

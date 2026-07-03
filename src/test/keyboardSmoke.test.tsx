@@ -1399,15 +1399,17 @@ describe('keyboard smoke tests', () => {
     let huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Jagd' })
     let sortSelect = screen.getByRole('combobox', { name: 'Sortierung' })
 
-    fireEvent.change(huntSelect, { target: { value: 'near-upgrade' } })
-    await waitFor(() => {
-      expect(screen.getByText('1 von 2 Motiven sichtbar')).toBeTruthy()
-      expect(screen.getByText('Medaillen-Jagd aktiv')).toBeTruthy()
-      expect(screen.getByText('Gold: Sehr nah am Upgrade')).toBeTruthy()
-    })
+    expect(Array.from((huntSelect as HTMLSelectElement).options).map((option) => option.value)).not.toContain('near-upgrade')
 
     huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Jagd' })
     fireEvent.change(huntSelect, { target: { value: 'upgradeable' } })
+    await waitFor(() => {
+      expect(screen.getByText('1 von 2 Motiven sichtbar')).toBeTruthy()
+      expect(screen.getByText('Medaillen-Jagd aktiv')).toBeTruthy()
+    })
+
+    huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Jagd' })
+    fireEvent.change(huntSelect, { target: { value: 'all' } })
     await waitFor(() => {
       expect(screen.getByText('2 von 2 Motiven sichtbar')).toBeTruthy()
     })
