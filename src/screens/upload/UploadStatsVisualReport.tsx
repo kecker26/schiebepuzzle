@@ -248,6 +248,7 @@ interface TrendMedalMarker {
 interface TrendReferenceStats {
   best: number | null
   median: number | null
+  worst: number | null
 }
 
 interface TrendReferenceDisplay {
@@ -1448,7 +1449,7 @@ function getTrendReferenceStats(
   seriesKey: string | null
 ): TrendReferenceStats {
   if (!seriesKey) {
-    return { best: null, median: null }
+    return { best: null, median: null, worst: null }
   }
 
   const values = points
@@ -1457,12 +1458,13 @@ function getTrendReferenceStats(
     .filter((value): value is number => value !== null)
 
   if (values.length === 0) {
-    return { best: null, median: null }
+    return { best: null, median: null, worst: null }
   }
 
   return {
     best: Math.min(...values),
     median: calculateMedian(values),
+    worst: Math.max(...values),
   }
 }
 
@@ -1474,8 +1476,8 @@ function getTrendReferenceDisplay(
     return { shouldMerge: false }
   }
 
-  const domainMinimum = Math.min(...visibleValues, stats.best, stats.median)
-  const domainMaximum = Math.max(...visibleValues, stats.best, stats.median)
+  const domainMinimum = Math.min(...visibleValues, stats.best, stats.median, stats.worst ?? stats.median)
+  const domainMaximum = Math.max(...visibleValues, stats.best, stats.median, stats.worst ?? stats.median)
   const domainRange = domainMaximum - domainMinimum
   const renderedDistance = domainRange === 0
     ? 0
@@ -1483,6 +1485,37 @@ function getTrendReferenceDisplay(
   const shouldMerge = renderedDistance <= TREND_REFERENCE_LABEL_COLLISION_DISTANCE
 
   return { shouldMerge }
+}
+
+function formatMergedTrendReferenceLabel(
+  stats: TrendReferenceStats,
+  formatter: (value: unknown) => string
+): string {
+  if (stats.best === null || stats.median === null) return ''
+
+  if (stats.best === stats.median) {
+    const label = stats.worst === stats.best
+      ? 'Bestwert, Median & Hoechstwert'
+      : 'Bestwert & Median'
+
+    return `${label} ${formatter(stats.best)}`
+  }
+
+  return `Bestwert ${formatter(stats.best)} / Median ${formatter(stats.median)}`
+}
+
+function formatMedianTrendReferenceLabel(
+  stats: TrendReferenceStats,
+  formatter: (value: unknown) => string
+): string {
+  if (stats.median === null) return ''
+
+  const label = stats.worst === stats.median ? 'Median & Hoechstwert' : 'Median'
+  return `${label} ${formatter(stats.median)}`
+}
+
+function shouldRenderSeparateWorstTrendReference(stats: TrendReferenceStats): boolean {
+  return stats.worst !== null && stats.worst !== stats.best && stats.worst !== stats.median
 }
 
 function getTrendValueFormatter(metric: TrendMetric): (value: unknown) => string {
@@ -1511,8 +1544,27 @@ function formatTrendDelta(fromValue: number | null, toValue: number | null, metr
   return `${Math.abs(delta)} Aktionen ${delta < 0 ? 'weniger' : 'mehr'}`
 }
 
-function getTrendDomain(): [number | string, number | string] {
-  return ['auto', 'auto']
+function getTrendDomain(values: number[], referenceStats: TrendReferenceStats): [number | string, number | string] {
+  const referenceValues = [referenceStats.best, referenceStats.median, referenceStats.worst]
+    .filter((value): value is number => value !== null)
+  const domainValues = [...values, ...referenceValues]
+
+  if (domainValues.length === 0) return ['auto', 'auto']
+
+  const minimum = Math.min(...domainValues)
+  const maximum = Math.max(...domainValues)
+
+  if (minimum === maximum) {
+    const padding = Math.max(1, Math.ceil(maximum * 0.12))
+    return [Math.max(0, minimum - padding), maximum + padding]
+  }
+
+  const padding = Math.max(1, Math.ceil((maximum - minimum) * 0.12))
+
+  return [
+    Math.max(0, Math.floor(minimum - padding)),
+    Math.ceil(maximum + padding),
+  ]
 }
 
 function buildKpiCards(
@@ -1808,9 +1860,14 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
   const point = chartPoint?.source ?? null
   if (!point) return null
 
-  const formatter = getTrendValueFormatter(metric)
-  const metricValue = getTrendMetricValue(point, metric)
   const movingAverage = chartPoint?.movingAverage ?? null
+  const activeColor = visiblePayload[0]?.color ?? 'currentColor'
+  const primaryMetricRow = metric === 'time'
+    ? { label: 'Zeit', value: formatOptionalDuration(point.time) }
+    : { label: 'Aktionen', value: formatOptionalMoves(point.actions) }
+  const secondaryMetricRow = metric === 'time'
+    ? { label: 'Aktionen', value: formatOptionalMoves(point.actions) }
+    : { label: 'Zeit', value: formatOptionalDuration(point.time) }
 
   return (
     <CursorTooltipPortal active>
@@ -1826,13 +1883,14 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
         ) : null}
         <div className="stats-recharts-tooltip-list">
           <span>
-            <i aria-hidden="true" style={{ backgroundColor: visiblePayload[0]?.color ?? 'currentColor' }} />
-            {metric === 'time' ? 'Zeit' : 'Aktionen'}: {formatter(metricValue)}
+            <i aria-hidden="true" style={{ backgroundColor: activeColor }} />
+            {primaryMetricRow.label}: {primaryMetricRow.value}
           </span>
+          <span>{secondaryMetricRow.label}: {secondaryMetricRow.value}</span>
           {movingAverage !== null ? (
             <span>5er-Trend: {formatTrendMovingAverage(movingAverage, metric)}</span>
           ) : null}
-          <span>Aktionen: {formatOptionalMoves(point.actions)}</span>
+          <span>Netto-Zuege: {formatOptionalMoves(point.moves)}</span>
           <span>Korrekturen: {formatExtraMoves(point.corrections)}</span>
         </div>
         <small>
@@ -2034,17 +2092,6 @@ export default function UploadStatsVisualReport({
     () => buildTrendPoints(rangedTrendHistory, trendMedalsByCompletionId),
     [rangedTrendHistory, trendMedalsByCompletionId]
   )
-  const trendSeriesChartPoints = useMemo(
-    () => buildTrendSeriesChartPoints(trendPoints, trendMetric),
-    [trendMetric, trendPoints]
-  )
-  const trendTickLabels = useMemo(
-    () => new Map(trendPoints.map((point) => [point.index, getTrendAxisLabel(point, trendPoints.length)])),
-    [trendPoints]
-  )
-  const trendTicks = useMemo(() => getTrendTicks(trendPoints), [trendPoints])
-  const trendXAxisDomain = useMemo(() => getTrendAxisDomain(trendPoints), [trendPoints])
-  const trendAxisSummary = useMemo(() => getTrendAxisSummary(trendPoints), [trendPoints])
   const assistanceSummary = useMemo(
     () => getDerivedAssistanceSummary(stats, completionHistory),
     [completionHistory, stats]
@@ -2077,7 +2124,30 @@ export default function UploadStatsVisualReport({
     ? focusedTrendDifficultyKey
     : null
   const focusedTrendSeries = visibleTrendSeries.find((series) => series.key === effectiveFocusedTrendKey) ?? null
-  const movingAverageCandidateSeries = focusedTrendSeries ? [focusedTrendSeries] : visibleTrendSeries
+  const trendChartPoints = useMemo(
+    () => {
+      if (effectiveFocusedTrendKey === null) return trendPoints
+
+      return buildTrendPoints(
+        rangedTrendHistory.filter((entry) => getCompletionDifficultyKey(entry) === effectiveFocusedTrendKey),
+        trendMedalsByCompletionId
+      )
+    },
+    [effectiveFocusedTrendKey, rangedTrendHistory, trendMedalsByCompletionId, trendPoints]
+  )
+  const trendChartSeries = focusedTrendSeries ? [focusedTrendSeries] : visibleTrendSeries
+  const trendSeriesChartPoints = useMemo(
+    () => buildTrendSeriesChartPoints(trendChartPoints, trendMetric),
+    [trendChartPoints, trendMetric]
+  )
+  const trendTickLabels = useMemo(
+    () => new Map(trendChartPoints.map((point) => [point.index, getTrendAxisLabel(point, trendChartPoints.length)])),
+    [trendChartPoints]
+  )
+  const trendTicks = useMemo(() => getTrendTicks(trendChartPoints), [trendChartPoints])
+  const trendXAxisDomain = useMemo(() => getTrendAxisDomain(trendChartPoints), [trendChartPoints])
+  const trendAxisSummary = useMemo(() => getTrendAxisSummary(trendChartPoints), [trendChartPoints])
+  const movingAverageCandidateSeries = trendChartSeries
   const canShowMovingAverage = movingAverageCandidateSeries.some((series) =>
     (trendSeriesChartPoints[series.key] ?? []).some((point) => point.movingAverage !== null)
   )
@@ -2162,11 +2232,13 @@ export default function UploadStatsVisualReport({
     () => buildFavoriteDifficultyData(solvedDifficultyRows, favoriteDifficultyKey, trendSeriesColorMap),
     [favoriteDifficultyKey, solvedDifficultyRows, trendSeriesColorMap]
   )
-  const focusedTrendStats = getTrendReferenceStats(trendPoints, trendMetric, focusedTrendSeries?.key ?? null)
-  const visibleTrendValues = visibleTrendSeries.flatMap((series) =>
+  const focusedTrendStats = getTrendReferenceStats(trendChartPoints, trendMetric, focusedTrendSeries?.key ?? null)
+  const visibleTrendValues = trendChartSeries.flatMap((series) =>
     (trendSeriesChartPoints[series.key] ?? []).map((point) => point.value)
   )
-  const medalTrendMarkers = visibleTrendSeries.flatMap<TrendMedalMarker>((series) =>
+  const trendYAxisDomain = getTrendDomain(visibleTrendValues, focusedTrendStats)
+  const hasTrendChartData = trendChartSeries.some((series) => (trendSeriesChartPoints[series.key] ?? []).length > 0)
+  const medalTrendMarkers = trendChartSeries.flatMap<TrendMedalMarker>((series) =>
     (trendSeriesChartPoints[series.key] ?? [])
       .filter((point) => point.source.challengeMedal !== null)
       .map((point) => ({
@@ -2179,10 +2251,10 @@ export default function UploadStatsVisualReport({
   const focusedTrendReferenceDisplay = getTrendReferenceDisplay(focusedTrendStats, visibleTrendValues)
   const trendFormatter = getTrendValueFormatter(trendMetric)
   const selectedTrend = TREND_METRICS.find((metric) => metric.id === trendMetric) ?? TREND_METRICS[0]
-  const compactTrendDelta = trendPoints.length >= 2 && trendPoints.length <= 3
+  const compactTrendDelta = trendChartPoints.length >= 2 && trendChartPoints.length <= 3
     ? formatTrendDelta(
-      getTrendMetricValue(trendPoints[0], trendMetric),
-      getTrendMetricValue(trendPoints[trendPoints.length - 1], trendMetric),
+      getTrendMetricValue(trendChartPoints[0], trendMetric),
+      getTrendMetricValue(trendChartPoints[trendChartPoints.length - 1], trendMetric),
       trendMetric
     )
     : null
@@ -2236,13 +2308,13 @@ export default function UploadStatsVisualReport({
     )
   }
 
-  const renderDifficultyColorLegend = (label: string) => {
+  const renderDifficultyColorLegend = (label: string, seriesList = trendSeriesOptions) => {
     if (trendSeriesOptions.length === 0) return null
 
     return (
       <div className="stats-chart-color-legend" aria-label={label}>
         <span className="stats-chart-color-legend-label">Schwierigkeiten</span>
-        {trendSeriesOptions.map((series) => {
+        {seriesList.map((series) => {
           return (
             <span
               key={series.key}
@@ -2704,15 +2776,15 @@ export default function UploadStatsVisualReport({
                     <span> {selectedTrend.description}</span>
                   </span>
                   <span>
-                    <strong>{rangedTrendHistory.length}</strong>
+                    <strong>{trendChartPoints.length}</strong>
                     <span> Laeufe im Ausschnitt</span>
                   </span>
                 </div>
 
-                {trendPoints.length > 0 && trendPoints.length <= 3 ? (
+                {trendChartPoints.length > 0 && trendChartPoints.length <= 3 ? (
                   <div className="stats-trend-compact-runs" aria-label="Kompakter Einzellaufvergleich">
                     <div className="stats-trend-compact-runs-list">
-                      {trendPoints.map((point) => {
+                      {trendChartPoints.map((point) => {
                         const metricValue = getTrendMetricValue(point, trendMetric)
                         const seriesColor = trendSeriesColorMap.get(point.difficultyKey) ?? 'var(--primary-color)'
 
@@ -2738,14 +2810,20 @@ export default function UploadStatsVisualReport({
                   </div>
                 ) : null}
 
-                {trendPoints.length === 0 || visibleTrendSeries.length === 0 ? (
+                {trendChartPoints.length === 0 || trendChartSeries.length === 0 || !hasTrendChartData ? (
                   <div className="stats-empty-state dashboard-empty-state">
                     <span className="empty-icon" aria-hidden="true"><Activity /></span>
                     <p>Keine Werte fuer diese Visualisierung.</p>
                     <p className="empty-hint">Waehle einen anderen Zeitraum oder spiele weitere Runden.</p>
                   </div>
                 ) : (
-                  <div className="stats-recharts-line-frame">
+                  <div
+                    className="stats-recharts-line-frame"
+                    data-visible-series-count={trendChartSeries.length}
+                    data-trend-point-count={trendChartPoints.length}
+                    data-y-domain={trendYAxisDomain.join(':')}
+                    data-reference-worst={focusedTrendStats.worst ?? ''}
+                  >
                     <ResponsiveContainer width="100%" height={340}>
                       <LineChart margin={{ top: 30, right: 22, left: 4, bottom: 12 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -2763,7 +2841,7 @@ export default function UploadStatsVisualReport({
                           tickLine={false}
                           axisLine={false}
                           width={64}
-                          domain={getTrendDomain()}
+                          domain={trendYAxisDomain}
                           tickFormatter={(value) => trendFormatter(typeof value === 'number' ? value : null)}
                         />
                         <Tooltip
@@ -2788,9 +2866,7 @@ export default function UploadStatsVisualReport({
                               y={focusedTrendStats.median}
                               stroke="transparent"
                               label={{
-                                value: focusedTrendStats.best === focusedTrendStats.median
-                                  ? `Bestwert & Median ${trendFormatter(focusedTrendStats.best)}`
-                                  : `Bestwert ${trendFormatter(focusedTrendStats.best)} · Median ${trendFormatter(focusedTrendStats.median)}`,
+                                value: formatMergedTrendReferenceLabel(focusedTrendStats, trendFormatter),
                                 fill: 'var(--text-secondary)',
                                 fontSize: 12,
                               }}
@@ -2814,15 +2890,27 @@ export default function UploadStatsVisualReport({
                             stroke="var(--text-muted)"
                             strokeDasharray="4 8"
                             label={{
-                              value: `Median ${trendFormatter(focusedTrendStats.median)}`,
+                              value: formatMedianTrendReferenceLabel(focusedTrendStats, trendFormatter),
                               fill: 'var(--text-secondary)',
                               fontSize: 12,
                             }}
                           />
                         ) : null}
-                        {visibleTrendSeries.map((line) => {
+                        {shouldRenderSeparateWorstTrendReference(focusedTrendStats) ? (
+                          <ReferenceLine
+                            y={focusedTrendStats.worst as number}
+                            stroke="var(--warning-color, #f59e0b)"
+                            strokeDasharray="2 6"
+                            label={{
+                              value: `Hoechstwert ${trendFormatter(focusedTrendStats.worst)}`,
+                              fill: 'var(--text-secondary)',
+                              fontSize: 12,
+                            }}
+                          />
+                        ) : null}
+                        {trendChartSeries.map((line) => {
                           const isFocused = focusedTrendSeries === null || focusedTrendSeries.key === line.key
-                          const rawOpacity = focusedTrendSeries === null ? 0.72 : isFocused ? 0.82 : 0.14
+                          const rawOpacity = focusedTrendSeries === null ? 0.72 : 0.88
 
                           return (
                             <Line
@@ -2836,10 +2924,13 @@ export default function UploadStatsVisualReport({
                               opacity={rawOpacity}
                               dot={renderTrendDot}
                               activeDot={{ r: 6, strokeWidth: 2 }}
+                              isAnimationActive={!shouldReduceMotion}
+                              animationDuration={shouldReduceMotion ? 0 : 520}
+                              animationEasing="ease-out"
                             />
                           )
                         })}
-                        {isMovingAverageVisible ? visibleTrendSeries.map((line) => {
+                        {isMovingAverageVisible ? trendChartSeries.map((line) => {
                           const isFocused = focusedTrendSeries === null || focusedTrendSeries.key === line.key
 
                           return (
@@ -2856,6 +2947,9 @@ export default function UploadStatsVisualReport({
                               activeDot={{ r: 5, strokeWidth: 2 }}
                               connectNulls={false}
                               legendType="none"
+                              isAnimationActive={!shouldReduceMotion}
+                              animationDuration={shouldReduceMotion ? 0 : 560}
+                              animationEasing="ease-out"
                             />
                           )
                         }) : null}
@@ -2885,12 +2979,12 @@ export default function UploadStatsVisualReport({
                   </div>
                 )}
 
-                {renderDifficultyColorLegend('Farblegende Trenddiagramm')}
+                {renderDifficultyColorLegend('Farblegende Trenddiagramm', trendChartSeries)}
                 {renderTrendFocusControls()}
 
                 <div className="stats-visual-line-legend">
                   <span>{completionHistory.length} Laeufe gesamt</span>
-                  <span>{visibleTrendSeries.length} von {trendSeriesOptions.length} Stufen sichtbar</span>
+                  <span>{trendChartSeries.length} von {trendSeriesOptions.length} Stufen sichtbar</span>
                   {medalTrendMarkers.length > 0 ? (
                     <span>{medalTrendMarkers.length} {medalTrendMarkers.length === 1 ? 'Medaillenlauf' : 'Medaillenlaeufe'} im Diagramm markiert</span>
                   ) : null}

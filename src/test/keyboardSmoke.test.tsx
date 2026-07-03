@@ -4915,6 +4915,15 @@ describe('keyboard smoke tests', () => {
     expect(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
     expect(within(screen.getByLabelText('Schwierigkeitsstufe fokussieren')).getByRole('button', { name: 'Alle vergleichen' }).classList.contains('is-active')).toBe(true)
     expect(container.textContent).toContain('Alle sichtbaren Stufen gleichwertig')
+    const getTrendFrame = () => container.querySelector<HTMLElement>('.stats-recharts-line-frame:not(.stats-recharts-histogram-frame)')
+    expect(getTrendFrame()?.getAttribute('data-visible-series-count')).toBe('2')
+    expect(getTrendFrame()?.getAttribute('data-trend-point-count')).toBe('5')
+
+    fireEvent.click(within(screen.getByLabelText('Schwierigkeitsstufe fokussieren')).getByRole('button', { name: 'Normal' }))
+    expect(getTrendFrame()?.getAttribute('data-visible-series-count')).toBe('1')
+    expect(getTrendFrame()?.getAttribute('data-trend-point-count')).toBe('3')
+    expect(getTrendFrame()?.getAttribute('data-reference-worst')).toBe('51')
+    expect(container.textContent).toContain('1 von 2 Stufen sichtbar')
 
     const trendMetricControls = screen.getByLabelText('Verlaufsmetrik waehlen')
     const histogramMetricControls = screen.getByLabelText('Verteilungsmetrik waehlen')
@@ -4927,6 +4936,8 @@ describe('keyboard smoke tests', () => {
     fireEvent.click(within(trendMetricControls).getByRole('button', { name: 'Zeit' }))
     expect(screen.getByText('Verteilung der Aktionen')).toBeTruthy()
     expect(within(screen.getByLabelText('Verteilungsmetrik waehlen')).getByRole('button', { name: 'Aktionen' }).classList.contains('is-active')).toBe(true)
+    expect(getTrendFrame()?.getAttribute('data-visible-series-count')).toBe('1')
+    expect(getTrendFrame()?.getAttribute('data-trend-point-count')).toBe('3')
 
     fireEvent.click(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Letzte 12' }))
     expect(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Letzte 12' }).classList.contains('is-active')).toBe(true)
