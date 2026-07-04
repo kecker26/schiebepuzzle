@@ -39,6 +39,18 @@ const SAVE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
 const BACKUP_FILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.spbkp(?:\.gz)?$/
 const STATS_EXPORT_FILE_NAME_PATTERN = /^schiebepuzzle-statistik-[a-zA-Z0-9._-]+\.(?:csv|json)$/
 const MAX_BODY_SIZE = 40 * 1024 * 1024
+const IMAGE_PROXY_MAX_BYTES = 12 * 1024 * 1024
+const IMAGE_PROXY_ALLOWED_HOSTS = new Set([
+  'images.unsplash.com',
+  'live.staticflickr.com',
+  'openaccess-cdn.clevelandart.org',
+])
+const IMAGE_PROXY_ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+])
 const MAX_SAVED_GAMES = 30
 const MAX_BACKUP_FILES = 3
 const BACKUP_FORMAT_VERSION = 4
@@ -633,6 +645,14 @@ interface GeneratedImageRequest {
   prompt: string
 }
 
+interface ImageProxyRequest {
+  url: string
+}
+
+interface ImageProxyResponse {
+  imageDataUrl: string
+}
+
 interface GeneratedImageResponse {
   imageSrc: string
   source: {
@@ -913,6 +933,21 @@ function isGeneratedImageRequest(value: unknown): value is GeneratedImageRequest
   if (!value || typeof value !== 'object') return false
   const input = value as { prompt?: unknown }
   return typeof input.prompt === 'string'
+}
+
+function isImageProxyRequest(value: unknown): value is ImageProxyRequest {
+  if (!value || typeof value !== 'object') return false
+  const input = value as { url?: unknown }
+  return typeof input.url === 'string'
+}
+
+function isAllowedImageProxyUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && IMAGE_PROXY_ALLOWED_HOSTS.has(url.hostname)
+  } catch {
+    return false
+  }
 }
 
 function normalizeGeneratedImagePrompt(prompt: string): string {
@@ -6149,6 +6184,70 @@ async function handleCollectionsApi(
   }
 }
 
+async function handleImageProxyApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void
+): Promise<void> {
+  const reqUrl = req.url ?? '/'
+  const url = new URL(reqUrl, 'http://localhost')
+
+  if (!url.pathname.startsWith('/api/image-proxy')) {
+    next()
+    return
+  }
+
+  try {
+    if (req.method === 'GET') {
+      sendJson(res, 200, { ok: true })
+      return
+    }
+
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Methode nicht erlaubt' })
+      return
+    }
+
+    const body = await readJsonBody(req)
+    if (!isImageProxyRequest(body) || !isAllowedImageProxyUrl(body.url)) {
+      sendJson(res, 400, { error: 'Ungueltige oder nicht erlaubte Bild-URL' })
+      return
+    }
+
+    const response = await fetch(body.url, { cache: 'no-store' })
+    if (!response.ok) {
+      sendJson(res, 502, { error: `Bildquelle konnte nicht geladen werden (${response.status})` })
+      return
+    }
+
+    const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? ''
+    if (!IMAGE_PROXY_ALLOWED_MIME_TYPES.has(contentType)) {
+      sendJson(res, 415, { error: 'Nicht unterstuetztes Bildformat' })
+      return
+    }
+
+    const contentLength = Number(response.headers.get('content-length') ?? 0)
+    if (contentLength > IMAGE_PROXY_MAX_BYTES) {
+      sendJson(res, 413, { error: 'Bild ist zu gross' })
+      return
+    }
+
+    const imageBuffer = Buffer.from(await response.arrayBuffer())
+    if (imageBuffer.length > IMAGE_PROXY_MAX_BYTES) {
+      sendJson(res, 413, { error: 'Bild ist zu gross' })
+      return
+    }
+
+    const payload: ImageProxyResponse = {
+      imageDataUrl: bufferToDataUrl(imageBuffer, contentType),
+    }
+    sendJson(res, 200, payload)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler'
+    sendJson(res, 500, { error: message })
+  }
+}
+
 async function handleGeneratedImageApi(
   req: IncomingMessage,
   res: ServerResponse,
@@ -6521,6 +6620,11 @@ async function handleApiRequest(
 
   if (url.pathname.startsWith('/api/collections')) {
     await handleCollectionsApi(req, res, next)
+    return
+  }
+
+  if (url.pathname.startsWith('/api/image-proxy')) {
+    await handleImageProxyApi(req, res, next)
     return
   }
 
