@@ -2663,14 +2663,22 @@ export default function App() {
     if (!status.nextMedal) return null
 
     const targetMedal = status.nextMedal
-    const targetMedalCount = upgradeCandidates.filter((entry) => (
-      getGalleryMedalHuntStatus(entry).nextMedal === targetMedal
-    )).length
+    const countsByNextMedal = new Map<ChallengeMedal, number>()
+    upgradeCandidates.forEach((entry) => {
+      const nextMedal = getGalleryMedalHuntStatus(entry).nextMedal
+      if (!nextMedal) return
+      countsByNextMedal.set(nextMedal, (countsByNextMedal.get(nextMedal) ?? 0) + 1)
+    })
+    const totalCount = upgradeCandidates.length
 
     return {
       medal: targetMedal,
-      label: `${formatChallengeMedalLabel(targetMedal)}-Chance: ${targetMedalCount} ${targetMedalCount === 1 ? 'Motiv' : 'Motive'}`,
-      detail: 'Gefiltert: noch upgradefaehig, sortiert nach Naehe zum naechsten Ziel.',
+      label: `${totalCount} ${totalCount === 1 ? 'upgradefaehiges Motiv' : 'upgradefaehige Motive'}`,
+      detail: `Beste Chance: ${formatChallengeMedalLabel(targetMedal)}, sortiert nach Naehe zum naechsten Ziel.`,
+      medalCounts: START_SCREEN_MEDAL_ORDER.map((medal) => ({
+        medal,
+        count: countsByNextMedal.get(medal) ?? 0,
+      })).filter((item) => item.count > 0),
     }
   }, [gallery])
 

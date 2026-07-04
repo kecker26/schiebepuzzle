@@ -24,6 +24,7 @@ interface StartScreenMedalHuntAction {
   medal: ChallengeMedal | null
   label: string
   detail: string
+  medalCounts?: StartScreenMedalCount[]
 }
 
 interface StartScreenProps {
@@ -353,27 +354,6 @@ export default function StartScreen({
             )}
 
             <div className="start-screen-actions-block">
-              {hasMedalHuntAction && medalHuntAction && (
-                <AnimatedButton
-                  className="start-screen-medal-hunt-button"
-                  onClick={onOpenMedalHuntRecommendation}
-                  data-app-tooltip="Oeffnet die Galerie gefiltert nach upgradefaehigen Motiven und sortiert nach Upgrade-Potenzial."
-                  data-app-tooltip-align="start"
-                  reveal
-                  revealLevel="subtle"
-                >
-                  <span className="start-screen-medal-hunt-emoji" aria-hidden="true">
-                    {medalHuntAction.medal ? getChallengeMedalEmoji(medalHuntAction.medal) : '*'}
-                  </span>
-                  <span className="start-screen-medal-hunt-copy">
-                    <strong>Medaillen-Jagd</strong>
-                    <span>
-                      {medalHuntAction.label}
-                    </span>
-                    <small>{medalHuntAction.detail}</small>
-                  </span>
-                </AnimatedButton>
-              )}
               <AnimatedStaggerGroup
                 className="start-screen-actions"
                 level="subtle"
@@ -429,26 +409,67 @@ export default function StartScreen({
               ))}
             </AnimatedStaggerGroup>
 
-            {hasMedalCounts && (
-              <div className="start-screen-medal-row" aria-label="Challenge-Medaillen nach bester Motiv-Stufe">
-                {medalCounts.map((item) => {
-                  const label = formatChallengeMedalLabel(item.medal)
-                  return (
-                    <button
-                      key={item.medal}
-                      type="button"
-                      className={`start-screen-medal-chip is-${item.medal}${item.count === 0 ? ' is-empty' : ''}`}
-                      onClick={() => onOpenGalleryMedalFilter?.(item.medal)}
-                      aria-label={`Galerie nach ${label} filtern: ${item.count} ${item.count === 1 ? 'Motiv' : 'Motive'}`}
-                      data-app-tooltip={`Galerie mit ${label}-Motiven oeffnen.`}
-                      data-app-tooltip-align="start"
-                    >
-                      <span aria-hidden="true">{getChallengeMedalEmoji(item.medal)}</span>
-                      <strong>{item.count}</strong>
-                    </button>
-                  )
-                })}
-              </div>
+            {(hasMedalHuntAction || hasMedalCounts) && (
+              <section className="start-screen-medal-panel" aria-label="Medaillen-Jagd und Medaillenspiegel">
+                {hasMedalHuntAction && medalHuntAction && (
+                  <AnimatedButton
+                    className="start-screen-medal-hunt-button"
+                    onClick={onOpenMedalHuntRecommendation}
+                    data-app-tooltip="Oeffnet die Galerie gefiltert nach upgradefaehigen Motiven und sortiert nach Upgrade-Potenzial."
+                    data-app-tooltip-align="start"
+                    reveal
+                    revealLevel="subtle"
+                  >
+                    <span className="start-screen-medal-hunt-emoji" aria-hidden="true">
+                      {medalHuntAction.medal ? getChallengeMedalEmoji(medalHuntAction.medal) : '*'}
+                    </span>
+                    <span className="start-screen-medal-hunt-copy">
+                      <strong>Medaillen-Jagd</strong>
+                      <span>{medalHuntAction.label}</span>
+                      {medalHuntAction.medalCounts && medalHuntAction.medalCounts.length > 0 && (
+                        <span className="start-screen-medal-hunt-breakdown" aria-label="Medaillen-Chancen nach Zielstufe">
+                          {medalHuntAction.medalCounts.map((item) => (
+                            <span key={item.medal} className={`start-screen-medal-hunt-chip is-${item.medal}`}>
+                              <span aria-hidden="true">{getChallengeMedalEmoji(item.medal)}</span>
+                              {formatChallengeMedalLabel(item.medal)} {item.count}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                      <small>{medalHuntAction.detail}</small>
+                    </span>
+                  </AnimatedButton>
+                )}
+
+                {hasMedalCounts && (
+                  <div className="start-screen-medal-summary">
+                    <span className="start-screen-medal-summary-copy">
+                      <strong>Medaillenspiegel</strong>
+                      <span>Beste Motiv-Stufen in deiner Galerie</span>
+                    </span>
+                    <div className="start-screen-medal-row" aria-label="Challenge-Medaillen nach bester Motiv-Stufe">
+                      {medalCounts.map((item) => {
+                        const label = formatChallengeMedalLabel(item.medal)
+                        return (
+                          <button
+                            key={item.medal}
+                            type="button"
+                            className={`start-screen-medal-chip is-${item.medal}${item.count === 0 ? ' is-empty' : ''}`}
+                            onClick={() => onOpenGalleryMedalFilter?.(item.medal)}
+                            aria-label={`Galerie nach ${label} filtern: ${item.count} ${item.count === 1 ? 'Motiv' : 'Motive'}`}
+                            data-app-tooltip={`Galerie mit ${label}-Motiven oeffnen.`}
+                            data-app-tooltip-align="start"
+                          >
+                            <span aria-hidden="true">{getChallengeMedalEmoji(item.medal)}</span>
+                            <strong>{item.count}</strong>
+                            <small>{label}</small>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </section>
             )}
 
             <div className="start-screen-shortcuts" aria-label="Shortcuts">

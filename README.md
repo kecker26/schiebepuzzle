@@ -5,7 +5,7 @@ Eine lokale React-Web-App zum Erstellen, Zuschneiden, Spielen und Auswerten von 
 ## Funktionsumfang
 
 - Eigene Bilder hochladen und als Puzzle-Motiv verwenden.
-- Zufallsbilder aus mehreren Quellen laden, optional mit Suchbegriffen, darunter keylose Openverse- und LoremFlickr-Suchen sowie weitere lokale und externe Provider.
+- Zufallsbilder aus mehreren Quellen laden, optional mit Suchbegriffen, darunter keylose Openverse-, LoremFlickr- und Cleveland-Museum-Suchen sowie optionale Flickr-, Unsplash- und weitere externe Provider. Ein Provider-Coordinator mischt die Quellen pro Anfrage gewichtet zufaellig und nimmt fehlschlagende Anbieter kurzzeitig aus der Auswahl.
 - KI-generierte Puzzle-Motive per Prompt ueber Pollinations Z-Image Turbo erstellen.
 - Bildzuschnitt mit Crop-Ansicht, Transform und Puzzle-Konfiguration.
 - Schiebepuzzle mit Canvas-Rendering, Drag-/Keyboard-Interaktion und visuellen Hervorhebungen.
@@ -48,6 +48,8 @@ Optional kann eine lokale `.env` aus `.env.example` angelegt werden. Ohne diese 
 
 ```env
 VITE_JAMENDO_CLIENT_ID=deine_jamendo_client_id
+VITE_FLICKR_API_KEY=dein_flickr_api_key
+VITE_UNSPLASH_ACCESS_KEY=dein_unsplash_access_key
 VITE_PEXELS_API_KEY=dein_pexels_api_key
 VITE_PIXABAY_API_KEY=dein_pixabay_api_key
 VITE_SMITHSONIAN_API_KEY=dein_smithsonian_api_key
@@ -122,6 +124,7 @@ Die Frontend-Services greifen ueber lokale API-Routen auf die Middleware zu:
 - `/api/gallery/tags` und `/api/gallery/:entryId/tags`: Tags global bereinigen oder manuell fuer einzelne beziehungsweise mehrere Galerie-Eintraege hinzufuegen und entfernen.
 - `/api/gallery/tag-categories`, `/api/gallery/tag-categories/assignments` und `/api/gallery/tag-categories/classify`: Statische und eigene Tag-Kategorien laden, verwalten, manuelle Zuordnungen speichern und unbekannte Tags gebuendelt ueber den bestehenden LLM-Provider klassifizieren.
 - `/api/collections`: Bild-Sammlungen laden, erstellen, bearbeiten und mit Galerie-Motiven verknuepfen.
+- `/api/image-proxy`: Erlaubte externe Bildquellen fuer Zufallsbild-Provider serverseitig abrufen und als Data-URL an das Frontend geben, wenn Browser-CORS den direkten Download blockiert.
 - `/api/backup`: Daten exportieren, importieren und lokale Backup-Dateien verwalten.
 - `/api/clipboard`: Clipboard-Hilfen fuer lokale Bild- und Textablage.
 - `/api/generated-image`: KI-Motiv aus einem Prompt ueber Pollinations Z-Image Turbo erzeugen, mit Cloudflare Workers AI Flux Schnell als Fallback.
