@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'motion/react'
-import { type ChangeEvent, type RefObject, useCallback, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { type AppContextMenuHandler, type AppContextMenuRequest } from '../app/appContextMenu.ts'
 import { useAccessibilityAnnouncer } from '../app/accessibilityAnnouncer.tsx'
 import { type HelpContext } from '../app/helpRegistry.ts'
@@ -108,6 +108,7 @@ interface PuzzleScreenProps {
   challengeTarget?: GalleryChallengeTarget | null
   challengeMode?: PersistedPuzzleProgress['challengeMode']
   onProgressChange?: (progress: PersistedPuzzleProgress | null) => void
+  registerProgressSnapshotProvider?: (provider: (() => PersistedPuzzleProgress | null) | null) => void
   onWin: (stats: WinStats) => void
   onQuit: () => void
   onGoToStartScreen: () => void
@@ -301,6 +302,7 @@ export default function PuzzleScreen({
   challengeTarget,
   challengeMode = null,
   onProgressChange,
+  registerProgressSnapshotProvider,
   onWin,
   onQuit,
   onGoToStartScreen,
@@ -1711,58 +1713,53 @@ export default function PuzzleScreen({
     clearHintAutoHideTimeout()
   }, [clearHintAutoHideTimeout, hintPreview])
 
-  const persistedElapsedTime = Math.floor(elapsedTime / 5) * 5
-  useEffect(() => {
-    if (!onProgressChange || !puzzleState) return
-
-    if (puzzleState.isSolved) {
-      onProgressChange(null)
-      return
+  const persistedElapsedTime = elapsedTime
+  const createCurrentProgressSnapshot = useCallback((snapshotElapsedTime: number): PersistedPuzzleProgress | null => {
+    if (!puzzleState || puzzleState.isSolved) {
+      return null
     }
 
-    onProgressChange(
-      createPersistedPuzzleProgress({
-        state: puzzleState,
-        config,
-        moveCount,
-        elapsedTime: persistedElapsedTime,
-        isPaused,
-        optimalStartMoveCount:
-          optimalStartMoveCountState.status === 'loading'
-            ? undefined
-            : optimalStartMoveCountState.moveCount,
-        optimalStartMoveCountKind:
-          optimalStartMoveCountState.status === 'loading'
-            ? undefined
-            : optimalStartMoveCountState.status,
-        optimalStartMoveCountSolverVersion:
-          optimalStartMoveCountState.status === 'loading'
-            ? undefined
-            : optimalStartMoveCountState.solverVersion,
-        runMetrics,
-        moveHistory,
-        redoHistory,
-        previewVisible: isPreviewVisible,
-        ghostPreviewVisible: isGhostPreviewVisible,
-        ghostPreviewWeight,
-        ghostPreviewMode,
-        ghostPreviewScope,
-        ghostPreviewMotion,
-        ghostPreviewProgressive: isGhostPreviewProgressive,
-        ghostPreviewProgressPeak,
-        heatmapOverlayVisible: isHeatmapOverlayVisible,
-        heatmapMode,
-        heatmapIntensity,
-        heatmapDistancesVisible: areHeatmapDistancesVisible,
-        solverProgress: {
-          shuffleMoves: [...shuffleMovesRef.current],
-          reducedMovePath: [...reducedMovePathRef.current],
-        },
-        challengeTarget,
-        challengeMode: effectiveChallengeMode,
-        historyLimit: PERSISTED_HISTORY_LIMIT,
-      })
-    )
+    return createPersistedPuzzleProgress({
+      state: puzzleState,
+      config,
+      moveCount,
+      elapsedTime: snapshotElapsedTime,
+      isPaused,
+      optimalStartMoveCount:
+        optimalStartMoveCountState.status === 'loading'
+          ? undefined
+          : optimalStartMoveCountState.moveCount,
+      optimalStartMoveCountKind:
+        optimalStartMoveCountState.status === 'loading'
+          ? undefined
+          : optimalStartMoveCountState.status,
+      optimalStartMoveCountSolverVersion:
+        optimalStartMoveCountState.status === 'loading'
+          ? undefined
+          : optimalStartMoveCountState.solverVersion,
+      runMetrics,
+      moveHistory,
+      redoHistory,
+      previewVisible: isPreviewVisible,
+      ghostPreviewVisible: isGhostPreviewVisible,
+      ghostPreviewWeight,
+      ghostPreviewMode,
+      ghostPreviewScope,
+      ghostPreviewMotion,
+      ghostPreviewProgressive: isGhostPreviewProgressive,
+      ghostPreviewProgressPeak,
+      heatmapOverlayVisible: isHeatmapOverlayVisible,
+      heatmapMode,
+      heatmapIntensity,
+      heatmapDistancesVisible: areHeatmapDistancesVisible,
+      solverProgress: {
+        shuffleMoves: [...shuffleMovesRef.current],
+        reducedMovePath: [...reducedMovePathRef.current],
+      },
+      challengeTarget,
+      challengeMode: effectiveChallengeMode,
+      historyLimit: PERSISTED_HISTORY_LIMIT,
+    })
   }, [
     challengeTarget,
     effectiveChallengeMode,
@@ -1782,12 +1779,50 @@ export default function PuzzleScreen({
     isPreviewVisible,
     moveCount,
     moveHistory,
-    onProgressChange,
     optimalStartMoveCountState,
-    persistedElapsedTime,
     puzzleState,
     redoHistory,
     runMetrics,
+  ])
+
+  const commitCurrentProgressSnapshot = useCallback((snapshotElapsedTime = elapsedTime) => {
+    if (!onProgressChange) return
+
+    if (puzzleState?.isSolved) {
+      onProgressChange(null)
+      return
+    }
+
+    const progress = createCurrentProgressSnapshot(snapshotElapsedTime)
+    if (progress) {
+      onProgressChange(progress)
+    }
+  }, [createCurrentProgressSnapshot, elapsedTime, onProgressChange, puzzleState?.isSolved])
+
+  useLayoutEffect(() => {
+    if (!registerProgressSnapshotProvider) return
+
+    registerProgressSnapshotProvider(() => createCurrentProgressSnapshot(elapsedTime))
+    return () => registerProgressSnapshotProvider(null)
+  }, [createCurrentProgressSnapshot, elapsedTime, registerProgressSnapshotProvider])
+
+  useEffect(() => {
+    if (!onProgressChange || !puzzleState) return
+
+    if (puzzleState.isSolved) {
+      onProgressChange(null)
+      return
+    }
+
+    const progress = createCurrentProgressSnapshot(persistedElapsedTime)
+    if (progress) {
+      onProgressChange(progress)
+    }
+  }, [
+    createCurrentProgressSnapshot,
+    onProgressChange,
+    persistedElapsedTime,
+    puzzleState,
   ])
 
   useEffect(() => {
@@ -2721,6 +2756,16 @@ export default function PuzzleScreen({
     pausePuzzle()
   }, [isPaused, pausePuzzle, resumePuzzle])
 
+  const handleQuitPuzzle = useCallback(() => {
+    commitCurrentProgressSnapshot()
+    onQuit()
+  }, [commitCurrentProgressSnapshot, onQuit])
+
+  const handleGoToStartScreen = useCallback(() => {
+    commitCurrentProgressSnapshot()
+    onGoToStartScreen()
+  }, [commitCurrentProgressSnapshot, onGoToStartScreen])
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
@@ -2742,7 +2787,7 @@ export default function PuzzleScreen({
     isInteractionLocked,
     onFocusBoard: focusBoardCanvas,
     onTogglePause: togglePause,
-    onQuit,
+    onQuit: handleQuitPuzzle,
     onTogglePreview: togglePreviewFromHotkey,
     onToggleGhostPreview: toggleGhostPreviewFromHotkey,
     onCycleGhostPreviewMode: cycleGhostPreviewModeFromHotkey,
@@ -2891,7 +2936,7 @@ export default function PuzzleScreen({
               onToggleHeatmapTargetPath={toggleHeatmapTargetPathVisibility}
               onUndo={handleUndoMove}
               onRedo={handleRedoMove}
-              onQuit={onQuit}
+              onQuit={handleQuitPuzzle}
               onOpenHelp={onOpenHelp}
               actionButtonRefs={{
                 hint: hintButtonRef,
@@ -3043,8 +3088,8 @@ export default function PuzzleScreen({
             onUndo={handleUndoMove}
             onRedo={handleRedoMove}
             onOpenHelp={onOpenHelp}
-            onGoToSelectionScreen={onQuit}
-            onGoToStartScreen={onGoToStartScreen}
+            onGoToSelectionScreen={handleQuitPuzzle}
+            onGoToStartScreen={handleGoToStartScreen}
             onClose={closeContextMenu}
             canUndo={moveHistory.length > 0}
             canRedo={redoHistory.length > 0}
