@@ -49,6 +49,11 @@ function formatBackupSize(size: number): string {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function formatBackupMotifsCount(backup: PuzzleDataBackupFile): string {
+  const motifCount = backup.galleryMotifsCount ?? backup.galleryEntriesCount
+  return `${motifCount} ${motifCount === 1 ? 'Motiv' : 'Motive'}`
+}
+
 export default function UploadBackupBrowserDialog({
   backups,
   isLoading,
@@ -206,7 +211,7 @@ export default function UploadBackupBrowserDialog({
                 <div className="dashboard-inline-chips backup-browser-chips">
                   <span className="saved-game-chip">{backup.savedGamesCount} Spielstaende</span>
                   <span className="saved-game-chip">{backup.totalSolved} Siege</span>
-                  <span className="saved-game-chip">{backup.galleryEntriesCount} Galerie-Bilder</span>
+                  <span className="saved-game-chip">{formatBackupMotifsCount(backup)}</span>
                   <span className="saved-game-chip">{formatBackupSize(backup.size)}</span>
                 </div>
               </div>
