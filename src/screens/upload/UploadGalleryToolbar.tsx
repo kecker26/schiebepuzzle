@@ -266,7 +266,7 @@ export default function UploadGalleryToolbar({
             data-app-tooltip="Alle Galerie-Filter und Sortierung auf Standard zuruecksetzen."
             data-app-tooltip-position="top"
           >
-            Zuruecksetzen
+            Alle Filter zuruecksetzen
           </button>
         </div>
       </div>

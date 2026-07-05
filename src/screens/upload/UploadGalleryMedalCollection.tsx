@@ -21,6 +21,7 @@ export default function UploadGalleryMedalCollection({
   onFilterChange,
 }: UploadGalleryMedalCollectionProps) {
   const totalMedalMotifs = items.reduce((sum, item) => sum + item.count, 0)
+  const hasActiveMedalFilter = activeFilter !== 'all'
 
   return (
     <section className="gallery-medal-collection" aria-labelledby="gallery-medal-collection-title">
@@ -46,9 +47,17 @@ export default function UploadGalleryMedalCollection({
             type="button"
             className={`dashboard-filter-chip gallery-medal-filter-clear${activeFilter === 'all' ? ' is-active' : ''}`}
             aria-pressed={activeFilter === 'all'}
+            aria-label={hasActiveMedalFilter ? 'Alle Motive anzeigen' : 'Alle Motive werden bereits angezeigt'}
+            disabled={!hasActiveMedalFilter}
             onClick={() => onFilterChange('all')}
+            data-app-tooltip={
+              hasActiveMedalFilter
+                ? 'Medaillenfilter deaktivieren und alle Galerie-Motive anzeigen.'
+                : 'Kein Medaillenfilter aktiv: Es werden bereits alle Galerie-Motive angezeigt.'
+            }
+            data-app-tooltip-position="top"
           >
-            Alle Medaillen
+            Alle Motive
           </button>
         </div>
 
