@@ -153,6 +153,14 @@ function isPromptFieldContextTarget(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('[data-upload-context="prompt-field"]') !== null
 }
 
+function formatGalleryMotifCount(count: number): string {
+  return `${count} ${count === 1 ? 'Motiv' : 'Motive'}`
+}
+
+function formatGalleryMotifDativeCount(count: number): string {
+  return count === 1 ? '1 Motiv' : `${count} Motiven`
+}
+
 async function createFileFromImageDataUrl(imageDataUrl: string): Promise<File> {
   const response = await fetch(imageDataUrl)
   const blob = await response.blob()
@@ -911,14 +919,17 @@ export default function UploadScreen({
     try {
       const backup = await onCreateBackupFile()
       const deletedBackupsLabel = backup.deletedBackupFileNames.join(', ')
+      const galleryMotifsCount = backup.galleryMotifsCount ?? backup.galleryEntriesCount
+      const galleryMotifsLabel = formatGalleryMotifCount(galleryMotifsCount)
+      const galleryMotifsDativeLabel = formatGalleryMotifDativeCount(galleryMotifsCount)
       setBackupStatusMessage(
         backup.alreadyCurrent
-          ? `Kein neues Backup angelegt: ${backup.fileName} ist bereits aktuell und enthaelt ${backup.savedGamesCount} Spielstaende, ${backup.totalSolved} Siege und ${backup.galleryEntriesCount} Galerie-Bilder.`
+          ? `Kein neues Backup angelegt: ${backup.fileName} ist bereits aktuell und enthaelt ${backup.savedGamesCount} Spielstaende, ${backup.totalSolved} Siege und ${galleryMotifsLabel}.`
           : backup.deletedBackupFileNames.length === 0
-            ? `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielstaenden, ${backup.totalSolved} Siegen und ${backup.galleryEntriesCount} Galerie-Bildern. Es werden maximal ${backup.retentionLimit} lokale Backups behalten.`
+            ? `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielstaenden, ${backup.totalSolved} Siegen und ${galleryMotifsDativeLabel}. Es werden maximal ${backup.retentionLimit} lokale Backups behalten.`
             : backup.deletedBackupFileNames.length === 1
-              ? `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielstaenden, ${backup.totalSolved} Siegen und ${backup.galleryEntriesCount} Galerie-Bildern. Das aelteste Backup ${deletedBackupsLabel} wurde automatisch entfernt. Es bleiben ${backup.retentionLimit} lokale Backups.`
-              : `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielstaenden, ${backup.totalSolved} Siegen und ${backup.galleryEntriesCount} Galerie-Bildern. ${backup.deletedBackupFileNames.length} alte Backups wurden automatisch entfernt (${deletedBackupsLabel}). Es bleiben ${backup.retentionLimit} lokale Backups.`
+              ? `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielstaenden, ${backup.totalSolved} Siegen und ${galleryMotifsDativeLabel}. Das aelteste Backup ${deletedBackupsLabel} wurde automatisch entfernt. Es bleiben ${backup.retentionLimit} lokale Backups.`
+              : `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielstaenden, ${backup.totalSolved} Siegen und ${galleryMotifsDativeLabel}. ${backup.deletedBackupFileNames.length} alte Backups wurden automatisch entfernt (${deletedBackupsLabel}). Es bleiben ${backup.retentionLimit} lokale Backups.`
       )
     } catch (backupError) {
       setError(`Backup konnte nicht exportiert werden: ${getErrorMessage(backupError)}`)
@@ -1064,11 +1075,13 @@ export default function UploadScreen({
     setIsImportingBackup(true)
     try {
       const result = await onImportBackupFile(pendingBackupImport.fileName)
+      const galleryMotifsCount = countUniqueGalleryEntries(result.gallery.entries)
+      const galleryMotifsLabel = formatGalleryMotifDativeCount(galleryMotifsCount)
       setPendingBackupImport(null)
       handleWindowChange('start')
       setHistoryFilter('all')
       setBackupStatusMessage(
-        `Backup importiert: ${pendingBackupImport.fileName} mit ${result.savedGames.length} Spielstaenden, ${result.stats.totalSolved} Siegen und ${result.gallery.totalEntries} Galerie-Bildern.`
+        `Backup importiert: ${pendingBackupImport.fileName} mit ${result.savedGames.length} Spielstaenden, ${result.stats.totalSolved} Siegen und ${galleryMotifsLabel}.`
       )
     } catch (backupError) {
       setError(`Backup konnte nicht importiert werden: ${getErrorMessage(backupError)}`)
@@ -1084,6 +1097,10 @@ export default function UploadScreen({
   const imageCollectionsCount = collections?.totalCollections ?? imageCollections.length
   const collectedImagesCount = imageCollections.reduce((sum, collection) => sum + collection.imageIds.length, 0)
   const latestGalleryAt = gallery?.lastCompletedAt ?? gallery?.entries[0]?.completedAt ?? null
+  const pendingBackupImportMotifsCount = pendingBackupImport
+    ? pendingBackupImport.galleryMotifsCount ?? pendingBackupImport.galleryEntriesCount
+    : 0
+  const pendingBackupImportMotifsLabel = formatGalleryMotifCount(pendingBackupImportMotifsCount)
   const hasRecordedStats = Boolean(stats && stats.totalSolved > 0)
   const historyFilterOptions = useMemo(() => getDifficultyHistoryFilterOptions(), [])
   const completionHistory = useMemo(() => stats?.completionHistory ?? [], [stats])
@@ -1524,7 +1541,7 @@ export default function UploadScreen({
               importActionRef={backupImportActionRef}
               savedGamesCount={savedGamesCount}
               totalSolved={stats?.totalSolved ?? 0}
-              galleryEntriesCount={galleryEntriesCount}
+              galleryMotifsCount={galleryUniqueEntriesCount}
               isExportingBackup={isExportingBackup}
               isLoadingBackupFiles={isLoadingBackupFiles}
               isImportingBackup={isImportingBackup}
@@ -1616,7 +1633,8 @@ export default function UploadScreen({
                   <span className="delete-confirm-name">{pendingBackupImport.fileName}</span>
                   {pendingBackupImport.exportedAt ? ` vom ${formatDate(pendingBackupImport.exportedAt)}` : ''} enthaelt{' '}
                   {pendingBackupImport.savedGamesCount} Spielstaende, {pendingBackupImport.totalSolved} Siege und{' '}
-                  {pendingBackupImport.galleryEntriesCount} Galerie-Bilder. Der aktuelle Datenstand wird dabei komplett ersetzt.
+                  {pendingBackupImportMotifsLabel}.
+                  Der aktuelle Datenstand wird dabei komplett ersetzt.
                 </p>
               }
               confirmLabel="Importieren"

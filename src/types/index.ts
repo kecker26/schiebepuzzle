@@ -505,6 +505,7 @@ export interface PuzzleDataBackupFile {
   savedGamesCount: number
   totalSolved: number
   galleryEntriesCount: number
+  galleryMotifsCount?: number
   size: number
   modifiedAt: string
   alreadyCurrent: boolean

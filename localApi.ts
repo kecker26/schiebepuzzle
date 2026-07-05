@@ -600,6 +600,7 @@ interface BackupFileResponse {
   savedGamesCount: number
   totalSolved: number
   galleryEntriesCount: number
+  galleryMotifsCount: number
   size: number
   modifiedAt: string
   alreadyCurrent: boolean
@@ -2618,6 +2619,48 @@ function getBackupFileGalleryEntriesCount(gallery: unknown): number {
   return Array.isArray(input.entries) ? input.entries.length : 0
 }
 
+function getBackupGalleryImageKey(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) {
+    return `image:${value}`
+  }
+
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const input = value as { assetId?: unknown }
+  return typeof input.assetId === 'string' && input.assetId.trim()
+    ? `asset:${input.assetId}`
+    : null
+}
+
+function getBackupFileGalleryMotifsCount(gallery: unknown): number {
+  if (!gallery || typeof gallery !== 'object') {
+    return 0
+  }
+
+  const input = gallery as { entries?: unknown }
+  if (!Array.isArray(input.entries)) {
+    return 0
+  }
+
+  const motifs = new Set<string>()
+  input.entries.forEach((entry, index) => {
+    if (!entry || typeof entry !== 'object') {
+      motifs.add(`missing:${index}`)
+      return
+    }
+
+    const galleryEntry = entry as { id?: unknown; previewImage?: unknown; sourceImage?: unknown }
+    const motifKey = getBackupGalleryImageKey(galleryEntry.sourceImage)
+      ?? getBackupGalleryImageKey(galleryEntry.previewImage)
+      ?? `missing:${typeof galleryEntry.id === 'string' ? galleryEntry.id : index}`
+    motifs.add(motifKey)
+  })
+
+  return motifs.size
+}
+
 function buildBackupFileResponse(
   fileName: string,
   backup: {
@@ -2642,6 +2685,7 @@ function buildBackupFileResponse(
     savedGamesCount: Array.isArray(backup.savedGames) ? backup.savedGames.length : 0,
     totalSolved: sanitizeCount(stats?.totalSolved),
     galleryEntriesCount: getBackupFileGalleryEntriesCount(backup.gallery),
+    galleryMotifsCount: getBackupFileGalleryMotifsCount(backup.gallery),
     size: Math.max(0, Math.round(size)),
     modifiedAt,
     alreadyCurrent,

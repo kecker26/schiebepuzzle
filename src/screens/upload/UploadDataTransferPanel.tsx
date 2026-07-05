@@ -10,7 +10,7 @@ import BusyIndicator from '../../motion/BusyIndicator.tsx'
 interface UploadDataTransferPanelProps {
   savedGamesCount: number
   totalSolved: number
-  galleryEntriesCount: number
+  galleryMotifsCount: number
   isExportingBackup: boolean
   isLoadingBackupFiles: boolean
   isImportingBackup: boolean
@@ -23,7 +23,7 @@ interface UploadDataTransferPanelProps {
 export default function UploadDataTransferPanel({
   savedGamesCount,
   totalSolved,
-  galleryEntriesCount,
+  galleryMotifsCount,
   isExportingBackup,
   isLoadingBackupFiles,
   isImportingBackup,
@@ -75,7 +75,7 @@ export default function UploadDataTransferPanel({
           </span>
           <span className="saved-game-chip">
             <UploadScreenIcon name="gallery" className="saved-game-chip-icon" />
-            <span>{galleryEntriesCount} Galerie-Bilder</span>
+            <span>{galleryMotifsCount} {galleryMotifsCount === 1 ? 'Motiv' : 'Motive'}</span>
           </span>
         </div>
       </AnimatedReveal>
