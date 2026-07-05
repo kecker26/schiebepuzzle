@@ -551,7 +551,10 @@ export default function App() {
   const activeSessionRef = useRef(0)
   const saveDebounceTimerRef = useRef<number | null>(null)
   const pendingSaveProgressRef = useRef<PersistedPuzzleProgress | null>(null)
+  const pendingSaveTargetIdRef = useRef<string | null>(null)
   const pendingSaveStartedAtRef = useRef(0)
+  const ignorePuzzleProgressRef = useRef(false)
+  const progressSnapshotProviderRef = useRef<(() => PersistedPuzzleProgress | null) | null>(null)
   const cropDraftPersistTimerRef = useRef<number | null>(null)
   const appContextMenuHandlerRef = useRef<AppContextMenuHandler | null>(null)
   const lastPersistedSaveAtRef = useRef(0)
@@ -841,6 +844,7 @@ export default function App() {
       saveDebounceTimerRef.current = null
     }
     pendingSaveProgressRef.current = null
+    pendingSaveTargetIdRef.current = null
     pendingSaveStartedAtRef.current = 0
     setHasPendingSaveChanges(false)
   }, [])
@@ -884,10 +888,6 @@ export default function App() {
   const restartPuzzleRun = useCallback(() => {
     setPuzzleRunKey((prev) => prev + 1)
   }, [])
-
-  useEffect(() => {
-    currentSaveIdRef.current = currentSaveId
-  }, [currentSaveId])
 
   useEffect(() => {
     deferredRecoverySaveIdRef.current = deferredRecoverySaveId
@@ -1259,9 +1259,10 @@ export default function App() {
     async (
       progress: PersistedPuzzleProgress,
       sessionId: number,
-      options: PersistSaveOptions = {}
+      options: PersistSaveOptions = {},
+      targetSaveId: string | null = null
     ): Promise<void> => {
-      const existingSaveId = currentSaveIdRef.current
+      const existingSaveId = targetSaveId ?? currentSaveIdRef.current
       if (!existingSaveId) {
         await ensureSaveId(progress, sessionId, options)
         return
@@ -1277,13 +1278,14 @@ export default function App() {
         setSavedGames((prev) => upsertSummary(prev, updated).slice(0, MAX_DISPLAYED_SAVED_GAMES))
         if (
           activeSessionRef.current === sessionId
-          && currentSaveIdRef.current === existingSaveId
         ) {
+          currentSaveIdRef.current = existingSaveId
+          setCurrentSaveId(existingSaveId)
           setSaveStatusError(null)
         }
       } catch (error) {
         // If the save was deleted between scheduling and execution, skip silently
-        if (currentSaveIdRef.current !== existingSaveId) return
+        if (!targetSaveId && currentSaveIdRef.current !== existingSaveId) return
         throw error
       }
     },
@@ -1296,11 +1298,13 @@ export default function App() {
       options: PersistSaveOptions = {}
     ): Promise<void> => {
       const latestProgress = pendingSaveProgressRef.current
+      const targetSaveId = pendingSaveTargetIdRef.current
       if (saveDebounceTimerRef.current !== null) {
         window.clearTimeout(saveDebounceTimerRef.current)
         saveDebounceTimerRef.current = null
       }
       pendingSaveProgressRef.current = null
+      pendingSaveTargetIdRef.current = null
       pendingSaveStartedAtRef.current = 0
 
       if (!shouldAutosavePuzzleRun(activeGalleryChallengeTarget, activeGalleryChallengeMode)) {
@@ -1322,7 +1326,7 @@ export default function App() {
         setSaveStatusError(null)
 
         try {
-          await persistSaveProgress(latestProgress, sessionId, options)
+          await persistSaveProgress(latestProgress, sessionId, options, targetSaveId)
           if (activeSessionRef.current === sessionId) {
             setLastSuccessfulSaveAt(Date.now())
             setSaveStatusError(null)
@@ -1330,6 +1334,7 @@ export default function App() {
         } catch (error) {
           if (activeSessionRef.current === sessionId) {
             pendingSaveProgressRef.current = latestProgress
+            pendingSaveTargetIdRef.current = targetSaveId
             if (pendingSaveStartedAtRef.current === 0) {
               pendingSaveStartedAtRef.current = Date.now()
             }
@@ -1384,7 +1389,7 @@ export default function App() {
     setSavedGamesError,
   ])
 
-  const prepareToLeavePlayingRun = useCallback(async (): Promise<boolean> => {
+  const prepareToLeavePlayingRun = useCallback(async (options: PersistSaveOptions = {}): Promise<boolean> => {
     if (appState !== 'playing') {
       return true
     }
@@ -1393,9 +1398,21 @@ export default function App() {
       return discardActiveMedalRunSave()
     }
 
+    const latestProgressSnapshot = progressSnapshotProviderRef.current?.() ?? null
+    if (latestProgressSnapshot) {
+      pendingSaveProgressRef.current = latestProgressSnapshot
+      pendingSaveTargetIdRef.current = currentSaveIdRef.current
+      if (pendingSaveStartedAtRef.current === 0) {
+        pendingSaveStartedAtRef.current = Date.now()
+      }
+      setSavedProgress(latestProgressSnapshot)
+      setHasPendingSaveChanges(true)
+    }
+
     await flushPendingSave(activeSessionRef.current, {
-      keepalive: currentSaveIdRef.current !== null,
+      keepalive: options.keepalive,
     })
+    await saveQueueRef.current
     return true
   }, [activeGalleryChallengeMode, activeGalleryChallengeTarget, appState, discardActiveMedalRunSave, flushPendingSave])
 
@@ -1442,6 +1459,7 @@ export default function App() {
     (progress: PersistedPuzzleProgress, sessionId: number) => {
       const now = Date.now()
       pendingSaveProgressRef.current = progress
+      pendingSaveTargetIdRef.current = currentSaveIdRef.current
       if (pendingSaveStartedAtRef.current === 0) {
         pendingSaveStartedAtRef.current = now
       }
@@ -1463,6 +1481,10 @@ export default function App() {
     },
     [flushPendingSave]
   )
+
+  const registerProgressSnapshotProvider = useCallback((provider: (() => PersistedPuzzleProgress | null) | null) => {
+    progressSnapshotProviderRef.current = provider
+  }, [])
 
   useEffect(() => {
     const flushSaveOnHide = () => {
@@ -1548,7 +1570,10 @@ export default function App() {
       setImage(loaded.image)
       setCroppedImage(loaded.croppedImage)
       setConfig(loaded.config)
-      setSavedProgress(loaded.progress)
+      setSavedProgress({
+        ...loaded.progress,
+        isPaused: true,
+      })
       setActiveGalleryChallengeTarget(
         isCleanPersistedChallengeTarget(loaded.progress.challengeTarget)
           ? loaded.progress.challengeTarget
@@ -1566,6 +1591,7 @@ export default function App() {
       setRandomImageError(null)
       resetCompletionFeedback()
       setUploadCommandRequest(null)
+      ignorePuzzleProgressRef.current = false
       setAppState('playing')
       setSavedGamesError(null)
     } catch (error) {
@@ -1893,7 +1919,9 @@ export default function App() {
 
   const handleQuitApp = useCallback(async () => {
     setQuitHint(null)
-    if (!await prepareToLeavePlayingRun()) return
+    if (!await prepareToLeavePlayingRun({
+      keepalive: currentSaveIdRef.current !== null,
+    })) return
 
     window.close()
 
@@ -1940,11 +1968,16 @@ export default function App() {
     setPendingGalleryChallengeTarget(null)
     setPendingGalleryChallengeMode(null)
     restartPuzzleRun()
+    ignorePuzzleProgressRef.current = false
     setAppState('playing')
   }
 
   const handleProgressChange = useCallback(
     (progress: PersistedPuzzleProgress | null) => {
+      if (ignorePuzzleProgressRef.current) {
+        return
+      }
+
       setSavedProgress(progress)
       if (
         progress
@@ -2357,6 +2390,7 @@ export default function App() {
           setRandomImageQuery('')
           restartPuzzleRun()
           setUploadCommandRequest(null)
+          ignorePuzzleProgressRef.current = false
           setAppState('playing')
         } catch (error) {
           if (activeSessionRef.current === sessionId) {
@@ -2421,6 +2455,7 @@ export default function App() {
 
     releaseAppFocus()
     scrollViewportToTop()
+    ignorePuzzleProgressRef.current = true
     beginSession()
     audioService.stopTransientEffects()
     resetRunArtifacts()
@@ -3001,6 +3036,7 @@ export default function App() {
             beginSession()
             restartPuzzleRun()
             resetRunArtifacts()
+            ignorePuzzleProgressRef.current = false
             setAppState('playing')
           },
         },
@@ -3124,6 +3160,7 @@ export default function App() {
     if (activeGalleryChallengeTarget && !activeGalleryReplaySetup) {
       clearGalleryChallengeState()
     }
+    ignorePuzzleProgressRef.current = false
     setAppState('playing')
   }
 
@@ -3145,6 +3182,7 @@ export default function App() {
     resetRunArtifacts()
     setConfig({ rows: nextDifficulty.rows, cols: nextDifficulty.cols })
     clearGalleryChallengeState()
+    ignorePuzzleProgressRef.current = false
     setAppState('playing')
   }
 
@@ -3314,6 +3352,7 @@ export default function App() {
                       challengeTarget={activeGalleryChallengeTarget}
                       challengeMode={activeGalleryChallengeMode}
                       onProgressChange={handleProgressChange}
+                      registerProgressSnapshotProvider={registerProgressSnapshotProvider}
                       onWin={handleWin}
                       onQuit={handleReset}
                       onGoToStartScreen={handleGoToStartScreen}
