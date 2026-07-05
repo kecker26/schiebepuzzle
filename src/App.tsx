@@ -1524,6 +1524,7 @@ export default function App() {
     setIsFetchingRandom(false)
     setRandomImageError(null)
     setCroppedImage(null)
+    setUploadCommandRequest(null)
     setAppState('imageLoaded')
   }, [beginSession, clearGalleryChallengeState, commitCropDraftSnapshot, config, resetRunArtifacts, setImagePalette])
 
@@ -1564,6 +1565,7 @@ export default function App() {
       setWinStats(null)
       setRandomImageError(null)
       resetCompletionFeedback()
+      setUploadCommandRequest(null)
       setAppState('playing')
       setSavedGamesError(null)
     } catch (error) {
@@ -2354,6 +2356,7 @@ export default function App() {
           setRandomImageSource(null)
           setRandomImageQuery('')
           restartPuzzleRun()
+          setUploadCommandRequest(null)
           setAppState('playing')
         } catch (error) {
           if (activeSessionRef.current === sessionId) {
@@ -2401,6 +2404,7 @@ export default function App() {
     setRandomImageSource(null)
     setRandomImageQuery('')
     setGalleryError(null)
+    setUploadCommandRequest(null)
     setAppState('imageLoaded')
   }, [
     beginSession,
