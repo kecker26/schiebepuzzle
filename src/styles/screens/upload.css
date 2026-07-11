@@ -9381,39 +9381,12 @@
   overflow: visible;
 }
 
-.stats-score-breakdown-layout {
-  display: grid;
-  grid-template-columns: minmax(110px, 0.45fr) minmax(0, 1fr);
-  align-items: start;
-  gap: 6px;
-  min-width: 0;
+.stats-score-breakdown-frame .recharts-wrapper {
   overflow: visible;
 }
 
-.stats-score-breakdown-categories {
-  position: relative;
-  z-index: 8;
-  display: grid;
-  grid-template-rows: repeat(5, 1fr);
-  align-items: center;
-  height: 112px;
-  margin-top: 10px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.2;
-  font-weight: 760;
+.stats-score-breakdown-frame .recharts-surface {
   overflow: visible;
-}
-
-.stats-score-breakdown-category {
-  position: relative;
-  display: inline-flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  overflow: visible;
-  white-space: nowrap;
 }
 
 .stats-score-breakdown-help-badge {
@@ -9450,37 +9423,6 @@
     color 0.16s ease;
 }
 
-.stats-score-breakdown-help-tooltip {
-  position: absolute;
-  z-index: 620;
-  top: 50%;
-  left: calc(100% + 8px);
-  min-width: 176px;
-  max-width: min(260px, 50vw);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  text-align: left;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  transform: translateY(-50%) scale(0.96);
-  transition:
-    opacity 0.14s ease,
-    transform 0.14s ease,
-    visibility 0.14s ease;
-}
-
-.stats-score-breakdown-category:first-child .stats-score-breakdown-help-tooltip {
-  top: 0;
-  transform: scale(0.96);
-}
-
-.stats-score-breakdown-category:last-child .stats-score-breakdown-help-tooltip {
-  top: auto;
-  bottom: 0;
-  transform: scale(0.96);
-}
-
 .stats-score-breakdown-help-badge:hover,
 .stats-score-breakdown-help-badge:focus-visible {
   border-color: color-mix(in srgb, var(--primary-color) 72%, var(--text-secondary));
@@ -9494,33 +9436,16 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent);
 }
 
-.stats-score-breakdown-help-badge:hover .stats-score-breakdown-help-tooltip,
-.stats-score-breakdown-help-badge:focus-visible .stats-score-breakdown-help-tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
-.stats-score-breakdown-help-badge:hover .stats-score-breakdown-help-tooltip,
-.stats-score-breakdown-help-badge:focus-visible .stats-score-breakdown-help-tooltip {
-  transform: translateY(-50%) scale(1);
-}
-
-.stats-score-breakdown-category:first-child .stats-score-breakdown-help-badge:hover .stats-score-breakdown-help-tooltip,
-.stats-score-breakdown-category:first-child .stats-score-breakdown-help-badge:focus-visible .stats-score-breakdown-help-tooltip,
-.stats-score-breakdown-category:last-child .stats-score-breakdown-help-badge:hover .stats-score-breakdown-help-tooltip,
-.stats-score-breakdown-category:last-child .stats-score-breakdown-help-badge:focus-visible .stats-score-breakdown-help-tooltip {
-  transform: scale(1);
-}
-
-.stats-score-breakdown-chart {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-  overflow: visible;
-}
-
 .stats-score-breakdown-frame .recharts-cartesian-grid line {
   stroke: color-mix(in srgb, var(--secondary-border) 62%, transparent);
+}
+
+.stats-score-breakdown-frame .recharts-cartesian-axis-line {
+  stroke: color-mix(in srgb, var(--secondary-border) 70%, transparent);
+}
+
+.stats-score-breakdown-frame .recharts-cartesian-axis-tick-line {
+  stroke: color-mix(in srgb, var(--secondary-border) 52%, transparent);
 }
 
 .stats-score-breakdown-frame .recharts-cartesian-axis-tick text,
@@ -9538,6 +9463,20 @@
   fill: var(--text-main);
   font-size: 11px;
   font-weight: 900;
+}
+
+.stats-score-breakdown-tick {
+  overflow: visible;
+}
+
+.stats-score-breakdown-tick-label {
+  fill: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.stats-score-breakdown-tick-help {
+  overflow: visible;
 }
 
 .stats-score-breakdown-note {
