@@ -68,7 +68,7 @@ describe('puzzleEstimates', () => {
     expect(first).toContain('synthetic:source:4x4')
   })
 
-  it('wendet persoenliche Mediane erst ab fuenf cleanen Laeufen mit 25-Prozent-Cap an', () => {
+  it('wendet persoenliche Mediane erst ab fuenf cleanen Läufen mit 25-Prozent-Cap an', () => {
     const withoutMedian = estimateGalleryChallengeTarget({
       config: { rows: 4, cols: 4 },
       motifKey: 'source',
@@ -148,7 +148,7 @@ describe('puzzleEstimates', () => {
     ], target.entryId)).toBe(true)
   })
 
-  it('wertet passende fruehere cleane Laeufe nur dann als vorhandene synthetische Serie, wenn Zeit und Zuege die Schaetzung schlagen', () => {
+  it('wertet passende frühere cleane Läufe nur dann als vorhandene synthetische Serie, wenn Zeit und Züge die Schätzung schlagen', () => {
     const target = estimateGalleryChallengeTarget({
       config: { rows: 4, cols: 4 },
       motifKey: 'source',

@@ -22,12 +22,12 @@ export default function MusicVolumeControl({ variant = 'panel' }: MusicVolumeCon
   return (
     <div
       className={`music-volume-control music-volume-control--${variant}`}
-      data-app-tooltip={`Musiklautstaerke: ${volumePercent}%.`}
+      data-app-tooltip={`Musiklautstärke: ${volumePercent}%.`}
       data-app-tooltip-align="start"
     >
       <div className="music-volume-control-head">
         <label className="music-volume-control-label" htmlFor={inputId}>
-          Lautstaerke
+          Lautstärke
         </label>
         <strong className="music-volume-control-value">{volumePercent}%</strong>
       </div>
@@ -42,7 +42,7 @@ export default function MusicVolumeControl({ variant = 'panel' }: MusicVolumeCon
           audioService.setMusicVolume(Number(event.currentTarget.value) / 100)
         }}
         className="music-volume-control-input"
-        aria-label="Musiklautstaerke"
+        aria-label="Musiklautstärke"
       />
       <div className="music-volume-control-scale" aria-hidden="true">
         <span>Leise</span>

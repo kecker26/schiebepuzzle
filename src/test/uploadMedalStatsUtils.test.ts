@@ -29,7 +29,7 @@ function createEntry(
 }
 
 describe('UploadMedalStatsUtils', () => {
-  it('zaehlt pro Motiv ausschliesslich die beste Medaille', () => {
+  it('zählt pro Motiv ausschließlich die beste Medaille', () => {
     const distribution = buildMedalDistribution([
       createEntry('a-bronze', 'motif-a', '2026-06-01T10:00:00.000Z', 'bronze'),
       createEntry('a-silver', 'motif-a', '2026-06-02T10:00:00.000Z', 'silver'),

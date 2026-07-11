@@ -115,14 +115,14 @@ function createRunVerdict(
 ): RunVerdict {
   if (!previousCompletion) {
     return {
-      title: `Neuer Vergleich fuer ${difficultyLabel}`,
+      title: `Neuer Vergleich für ${difficultyLabel}`,
       copy: 'Dieser Lauf ist schon gegen die aktuellen Rekorde eingeordnet. Der Direktvergleich startet, sobald ein weiterer Abschluss derselben Stufe dazukommt.',
       tone: 'neutral',
     }
   }
 
   const timePhrase = formatTrendPhrase(timeTrend, 'schneller', 'langsamer', 'gleich schnell', 'zeitlich eingeordnet')
-  const movesPhrase = formatTrendPhrase(movesTrend, 'sparsamer', 'mit mehr Zuegen', 'gleich sparsam', 'nach Zuegen eingeordnet')
+  const movesPhrase = formatTrendPhrase(movesTrend, 'sparsamer', 'mit mehr Zügen', 'gleich sparsam', 'nach Zügen eingeordnet')
   const assistancePhrase = formatTrendPhrase(
     assistanceTrend,
     'sauberer',
@@ -140,7 +140,7 @@ function createRunVerdict(
 
   return {
     title: `${capitalizeFirst(timePhrase)}, ${movesPhrase} und ${assistancePhrase}`,
-    copy: 'Die wichtigsten Unterschiede stehen direkt in der Tabelle. Gruene Punkte markieren Verbesserungen, rote Punkte Verschlechterungen, neutrale Punkte gleich gebliebene Werte oder fehlende Vergleichsdaten.',
+    copy: 'Die wichtigsten Unterschiede stehen direkt in der Tabelle. Grüne Punkte markieren Verbesserungen, rote Punkte Verschlechterungen, neutrale Punkte gleich gebliebene Werte oder fehlende Vergleichsdaten.',
     tone,
   }
 }
@@ -216,7 +216,7 @@ function createBestGapBadge(
       : formatCount(Math.abs(deltaToPreviousGap), singular, plural)
 
     return {
-      label: `${deltaLabel} ${trend === 'better' ? 'naeher an' : 'weiter weg von'} ${targetLabel}`,
+      label: `${deltaLabel} ${trend === 'better' ? 'näher an' : 'weiter weg von'} ${targetLabel}`,
       tone: trend === 'better' ? 'positive' : 'negative',
     }
   }
@@ -256,7 +256,7 @@ function formatAssistanceBreakdown(run: {
 }): string {
   return [
     formatCount(run.hintCount, 'Hinweis', 'Hinweise'),
-    formatCount(run.suggestedMoveCount, 'Auto-Zug', 'Auto-Zuege'),
+    formatCount(run.suggestedMoveCount, 'Auto-Zug', 'Auto-Züge'),
     `${run.ghostUsageCount}x Ghost (${formatUsageDuration(run.ghostUsageDurationMs)})`,
     `${run.heatmapUsageCount}x Heatmap (${formatUsageDuration(run.heatmapUsageDurationMs)})`,
   ].join(', ')
@@ -319,7 +319,7 @@ export default function UploadStatsRunComparison({
   ].filter((badge): badge is ComparisonBadge => badge !== null)
 
   const movesBadges = [
-    createMovesDeltaBadge(movesComparison.deltaToPrevious, 'Zug', 'Zuege'),
+    createMovesDeltaBadge(movesComparison.deltaToPrevious, 'Zug', 'Züge'),
     createBestGapBadge(
       movesGapComparison.currentGap,
       movesGapComparison.deltaToPreviousGap,
@@ -327,7 +327,7 @@ export default function UploadStatsRunComparison({
       'Rekord erreicht',
       'Rekord',
       'Zug',
-      'Zuege'
+      'Züge'
     ),
   ].filter((badge): badge is ComparisonBadge => badge !== null)
 
@@ -367,24 +367,24 @@ export default function UploadStatsRunComparison({
       tone: timeTone,
     },
     {
-      label: 'Zuege',
+      label: 'Züge',
       current: `${currentRun.moves}`,
       previous: previousRun
         ? `${previousRun.moves}`
         : `Rekord ${formatOptionalMoves(difficultyStats?.bestMoves ?? null)}`,
-      insight: formatBadgeSummary(movesBadges, previousCompletion ? 'Zuege wie zuletzt' : 'Noch kein Vorlauf'),
+      insight: formatBadgeSummary(movesBadges, previousCompletion ? 'Züge wie zuletzt' : 'Noch kein Vorlauf'),
       tone: movesTone,
-      detail: 'Reine Puzzle-Zuege bis zur Loesung.',
+      detail: 'Reine Puzzle-Züge bis zur Lösung.',
     },
     {
-      label: 'Ruecknahmen',
+      label: 'Rücknahmen',
       current: formatExtraMoves(currentExtraMoves),
       previous: previousRun
         ? previousExtraMoves === null ? 'Vorlauf ohne Profil' : formatExtraMoves(previousExtraMoves)
         : '--',
-      insight: formatBadgeSummary(extraBadges, currentExtraMoves === null ? 'Ohne Laufprofil' : 'Keine Veraenderung'),
+      insight: formatBadgeSummary(extraBadges, currentExtraMoves === null ? 'Ohne Laufprofil' : 'Keine Veränderung'),
       tone: extraTone,
-      detail: 'Ruecknahmen sind Zusatzaktionen ueber die eigentlichen Puzzle-Zuege hinaus.',
+      detail: 'Rücknahmen sind Zusatzaktionen über die eigentlichen Puzzle-Züge hinaus.',
     },
     {
       label: 'Hilfen & Sauberkeit',
@@ -398,7 +398,7 @@ export default function UploadStatsRunComparison({
         ? `Jetzt ${formatAssistanceBreakdown(currentRun)}.${previousRun?.hasDetailedProfile
           ? ` Davor ${formatAssistanceBreakdown(previousRun)}.`
           : ''}`
-        : 'Der neueste Lauf enthaelt kein volles Hilfsprofil.',
+        : 'Der neueste Lauf enthält kein volles Hilfsprofil.',
     },
   ]
 
@@ -451,13 +451,13 @@ export default function UploadStatsRunComparison({
               </strong>
             </span>
             <span>
-              <small>Zuege</small>
+              <small>Züge</small>
               <strong>
                 <SpringNumber value={currentRun.moves} from={0} durationMs={1700} />
               </strong>
             </span>
             <span>
-              <small>Ruecknahmen</small>
+              <small>Rücknahmen</small>
               <strong>
                 <SpringNumber
                   value={currentExtraMoves}

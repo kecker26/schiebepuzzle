@@ -73,7 +73,7 @@ function formatAssistanceLabel(mode: PuzzleAssistanceMode): string {
     case 'hinted':
       return 'Mit Hilfen'
     case 'auto-assisted':
-      return 'Mit Auto-Zuegen'
+      return 'Mit Auto-Zügen'
   }
 }
 
@@ -116,7 +116,7 @@ function formatAssistanceBreakdown(run: {
 }): string {
   return [
     formatCount(run.hintCount, 'Hinweis', 'Hinweise'),
-    formatCount(run.suggestedMoveCount, 'Auto-Zug', 'Auto-Zuege'),
+    formatCount(run.suggestedMoveCount, 'Auto-Zug', 'Auto-Züge'),
     `${run.ghostUsageCount}x Ghost (${formatUsageDuration(run.ghostUsageDurationMs)})`,
     `${run.heatmapUsageCount}x Heatmap (${formatUsageDuration(run.heatmapUsageDurationMs)})`,
   ].join(', ')
@@ -158,13 +158,13 @@ function createMovesBadge(delta: number | null, difficultyLabel: string): WinCom
 
   if (delta === 0) {
     return {
-      label: `Gleich viele Zuege wie letzter ${difficultyLabel}-Lauf`,
+      label: `Gleich viele Züge wie letzter ${difficultyLabel}-Lauf`,
       tone: 'neutral',
     }
   }
 
   return {
-    label: `${formatCount(Math.abs(delta), 'Zug', 'Zuege')} ${delta < 0 ? 'weniger' : 'mehr'} als letzter ${difficultyLabel}-Lauf`,
+    label: `${formatCount(Math.abs(delta), 'Zug', 'Züge')} ${delta < 0 ? 'weniger' : 'mehr'} als letzter ${difficultyLabel}-Lauf`,
     tone: delta < 0 ? 'positive' : 'negative',
   }
 }
@@ -196,7 +196,7 @@ function createBestGapBadge(
       : formatCount(Math.abs(deltaToPreviousGap), singular, plural)
 
     return {
-      label: `${deltaLabel} ${trend === 'better' ? 'naeher am' : 'weiter weg vom'} ${targetLabel}`,
+      label: `${deltaLabel} ${trend === 'better' ? 'näher am' : 'weiter weg vom'} ${targetLabel}`,
       tone: trend === 'better' ? 'positive' : 'negative',
     }
   }
@@ -285,14 +285,14 @@ export default function WinDialog({
       ? challengeQualificationResult === 'created-template'
         ? 'Echte Vorlage erstellt. Keine Medaille, weil dieser Lauf erst der neue Massstab ist.'
         : isCleanChallengeRun
-          ? 'Noch keine Vorlage erstellt: Zeit und Zuege haben das geschaetzte Ziel nicht ausreichend unterboten.'
-          : `Dieser Lauf haette ${challengeMedalLabel ?? 'eine Einstufung'} erreichen koennen, zaehlt mit Hilfe aber nur als Uebung.`
+          ? 'Noch keine Vorlage erstellt: Zeit und Züge haben das geschätzte Ziel nicht ausreichend unterboten.'
+          : `Dieser Lauf hätte ${challengeMedalLabel ?? 'eine Einstufung'} erreichen können, zählt mit Hilfe aber nur als Übung.`
       : challengeMode === 'qualification'
         ? challengeQualificationResult === 'created-template'
-          ? 'Echte Vorlage erstellt. Qualifikationen vergeben keine Medaille; ab jetzt zaehlt der Medaillenlauf gegen deine Vorlage.'
+          ? 'Echte Vorlage erstellt. Qualifikationen vergeben keine Medaille; ab jetzt zählt der Medaillenlauf gegen deine Vorlage.'
           : isCleanChallengeRun
-            ? 'Qualifikation nicht geschafft: Zeit oder Zuege haben das geschaetzte Ziel nicht unterboten. Als Uebung unter "Vor dem echten Ziel" gespeichert.'
-            : 'Qualifikation nicht geschafft: Hilfe genutzt. Als Uebung unter "Vor dem echten Ziel" gespeichert.'
+            ? 'Qualifikation nicht geschafft: Zeit oder Züge haben das geschätzte Ziel nicht unterboten. Als Übung unter "Vor dem echten Ziel" gespeichert.'
+            : 'Qualifikation nicht geschafft: Hilfe genutzt. Als Übung unter "Vor dem echten Ziel" gespeichert.'
         : getChallengeMedalExplanation(stats, challengeTarget, challengeMedal)
     : null
   const nextChallengeMedalGoal = challengeTarget
@@ -304,26 +304,26 @@ export default function WinDialog({
       ? `Erste Challenge-Medaille: ${challengeMedalLabel}`
       : getChallengeMedalRank(challengeMedal) > getChallengeMedalRank(challengePreviousBestMedal)
         ? `Aufstieg: ${formatChallengeMedalLabel(challengePreviousBestMedal)} zu ${challengeMedalLabel}`
-        : `Medaille bestaetigt: ${challengeMedalLabel}`
+        : `Medaille bestätigt: ${challengeMedalLabel}`
     : challengeTarget
       ? challengeQualificationResult === 'created-template'
         ? 'Vorlage erstellt: jetzt Medaille jagen'
         : challengeMode === 'soft'
-          ? 'Geschaetzter Vergleich abgeschlossen'
+          ? 'Geschätzter Vergleich abgeschlossen'
           : challengeMode === 'qualification'
             ? 'Qualifikation ohne Vorlage'
             : isCleanChallengeRun
               ? 'Challenge abgeschlossen: keine Medaille'
-              : 'Mit Hilfe: als verwandter Uebungslauf gespeichert'
+              : 'Mit Hilfe: als verwandter Übungslauf gespeichert'
       : null
   const challengeSummaryKicker =
     challengeMode === 'soft'
-      ? 'Geschaetzter Vergleich'
+      ? 'Geschätzter Vergleich'
       : challengeMode === 'qualification'
         ? 'Qualifikation'
         : isCleanChallengeRun
           ? 'Medaillenlauf abgeschlossen'
-          : 'Uebung abgeschlossen'
+          : 'Übung abgeschlossen'
   const challengeSummaryTitle =
     challengeQualificationResult === 'created-template'
       ? 'Echte Vorlage erstellt'
@@ -379,7 +379,7 @@ export default function WinDialog({
           ].filter((badge): badge is WinComparisonBadge => badge !== null),
         },
         {
-          label: 'Aktueller Lauf - Netto-Zuege',
+          label: 'Aktueller Lauf - Netto-Züge',
           value: `${currentRun.moves}`,
           copy: `${currentRun.actionMoves} Aktionen, ${extraMoves} Korrekturen in diesem Lauf.`,
           tone: resolveComparisonTone(movesComparison.trend, movesGapComparison.trend),
@@ -392,7 +392,7 @@ export default function WinDialog({
               'Stufen-Zugrekord erreicht',
               'Stufen-Zugrekord',
               'Zug',
-              'Zuege'
+              'Züge'
             ),
           ].filter((badge): badge is WinComparisonBadge => badge !== null),
         },
@@ -486,10 +486,10 @@ export default function WinDialog({
               )}
             </div>
             <div className="win-hero-copy">
-              <span className="win-kicker">Puzzle geloest</span>
+              <span className="win-kicker">Puzzle gelöst</span>
               <h2 id="win-title">Gewonnen!</h2>
               <p className="win-message">
-                Bild geloest in {formatTime(stats.time)} und {stats.moves} Zuegen.
+                Bild gelöst in {formatTime(stats.time)} und {stats.moves} Zügen.
               </p>
               <div className="win-hero-tags">
                 <span className="win-tag win-tag-accent">{difficultyLabel}</span>
@@ -550,7 +550,7 @@ export default function WinDialog({
               <span>Zeit</span>
               <strong>{formatTime(stats.time)} / {formatTime(challengeTarget.time)}</strong>
               <em>{challengeTimeDelta !== null && challengeTimeDelta < 0 ? `${Math.abs(challengeTimeDelta)} Sek. schneller` : challengeTimeDelta === 0 ? 'Gleichstand' : `${challengeTimeDelta} Sek. langsamer`}</em>
-              <span>Netto-Zuege</span>
+              <span>Netto-Züge</span>
               <strong>{stats.moves} / {challengeTarget.moves}</strong>
               <em>{challengeMovesDelta !== null && challengeMovesDelta < 0 ? `${Math.abs(challengeMovesDelta)} weniger` : challengeMovesDelta === 0 ? 'Gleichstand' : `${challengeMovesDelta} mehr`}</em>
             </div>
@@ -558,7 +558,7 @@ export default function WinDialog({
               <div className="win-challenge-next-goal">
                 <span>
                   {nextChallengeMedalGoal.medal
-                    ? `Fuer ${formatChallengeMedalLabel(nextChallengeMedalGoal.medal)}`
+                    ? `Für ${formatChallengeMedalLabel(nextChallengeMedalGoal.medal)}`
                     : 'Medaillenstatus'}
                 </span>
                 <strong>{nextChallengeMedalGoal.label}</strong>
@@ -571,7 +571,7 @@ export default function WinDialog({
           <AnimatedReveal className="stat-item" interaction="surface" level="subtle">
             <span className="stat-label">
               <Route className="stat-icon" strokeWidth={2.2} absoluteStrokeWidth />
-              <span>Netto-Zuege</span>
+              <span>Netto-Züge</span>
             </span>
             <span className="stat-value">{stats.moves}</span>
           </AnimatedReveal>
@@ -603,7 +603,7 @@ export default function WinDialog({
             <div className="win-comparison-head">
               <span className="win-kicker">Stufenvergleich</span>
               <p className="win-comparison-copy">
-                Dieser Lauf gegen den zuletzt abgeschlossenen {difficultyLabel}-Lauf und deine persoenlichen Rekorde auf dieser Stufe.
+                Dieser Lauf gegen den zuletzt abgeschlossenen {difficultyLabel}-Lauf und deine persönlichen Rekorde auf dieser Stufe.
               </p>
               {challengeTarget ? (
                 <p className="win-comparison-context-note">
@@ -668,12 +668,12 @@ export default function WinDialog({
               className="win-secondary-btn"
               data-win-dialog-action="true"
               disabled={!nextDifficultyLabel}
-              data-app-tooltip={nextDifficultyLabel ? `Naechste Schwierigkeit starten: ${nextDifficultyLabel}.` : 'Keine hoehere Schwierigkeit verfuegbar.'}
+              data-app-tooltip={nextDifficultyLabel ? `Nächste Schwierigkeit starten: ${nextDifficultyLabel}.` : 'Keine höhere Schwierigkeit verfügbar.'}
               data-app-tooltip-position="top"
               reveal
               revealLevel="subtle"
             >
-              {nextDifficultyLabel ? `Weiter: ${nextDifficultyLabel}` : 'Haerteste Stufe'}
+              {nextDifficultyLabel ? `Weiter: ${nextDifficultyLabel}` : 'Härteste Stufe'}
             </AnimatedButton>
             <AnimatedButton
               onClick={onGoToSelectionScreen}

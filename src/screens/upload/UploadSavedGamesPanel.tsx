@@ -288,7 +288,7 @@ export default function UploadSavedGamesPanel({
         <div>
           <span className="saved-games-kicker">Fortsetzen</span>
           <h3 id={titleId} className="dashboard-section-title">
-            Gespeicherte Spielstaende
+            Gespeicherte Spielstände
           </h3>
         </div>
         {!isLoadingSavedGames && savedGamesCount > 0 && (
@@ -299,11 +299,11 @@ export default function UploadSavedGamesPanel({
               className="secondary saved-games-delete-all-button"
               onClick={onDeleteAllRequest}
               disabled={isBulkActionDisabled}
-              data-app-tooltip="Alle gespeicherten Zwischenstaende loeschen. Statistik und Galerie bleiben erhalten."
+              data-app-tooltip="Alle gespeicherten Zwischenstände löschen. Statistik und Galerie bleiben erhalten."
               data-app-tooltip-position="top"
             >
               <UploadScreenIcon name="trash" />
-              {isDeletingAllSavedGames ? <BusyIndicator label="Loesche alle ..." /> : 'Alle loeschen'}
+              {isDeletingAllSavedGames ? <BusyIndicator label="Lösche alle ..." /> : 'Alle löschen'}
             </button>
           </div>
         )}
@@ -314,7 +314,7 @@ export default function UploadSavedGamesPanel({
           <UploadStateNotice
             icon={'\u{23F3}'}
             iconName="timer"
-            title="Spielstaende werden geladen ..."
+            title="Spielstände werden geladen ..."
             detail="Die zuletzt gesicherten Partien werden gerade eingelesen."
             role="status"
             ariaLive="polite"
@@ -324,7 +324,7 @@ export default function UploadSavedGamesPanel({
           <UploadStateNotice
             icon={'\u{1F4E6}'}
             iconName="folder"
-            title="Keine Spielstaende vorhanden."
+            title="Keine Spielstände vorhanden."
             detail="Starte auf der Auswahlseite ein neues Puzzle. Dein Fortschritt landet danach automatisch hier im Bereich."
             className="saved-games-empty-state"
           />

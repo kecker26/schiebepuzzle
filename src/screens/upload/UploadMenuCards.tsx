@@ -88,17 +88,17 @@ export default function UploadMenuCards({
         <span className="menu-card-title">{isDragActive ? 'Bild hier ablegen' : 'Foto hochladen'}</span>
         <span className="menu-card-desc">
           {isDragActive
-            ? 'Die Bilddatei wird nach dem Loslassen direkt vorbereitet und in den Zuschnitt uebernommen.'
-            : 'Waehle ein Bild von deinem Geraet und starte damit sofort ein Puzzle.'}
+            ? 'Die Bilddatei wird nach dem Loslassen direkt vorbereitet und in den Zuschnitt übernommen.'
+            : 'Wähle ein Bild von deinem Gerät und starte damit sofort ein Puzzle.'}
         </span>
         <span className="menu-card-hint">
           {isDragActive
-            ? 'Unterstuetzt werden gaengige Bilddateien wie JPG, PNG, WebP oder GIF.'
-            : 'Klicken, Datei hineinziehen oder mit Strg+V einfuegen.'}
+            ? 'Unterstützt werden gängige Bilddateien wie JPG, PNG, WebP oder GIF.'
+            : 'Klicken, Datei hineinziehen oder mit Strg+V einfügen.'}
         </span>
         <span className="menu-card-arrow">
           <UploadScreenIcon name="mousePointerClick" className="menu-card-arrow-icon" />
-          {isDragActive ? 'Jetzt ablegen' : 'Foto auswaehlen'}
+          {isDragActive ? 'Jetzt ablegen' : 'Foto auswählen'}
         </span>
       </AnimatedCardButton>
 
@@ -108,21 +108,21 @@ export default function UploadMenuCards({
         onSubmit={handleRandomSubmit}
       >
         <span className="menu-card-glow" aria-hidden="true" />
-        <span className="menu-card-eyebrow">Ueberraschung</span>
+        <span className="menu-card-eyebrow">Überraschung</span>
         <span className="menu-card-icon" aria-hidden="true">
           <UploadScreenIcon name="dice" className="menu-card-icon-symbol" />
         </span>
         <span className="menu-card-title">
-          {isFetchingRandom ? 'Wird geladen...' : 'Zufaelliges Bild'}
+          {isFetchingRandom ? 'Wird geladen...' : 'Zufälliges Bild'}
         </span>
-        <span className="menu-card-desc">Ein ueberraschendes Motiv fuer eine spontane Runde ohne Auswahlstress.</span>
+        <span className="menu-card-desc">Ein überraschendes Motiv für eine spontane Runde ohne Auswahlstress.</span>
         {isFetchingRandom ? (
           <AsyncStatusPanel
             compact
             floating
-            title={randomQuery.trim() ? `Suche Motiv zu "${randomQuery.trim()}"` : 'Suche ein zufaelliges Motiv'}
-            detail="Bildquellen werden nacheinander abgefragt und geprueft."
-            longWaitDetail="Die Bildsuche laeuft noch. Langsame oder nicht erreichbare Quellen werden automatisch uebersprungen."
+            title={randomQuery.trim() ? `Suche Motiv zu "${randomQuery.trim()}"` : 'Suche ein zufälliges Motiv'}
+            detail="Bildquellen werden nacheinander abgefragt und geprüft."
+            longWaitDetail="Die Bildsuche läuft noch. Langsame oder nicht erreichbare Quellen werden automatisch übersprungen."
           />
         ) : null}
         <label className="random-image-query-label" htmlFor="random-image-query-input">
@@ -131,7 +131,7 @@ export default function UploadMenuCards({
         <span className="random-image-query-row">
           <span
             className="random-image-query-field"
-            data-app-tooltip="Optionales Thema, Motiv oder Stil fuer die Online-Bildsuche."
+            data-app-tooltip="Optionales Thema, Motiv oder Stil für die Online-Bildsuche."
             data-app-tooltip-align="start"
           >
             <input
@@ -146,10 +146,10 @@ export default function UploadMenuCards({
             <button
               className="random-image-query-clear"
               type="button"
-              aria-label="Suchbegriffe loeschen"
+              aria-label="Suchbegriffe löschen"
               onClick={handleRandomClear}
               disabled={!randomQuery.trim() || isFetchingRandom}
-              data-app-tooltip="Suchbegriffe leeren und wieder echten Zufall nutzen."
+              data-app-tooltip="Suchbegriffe löschen und wieder echten Zufall nutzen."
               data-app-tooltip-align="end"
             >
               <UploadScreenIcon name="x" className="random-image-query-clear-icon" />
@@ -160,7 +160,7 @@ export default function UploadMenuCards({
         <button
           className="menu-card-arrow random-image-submit"
           type="submit"
-          aria-label={isFetchingRandom ? 'Zufaelliges Bild wird geladen' : 'Zufaelliges Bild starten'}
+          aria-label={isFetchingRandom ? 'Zufälliges Bild wird geladen' : 'Zufälliges Bild starten'}
           disabled={isFetchingRandom}
           data-app-tooltip="Online-Motiv laden und direkt zum Zuschnitt wechseln."
           data-app-tooltip-align="end"
@@ -183,7 +183,7 @@ export default function UploadMenuCards({
           Bild per Prompt
         </label>
         <span className="menu-card-desc">
-          Beschreibe dein Wunschmotiv. Nano Banana erstellt daraus ein Puzzle-Bild.
+          Beschreibe dein Wunschmotiv. Die KI erstellt daraus ein Puzzle-Bild.
         </span>
         {isGeneratingPromptImage ? (
           <AsyncStatusPanel
@@ -191,7 +191,7 @@ export default function UploadMenuCards({
             floating
             title="KI erstellt dein Puzzle-Bild"
             phase="Prompt wird verarbeitet und das Motiv gerendert."
-            longWaitDetail="Die Bildgenerierung laeuft noch. Aufwendige Motive benoetigen gelegentlich etwas mehr Zeit."
+            longWaitDetail="Die Bildgenerierung läuft noch. Aufwendige Motive benötigen gelegentlich etwas mehr Zeit."
           />
         ) : null}
         <textarea

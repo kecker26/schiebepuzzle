@@ -49,7 +49,7 @@ const replaySetup = {
 } satisfies NonNullable<SolvedGalleryEntry['replaySetup']>
 
 describe('UploadGalleryDisplayUtils', () => {
-  it('verknuepft gleiche Motive ueber mehrere Schwierigkeitsstufen fuer Replay-Metadaten', () => {
+  it('verknuepft gleiche Motive über mehrere Schwierigkeitsstufen für Replay-Metadaten', () => {
     const entries = buildGalleryDisplayEntries(
       [
         createGalleryEntry('motif-a-4x4-latest', {
@@ -184,7 +184,7 @@ describe('UploadGalleryDisplayUtils', () => {
     })
   })
 
-  it('zaehlt jedes Motiv genau einmal nach seiner besten Challenge-Medaille', () => {
+  it('zählt jedes Motiv genau einmal nach seiner besten Challenge-Medaille', () => {
     const entries = buildGalleryDisplayEntries(
       [
         createGalleryEntry('motif-a-silver', {
@@ -311,7 +311,7 @@ describe('UploadGalleryDisplayUtils', () => {
       : null
     ).toMatchObject({
       label: 'Zeit: 1 Sek. schneller',
-      detail: 'Zuege: 1 Zug weniger',
+      detail: 'Züge: 1 Zug weniger',
       tone: 'near',
     })
     const bronzeCandidate = entries.find((entry) => entry.motifId === 'source-bronze-candidate')
@@ -369,12 +369,12 @@ describe('UploadGalleryDisplayUtils', () => {
       nearUpgrade: false,
       proximityScore: null,
     })).toMatchObject({
-      label: 'Hoechste verfuegbare Stufe',
+      label: 'Höchste verfügbare Stufe',
       tone: 'complete',
     })
   })
 
-  it('markiert die beste Medaille und das naechste erreichbare Motiv-Ziel', () => {
+  it('markiert die beste Medaille und das nächste erreichbare Motiv-Ziel', () => {
     const target = createGalleryEntry('target', {
       moves: 100,
       replaySetup: {
@@ -404,10 +404,10 @@ describe('UploadGalleryDisplayUtils', () => {
         { medal: 'diamond', status: 'locked' },
       ],
     })
-    expect(progress?.label).toContain('Naechstes Ziel: Gold')
+    expect(progress?.label).toContain('Nächstes Ziel: Gold')
   })
 
-  it('laesst Diamant ohne exaktes Solver-Optimum als naechstes Ziel offen', () => {
+  it('laesst Diamant ohne exaktes Solver-Optimum als nächstes Ziel offen', () => {
     const target = createGalleryEntry('target')
     const progress = getChallengeMedalProgress([
       target,
@@ -444,7 +444,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(progress.currentMedal).toBe('gold')
     expect(progress.stages).toContainEqual({ medal: 'gold', status: 'current' })
     expect(progress.stages).toContainEqual({ medal: 'diamond', status: 'next' })
-    expect(progress.label).not.toContain('Gold ist fuer die beste Vorlage nicht erreichbar')
+    expect(progress.label).not.toContain('Gold ist für die beste Vorlage nicht erreichbar')
   })
 
   it('markiert nicht erreichbare hoehere Medaillen im Fortschritt', () => {
@@ -469,7 +469,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(progress.label).toContain('nicht erreichbar')
   })
 
-  it('zeigt fuer Motive ohne Challenge-Medaille Bronze als erstes Ziel', () => {
+  it('zeigt für Motive ohne Challenge-Medaille Bronze als erstes Ziel', () => {
     const progress = getChallengeMedalProgress([createGalleryEntry('normal-run')])
 
     expect(progress).toMatchObject({
@@ -599,7 +599,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(series.relatedStartStateEntries.map((entry) => entry.id)).toEqual(['assisted-challenge-run'])
   })
 
-  it('erstellt bereits fuer den ersten assistierten Versuch eine medaillenlose Challenge-Serie', () => {
+  it('erstellt bereits für den ersten assistierten Versuch eine medaillenlose Challenge-Serie', () => {
     const replaySetup = {
       version: 1,
       startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
@@ -628,7 +628,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(series[0].relatedStartStateEntries.map((entry) => entry.id)).toEqual(['assisted-challenge-run'])
   })
 
-  it('gruppiert Laeufe mit gleicher synthetischer Ziel-ID als geschaetzte Ursprungserie', () => {
+  it('gruppiert Läufe mit gleicher synthetischer Ziel-ID als geschätzte Ursprungserie', () => {
     const estimatedChallengeTarget = {
       entryId: 'synthetic:source:4x4:crop:board:estimate-v1',
       completedAt: '2026-04-20T12:00:00.000Z',
@@ -672,7 +672,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(series.preTemplateEntries.map((entry) => entry.id)).toEqual(['failed-qualification'])
   })
 
-  it('haengt freie Laeufe mit gleichem Startbrett an die synthetische Ursprungserie', () => {
+  it('haengt freie Läufe mit gleichem Startbrett an die synthetische Ursprungserie', () => {
     const replaySetup = {
       version: 1,
       startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
@@ -720,7 +720,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(buildGalleryStartStateSeries([sameStartPractice, softRun], excluded)).toEqual([])
   })
 
-  it('fasst synthetischen Ursprung und echte Medaillenlaeufe desselben Startbretts zusammen', () => {
+  it('fasst synthetischen Ursprung und echte Medaillenläufe desselben Startbretts zusammen', () => {
     const replaySetup = {
       version: 1,
       startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
@@ -875,7 +875,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(relations.attemptsByEntryId.get(followUpAttempt.id)?.series.targetId).toBe(firstAttempt.id)
   })
 
-  it('gruppiert nicht-medaillebezogene Laeufe mit gleichem Startzustand separat', () => {
+  it('gruppiert nicht-medaillebezogene Läufe mit gleichem Startzustand separat', () => {
     const replaySetup = {
       version: 1,
       startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
@@ -918,7 +918,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(relations.entriesByEntryId.has(unrelated.id)).toBe(false)
   })
 
-  it('erstellt fuer eine einzelne cleane Vorlage bereits eine Startzustand-Serie', () => {
+  it('erstellt für eine einzelne cleane Vorlage bereits eine Startzustand-Serie', () => {
     const cleanTemplate = createGalleryEntry('clean-template', {
       assistanceMode: 'clean',
       replaySetup: {
@@ -995,7 +995,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(buildGalleryStartStateSeries([target, challengeAttempt], excluded)).toEqual([])
   })
 
-  it('erstellt fuer gescheiterte Qualifikationen keine neutrale Startzustand-Serie', () => {
+  it('erstellt für gescheiterte Qualifikationen keine neutrale Startzustand-Serie', () => {
     const replaySetup = {
       version: 1,
       startBoard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15],
@@ -1039,7 +1039,7 @@ describe('UploadGalleryDisplayUtils', () => {
     })
   })
 
-  it('dedupliziert Galerie-Eintraege motivweit fuer Sammlungen', () => {
+  it('dedupliziert Galerie-Eintraege motivweit für Sammlungen', () => {
     const ids = getUniqueGalleryMotifEntryIds([
       createGalleryEntry('motif-a-latest', {
         completedAt: '2026-04-24T12:00:00.000Z',
@@ -1063,7 +1063,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(ids).toEqual(['motif-a-latest', 'motif-b'])
   })
 
-  it('filtert Galerie-Karten nur, wenn alle ausgewaehlten Tags am Motiv vorhanden sind', () => {
+  it('filtert Galerie-Karten nur, wenn alle ausgewählten Tags am Motiv vorhanden sind', () => {
     const entry = {
       visibleEntries: [
         createGalleryEntry('motif-a-latest', {
@@ -1079,7 +1079,7 @@ describe('UploadGalleryDisplayUtils', () => {
     expect(galleryDisplayEntryMatchesAllTagKeys(entry, [getGalleryTagKey('wald'), getGalleryTagKey('stadt')])).toBe(false)
   })
 
-  it('sortiert aehnliche Galerie-Motive nach Tag-Ueberschneidung und Loesungshaeufigkeit', () => {
+  it('sortiert ähnliche Galerie-Motive nach Tag-Überschneidung und Lösungshäufigkeit', () => {
     const entries = buildGalleryDisplayEntries(
       [
         createGalleryEntry('motif-a', {

@@ -26,7 +26,7 @@ export default function GalleryStartBoardPreview({
 
   if (!entry || !image) {
     return (
-      <div className={rootClassName} aria-label="Startbrett nicht mehr verfuegbar" role="img">
+      <div className={rootClassName} aria-label="Startbrett nicht mehr verfügbar" role="img">
         <span className="gallery-start-board-preview-placeholder">Archiv</span>
       </div>
     )
@@ -34,7 +34,7 @@ export default function GalleryStartBoardPreview({
 
   if (!hasStartBoard || !entry.replaySetup) {
     return (
-      <div className={rootClassName} aria-label="Motivvorschau; gespeichertes Startbrett nicht verfuegbar" role="img">
+      <div className={rootClassName} aria-label="Motivvorschau; gespeichertes Startbrett nicht verfügbar" role="img">
         <img src={image} alt="" loading="lazy" decoding="async" />
         <span className="gallery-start-board-preview-label">Motiv</span>
       </div>

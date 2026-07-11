@@ -139,17 +139,17 @@ type BoardToolHelpTopic =
   | 'heatmap'
   | 'tile-numbers'
 
-const DEFAULT_BOARD_CAPTION = 'Das markierte Leerfeld ist dein Anker fuer schnelle, saubere Zugfolgen.'
+const DEFAULT_BOARD_CAPTION = 'Das markierte Leerfeld ist dein Anker für schnelle, saubere Zugfolgen.'
 const BOARD_INTRO_ANIMATION_MS = 1180
 const MOVE_FEEDBACK_DURATION_MS = 2600
 
 const BOARD_TOOL_HELP_MESSAGES: Record<BoardToolHelpTopic, string> = {
-  hint: 'Der Hinweis markiert dir die beste naechste Kachel direkt auf dem Brett, ohne den Zug selbst auszufuehren.',
-  'suggested-move': 'Zug spielen fuehrt den empfohlenen Schritt direkt aus oder berechnet ihn neu, wenn noch kein Vorschlag bereitsteht.',
+  hint: 'Der Hinweis markiert dir die beste nächste Kachel direkt auf dem Brett, ohne den Zug selbst auszuführen.',
+  'suggested-move': 'Zug spielen führt den empfohlenen Schritt direkt aus oder berechnet ihn neu, wenn noch kein Vorschlag bereitsteht.',
   preview: 'Die Vorschau blendet das Zielbild rechts ein oder aus, damit du Bildbereiche schneller mit dem Brett vergleichen kannst.',
-  'ghost-preview': 'Die Geisteransicht legt je nach Modus Vollbild, Konturen oder Kanten ueber das Brett, damit du Formen und Positionen leichter abgleichen kannst.',
-  heatmap: 'Die Heatmap bewertet bewegliche Kacheln und markiert die beste naechste Option direkt auf dem Brett.',
-  'tile-numbers': 'Nummern zeigt fuer 5 Sekunden die Soll-Reihenfolge und animiert korrekte Kacheln gruen, falsche rot.',
+  'ghost-preview': 'Die Geisteransicht legt je nach Modus Vollbild, Konturen oder Kanten über das Brett, damit du Formen und Positionen leichter abgleichen kannst.',
+  heatmap: 'Die Heatmap bewertet bewegliche Kacheln und markiert die beste nächste Option direkt auf dem Brett.',
+  'tile-numbers': 'Nummern zeigt für 5 Sekunden die Soll-Reihenfolge und animiert korrekte Kacheln grün, falsche rot.',
 }
 
 type StartOptimalMoveCountState =
@@ -1874,12 +1874,12 @@ export default function PuzzleScreen({
       : optimalStartMoveCountState.status === 'lower-bound'
         ? knownStartSolutionMoveCount !== null && knownStartSolutionMoveCount > 0
           ? knownStartSolutionMoveCount > optimalStartMoveCountState.moveCount
-            ? `Bekannt: ${knownStartSolutionMoveCount} (Min. ${optimalStartMoveCountState.moveCount}${isImprovingStartSolution ? ', Suche laeuft' : ''})`
+            ? `Bekannt: ${knownStartSolutionMoveCount} (Min. ${optimalStartMoveCountState.moveCount}${isImprovingStartSolution ? ', Suche läuft' : ''})`
             : `Bekannt: ${knownStartSolutionMoveCount}`
-          : `Mindestens: ${optimalStartMoveCountState.moveCount}${isImprovingStartSolution ? ' | Suche laeuft' : ''}`
+          : `Mindestens: ${optimalStartMoveCountState.moveCount}${isImprovingStartSolution ? ' | Suche läuft' : ''}`
       : optimalStartMoveCountState.status === 'loading'
         ? 'Optimal wird berechnet ...'
-        : 'Optimal momentan nicht verfuegbar'
+        : 'Optimal momentan nicht verfügbar'
   const resolveSuggestedQueue = useCallback(async (
     puzzleSnapshot: PuzzleState
   ): Promise<{ queue: string[]; source: 'exact' | 'tracked' | 'greedy' } | null> => {
@@ -2611,7 +2611,7 @@ export default function PuzzleScreen({
       }
       if (recalibratedFocus?.focusRow !== activeFocusRow) {
         showMoveFeedback({
-          message: `Fokus nach Rueckgaengig neu gesetzt: ${recalibratedFocus?.title ?? 'Zielbild vollstaendig'}.`,
+          message: `Fokus nach Rückgängig neu gesetzt: ${recalibratedFocus?.title ?? 'Zielbild vollständig'}.`,
           tone: 'neutral',
         })
       }
@@ -2658,7 +2658,7 @@ export default function PuzzleScreen({
       }
       if (recalibratedFocus?.focusRow !== activeFocusRow) {
         showMoveFeedback({
-          message: `Fokus nach Wiederholen neu gesetzt: ${recalibratedFocus?.title ?? 'Zielbild vollstaendig'}.`,
+          message: `Fokus nach Wiederholen neu gesetzt: ${recalibratedFocus?.title ?? 'Zielbild vollständig'}.`,
           tone: 'neutral',
         })
       }
@@ -2868,7 +2868,7 @@ export default function PuzzleScreen({
       return
     }
 
-    announceAccessibility('Puzzlebrett fokussiert. Pfeile oder WASD bewegen Kacheln. B bringt den Fokus jederzeit zurueck.')
+    announceAccessibility('Puzzlebrett fokussiert. Pfeile oder WASD bewegen Kacheln. B bringt den Fokus jederzeit zurück.')
   }, [announceAccessibility, isBoardFocused])
 
   return (
@@ -2987,7 +2987,7 @@ export default function PuzzleScreen({
                     />
                     {hintPreview && (
                       <div className="puzzle-hint-board-legend" aria-hidden="true">
-                        <span><i className="is-move" /> Naechster Zug</span>
+                        <span><i className="is-move" /> Nächster Zug</span>
                         <span><i className="is-target" /> Zielposition</span>
                       </div>
                     )}
@@ -3033,8 +3033,8 @@ export default function PuzzleScreen({
               </div>
               <p id={boardDescriptionId} className="visually-hidden">
                 {areGameAidsLocked
-                  ? 'Das Puzzlebrett ist der zentrale Spielbereich. Pfeiltasten oder WASD bewegen Kacheln und B holt den Fokus zurueck auf das Brett. Im Zielmodus sind die Spielhilfen gesperrt.'
-                  : 'Das Puzzlebrett ist der zentrale Spielbereich. Pfeiltasten oder WASD bewegen Kacheln, H zeigt einen Hinweis, Enter spielt den empfohlenen Zug und B holt den Fokus zurueck auf das Brett.'}
+                  ? 'Das Puzzlebrett ist der zentrale Spielbereich. Pfeiltasten oder WASD bewegen Kacheln und B holt den Fokus zurück auf das Brett. Im Zielmodus sind die Spielhilfen gesperrt.'
+                  : 'Das Puzzlebrett ist der zentrale Spielbereich. Pfeiltasten oder WASD bewegen Kacheln, H zeigt einen Hinweis, Enter spielt den empfohlenen Zug und B holt den Fokus zurück auf das Brett.'}
               </p>
               <p id={boardCaptionId} className="puzzle-board-caption" aria-live="polite">
                 {boardCaption}

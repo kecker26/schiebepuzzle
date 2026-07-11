@@ -117,19 +117,19 @@ const GHOST_PREVIEW_MODE_OPTIONS: Array<{
     value: 'image',
     label: 'Vollbild',
     sliderLabel: 'Originalbild',
-    description: 'Zeigt das Motiv flaechig und halbtransparent ueber den noch offenen Kacheln.',
+    description: 'Zeigt das Motiv flächig und halbtransparent über den noch offenen Kacheln.',
   },
   {
     value: 'contours',
     label: 'Konturen',
     sliderLabel: 'Konturen',
-    description: 'Hebt groessere Formen und Bilduebergaenge hervor, ohne das ganze Foto voll auszuspielen.',
+    description: 'Hebt größere Formen und Bildübergänge hervor, ohne das ganze Foto voll auszuspielen.',
   },
   {
     value: 'edges',
     label: 'Kanten',
     sliderLabel: 'Kanten',
-    description: 'Reduziert die Hilfe auf harte Linien und markante Umrisse fuer eine sparsame Orientierung.',
+    description: 'Reduziert die Hilfe auf harte Linien und markante Umrisse für eine sparsame Orientierung.',
   },
 ]
 
@@ -140,7 +140,7 @@ const HEATMAP_MODE_OPTIONS: Array<{
 }> = [
   {
     value: 'classic',
-    label: 'Farbflaechen',
+    label: 'Farbflächen',
     description: 'Faerbt falsch platzierte Kacheln entsprechend ihrer Entfernung zum Ziel. X+ zeigt rechts, Y+ zeigt oben.',
   },
   {
@@ -151,7 +151,7 @@ const HEATMAP_MODE_OPTIONS: Array<{
   {
     value: 'delta',
     label: 'Verlauf',
-    description: 'Vergleicht die Zieldistanz jeder Kachel mit den letzten bis zu fuenf Zuegen.',
+    description: 'Vergleicht die Zieldistanz jeder Kachel mit den letzten bis zu fünf Zügen.',
   },
 ]
 
@@ -212,11 +212,6 @@ function HintPositionGrid({
       })}
     </div>
   )
-}
-
-function formatSignedDelta(delta: number, suffix: string = ''): string {
-  if (delta === 0) return `±0${suffix}`
-  return `${delta > 0 ? '+' : '-'}${Math.abs(delta)}${suffix}`
 }
 
 export default function PuzzleLeftPanel({
@@ -294,6 +289,12 @@ export default function PuzzleLeftPanel({
     HEATMAP_MODE_OPTIONS.find((option) => option.value === heatmapMode) ?? HEATMAP_MODE_OPTIONS[0]
   const challengeMovesDelta = challengeTarget ? moveCount - challengeTarget.moves : 0
   const challengeTimeDelta = challengeTarget ? elapsedTime - challengeTarget.time : 0
+  const challengeMovesBudgetLabel = challengeMovesDelta <= 0
+    ? `${Math.abs(challengeMovesDelta)} Züge verbleiben`
+    : `${challengeMovesDelta} Züge über dem Ziel`
+  const challengeTimeBudgetLabel = challengeTimeDelta <= 0
+    ? `${formatElapsedTime(Math.abs(challengeTimeDelta))} verbleiben`
+    : `${formatElapsedTime(challengeTimeDelta)} über dem Ziel`
   const challengeForecast = challengeTarget
     ? deriveLiveChallengeForecast({
         moves: moveCount,
@@ -309,7 +310,7 @@ export default function PuzzleLeftPanel({
     : 'Keine Medaille'
   const challengeModeLabel =
     effectiveChallengeMode === 'soft'
-      ? 'Geschaetzter Vergleich'
+      ? 'Geschätzter Vergleich'
       : effectiveChallengeMode === 'qualification'
         ? 'Qualifikation'
         : 'Medaillenlauf'
@@ -317,16 +318,19 @@ export default function PuzzleLeftPanel({
     effectiveChallengeMode === 'soft'
       ? challengeForecast?.isClean
         ? challengeForecast.medal
-          ? `Moegliche Einstufung: ${challengeForecastLabel}, wenn dieser Lauf clean bleibt.`
+          ? 'Clean bleiben, um diese Prognose zu sichern.'
           : 'Aktuell keine Einstufung; mindestens ein Ziel muss strikt unterboten werden.'
-        : 'Mit Hilfe nur Uebung; Vergleich bleibt informativ.'
+        : 'Mit Hilfe bleibt der Vergleich informativ und zählt als unterstützt.'
       : effectiveChallengeMode === 'qualification'
         ? 'Ziel: echte Vorlage erstellen. Dieser Lauf vergibt noch keine Medaille.'
         : challengeForecast?.isClean
           ? challengeForecast.medal
             ? `${challengeForecastLabel} bleibt erreichbar, solange der Lauf clean bleibt.`
-            : 'Keine Medaille mehr erreichbar; Lauf wird Uebung.'
-          : 'Keine Medaille mehr erreichbar; Lauf wird Uebung.'
+            : 'Keine Medaille mehr erreichbar; Lauf wird Übung.'
+          : 'Keine Medaille mehr erreichbar; Lauf wird Übung.'
+  const challengeAccessibilityLabel = areGameAidsLocked
+    ? `${MEDAL_RUN_LOCK_MESSAGE} Beste noch erreichbare Medaille: ${challengeForecastLabel}.`
+    : `Geschätzter Vergleich. Spielhilfen sind erlaubt; mit Hilfe zählt der Lauf als unterstützt. Prognose: ${challengeForecastLabel}.`
 
   return (
     <AnimatedStaggerGroup
@@ -346,7 +350,7 @@ export default function PuzzleLeftPanel({
               className="puzzle-help-trigger"
               ref={actionButtonRefs.helpTrigger}
               onClick={onOpenHelp}
-              aria-label="Hilfe und Tastenkuerzel anzeigen"
+              aria-label="Hilfe und Tastenkürzel anzeigen"
               aria-keyshortcuts="F1"
               data-puzzle-allow-hotkeys="true"
               data-app-tooltip="Kontextbezogene Hilfe und alle Puzzle-Shortcuts anzeigen."
@@ -381,7 +385,7 @@ export default function PuzzleLeftPanel({
           {challengeTarget && (
             <div
               className={`puzzle-challenge-badge is-${challengeForecast?.medal ?? 'none'}`}
-              aria-label={`${MEDAL_RUN_LOCK_MESSAGE} Beste noch erreichbare Medaille: ${challengeForecastLabel}.`}
+              aria-label={challengeAccessibilityLabel}
             >
               <span className="puzzle-challenge-badge-label">
                 <Trophy aria-hidden="true" size={14} strokeWidth={2.3} />
@@ -394,21 +398,21 @@ export default function PuzzleLeftPanel({
                 <span className="puzzle-challenge-badge-status">
                   <Medal aria-hidden="true" size={18} strokeWidth={2.4} />
                   {effectiveChallengeMode === 'qualification'
-                    ? 'Vorlage moeglich'
+                      ? 'Vorlage möglich'
                     : effectiveChallengeMode === 'soft'
                       ? `Prognose: ${challengeForecastLabel}`
                       : `Beste noch erreichbar: ${challengeForecastLabel}`}
                 </span>
               </AnimatedStateSwap>
               <span className={`puzzle-challenge-badge-detail${challengeForecast?.movesReached ? ' is-positive' : ' is-negative'}`}>
-                Netto-Zuege: {moveCount} / {challengeTarget.moves} ({formatSignedDelta(challengeMovesDelta)})
+                Netto-Züge: {challengeMovesBudgetLabel}
               </span>
               <span className={`puzzle-challenge-badge-detail${challengeForecast?.timeReached ? ' is-positive' : ' is-negative'}`}>
-                Zeit: {formatElapsedTime(elapsedTime)} / {formatElapsedTime(challengeTarget.time)} ({formatSignedDelta(challengeTimeDelta, 's')})
+                Zeit: {challengeTimeBudgetLabel}
               </span>
-              {challengeGoldTargets ? (
+              {challengeGoldTargets && challengeForecast?.medal !== 'diamond' ? (
                 <span className="puzzle-challenge-badge-detail is-muted">
-                  Gold ab: max. {formatElapsedTime(challengeGoldTargets.time)} und {challengeGoldTargets.moves} Zuege
+                  Gold: höchstens {formatElapsedTime(challengeGoldTargets.time)} und {challengeGoldTargets.moves} Züge
                 </span>
               ) : null}
               <span className={`puzzle-challenge-badge-detail${challengeForecast?.isClean ? ' is-positive' : ' is-negative'}`}>
@@ -416,7 +420,7 @@ export default function PuzzleLeftPanel({
               </span>
               {challengeForecast?.goldAvailable && !challengeForecast.diamondAvailable ? (
                 <span className="puzzle-challenge-badge-detail is-muted">
-                  Diamant braucht Zeit und Zuege mindestens 40 % unter der Vorlage.
+                  Diamant braucht Zeit und Züge mindestens 40 % unter der Vorlage.
                 </span>
               ) : null}
               <span className="puzzle-challenge-badge-detail is-muted">
@@ -432,12 +436,12 @@ export default function PuzzleLeftPanel({
               <span className="puzzle-stat-icon-shell" aria-hidden="true">
                 <PuzzleScreenIcon name="route" className="puzzle-stat-icon" />
               </span>
-              <span className="puzzle-stat-label">Deine Zuege</span>
+              <span className="puzzle-stat-label">Deine Züge</span>
             </div>
             <strong className="puzzle-stat-value">
               <SpringNumber value={moveCount} />
             </strong>
-            <span className="puzzle-stat-detail" data-app-tooltip="Deine gespielten Aktionen im Vergleich zum berechneten Optimalweg." data-app-tooltip-align="start">
+            <span className="puzzle-stat-detail" data-app-tooltip="Deine Netto-Züge im Vergleich zum berechneten Optimalweg." data-app-tooltip-align="start">
               {isImprovingStartSolution ? <BusyIndicator /> : null}
               {optimalMoveSummary}
             </span>
@@ -473,7 +477,7 @@ export default function PuzzleLeftPanel({
                     <span className="puzzle-panel-kicker-icon-shell" aria-hidden="true">
                       <PuzzleScreenIcon name="crosshair" className="puzzle-panel-kicker-icon" />
                     </span>
-                    <span className="puzzle-progress-kicker">Loesungsnaehe</span>
+                    <span className="puzzle-progress-kicker">Lösungsnähe</span>
                   </span>
                   <span className="puzzle-progress-state">{progressStatusLabel}</span>
                 </div>
@@ -511,7 +515,7 @@ export default function PuzzleLeftPanel({
               <span className="puzzle-panel-kicker-icon-shell" aria-hidden="true">
                 <PuzzleScreenIcon name="lightbulb" className="puzzle-panel-kicker-icon" />
               </span>
-              <span className="puzzle-hint-kicker">Naechster Hinweis</span>
+              <span className="puzzle-hint-kicker">Nächster Hinweis</span>
             </span>
             {hintPreview && (
               <span
@@ -558,11 +562,11 @@ export default function PuzzleLeftPanel({
           ) : isComputingSuggestion ? (
             <div className="puzzle-hint-empty puzzle-hint-empty--computing" aria-live="polite">
               <span className="puzzle-hint-spinner" aria-hidden="true" />
-              <span>Berechne den naechsten Zug ...</span>
+              <span>Berechne den nächsten Zug ...</span>
             </div>
           ) : (
             <p className="puzzle-hint-empty">
-              <span>Markiert die beste Kachel direkt auf dem Brett. Nutze den Hinweis, wenn du kurz festhaengst.</span>
+              <span>Markiert die beste Kachel direkt auf dem Brett. Nutze den Hinweis, wenn du kurz festhängst.</span>
             </p>
           )}
 
@@ -577,7 +581,7 @@ export default function PuzzleLeftPanel({
               data-puzzle-allow-hotkeys="true"
               data-app-tooltip={areGameAidsLocked
                 ? 'Im Zielmodus gesperrt.'
-                : 'Berechnet und markiert eine hilfreiche naechste Kachel. Zaehlt als Hilfe im Laufprofil.'}
+                : 'Berechnet und markiert eine hilfreiche nächste Kachel. Zählt als Hilfe im Laufprofil.'}
               data-app-tooltip-align="start"
               reveal
               revealLevel="subtle"
@@ -601,7 +605,7 @@ export default function PuzzleLeftPanel({
               data-puzzle-allow-hotkeys="true"
               data-app-tooltip={areGameAidsLocked
                 ? 'Im Zielmodus gesperrt.'
-                : 'Fuehrt den empfohlenen Zug aus. Wird als Auto-Zug in der Statistik erfasst.'}
+                : 'Führt den empfohlenen Zug aus. Wird als Auto-Zug in der Statistik erfasst.'}
               data-app-tooltip-align="end"
               reveal
               revealLevel="subtle"
@@ -610,7 +614,7 @@ export default function PuzzleLeftPanel({
                 {isComputingSuggestion
                   ? 'Berechne Zug ...'
                   : hintPreview
-                    ? 'Zug ausfuehren'
+                    ? 'Zug ausführen'
                     : 'Zug spielen'}
               </span>
               <span className="puzzle-button-hotkey" aria-hidden="true">Enter</span>
@@ -638,7 +642,7 @@ export default function PuzzleLeftPanel({
       >
         <div className="puzzle-tools-shell-header">
           <span className="puzzle-tools-shell-kicker">Werkzeuge</span>
-          <p className="puzzle-tools-shell-copy">Vorschau, Overlays und Verlauf fuer die aktuelle Runde.</p>
+          <p className="puzzle-tools-shell-copy">Vorschau, Overlays und Verlauf für die aktuelle Runde.</p>
         </div>
         <AnimatedStaggerGroup className="puzzle-tools" level="subtle">
           <AnimatedButton
@@ -672,7 +676,7 @@ export default function PuzzleLeftPanel({
               ? 'Im Zielmodus gesperrt.'
               : isGhostPreviewVisible
                 ? 'Geisterbild vom Brett ausblenden.'
-                : 'Zielbild transparent ueber das Brett legen.'}
+                : 'Zielbild transparent über das Brett legen.'}
             data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
@@ -725,12 +729,12 @@ export default function PuzzleLeftPanel({
             disabled={areGameAidsLocked || moveHistoryLength === 0 || isInteractionLocked}
             aria-keyshortcuts="Control+Z"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip={areGameAidsLocked ? 'Im Zielmodus gesperrt.' : 'Letzten Zug rueckgaengig machen.'}
+            data-app-tooltip={areGameAidsLocked ? 'Im Zielmodus gesperrt.' : 'Letzten Zug rückgängig machen.'}
             data-app-tooltip-align="start"
             reveal
             revealLevel="subtle"
           >
-            <span className="puzzle-button-label">Zug zurueck</span>
+            <span className="puzzle-button-label">Zug zurück</span>
             <span className="puzzle-button-hotkey" aria-hidden="true">Strg+Z</span>
           </AnimatedButton>
           <AnimatedButton
@@ -740,7 +744,7 @@ export default function PuzzleLeftPanel({
             disabled={areGameAidsLocked || redoHistoryLength === 0 || isInteractionLocked}
             aria-keyshortcuts="Control+Y"
             data-puzzle-allow-hotkeys="true"
-            data-app-tooltip={areGameAidsLocked ? 'Im Zielmodus gesperrt.' : 'Rueckgaengig gemachten Zug wiederholen.'}
+            data-app-tooltip={areGameAidsLocked ? 'Im Zielmodus gesperrt.' : 'Rückgängig gemachten Zug wiederholen.'}
             data-app-tooltip-align="end"
             reveal
             revealLevel="subtle"
@@ -759,7 +763,7 @@ export default function PuzzleLeftPanel({
             interaction="surface"
             level="medium"
             aria-live="polite"
-            data-app-tooltip={`${activeGhostPreviewMode.sliderLabel}: ${ghostPreviewWeight}% gegenueber Puzzle ${100 - ghostPreviewWeight}%.`}
+            data-app-tooltip={`${activeGhostPreviewMode.sliderLabel}: ${ghostPreviewWeight}% gegenüber Puzzle ${100 - ghostPreviewWeight}%.`}
             data-app-tooltip-align="start"
           >
             <div className="puzzle-ghost-slider-header">
@@ -812,7 +816,7 @@ export default function PuzzleLeftPanel({
                 className={`puzzle-ghost-mode-button${ghostPreviewMotion === 'pulse' ? ' is-active' : ''}`}
                 onClick={() => onGhostPreviewMotionChange(ghostPreviewMotion === 'pulse' ? 'static' : 'pulse')}
                 aria-pressed={ghostPreviewMotion === 'pulse'}
-                data-app-tooltip="Laesst das Zielbild sanft pulsieren. Bei reduzierter Bewegung bleibt es statisch."
+                data-app-tooltip="Lässt das Zielbild sanft pulsieren. Bei reduzierter Bewegung bleibt es statisch."
               >
                 Pulsieren
               </button>
@@ -821,7 +825,7 @@ export default function PuzzleLeftPanel({
                 className={`puzzle-ghost-mode-button${isGhostPreviewProgressive ? ' is-active' : ''}`}
                 onClick={onToggleGhostPreviewProgressive}
                 aria-pressed={isGhostPreviewProgressive}
-                data-app-tooltip="Schwaecht das Geisterbild mit dem hoechsten erreichten Spielfortschritt ab."
+                data-app-tooltip="Schwächt das Geisterbild mit dem höchsten erreichten Spielfortschritt ab."
               >
                 Progressiv
               </button>
@@ -843,7 +847,7 @@ export default function PuzzleLeftPanel({
             <p className="puzzle-ghost-mode-copy">{activeGhostPreviewMode.description}</p>
             <p className="puzzle-ghost-mode-copy">
               Diese Runde: {ghostUsageCount} Aktivierungen, {Math.round(ghostUsageDurationMs / 1000)}s sichtbar.
-              Shift+G wechselt die Darstellung, + / - aendert die Staerke.
+              Shift+G wechselt die Darstellung, + / - ändert die Stärke.
             </p>
           </AnimatedReveal>
         )}
@@ -857,7 +861,7 @@ export default function PuzzleLeftPanel({
             interaction="surface"
             level="medium"
             aria-live="polite"
-            data-app-tooltip={`Heatmap-Intensitaet: ${heatmapIntensity}%.`}
+            data-app-tooltip={`Heatmap-Intensität: ${heatmapIntensity}%.`}
             data-app-tooltip-align="start"
           >
             <div className="puzzle-ghost-slider-header">
@@ -892,7 +896,7 @@ export default function PuzzleLeftPanel({
               value={heatmapIntensity}
               onChange={onHeatmapIntensityChange}
               className="puzzle-ghost-slider-input"
-              aria-label="Intensitaet der Heatmap"
+              aria-label="Intensität der Heatmap"
             />
             <div className="puzzle-ghost-slider-scale" aria-hidden="true">
               <span>Dezent</span>
@@ -942,7 +946,7 @@ export default function PuzzleLeftPanel({
             {isHeatmapTargetPathVisible && heatmapTargetPath && (
               <div className="puzzle-heatmap-path-card">
                 <span className="puzzle-heatmap-potential-kicker">Warum dieser Zug?</span>
-                <strong>{heatmapTargetPath.objective?.label ?? 'Naechste Zugfolge vorbereiten'}</strong>
+                <strong>{heatmapTargetPath.objective?.label ?? 'Nächste Zugfolge vorbereiten'}</strong>
                 {heatmapPathProgress && (
                   <div
                     className={
@@ -967,7 +971,7 @@ export default function PuzzleLeftPanel({
                 )}
                 <span>
                   {heatmapTargetPath.objective?.detail
-                    ?? `Die naechsten ${heatmapTargetPath.steps.length} Solver-Zuege sind am Brett nummeriert.`}
+                    ?? `Die nächsten ${heatmapTargetPath.steps.length} Solver-Züge sind am Brett nummeriert.`}
                 </span>
                 {isHeatmapPathDeviationVisible && (
                   <div className="puzzle-heatmap-path-warning" role="alert">
@@ -1004,29 +1008,30 @@ export default function PuzzleLeftPanel({
       </AnimatePresence>
 
       <AnimatedReveal className="puzzle-side-footer" level="subtle">
-        <AnimatedButton
-          ref={actionButtonRefs.pause}
-          onClick={onTogglePause}
-          className={'secondary puzzle-pause-toggle' + (isPaused ? ' is-active' : '')}
-          aria-keyshortcuts="P"
-          aria-pressed={isPaused}
-          data-puzzle-allow-hotkeys="true"
-          data-app-tooltip={isPaused ? 'Runde fortsetzen und Brett wieder anzeigen.' : 'Timer anhalten und Brett verdecken.'}
-          data-app-tooltip-position="top"
-          reveal
-          revealLevel="subtle"
-        >
-          <PuzzleScreenIcon name={isPaused ? 'play' : 'pause'} />
-          <span className="puzzle-button-label">{isPaused ? 'Weiterspielen' : 'Pause'}</span>
-          <span className="puzzle-button-hotkey" aria-hidden="true">P</span>
-        </AnimatedButton>
+        {!isPaused ? (
+          <AnimatedButton
+            ref={actionButtonRefs.pause}
+            onClick={onTogglePause}
+            className="secondary puzzle-pause-toggle"
+            aria-keyshortcuts="P"
+            data-puzzle-allow-hotkeys="true"
+            data-app-tooltip="Timer anhalten und Brett verdecken."
+            data-app-tooltip-position="top"
+            reveal
+            revealLevel="subtle"
+          >
+            <PuzzleScreenIcon name="pause" />
+            <span className="puzzle-button-label">Pause</span>
+            <span className="puzzle-button-hotkey" aria-hidden="true">P</span>
+          </AnimatedButton>
+        ) : null}
         <AnimatedButton
           ref={actionButtonRefs.quit}
           onClick={onQuit}
           className="puzzle-tool-primary quit-btn"
           aria-keyshortcuts="Escape"
           data-puzzle-allow-hotkeys="true"
-          data-app-tooltip="Runde abbrechen und zur Auswahl zurueckkehren."
+          data-app-tooltip="Runde abbrechen und zur Auswahl zurückkehren."
           data-app-tooltip-position="top"
           reveal
           revealLevel="subtle"

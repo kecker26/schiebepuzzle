@@ -46,7 +46,7 @@ export default function GalleryChallengeStartDialog({
         type="button"
         className="gallery-challenge-start-close"
         onClick={onCancel}
-        aria-label="Challenge-Dialog schliessen"
+        aria-label="Challenge-Dialog schließen"
       >
         <X aria-hidden="true" size={18} strokeWidth={2.4} />
       </button>
@@ -68,7 +68,7 @@ export default function GalleryChallengeStartDialog({
         <GalleryStartBoardPreview entry={target} className="gallery-challenge-start-board" />
         <div className="gallery-challenge-start-target-metrics" aria-label="Zielwerte der Challenge">
           <span><small>Zielzeit</small><strong>{formatTime(target.time)}</strong></span>
-          <span><small>Netto-Zuege</small><strong>{target.moves}</strong></span>
+          <span><small>Netto-Züge</small><strong>{target.moves}</strong></span>
         </div>
       </div>
 

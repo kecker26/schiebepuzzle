@@ -117,7 +117,7 @@ describe('puzzle medal run controls', () => {
       'Geisterbild ein',
       'Heatmap ein',
       'Nummern 5s',
-      'Zug zurueck',
+      'Zug zurück',
       'Zug vor',
     ]) {
       expect((screen.getByRole('button', { name }) as HTMLButtonElement).disabled).toBe(true)
@@ -142,7 +142,7 @@ describe('puzzle medal run controls', () => {
     })
 
     expect(screen.getByText('Prognose: Bronze')).toBeTruthy()
-    expect(screen.getByText('Moegliche Einstufung: Bronze, wenn dieser Lauf clean bleibt.')).toBeTruthy()
-    expect(screen.queryByText('Moegliche Einstufung: Gold, wenn dieser Lauf clean bleibt.')).toBeNull()
+    expect(screen.getByText('Clean bleiben, um diese Prognose zu sichern.')).toBeTruthy()
+    expect(screen.queryByText('Gold bleibt erreichbar, solange der Lauf clean bleibt.')).toBeNull()
   })
 })

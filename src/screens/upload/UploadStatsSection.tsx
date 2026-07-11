@@ -69,7 +69,7 @@ export default function UploadStatsSection({
             className="secondary"
             interaction="chip"
             onClick={onBackToStart}
-            data-app-tooltip="Zur Auswahluebersicht zurueckkehren."
+            data-app-tooltip="Zur Auswahlübersicht zurückkehren."
             data-app-tooltip-position="top"
           >
             <UploadScreenIcon name="home" />

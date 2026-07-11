@@ -80,7 +80,7 @@ export default function ErrorToast({ message, onDismiss, autoDismissMs = 8000, p
           type="button"
           className="error-toast-close"
           onClick={handleDismiss}
-          aria-label="Fehlermeldung schliessen"
+          aria-label="Fehlermeldung schließen"
           data-app-tooltip="Fehlermeldung ausblenden."
           data-app-tooltip-position="left"
         >

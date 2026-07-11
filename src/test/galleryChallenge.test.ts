@@ -62,7 +62,7 @@ describe('galleryChallenge', () => {
     expect(deriveChallengeMedal(createStats({ moves: 60, time: 72, assistanceMode: 'hinted' }), target)).toBeNull()
   })
 
-  it('ignoriert Solver-Untergrenzen fuer Diamant', () => {
+  it('ignoriert Solver-Untergrenzen für Diamant', () => {
     expect(deriveChallengeMedal(createStats({ moves: 60, time: 72 }), {
       ...target,
       optimalStartMoveCountKind: 'lower-bound',
@@ -91,7 +91,7 @@ describe('galleryChallenge', () => {
     expect(deriveChallengeMedal(createStats({ moves: 100, time: 121 }), target)).toBeNull()
   })
 
-  it('vergibt assistierten Laeufen unabhaengig von den Zielwerten keine Medaille', () => {
+  it('vergibt assistierten Läufen unabhaengig von den Zielwerten keine Medaille', () => {
     expect(deriveChallengeMedal(createStats({ assistanceMode: 'auto-assisted' }), target)).toBeNull()
     expect(deriveChallengeMedal(createStats({ ghostUsageCount: 1 }), target)).toBeNull()
     expect(deriveChallengeMedal(createStats({ heatmapUsageCount: 1 }), target)).toBeNull()
@@ -128,17 +128,17 @@ describe('galleryChallenge', () => {
     expect(getChallengeMedalExplanation(assistedStats, target, null)).toContain('keine Medaille')
     expect(getNextChallengeMedalGoal(assistedStats, target, null)).toEqual({
       medal: 'bronze',
-      label: 'Ohne Hilfe neu starten. Medaillen werden nur fuer absolut cleane Laeufe vergeben.',
+      label: 'Ohne Hilfe neu starten. Medaillen werden nur für absolut cleane Läufe vergeben.',
     })
     expect(getNextChallengeMedalGoal(createStats({ moves: 105, time: 125 }), target, null)).toEqual({
       medal: 'bronze',
-      label: '6 Sek. schneller oder 6 Zuege weniger',
+      label: '6 Sek. schneller oder 6 Züge weniger',
     })
     expect(getChallengeMedalExplanation(createStats({ moves: 105, time: 125 }), target, null))
       .toContain('kein Ziel')
   })
 
-  it('meldet Diamant fuer positive Zielwerte als verfuegbar', () => {
+  it('meldet Diamant für positive Zielwerte als verfuegbar', () => {
     expect(isChallengeDiamondAvailable(target)).toBe(true)
     expect(isChallengeDiamondAvailable({ ...target, optimalStartMoveCountKind: 'lower-bound' })).toBe(true)
   })
@@ -158,7 +158,7 @@ describe('galleryChallenge', () => {
       'gold'
     )).toEqual({
       medal: 'diamond',
-      label: '24 Sek. schneller bis zum 40-Prozent-Zeitziel + 20 Zuege weniger bis zum 40-Prozent-Zugziel',
+      label: '24 Sek. schneller bis zum 40-Prozent-Zeitziel + 20 Züge weniger bis zum 40-Prozent-Zugziel',
     })
   })
 
@@ -185,7 +185,7 @@ describe('galleryChallenge', () => {
       'bronze'
     )).toEqual({
       medal: null,
-      label: 'Hoechste verfuegbare Medaillenstufe erreicht.',
+      label: 'Höchste verfügbare Medaillenstufe erreicht.',
     })
   })
 })

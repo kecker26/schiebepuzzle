@@ -55,11 +55,11 @@ export default function UploadWorkspaceLauncher({
   galleryActionRef,
   collectionsActionRef,
 }: UploadWorkspaceLauncherProps) {
-  const latestActivityLabel = latestActivityAt ? formatDate(latestActivityAt) : 'Noch keine Aktivitaet'
+  const latestActivityLabel = latestActivityAt ? formatDate(latestActivityAt) : 'Noch keine Aktivität'
   const latestGalleryLabel = latestGalleryAt ? formatDate(latestGalleryAt) : 'Noch kein Galerie-Eintrag'
-  const savedGamesMeta = latestActivityAt ? `Aktiv ${latestActivityLabel}` : 'Bereit fuer offene Partien'
+  const savedGamesMeta = latestActivityAt ? `Aktiv ${latestActivityLabel}` : 'Bereit für offene Partien'
   const statsMeta = activeDays > 0 ? `${activeDays} aktive Tage` : 'Noch keine Sieges-Serie'
-  const galleryMeta = latestGalleryAt ? `Letzter Sieg ${latestGalleryLabel}` : 'Wird mit jedem geloesten Bild gefuellt'
+  const galleryMeta = latestGalleryAt ? `Letzter Sieg ${latestGalleryLabel}` : 'Wird mit jedem gelösten Bild gefüllt'
   const collectionsMeta = collectionsCount > 0 ? `${collectedImagesCount} Motive gesammelt` : 'Favoriten sammeln'
 
   return (
@@ -77,7 +77,7 @@ export default function UploadWorkspaceLauncher({
             <UploadScreenIcon name="layers" className="upload-section-title-icon" />
           </span>
           <h2 id="upload-data-window-title" className="upload-workspace-launcher-title">
-            Spielstaende, Statistik, Galerie und Sammlungen
+            Spielstände, Statistik, Galerie und Sammlungen
           </h2>
         </div>
       </AnimatedReveal>
@@ -100,7 +100,7 @@ export default function UploadWorkspaceLauncher({
           <span className="menu-card-icon" aria-hidden="true">
             <UploadScreenIcon name="folder" className="menu-card-icon-symbol" />
           </span>
-          <span className="menu-card-title">Spielstaende</span>
+          <span className="menu-card-title">Spielstände</span>
           <strong className="workspace-launcher-value">
             <SpringNumber value={isLoadingSavedGames ? null : savedGamesCount} from={0} durationMs={1700} fallback="Lade ..." />
             {!isLoadingSavedGames ? ' aktiv' : null}
@@ -118,7 +118,7 @@ export default function UploadWorkspaceLauncher({
           </div>
           <span className="menu-card-arrow">
             <UploadScreenIcon name="folder" className="menu-card-arrow-icon" />
-            Spielstaende oeffnen
+            Spielstände öffnen
           </span>
         </AnimatedCardButton>
 
@@ -153,7 +153,7 @@ export default function UploadWorkspaceLauncher({
           </div>
           <span className="menu-card-arrow">
             <UploadScreenIcon name="barChart2" className="menu-card-arrow-icon" />
-            Statistik oeffnen
+            Statistik öffnen
           </span>
         </AnimatedCardButton>
 
@@ -166,7 +166,7 @@ export default function UploadWorkspaceLauncher({
           revealLevel="medium"
         >
           <span className="menu-card-glow" aria-hidden="true" />
-          <span className="menu-card-eyebrow">Rueckblick</span>
+          <span className="menu-card-eyebrow">Rückblick</span>
           <span className="menu-card-icon" aria-hidden="true">
             <UploadScreenIcon name="gallery" className="menu-card-icon-symbol" />
           </span>
@@ -175,11 +175,11 @@ export default function UploadWorkspaceLauncher({
             <SpringNumber value={isLoadingGallery ? null : galleryEntriesCount} from={0} durationMs={1700} fallback="Lade ..." />
             {!isLoadingGallery ? ' Motive' : null}
           </strong>
-          <span className="menu-card-desc">Alle geloesten Motive als durchsuchbare Bildwand mit Schwierigkeit und Laufdaten.</span>
+          <span className="menu-card-desc">Alle gelösten Motive als durchsuchbare Bildwand mit Schwierigkeit und Laufdaten.</span>
           <div className="workspace-launcher-meta">
             <span className="saved-game-chip">
               <UploadScreenIcon name="image" className="saved-game-chip-icon" />
-              {isLoadingGallery ? <BusyIndicator label="Wird geladen ..." /> : `${gallerySolveCount} Loesungen`}
+              {isLoadingGallery ? <BusyIndicator label="Wird geladen ..." /> : `${gallerySolveCount} Lösungen`}
             </span>
             <span className="saved-game-chip">
               <UploadScreenIcon name="clock" className="saved-game-chip-icon" />
@@ -188,7 +188,7 @@ export default function UploadWorkspaceLauncher({
           </div>
           <span className="menu-card-arrow">
             <UploadScreenIcon name="gallery" className="menu-card-arrow-icon" />
-            Galerie oeffnen
+            Galerie öffnen
           </span>
         </AnimatedCardButton>
 
@@ -201,7 +201,7 @@ export default function UploadWorkspaceLauncher({
           revealLevel="medium"
         >
           <span className="menu-card-glow" aria-hidden="true" />
-          <span className="menu-card-eyebrow">Kollektionen</span>
+          <span className="menu-card-eyebrow">Favoriten</span>
           <span className="menu-card-icon" aria-hidden="true">
             <UploadScreenIcon name="folderHeart" className="menu-card-icon-symbol" />
           </span>
@@ -218,12 +218,12 @@ export default function UploadWorkspaceLauncher({
             </span>
             <span className="saved-game-chip">
               <UploadScreenIcon name="image" className="saved-game-chip-icon" />
-              Aus geloesten Motiven
+              Aus gelösten Motiven
             </span>
           </div>
           <span className="menu-card-arrow">
             <UploadScreenIcon name="folderHeart" className="menu-card-arrow-icon" />
-            Sammlungen oeffnen
+            Sammlungen öffnen
           </span>
         </AnimatedCardButton>
       </AnimatedStaggerGroup>

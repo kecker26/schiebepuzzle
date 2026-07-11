@@ -148,7 +148,7 @@ export default function PuzzleRightPanel({
               className="puzzle-preview-image-shell"
               style={previewRatioStyle}
               onMouseLeave={() => onReferenceTileHover(null)}
-              data-app-tooltip="Mit der Maus ueber Bildbereiche fahren, um die passende Kachel auf dem Brett hervorzuheben."
+              data-app-tooltip="Mit der Maus über Bildbereiche fahren, um die passende Kachel auf dem Brett hervorzuheben."
               data-app-tooltip-align="end"
             >
               <img src={image} alt="Zielbild Vorschau" className="puzzle-preview-image" />
@@ -196,8 +196,8 @@ export default function PuzzleRightPanel({
           </div>
           <p className="puzzle-preview-copy">
             {progressMetrics
-              ? `${progressMetrics.correctTiles} Kacheln stimmen bereits. Fahre rechts mit der Maus ueber einen Bildausschnitt, um die passende Kachel links zu finden.`
-              : 'Fahre rechts mit der Maus ueber einen Bildausschnitt, um die passende Kachel links hervorzuheben.'}
+              ? `${progressMetrics.correctTiles} Kacheln stimmen bereits. Fahre rechts mit der Maus über einen Bildausschnitt, um die passende Kachel links zu finden.`
+              : 'Fahre rechts mit der Maus über einen Bildausschnitt, um die passende Kachel links hervorzuheben.'}
           </p>
         </AnimatedReveal>
 
@@ -247,14 +247,14 @@ export default function PuzzleRightPanel({
                         <span style={{ width: `${focusProgressPercent}%` }} />
                       </div>
                     </div>
-                    <div className="puzzle-focus-legend" aria-label="Legende fuer den Strategiefokus">
+                    <div className="puzzle-focus-legend" aria-label="Legende für den Strategiefokus">
                       <span><i className="is-focus" aria-hidden="true" /> Aktueller Bereich</span>
                       <span><i className="is-correct" aria-hidden="true" /> Position stimmt</span>
                     </div>
                   </>
                 ) : (
                   <p className="puzzle-focus-disabled-copy">
-                    Fokus und Kachelmarkierungen sind ausgeblendet. Die Hover-Verknuepfung zum Puzzle bleibt aktiv.
+                    Fokus und Kachelmarkierungen sind ausgeblendet. Die Hover-Verknüpfung zum Puzzle bleibt aktiv.
                   </p>
                 )}
               </AnimatedReveal>
@@ -273,7 +273,7 @@ export default function PuzzleRightPanel({
                 className={`puzzle-music-toggle${isMusicMuted ? '' : ' is-active'}`}
                 onClick={handleToggleMusic}
                 aria-label={isMusicMuted ? 'Musik einschalten' : 'Musik ausschalten'}
-                data-app-tooltip={isMusicMuted ? 'Musik fuer die Runde einschalten.' : 'Musik fuer die Runde ausschalten.'}
+                data-app-tooltip={isMusicMuted ? 'Musik für die Runde einschalten.' : 'Musik für die Runde ausschalten.'}
                 data-app-tooltip-align="end"
                 reveal
                 revealLevel="subtle"
@@ -303,7 +303,7 @@ export default function PuzzleRightPanel({
                   tabIndex={-1}
                   target="_blank"
                   rel="noreferrer"
-                  data-app-tooltip="Quelle und Lizenzinformationen zum aktuell abgespielten Track oeffnen."
+                  data-app-tooltip="Quelle und Lizenzinformationen zum aktuell abgespielten Track öffnen."
                   data-app-tooltip-align="end"
                 >
                     via {musicAttribution.providerLabel ?? 'Quelle'}

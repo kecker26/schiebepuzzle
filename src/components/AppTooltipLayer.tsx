@@ -14,6 +14,8 @@ interface ActiveTooltip {
 const VIEWPORT_GAP = 12
 const TRIGGER_GAP = 8
 const CURSOR_GAP = 14
+const POINTER_SHOW_DELAY_MS = 420
+const KEYBOARD_SHOW_DELAY_MS = 520
 
 interface CursorPosition {
   x: number
@@ -48,12 +50,18 @@ function clamp(value: number, min: number, max: number): number {
 export default function AppTooltipLayer() {
   const tooltipRef = useRef<HTMLDivElement>(null)
   const activeTriggerRef = useRef<HTMLElement | null>(null)
+  const showTimeoutRef = useRef<number | null>(null)
+  const lastInteractionWasKeyboardRef = useRef(false)
   const [activeTooltip, setActiveTooltip] = useState<ActiveTooltip | null>(null)
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null)
   const [tooltipStyle, setTooltipStyle] = useState<CSSProperties>({ left: -9999, top: -9999 })
 
   const hideTooltip = useCallback((trigger?: HTMLElement | null) => {
-    if (trigger && activeTriggerRef.current !== trigger) return
+    if (showTimeoutRef.current !== null) {
+      window.clearTimeout(showTimeoutRef.current)
+      showTimeoutRef.current = null
+    }
+    if (trigger && activeTriggerRef.current && activeTriggerRef.current !== trigger) return
     activeTriggerRef.current = null
     setCursorPosition(null)
     setActiveTooltip(null)
@@ -69,12 +77,37 @@ export default function AppTooltipLayer() {
     setActiveTooltip(nextTooltip)
   }, [])
 
+  const scheduleTooltip = useCallback((
+    trigger: HTMLElement,
+    delayMs: number,
+    cursor?: CursorPosition,
+  ) => {
+    if (showTimeoutRef.current !== null) {
+      window.clearTimeout(showTimeoutRef.current)
+    }
+    showTimeoutRef.current = window.setTimeout(() => {
+      showTimeoutRef.current = null
+      if (!trigger.isConnected) return
+      showTooltip(trigger, cursor)
+    }, delayMs)
+  }, [showTooltip])
+
   useEffect(() => {
     const handlePointerOver = (event: PointerEvent) => {
       const trigger = getTooltipTrigger(event.target)
       if (trigger && trigger !== activeTriggerRef.current) {
-        showTooltip(trigger, { x: event.clientX, y: event.clientY })
+        scheduleTooltip(trigger, POINTER_SHOW_DELAY_MS, { x: event.clientX, y: event.clientY })
       }
+    }
+
+    const handlePointerDown = () => {
+      lastInteractionWasKeyboardRef.current = false
+      hideTooltip()
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return
+      lastInteractionWasKeyboardRef.current = true
     }
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -96,8 +129,13 @@ export default function AppTooltipLayer() {
       if (!(target instanceof HTMLElement)) return
 
       window.requestAnimationFrame(() => {
-        if (document.activeElement === target && target.matches(':focus-visible') && target.hasAttribute('data-app-tooltip')) {
-          showTooltip(target)
+        if (
+          lastInteractionWasKeyboardRef.current
+          && document.activeElement === target
+          && target.matches(':focus-visible')
+          && target.hasAttribute('data-app-tooltip')
+        ) {
+          scheduleTooltip(target, KEYBOARD_SHOW_DELAY_MS)
         }
       })
     }
@@ -112,8 +150,10 @@ export default function AppTooltipLayer() {
     const handleViewportChange = () => hideTooltip()
 
     document.addEventListener('pointerover', handlePointerOver, true)
+    document.addEventListener('pointerdown', handlePointerDown, true)
     document.addEventListener('pointermove', handlePointerMove, true)
     document.addEventListener('pointerout', handlePointerOut, true)
+    document.addEventListener('keydown', handleKeyDown, true)
     document.addEventListener('focusin', handleFocusIn, true)
     document.addEventListener('focusout', handleFocusOut, true)
     window.addEventListener('resize', handleViewportChange)
@@ -121,14 +161,16 @@ export default function AppTooltipLayer() {
 
     return () => {
       document.removeEventListener('pointerover', handlePointerOver, true)
+      document.removeEventListener('pointerdown', handlePointerDown, true)
       document.removeEventListener('pointermove', handlePointerMove, true)
       document.removeEventListener('pointerout', handlePointerOut, true)
+      document.removeEventListener('keydown', handleKeyDown, true)
       document.removeEventListener('focusin', handleFocusIn, true)
       document.removeEventListener('focusout', handleFocusOut, true)
       window.removeEventListener('resize', handleViewportChange)
       window.removeEventListener('scroll', handleViewportChange, true)
     }
-  }, [hideTooltip, showTooltip])
+  }, [hideTooltip, scheduleTooltip])
 
   useLayoutEffect(() => {
     const tooltip = tooltipRef.current

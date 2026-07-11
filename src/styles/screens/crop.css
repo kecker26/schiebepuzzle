@@ -75,6 +75,9 @@
 
 .crop-header-title > div {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .crop-header-title h2 {
@@ -572,10 +575,9 @@
   max-width: 108px;
   aspect-ratio: 1;
   justify-self: center;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 28px 1fr 22px;
   align-items: stretch;
-  justify-content: space-between;
   gap: 4px;
   padding: 8px;
   overflow: hidden;
@@ -673,15 +675,18 @@
 
 .crop-difficulty-card-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  min-height: 28px;
 }
 
 .crop-difficulty-card-label {
+  max-width: 58px;
   font-size: 14px;
-  line-height: 1.1;
+  line-height: 1;
   font-weight: 900;
+  text-align: left;
 }
 
 .crop-difficulty-card-size,
@@ -695,15 +700,28 @@
   text-transform: uppercase;
 }
 
+.crop-difficulty-card-size {
+  flex: 0 0 auto;
+}
+
+.crop-difficulty-card-meta {
+  display: flex;
+  min-height: 22px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .crop-difficulty-mini-grid {
   display: grid;
   grid-template-columns: repeat(var(--difficulty-grid-cols), minmax(0, 1fr));
   grid-template-rows: repeat(var(--difficulty-grid-rows), minmax(0, 1fr));
   gap: 2px;
-  width: min(40px, 54%);
+  width: min(34px, 50%);
   max-height: none;
   aspect-ratio: 1;
   align-self: center;
+  justify-self: center;
   opacity: 0.86;
 }
 

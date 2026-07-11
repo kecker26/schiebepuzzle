@@ -77,9 +77,9 @@ function formatChallengeDelta(value: number, unit: string): string {
 
 function getPreTemplateEntryComment(entry: SolvedGalleryEntry): string {
   if (entry.qualificationResult === 'failed') return 'Qualifikation: kein echtes Ziel erzeugt.'
-  if (entry.qualificationResult === 'created-template') return 'Vorlage: machte aus der Schaetzung ein echtes Ziel.'
-  if (entry.challengeRunKind === 'qualification') return 'Qualifikation: pruefte das geschaetzte Ziel.'
-  return 'Vor Zielsetzung: gehoert zur frueheren Schaetzphase.'
+  if (entry.qualificationResult === 'created-template') return 'Vorlage: machte aus der Schätzung ein echtes Ziel.'
+  if (entry.challengeRunKind === 'qualification') return 'Qualifikation: prüfte das geschätzte Ziel.'
+  return 'Vor Zielsetzung: gehört zur früheren Schätzphase.'
 }
 
 function getRelatedStartStateEntryComment(entry: SolvedGalleryEntry, canStartRelatedChallenge: boolean): string {
@@ -91,7 +91,7 @@ function getRelatedStartStateEntryComment(entry: SolvedGalleryEntry, canStartRel
     return 'Clean: kann als alternative Vorlage dienen.'
   }
 
-  return 'Uebung: gleiches Startbrett, nicht gewertet.'
+  return 'Übung: gleiches Startbrett, nicht gewertet.'
 }
 
 function getCompletedAtTimestamp(entry: SolvedGalleryEntry): number {
@@ -155,12 +155,12 @@ export default function UploadGalleryDetailDialog({
     ? formatTime(motifReplaySummary.bestCleanTimeEntry.time)
     : null
   const solveCountCopy = entry.visibleSolveCount === entry.totalSolveCount
-    ? `Dieses Motiv wurde insgesamt ${entry.totalSolveCount} Mal geloest.`
-    : `Dieses Motiv wurde insgesamt ${entry.totalSolveCount} Mal geloest; ${entry.visibleSolveCount} Loesungen passen aktuell zu deiner Auswahl.`
+    ? `Dieses Motiv wurde insgesamt ${entry.totalSolveCount} Mal gelöst.`
+    : `Dieses Motiv wurde insgesamt ${entry.totalSolveCount} Mal gelöst; ${entry.visibleSolveCount} Lösungen passen aktuell zu deiner Auswahl.`
   const motifReplayCopy =
     motifReplayableCount > 0
-      ? `Motivweit ueber alle Stufen liegen ${motifSolveCountLabel} auf ${motifDifficultyCount} ${motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'} vor; ${motifReplayableCount} davon haben ein Replay-Bild.`
-      : `Motivweit ueber alle Stufen liegen ${motifSolveCountLabel} vor, derzeit aber ohne gespeichertes Replay-Bild.`
+      ? `Motivweit über alle Stufen liegen ${motifSolveCountLabel} auf ${motifDifficultyCount} ${motifDifficultyCount === 1 ? 'Stufe' : 'Stufen'} vor; ${motifReplayableCount} davon haben ein Replay-Bild.`
+      : `Motivweit über alle Stufen liegen ${motifSolveCountLabel} vor, derzeit aber ohne gespeichertes Replay-Bild.`
   const aiTags = representativeEntry.tags ?? []
   const aiTagging = representativeEntry.aiTagging ?? null
   const aiProviderLabel = formatAiProviderLabel(aiTagging?.provider)
@@ -322,7 +322,7 @@ export default function UploadGalleryDetailDialog({
           ? 'Medaillen-Vorlage'
           : startStateRelation.isOrigin
             ? 'Ursprung'
-            : 'Uebungslauf'
+            : 'Übungslauf'
         : null,
       motifReplaySummary.bestTimeEntry?.id === timelineEntry.id ? 'Bestzeit' : null,
       motifReplaySummary.bestMovesEntry?.id === timelineEntry.id ? 'Bestweg' : null,
@@ -342,18 +342,18 @@ export default function UploadGalleryDetailDialog({
     )
     const roleLabel = startStateRelation
       ? `Startzustand-Serie ${startStateRelation.seriesNumber}`
-      : 'Eigenstaendiger Lauf'
+      : 'Eigenständiger Lauf'
     const roleDetail = startStateRelation
       ? hasStartStateCleanAnchor
-        ? `${startStateRunCount} ${startStateRunCount === 1 ? 'Lauf' : 'Laeufe'} mit gleichem Startbrett; cleane Vorlage ist markiert.`
-        : `${startStateRunCount} ${startStateRunCount === 1 ? 'Lauf' : 'Laeufe'} mit gleichem Startbrett; Medaillen nur bei cleanen Vorlagen.`
+        ? `${startStateRunCount} ${startStateRunCount === 1 ? 'Lauf' : 'Läufe'} mit gleichem Startbrett; cleane Vorlage ist markiert.`
+        : `${startStateRunCount} ${startStateRunCount === 1 ? 'Lauf' : 'Läufe'} mit gleichem Startbrett; Medaillen nur bei cleanen Vorlagen.`
       : 'Komplett neuer Lauf ohne Challenge-Bezug.'
     const mainKicker = startStateRelation
       ? isStartStateCleanAnchor
         ? 'Medaillen-Vorlage'
         : startStateRelation.isOrigin
         ? 'Ursprung'
-        : `Uebung ${startStateRelation.entryNumber}`
+        : `Übung ${startStateRelation.entryNumber}`
       : isCurrentEntry ? 'Angezeigt' : 'Lauf'
 
     return (
@@ -394,23 +394,23 @@ export default function UploadGalleryDetailDialog({
                     key={marker}
                     data-app-tooltip={
                       marker === 'Aktuell'
-                        ? 'Dieser Lauf ist gerade im Detaildialog ausgewaehlt.'
+                        ? 'Dieser Lauf ist gerade im Detaildialog ausgewählt.'
                         : marker.startsWith('Serie ')
-                          ? `${startStateRunCount} Laeufe teilen dieses gespeicherte Startbrett.`
+                          ? `${startStateRunCount} Läufe teilen dieses gespeicherte Startbrett.`
                           : marker === 'Medaillen-Vorlage'
-                            ? 'Clean geloester Lauf dieser Startzustand-Serie; nur solche Laeufe duerfen Medaillen-Vorlage sein.'
+                            ? 'Clean gelöster Lauf dieser Startzustand-Serie; nur solche Läufe dürfen Medaillen-Vorlage sein.'
                           : marker === 'Ursprung'
                             ? 'Erster gespeicherter Lauf dieser Startzustand-Serie.'
-                            : marker === 'Uebungslauf'
+                            : marker === 'Übungslauf'
                               ? 'Weiterer Lauf mit demselben gespeicherten Startbrett.'
                               : marker === 'Bestzeit'
-                                ? 'Schnellster gespeicherter Lauf fuer dieses Motiv.'
+                                ? 'Schnellster gespeicherter Lauf für dieses Motiv.'
                                 : marker === 'Bestweg'
-                                  ? 'Wenigste Netto-Zuege fuer dieses Motiv.'
+                                  ? 'Wenigste Netto-Züge für dieses Motiv.'
                                   : marker === 'Clean'
-                                    ? 'Bester Lauf ohne Hilfen (Hinweise, Ghost, Heatmap, Auto-Zuege oder Solver).'
+                                    ? 'Bester Lauf ohne Hilfen (Hinweise, Ghost, Heatmap, Auto-Züge oder Solver).'
                                     : marker === 'Archiv'
-                                      ? 'Bilddaten sind nicht mehr fuer Replay verfuegbar.'
+                                      ? 'Bilddaten sind nicht mehr für Replay verfügbar.'
                                       : 'Dieser Lauf liegt auf einer anderen Schwierigkeit.'
                     }
                     data-app-tooltip-position="top"
@@ -466,9 +466,9 @@ export default function UploadGalleryDetailDialog({
                   ? canStartChallenge
                     ? 'Cleanen gespeicherten Startzustand als Medaillen-Challenge wiederholen.'
                     : hasChallengeSetup
-                      ? 'Dieser Lauf wurde nicht clean geloest und startet deshalb nur als Uebung ohne Medaille.'
+                      ? 'Dieser Lauf wurde nicht clean gelöst und startet deshalb nur als Übung ohne Medaille.'
                       : (timelineEntry.cropTransform ? 'Gespeicherten Ausschnitt erneut spielen.' : 'Motiv neu laden und spielen.')
-                  : 'Archivierter Lauf ohne verfuegbare Bilddaten.'
+                  : 'Archivierter Lauf ohne verfügbare Bilddaten.'
               }
               data-app-tooltip-position="top"
             >
@@ -476,7 +476,7 @@ export default function UploadGalleryDetailDialog({
                 ? canStartChallenge
                   ? 'Challenge starten'
                   : hasChallengeSetup
-                    ? 'Startzustand ueben'
+                    ? 'Startzustand üben'
                     : (timelineEntry.cropTransform ? 'Ausschnitt spielen' : 'Motiv spielen')
                 : 'Archiv'}
             </button>
@@ -512,7 +512,7 @@ export default function UploadGalleryDetailDialog({
       return getCompletedAtTimestamp(b) - getCompletedAtTimestamp(a)
     })
     const bestRunEntry = getBestRunEntry(series.entries)
-    const runCountLabel = `${series.entries.length} ${series.entries.length === 1 ? 'Lauf' : 'Laeufe'}`
+    const runCountLabel = `${series.entries.length} ${series.entries.length === 1 ? 'Lauf' : 'Läufe'}`
 
     return (
       <article
@@ -531,14 +531,14 @@ export default function UploadGalleryDetailDialog({
             </small>
             {bestRunEntry ? (
               <small className="gallery-detail-series-best-run">
-                Bester Lauf: {formatTime(bestRunEntry.time)} - {bestRunEntry.moves} Zuege
+                Bester Lauf: {formatTime(bestRunEntry.time)} - {bestRunEntry.moves} Züge
               </small>
             ) : null}
           </div>
           <div className="gallery-detail-challenge-card-actions">
             <span className={`gallery-detail-start-state-badge${series.cleanAnchorEntry ? ' is-clean' : ''}`}>
               <GitBranch aria-hidden="true" size={14} strokeWidth={2.4} />
-              {series.cleanAnchorEntry ? 'Cleane Vorlage' : 'Uebungsserie'}
+              {series.cleanAnchorEntry ? 'Cleane Vorlage' : 'Übungsserie'}
             </span>
             <button
               type="button"
@@ -587,7 +587,7 @@ export default function UploadGalleryDetailDialog({
                         <strong>{formatTime(challengeTarget.time)}</strong>
                       </span>
                       <span>
-                        <small>Netto-Zuege</small>
+                        <small>Netto-Züge</small>
                         <strong>{challengeTarget.moves}</strong>
                       </span>
                     </>
@@ -598,7 +598,7 @@ export default function UploadGalleryDetailDialog({
                         <strong>{formatDifficultyLabel(displayEntry.config)}</strong>
                       </span>
                       <span>
-                        <small>Laeufe</small>
+                        <small>Läufe</small>
                         <strong>{series.entries.length}</strong>
                       </span>
                     </>
@@ -606,8 +606,8 @@ export default function UploadGalleryDetailDialog({
                 </div>
                 <small>
                   {challengeTarget
-                    ? 'Der cleane Lauf ist die Medaillen-Vorlage; Uebungslaeufe mit demselben Startbrett stehen getrennt darunter.'
-                    : 'Alle zugehoerigen Laeufe teilen genau dieses gespeicherte Startbrett.'}
+                    ? 'Der cleane Lauf ist die Medaillen-Vorlage; Übungsläufe mit demselben Startbrett stehen getrennt darunter.'
+                    : 'Alle zugehörigen Läufe teilen genau dieses gespeicherte Startbrett.'}
                 </small>
                 <button
                   type="button"
@@ -623,15 +623,15 @@ export default function UploadGalleryDetailDialog({
                   onKeyDown={handleActionKeyDown}
                   aria-label={challengeTarget
                     ? `Cleane Vorlage der Startzustand-Serie ${seriesNumber} herausfordern`
-                    : `Gemeinsamen Startzustand der Startzustand-Serie ${seriesNumber} ueben`}
+                    : `Gemeinsamen Startzustand der Startzustand-Serie ${seriesNumber} üben`}
                   data-app-tooltip={challengeTarget
                     ? 'Startet den cleanen Lauf als Medaillen-Vorlage mit demselben gespeicherten Startzustand.'
                     : practiceEntry
-                      ? 'Spielt den gemeinsamen gespeicherten Startzustand als Uebung ohne Medaille.'
-                      : 'Gemeinsamer Startzustand ohne verfuegbare Bilddaten.'}
+                      ? 'Spielt den gemeinsamen gespeicherten Startzustand als Übung ohne Medaille.'
+                      : 'Gemeinsamer Startzustand ohne verfügbare Bilddaten.'}
                   data-app-tooltip-position="top"
                 >
-                  {challengeTarget ? 'Vorlage herausfordern' : 'Startzustand ueben'}
+                  {challengeTarget ? 'Vorlage herausfordern' : 'Startzustand üben'}
                 </button>
               </div>
             </div>
@@ -639,7 +639,7 @@ export default function UploadGalleryDetailDialog({
             <div className="gallery-detail-challenge-attempts gallery-detail-start-state-runs">
               <div className="gallery-detail-challenge-attempts-head">
                 <GitBranch aria-hidden="true" size={16} strokeWidth={2.4} />
-                <span>{series.cleanAnchorEntry ? 'Uebungslaeufe fuer diesen Startzustand' : 'Zugehoerige Laeufe'}</span>
+                <span>{series.cleanAnchorEntry ? 'Übungsläufe für diesen Startzustand' : 'Zugehörige Läufe'}</span>
                 <strong>{practiceEntries.length}</strong>
               </div>
               {series.cleanAnchorEntry ? (
@@ -651,23 +651,23 @@ export default function UploadGalleryDetailDialog({
                     if (practiceEntry) onReplayEntry(practiceEntry, 'practice')
                   }}
                   onKeyDown={handleActionKeyDown}
-                  aria-label={`Startzustand der Startzustand-Serie ${seriesNumber} als Uebung starten`}
+                  aria-label={`Startzustand der Startzustand-Serie ${seriesNumber} als Übung starten`}
                   data-app-tooltip={practiceEntry
-                    ? 'Spielt den gemeinsamen gespeicherten Startzustand als Uebung ohne Medaille.'
-                    : 'Gemeinsamer Startzustand ohne verfuegbare Bilddaten.'}
+                    ? 'Spielt den gemeinsamen gespeicherten Startzustand als Übung ohne Medaille.'
+                    : 'Gemeinsamer Startzustand ohne verfügbare Bilddaten.'}
                   data-app-tooltip-position="top"
                 >
-                  Startzustand ueben
+                  Startzustand üben
                 </button>
               ) : null}
               <div className="gallery-detail-challenge-attempt-list">
                 {rankedPracticeEntries.map((seriesEntry, practiceIndex) => {
                   const relation = startStateRelations.entriesByEntryId.get(seriesEntry.id)
                   const role = series.cleanAnchorEntry
-                    ? `Uebungslauf ${practiceIndex + 1}`
+                    ? `Übungslauf ${practiceIndex + 1}`
                     : relation?.isOrigin
                       ? 'Ursprung'
-                      : `Uebung ${relation?.entryNumber ?? 1}`
+                      : `Übung ${relation?.entryNumber ?? 1}`
                   const statusLabels = [
                     seriesEntry.id === representativeEntry.id ? 'Aktuell' : null,
                     seriesEntry.time === bestTime ? 'Bestzeit' : null,
@@ -699,7 +699,7 @@ export default function UploadGalleryDetailDialog({
                 })}
                 {rankedPracticeEntries.length === 0 ? (
                   <div className="gallery-detail-start-state-empty-runs" role="status">
-                    Noch keine Uebungslaeufe fuer diesen Startzustand.
+                    Noch keine Übungsläufe für diesen Startzustand.
                   </div>
                 ) : null}
               </div>
@@ -750,7 +750,7 @@ export default function UploadGalleryDetailDialog({
           {detailImage ? (
             <img
               src={detailImage}
-              alt={`Geloestes Puzzle ${formatDifficultyLabel(representativeEntry.config)} vom ${formatDate(representativeEntry.completedAt)}`}
+              alt={`Gelöstes Puzzle ${formatDifficultyLabel(representativeEntry.config)} vom ${formatDate(representativeEntry.completedAt)}`}
               className="gallery-detail-image"
             />
           ) : (
@@ -771,31 +771,31 @@ export default function UploadGalleryDetailDialog({
             aria-label={
               motifReplayEntry
                 ? `Motiv ${formatDifficultyLabel(motifReplayEntry.config)} vom ${formatDate(motifReplayEntry.completedAt)} komplett neu spielen`
-                : 'Motiv neu spielen derzeit nicht verfuegbar'
+                : 'Motiv neu spielen derzeit nicht verfügbar'
             }
             data-page-primary-focus={canReplayMotif ? 'true' : undefined}
-            data-app-tooltip="Motiv neu in den Zuschnitt laden. Schwierigkeit und Ausschnitt koennen angepasst werden."
+            data-app-tooltip="Motiv neu in den Zuschnitt laden. Schwierigkeit und Ausschnitt können angepasst werden."
             data-app-tooltip-align="start"
           >
             <span className="gallery-detail-motif-replay-kicker">Motiv</span>
             <strong>Neu spielen</strong>
             <span>
-              Schwierigkeit im Zuschnitt frei waehlen
+              Schwierigkeit im Zuschnitt frei wählen
             </span>
           </button>
 
           {similarEntries.length > 0 ? (
             <section className="gallery-detail-similar-motifs" aria-labelledby="gallery-detail-similar-title">
               <div className="gallery-detail-replay-header">
-                <span id="gallery-detail-similar-title" className="saved-games-kicker">Aehnliche Motive</span>
+                <span id="gallery-detail-similar-title" className="saved-games-kicker">Ähnliche Motive</span>
                 <p className="gallery-detail-replay-copy">
-                  Motive mit ueberschneidenden Tags aus deiner lokalen Galerie.
+                  Motive mit überschneidenden Tags aus deiner lokalen Galerie.
                 </p>
               </div>
 
               <div
                 className="gallery-detail-similar-strip"
-                aria-label="Aehnliche Galerie-Motive"
+                aria-label="Ähnliche Galerie-Motive"
                 onKeyDown={handleDirectionalFocusNavigation}
               >
                 {similarEntries.map((similarEntry) => {
@@ -809,8 +809,8 @@ export default function UploadGalleryDetailDialog({
                       type="button"
                       className="gallery-detail-similar-motif"
                       onClick={() => onOpenSimilarEntry?.(similarEntry)}
-                      aria-label={`Aehnliches Motiv ${formatDifficultyLabel(similarRepresentativeEntry.config)} vom ${formatDate(similarRepresentativeEntry.completedAt)} anzeigen`}
-                      data-app-tooltip="Aehnliches Motiv aus der Galerie anzeigen."
+                      aria-label={`Ähnliches Motiv ${formatDifficultyLabel(similarRepresentativeEntry.config)} vom ${formatDate(similarRepresentativeEntry.completedAt)} anzeigen`}
+                      data-app-tooltip="Ähnliches Motiv aus der Galerie anzeigen."
                       data-app-tooltip-position="top"
                     >
                       {similarImage ? (
@@ -845,7 +845,7 @@ export default function UploadGalleryDetailDialog({
               {formatDifficultyLabel(representativeEntry.config)}
             </h3>
             <p id={descriptionId} className="gallery-detail-copy">
-              {solveCountCopy} Gezeigt wird der juengste Lauf, der zu deiner aktuellen Auswahl passt,
+              {solveCountCopy} Gezeigt wird der jüngste Lauf, der zu deiner aktuellen Auswahl passt,
               vom {formatDate(representativeEntry.completedAt)}. {motifReplayCopy}
             </p>
           </div>
@@ -872,7 +872,7 @@ export default function UploadGalleryDetailDialog({
                 <span id="gallery-detail-ai-title" className="saved-games-kicker">Tags & Sortierung</span>
                 <p className="gallery-detail-replay-copy">
                   {aiTagging?.status === 'tagged'
-                    ? `${aiProviderLabel} hat Tags und passende Sammlungsvorschlaege fuer dieses Motiv erstellt.`
+                    ? `${aiProviderLabel} hat Tags und passende Sammlungsvorschläge für dieses Motiv erstellt.`
                     : aiTagging?.status === 'unavailable'
                       ? `${aiProviderLabel}-Tagging ist noch nicht konfiguriert.`
                       : `${aiProviderLabel} konnte dieses Motiv noch nicht taggen.`}
@@ -890,18 +890,18 @@ export default function UploadGalleryDetailDialog({
                       void onRetryTagging?.(representativeEntry)
                     }}
                     disabled={isRetryingTagging || !onRetryTagging}
-                    data-app-tooltip={aiTagging.error || 'KI-Tagging fuer dieses Motiv erneut anfragen.'}
+                    data-app-tooltip={aiTagging.error || 'KI-Tagging für dieses Motiv erneut anfragen.'}
                     data-app-tooltip-position="top"
                   >
-                    {isRetryingTagging ? <BusyIndicator label="Prueft ..." /> : 'KI-Tagging erneut versuchen'}
+                    {isRetryingTagging ? <BusyIndicator label="Prüft ..." /> : 'KI-Tagging erneut versuchen'}
                   </button>
                 ) : null}
                 {isRetryingTagging ? (
                   <AsyncStatusPanel
                     compact
                     title="KI analysiert das Galeriebild"
-                    phase="Bildinhalt, Tags und Sammlungsvorschlaege werden geprueft."
-                    longWaitDetail="Die Bildanalyse laeuft noch. Das Motiv bleibt waehrenddessen in der Galerie erhalten."
+                    phase="Bildinhalt, Tags und Sammlungsvorschläge werden geprüft."
+                    longWaitDetail="Die Bildanalyse läuft noch. Das Motiv bleibt währenddessen in der Galerie erhalten."
                   />
                 ) : null}
               </div>
@@ -965,7 +965,7 @@ export default function UploadGalleryDetailDialog({
                     void handleAddManualTag()
                   }}
                 >
-                  <label htmlFor="gallery-detail-manual-tag">Eigenen Tag hinzufuegen</label>
+                  <label htmlFor="gallery-detail-manual-tag">Eigenen Tag hinzufügen</label>
                   <div>
                     <input
                       id="gallery-detail-manual-tag"
@@ -989,10 +989,10 @@ export default function UploadGalleryDetailDialog({
                       type="submit"
                       className="secondary"
                       disabled={isEditingTags || !canAddManualTag}
-                      aria-label="Eigenen Tag hinzufuegen"
+                      aria-label="Eigenen Tag hinzufügen"
                     >
                       <Plus aria-hidden="true" size={15} strokeWidth={2.5} />
-                      {isEditingTags ? <BusyIndicator label="Speichert ..." /> : 'Hinzufuegen'}
+                      {isEditingTags ? <BusyIndicator label="Speichert ..." /> : 'Hinzufügen'}
                     </button>
                   </div>
                   <small>Manuelle Tags bleiben bei einer neuen KI-Analyse erhalten.</small>
@@ -1006,7 +1006,7 @@ export default function UploadGalleryDetailDialog({
               <div className="gallery-detail-replay-header">
                 <span id="gallery-detail-challenge-series-title" className="saved-games-kicker">Challenge-Startzustand-Serien</span>
                 <p className="gallery-detail-replay-copy">
-                  Eine Karte fasst alle Laeufe mit identischem gespeicherten Startbrett zusammen.
+                  Eine Karte fasst alle Läufe mit identischem gespeicherten Startbrett zusammen.
                 </p>
               </div>
 
@@ -1084,14 +1084,14 @@ export default function UploadGalleryDetailDialog({
                             {target
                               ? `${formatDifficultyLabel(target.config)} vom ${formatDate(target.completedAt)}`
                               : estimatedTarget
-                                ? `Gestartet mit geschaetztem Ziel: ${estimatedTarget.moves} Zuege / ${formatTime(estimatedTarget.time)}`
+                                ? `Gestartet mit geschätztem Ziel: ${estimatedTarget.moves} Züge / ${formatTime(estimatedTarget.time)}`
                                 : 'Vorlagenlauf nicht mehr vorhanden'}
                           </strong>
                           {estimatedTarget ? (
                             <small className="gallery-detail-challenge-origin">
                               {target
-                                ? 'Enthaelt die geschaetzte Vorphase und die echte Vorlage dieses Startbretts.'
-                                : 'Enthaelt die geschaetzte Vorphase dieses Startbretts; eine echte Vorlage fehlt noch.'}
+                                ? 'Enthält die geschätzte Vorphase und die echte Vorlage dieses Startbretts.'
+                                : 'Enthält die geschätzte Vorphase dieses Startbretts; eine echte Vorlage fehlt noch.'}
                             </small>
                           ) : null}
                           {targetOrigin ? (
@@ -1101,7 +1101,7 @@ export default function UploadGalleryDetailDialog({
                           ) : null}
                           {bestRunEntry ? (
                             <small className="gallery-detail-series-best-run">
-                              Bester Lauf: {formatTime(bestRunEntry.time)} - {bestRunEntry.moves} Zuege
+                              Bester Lauf: {formatTime(bestRunEntry.time)} - {bestRunEntry.moves} Züge
                             </small>
                           ) : null}
                         </div>
@@ -1151,7 +1151,7 @@ export default function UploadGalleryDetailDialog({
                             <span className="gallery-detail-challenge-target-icon" aria-hidden="true">
                               <Target size={17} strokeWidth={2.5} />
                             </span>
-                            <span>{isEstimatedOriginSeries ? (target ? 'Echte Vorlage' : 'Geschaetztes Ziel') : 'Vorlage dieser Serie'}</span>
+                            <span>{isEstimatedOriginSeries ? (target ? 'Echte Vorlage' : 'Geschätztes Ziel') : 'Vorlage dieser Serie'}</span>
                           </div>
                           {target ? (
                             <div className="gallery-detail-challenge-target-metrics" aria-label="Werte der Challenge-Vorlage">
@@ -1160,18 +1160,18 @@ export default function UploadGalleryDetailDialog({
                                 <strong>{formatTime(target.time)}</strong>
                               </span>
                               <span>
-                                <small>Netto-Zuege</small>
+                                <small>Netto-Züge</small>
                                 <strong>{target.moves}</strong>
                               </span>
                             </div>
                           ) : estimatedTarget ? (
-                            <div className="gallery-detail-challenge-target-metrics" aria-label="Werte des geschaetzten Ziels">
+                            <div className="gallery-detail-challenge-target-metrics" aria-label="Werte des geschätzten Ziels">
                               <span>
                                 <small>Zielzeit</small>
                                 <strong>{formatTime(estimatedTarget.time)}</strong>
                               </span>
                               <span>
-                                <small>Zielzuege</small>
+                                <small>Zielzüge</small>
                                 <strong>{estimatedTarget.moves}</strong>
                               </span>
                             </div>
@@ -1184,7 +1184,7 @@ export default function UploadGalleryDetailDialog({
                                 ? 'Vorlage: erster erfolgreicher cleaner Referenzlauf dieses Startbretts.'
                                 : 'Noch keine echte Vorlage vorhanden. Eine Qualifikation kann sie erzeugen.'
                               : target
-                              ? `Vorlage: Referenzlauf fuer ${series.attempts.length} ${series.attempts.length === 1 ? 'Medaillenlauf' : 'Medaillenlaeufe'} dieses Startbretts.`
+                              ? `Vorlage: Referenzlauf für ${series.attempts.length} ${series.attempts.length === 1 ? 'Medaillenlauf' : 'Medaillenläufe'} dieses Startbretts.`
                               : 'Historische Challenge-Serie ohne vorhandene Vorlage.'}
                           </small>
                           <button
@@ -1207,11 +1207,11 @@ export default function UploadGalleryDetailDialog({
                             data-app-tooltip={isEstimatedOriginSeries && !target
                               ? qualificationEntry
                                 ? 'Startet denselben gespeicherten Startzustand als Qualifikation ohne Medaille.'
-                                : 'Noch kein replaybarer Ursprungslauf fuer diese Schaetzung vorhanden.'
+                                : 'Noch kein replaybarer Ursprungslauf für diese Schätzung vorhanden.'
                               : canChallengeAgain
                               ? 'Nur diese cleane Vorlage mit demselben gespeicherten Startzustand erneut herausfordern.'
                               : canReplayTargetStart
-                                ? 'Dieser Lauf wurde nicht clean geloest und startet deshalb nur als Uebung ohne Medaille.'
+                                ? 'Dieser Lauf wurde nicht clean gelöst und startet deshalb nur als Übung ohne Medaille.'
                                 : 'Die Vorlage kann nicht erneut als Challenge gestartet werden.'}
                             data-app-tooltip-position="top"
                           >
@@ -1220,8 +1220,8 @@ export default function UploadGalleryDetailDialog({
                               : canChallengeAgain
                               ? 'Vorlage herausfordern'
                               : canReplayTargetStart
-                                ? 'Startzustand ueben'
-                                : 'Vorlage nicht verfuegbar'}
+                                ? 'Startzustand üben'
+                                : 'Vorlage nicht verfügbar'}
                           </button>
                         </div>
                       </div>
@@ -1233,18 +1233,18 @@ export default function UploadGalleryDetailDialog({
                             <span>Vor dem echten Ziel</span>
                             <strong>{series.preTemplateEntries.length}</strong>
                           </div>
-                          <p>Laeufe aus der geschaetzten Phase, bevor dieses Startbrett eine echte Vorlage hatte.</p>
+                          <p>Läufe aus der geschätzten Phase, bevor dieses Startbrett eine echte Vorlage hatte.</p>
                           {isEstimatedOriginSeries && !target && qualificationEntry ? (
                             <button
                               type="button"
                               className="gallery-detail-challenge-related-action is-shared"
                               onClick={() => onReplayEntry(qualificationEntry, 'practice')}
                               onKeyDown={handleActionKeyDown}
-                              aria-label={`Startzustand der Challenge-Serie ${seriesIndex + 1} als Uebung starten`}
-                              data-app-tooltip="Spielt den gespeicherten Startzustand frei als Uebung ohne Qualifikation und ohne Medaille."
+                              aria-label={`Startzustand der Challenge-Serie ${seriesIndex + 1} als Übung starten`}
+                              data-app-tooltip="Spielt den gespeicherten Startzustand frei als Übung ohne Qualifikation und ohne Medaille."
                               data-app-tooltip-position="top"
                             >
-                              Startzustand ueben
+                              Startzustand üben
                             </button>
                           ) : null}
                           <div className="gallery-detail-challenge-related-list">
@@ -1259,7 +1259,7 @@ export default function UploadGalleryDetailDialog({
                                       ? 'Qualifikation gescheitert'
                                       : preTemplateEntry.challengeRunKind === 'qualification'
                                         ? 'Qualifikation'
-                                        : 'Soft-Uebung'}
+                                        : 'Soft-Übung'}
                                   </span>
                                   <strong>{formatTime(preTemplateEntry.time)} - {preTemplateEntry.moves} Netto</strong>
                                   <small>{getPreTemplateEntryComment(preTemplateEntry)}</small>
@@ -1285,7 +1285,7 @@ export default function UploadGalleryDetailDialog({
                             <div
                               key={item.attempt.id}
                               className={`gallery-detail-challenge-medal-history-step is-${item.medal} is-${item.trend}`}
-                              data-app-tooltip={`Versuch ${item.attemptNumber}: ${formatChallengeMedalLabel(item.medal)}${item.trend === 'upgrade' ? ' - Aufstieg' : item.trend === 'confirmed' ? ' - bestaetigt' : item.trend === 'downgrade' ? ' - unter bisherigem Stand' : ''}.`}
+                              data-app-tooltip={`Versuch ${item.attemptNumber}: ${formatChallengeMedalLabel(item.medal)}${item.trend === 'upgrade' ? ' - Aufstieg' : item.trend === 'confirmed' ? ' - bestätigt' : item.trend === 'downgrade' ? ' - unter bisherigem Stand' : ''}.`}
                               data-app-tooltip-position="top"
                             >
                               {index > 0 ? <span className="gallery-detail-challenge-medal-history-arrow" aria-hidden="true">→</span> : null}
@@ -1296,7 +1296,7 @@ export default function UploadGalleryDetailDialog({
                                 <small>Versuch {item.attemptNumber}</small>
                                 <strong>{formatChallengeMedalLabel(item.medal)}</strong>
                                 {item.trend === 'upgrade' ? <em>Aufstieg</em> : null}
-                                {item.trend === 'confirmed' ? <em>Bestaetigt</em> : null}
+                                {item.trend === 'confirmed' ? <em>Bestätigt</em> : null}
                               </span>
                             </div>
                           ))}
@@ -1306,7 +1306,7 @@ export default function UploadGalleryDetailDialog({
                       <div className="gallery-detail-challenge-attempts">
                         <div className="gallery-detail-challenge-attempts-head">
                           <Trophy aria-hidden="true" size={16} strokeWidth={2.4} />
-                          <span>Medaillenlaeufe</span>
+                          <span>Medaillenläufe</span>
                           <strong>{series.attempts.length}</strong>
                         </div>
                         <div className="gallery-detail-challenge-attempt-list">
@@ -1334,7 +1334,7 @@ export default function UploadGalleryDetailDialog({
                                     <strong>{formatTime(attempt.time)} · {attempt.moves} Netto</strong>
                                     {timeDelta !== null && movesDelta !== null ? (
                                       <small>
-                                        {formatChallengeDelta(timeDelta, 'Sek.')} · {formatChallengeDelta(movesDelta, 'Zuege')}
+                                        {formatChallengeDelta(timeDelta, 'Sek.')} · {formatChallengeDelta(movesDelta, 'Züge')}
                                       </small>
                                     ) : null}
                                     {followUpSeries ? (
@@ -1353,9 +1353,9 @@ export default function UploadGalleryDetailDialog({
                         <div className="gallery-detail-challenge-related-start-state">
                           <div className="gallery-detail-challenge-related-head">
                             <GitBranch aria-hidden="true" size={16} strokeWidth={2.4} />
-                            <span>Weitere Laeufe dieses Startbretts</span>
+                            <span>Weitere Läufe dieses Startbretts</span>
                             <strong>
-                              {series.relatedStartStateEntries.length} {series.relatedStartStateEntries.length === 1 ? 'Lauf' : 'Laeufe'}
+                              {series.relatedStartStateEntries.length} {series.relatedStartStateEntries.length === 1 ? 'Lauf' : 'Läufe'}
                             </strong>
                           </div>
                           <p>
@@ -1370,14 +1370,14 @@ export default function UploadGalleryDetailDialog({
                             }}
                             onKeyDown={handleActionKeyDown}
                             aria-label={series.relatedStartStateEntries.length > 0
-                              ? 'Gemeinsamen Startzustand der verwandten Laeufe ueben'
-                              : `Startzustand der Challenge-Serie ${seriesIndex + 1} als Uebung starten`}
+                              ? 'Gemeinsamen Startzustand der verwandten Läufe üben'
+                              : `Startzustand der Challenge-Serie ${seriesIndex + 1} als Übung starten`}
                             data-app-tooltip={relatedPracticeEntry
-                              ? 'Spielt den gemeinsamen gespeicherten Startzustand als Uebung ohne Medaille.'
-                              : 'Gemeinsamer Startzustand ohne verfuegbare Bilddaten.'}
+                              ? 'Spielt den gemeinsamen gespeicherten Startzustand als Übung ohne Medaille.'
+                              : 'Gemeinsamer Startzustand ohne verfügbare Bilddaten.'}
                             data-app-tooltip-position="top"
                           >
-                            Startzustand ueben
+                            Startzustand üben
                           </button>
                           <div className="gallery-detail-challenge-related-list">
                             {series.relatedStartStateEntries.length > 0 ? series.relatedStartStateEntries.map((relatedEntry) => {
@@ -1386,7 +1386,7 @@ export default function UploadGalleryDetailDialog({
                                 ? 'Verwandter Ursprung'
                                 : canStartRelatedChallenge
                                   ? 'Alternative cleane Vorlage'
-                                  : 'Verwandter Uebungslauf'
+                                  : 'Verwandter Übungslauf'
 
                               return (
                                 <div key={relatedEntry.id} className="gallery-detail-challenge-related-row">
@@ -1405,7 +1405,7 @@ export default function UploadGalleryDetailDialog({
                               )
                             }) : (
                               <div className="gallery-detail-start-state-empty-runs" role="status">
-                                Noch keine Uebungslaeufe fuer diesen Startzustand.
+                                Noch keine Übungsläufe für diesen Startzustand.
                               </div>
                             )}
                           </div>
@@ -1425,7 +1425,7 @@ export default function UploadGalleryDetailDialog({
               <div className="gallery-detail-replay-header">
                 <span id="gallery-detail-start-state-title" className="saved-games-kicker">Startzustand-Serien</span>
                 <p className="gallery-detail-replay-copy">
-                  Pro gemeinsamem Startbrett eine Karte; cleane Vorlagen und Serien-Bestwerte stehen in der Laufuebersicht zuerst.
+                  Pro gemeinsamem Startbrett eine Karte; cleane Vorlagen und Serien-Bestwerte stehen in der Laufübersicht zuerst.
                 </p>
               </div>
 
@@ -1438,9 +1438,9 @@ export default function UploadGalleryDetailDialog({
           {standaloneTimelineEntries.length > 0 ? (
             <section className="gallery-detail-timeline" aria-labelledby="gallery-detail-timeline-title">
               <div className="gallery-detail-replay-header">
-                <span id="gallery-detail-timeline-title" className="saved-games-kicker">Eigenstaendige Laeufe</span>
+                <span id="gallery-detail-timeline-title" className="saved-games-kicker">Eigenständige Läufe</span>
                 <p className="gallery-detail-replay-copy">
-                  Eigene Startzustaende ohne Verbindung zu einer bestehenden Challenge- oder Startzustand-Serie.
+                  Eigene Startzustände ohne Verbindung zu einer bestehenden Challenge- oder Startzustand-Serie.
                 </p>
               </div>
 
@@ -1459,8 +1459,8 @@ export default function UploadGalleryDetailDialog({
                 data-page-primary-focus={canReplayMotif ? undefined : 'true'}
                 onClick={() => onCollectEntry(entry)}
                 onKeyDown={handleActionKeyDown}
-                aria-label={`Galerie-Bild ${formatDifficultyLabel(representativeEntry.config)} vom ${formatDate(representativeEntry.completedAt)} zu einer Sammlung hinzufuegen`}
-                data-app-tooltip="Dieses Motiv zu einer Sammlung hinzufuegen."
+                aria-label={`Galerie-Bild ${formatDifficultyLabel(representativeEntry.config)} vom ${formatDate(representativeEntry.completedAt)} zu einer Sammlung hinzufügen`}
+                data-app-tooltip="Dieses Motiv zu einer Sammlung hinzufügen."
                 data-app-tooltip-position="top"
               >
                 Sammeln
@@ -1473,10 +1473,10 @@ export default function UploadGalleryDetailDialog({
               data-page-primary-focus={canReplayMotif || onCollectEntry ? undefined : 'true'}
               onClick={onClose}
               onKeyDown={handleActionKeyDown}
-              data-app-tooltip="Galerie-Detaildialog schliessen."
+              data-app-tooltip="Galerie-Detaildialog schließen."
               data-app-tooltip-position="top"
             >
-              Schliessen
+              Schließen
             </button>
           </div>
         </div>

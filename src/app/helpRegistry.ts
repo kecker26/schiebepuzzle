@@ -44,55 +44,55 @@ const ALL_HELP_CONTEXTS: HelpContext[] = [
 
 const COMMON_SECTIONS: HelpSection[] = [
   {
-    title: 'Ueberall in der App',
+    title: 'Überall in der App',
     icon: 'command',
     isGlobal: true,
     items: [
       {
         keys: ['F1'],
-        label: 'Hilfe oeffnen oder schliessen',
-        detail: 'Funktioniert in jeder Ansicht und ueber fast allen Dialogen.',
+        label: 'Hilfe öffnen oder schließen',
+        detail: 'Funktioniert in jeder Ansicht und über fast allen Dialogen.',
       },
       {
         keys: ['?'],
         label: 'Shortcut-Hilfe schnell aufrufen',
-        detail: 'Ideal, wenn du gerade nicht mehr weisst, welche Tasten hier gelten.',
+        detail: 'Ideal, wenn du gerade nicht mehr weißt, welche Tasten hier gelten.',
       },
       {
         keys: ['Strg', '/'],
         label: 'Alternative Hilfe-Taste',
-        detail: 'Nuetzlich auf Tastaturen, auf denen das Fragezeichen unpraktisch liegt.',
+        detail: 'Nützlich auf Tastaturen, auf denen das Fragezeichen unpraktisch liegt.',
       },
       {
         keys: ['F8'],
-        label: 'Schnellaktionen oeffnen',
-        detail: 'Oeffnet die Command Palette fuer Start, Auswahl, Musik, Hilfe und wichtige Direktaktionen.',
+        label: 'Schnellaktionen öffnen',
+        detail: 'Öffnet die Command Palette für Start, Auswahl, Musik, Hilfe und wichtige Direktaktionen.',
       },
       {
         keys: ['Strg', 'Pos1'],
         label: 'Zum ersten sinnvollen Fokusziel der aktuellen Ansicht springen',
-        detail: 'Richtet die sichtbare Ebene wieder am Anfang aus und setzt den Fokus auf die primaere Aktion der aktuellen Seite oder des aktuellen Dialogs.',
+        detail: 'Richtet die sichtbare Ebene wieder am Anfang aus und setzt den Fokus auf die primäre Aktion der aktuellen Seite oder des aktuellen Dialogs.',
       },
       {
         keys: ['Tab'],
-        label: 'Zum naechsten Fokusziel springen',
+        label: 'Zum nächsten Fokusziel springen',
       },
       {
         keys: ['Shift', 'Tab'],
-        label: 'Zum vorherigen Fokusziel zurueck',
+        label: 'Zum vorherigen Fokusziel zurück',
       },
       {
         keys: ['Enter'],
-        label: 'Fokussierte Standardaktion ausfuehren',
+        label: 'Fokussierte Standardaktion ausführen',
       },
       {
         keys: ['Leertaste'],
-        label: 'Buttons und Umschalter bestaetigen',
+        label: 'Buttons und Umschalter bestätigen',
       },
       {
         keys: ['Esc'],
-        label: 'Die oberste offene Ebene schliessen',
-        detail: 'Zum Beispiel Hilfe, Menues oder andere modale Fenster.',
+        label: 'Die oberste offene Ebene schließen',
+        detail: 'Zum Beispiel Hilfe, Menüs oder andere modale Fenster.',
       },
     ],
   },
@@ -102,13 +102,13 @@ const COMMON_SECTIONS: HelpSection[] = [
     isGlobal: true,
     items: [
       {
-        label: 'Dialoge behalten den Fokus bei sich, bis du sie schliesst.',
+        label: 'Dialoge behalten den Fokus bei sich, bis du sie schließt.',
       },
       {
-        label: 'Nach dem Schliessen springt der Fokus wieder an den Ausloeser zurueck.',
+        label: 'Nach dem Schließen springt der Fokus wieder an den Auslöser zurück.',
       },
       {
-        label: 'Die Hilfe oeffnet ueber der aktuellen Ansicht, ohne den Kontext zu verlieren.',
+        label: 'Die Hilfe öffnet über der aktuellen Ansicht, ohne den Kontext zu verlieren.',
       },
     ],
   },
@@ -125,16 +125,16 @@ const COMMON_SECTIONS: HelpSection[] = [
         label: 'In den kompakten Werkzeugleisten oben direkt zwischen den sichtbaren Buttons wechseln',
       },
       {
-        label: 'Per Pfeil nach unten oeffnest du Lautstaerke oder Stilauswahl direkt im Dropdown.',
+        label: 'Per Pfeil nach unten öffnest du Lautstärke oder Stilauswahl direkt im Dropdown.',
       },
       {
-        label: 'Das Emotion-Theme leitet aus dem aktuellen Bild eine passende Stimmung und Farbpalette fuer UI, Galerie-, Spielstand- und Sammlungskarten ab.',
+        label: 'Das Emotion-Theme leitet aus dem aktuellen Bild eine passende Stimmung und Farbpalette für UI, Galerie-, Spielstand- und Sammlungskarten ab.',
       },
       {
-        label: 'Die Bildstimmung wird nur lokal im Browser aus Farben, Helligkeit, Saettigung und Kontrast ermittelt; dafuer wird keine Gemini-Anfrage gesendet.',
+        label: 'Die Bildstimmung entsteht direkt auf deinem Gerät; dafür werden keine Bilddaten an die KI gesendet.',
       },
       {
-        label: 'Mit dem Palette-Button wechselst du jederzeit zwischen Emotion-Theme und Standard-Farbgebung; Hell- und Dunkel-Modus bleiben davon unabhaengig.',
+        label: 'Mit dem Palette-Button wechselst du jederzeit zwischen Emotion-Theme und Standard-Farbgebung; Hell- und Dunkel-Modus bleiben davon unabhängig.',
       },
     ],
   },
@@ -144,20 +144,20 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
   welcome: {
     kicker: 'Willkommen',
     title: 'Erste Schritte',
-    description: 'So funktioniert die App: Bild laden, zuschneiden, Puzzle loesen. Dein Fortschritt wird automatisch gespeichert.',
+    description: 'So funktioniert die App: Bild laden, zuschneiden, Puzzle lösen. Dein Fortschritt wird automatisch gespeichert.',
     sections: [
       {
         title: 'Was ist ein Schiebepuzzle?',
         icon: 'grid',
         items: [
           {
-            label: 'Du schiebst Kacheln in ein Leerfeld, um ein zerstueckeltes Bild wiederherzustellen.',
+            label: 'Du schiebst Kacheln in ein Leerfeld, um ein zerstückeltes Bild wiederherzustellen.',
           },
           {
-            label: 'Je hoeher die Schwierigkeit, desto mehr Kacheln – von 3x3 bis 7x7.',
+            label: 'Je höher die Schwierigkeit, desto mehr Kacheln – von 3x3 bis 7x7.',
           },
           {
-            label: 'Dein Weg: Bild hochladen oder Zufallsbild starten, Ausschnitt waehlen, Puzzle loesen.',
+            label: 'Dein Weg: Bild hochladen oder Zufallsbild starten, Ausschnitt wählen, Puzzle lösen.',
           },
         ],
       },
@@ -175,25 +175,25 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Enter'],
-            label: 'Spiel starten oder Beenden bestaetigen',
+            label: 'Spiel starten oder Beenden bestätigen',
           },
           {
-            label: 'Die Infokarten sind Lesebereiche; die primaeren Aktionen liegen im Aktionspanel.',
+            label: 'Die Infokarten sind Lesebereiche; die primären Aktionen liegen im Aktionspanel.',
           },
         ],
       },
       {
-        title: 'Features im Ueberblick',
+        title: 'Features im Überblick',
         icon: 'helpCircle',
         items: [
           {
-            label: 'Hinweise und automatische Zuege helfen dir, wenn du festhaengst.',
+            label: 'Hinweise und automatische Züge helfen dir, wenn du festhängst.',
           },
           {
             label: 'Geisterbild, konfigurierbare Heatmap und Nummern-Overlay zeigen visuelle Hilfen auf dem Brett.',
           },
           {
-            label: 'Statistik, Galerie und Spielstaende behalten deinen Fortschritt im Blick.',
+            label: 'Statistik, Galerie und Spielstände behalten deinen Fortschritt im Blick.',
           },
           {
             label: 'Alles funktioniert komplett per Tastatur und per Maus.',
@@ -204,8 +204,8 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
   },
   'upload-start': {
     kicker: 'Auswahl',
-    title: 'Bild laden und Bereiche oeffnen',
-    description: 'Bild laden, Zufallsbild starten oder in Spielstaende, Statistik und Galerie springen.',
+    title: 'Bild laden und Bereiche öffnen',
+    description: 'Bild laden, Zufallsbild starten oder in Spielstände, Statistik und Galerie springen.',
     sections: [
       {
         title: 'Bild vorbereiten',
@@ -217,20 +217,20 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Enter'],
-            label: 'Fokussierte Karte oder Schaltflaeche oeffnen',
+            label: 'Fokussierte Karte oder Schaltfläche öffnen',
           },
           {
             keys: ['Pfeile', 'Pos1', 'Ende'],
-            label: 'Auf den grossen Karten und Backup-Aktionen direkt zwischen benachbarten Zielen wechseln',
+            label: 'Auf den großen Karten und Backup-Aktionen direkt zwischen benachbarten Zielen wechseln',
           },
           {
             keys: ['Strg', 'V'],
-            label: 'Ein Bild direkt aus der Zwischenablage einfuegen',
-            detail: 'Funktioniert in der Auswahlansicht ohne zusaetzlichen Dateidialog.',
+            label: 'Ein Bild direkt aus der Zwischenablage einfügen',
+            detail: 'Funktioniert in der Auswahlansicht ohne zusätzlichen Dateidialog.',
           },
           {
             keys: ['Esc'],
-            label: 'Zur Startseite zurueckkehren, solange kein Dialog oder Datenfenster offen ist',
+            label: 'Zur Startseite zurückkehren, solange kein Dialog oder Datenfenster offen ist',
           },
         ],
       },
@@ -242,7 +242,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
             label: 'Klicke auf die Upload-Karte oder ziehe ein Bild per Drag-and-Drop hinein.',
           },
           {
-            label: 'Die Datenbereiche (Spielstaende, Statistik, Galerie) oeffnen sich per Klick.',
+            label: 'Die Datenbereiche Spielstände, Statistik und Galerie öffnen sich per Klick.',
           },
         ],
       },
@@ -251,28 +251,28 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'archive',
         items: [
           {
-            label: 'Spielstaende, Statistik, Galerie und Sammlungen lassen sich vollstaendig per Fokus und Enter oeffnen.',
+            label: 'Spielstände, Statistik, Galerie und Sammlungen lassen sich vollständig per Fokus und Enter öffnen.',
           },
           {
-            label: 'Backups koennen ohne Maus exportiert und importiert werden.',
+            label: 'Backups können ohne Maus exportiert und importiert werden.',
           },
           {
-            label: 'Ein Backup sichert Spielstaende, Statistik, Galerie, Sammlungen sowie eigene und gelernte Tag-Kategorien gemeinsam.',
+            label: 'Ein Backup sichert Spielstände, Statistik, Galerie, Sammlungen sowie eigene und gelernte Tag-Kategorien gemeinsam.',
           },
           {
-            label: 'Die App behaelt die 3 neuesten lokalen Backups; beim Erstellen eines weiteren Backups wird das aelteste automatisch entfernt.',
+            label: 'Die App behält die 3 neuesten lokalen Backups; beim Erstellen eines weiteren Backups wird das älteste automatisch entfernt.',
           },
           {
-            label: 'Ein Import fuehrt Daten nicht zusammen, sondern ersetzt den aktuellen Datenstand komplett. Erstelle vorher ein frisches Backup, wenn du ihn behalten moechtest.',
+            label: 'Ein Import führt Daten nicht zusammen, sondern ersetzt den aktuellen Datenstand komplett. Erstelle vorher ein frisches Backup, wenn du ihn behalten möchtest.',
           },
         ],
       },
     ],
   },
   'upload-savedGames': {
-    kicker: 'Spielstaende',
+    kicker: 'Spielstände',
     title: 'Offene Partien verwalten',
-    description: 'Gespeicherte Spiele fortsetzen, loeschen oder direkt zu Statistik, Galerie und Start wechseln.',
+    description: 'Gespeicherte Spiele fortsetzen, löschen oder direkt zu Statistik, Galerie und Start wechseln.',
     sections: [
       {
         title: 'Im Fenster navigieren',
@@ -285,7 +285,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           {
             keys: ['Pfeile'],
             label: 'Auf den Bereichskarten und in der Spielstandliste wechseln',
-            detail: 'Links und rechts wechseln innerhalb einer Karte, hoch und runter zur gleichen Aktion anderer Spielstaende.',
+            detail: 'Links und rechts wechseln innerhalb einer Karte, hoch und runter zur gleichen Aktion anderer Spielstände.',
           },
           {
             keys: ['Pos1'],
@@ -303,7 +303,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         items: [
           {
             keys: ['Enter'],
-            label: 'Weiterspielen, Loeschen oder Alle loeschen bestaetigen',
+            label: 'Weiterspielen, Löschen oder Alle löschen bestätigen',
           },
           {
             keys: ['Home', 'Ende'],
@@ -325,7 +325,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
             label: 'Klicke auf Weiterspielen, um direkt ins Puzzle zu springen.',
           },
           {
-            label: 'Klicke Loeschen, um einen einzelnen Spielstand zu entfernen.',
+            label: 'Klicke Löschen, um einen einzelnen Spielstand zu entfernen.',
           },
         ],
       },
@@ -346,7 +346,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Pfeile'],
-            label: 'Zwischen den Abschnittskoepfen wechseln und den Zielabschnitt oben ausrichten',
+            label: 'Zwischen den Abschnittsköpfen wechseln und den Zielabschnitt oben ausrichten',
           },
           {
             keys: ['Enter'],
@@ -358,7 +358,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Ende'],
-            label: 'Immer direkt zur letzten Abschnittsueberschrift Verlaufstabelle springen',
+            label: 'Immer direkt zur letzten Abschnittsüberschrift Verlaufstabelle springen',
           },
         ],
       },
@@ -368,11 +368,11 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         items: [
           {
             keys: ['Tab'],
-            label: 'Zwischen Filter-Chips, Sortierkoepfen, Reset und Rueckwegen wechseln',
+            label: 'Zwischen Filter-Chips, Sortierköpfen, Reset und Rückwegen wechseln',
           },
           {
             keys: ['Pfeile'],
-            label: 'Filter-Chips und Sortierkoepfe direkt horizontal durchlaufen',
+            label: 'Filter-Chips und Sortierköpfe direkt horizontal durchlaufen',
           },
           {
             keys: ['Home', 'Ende'],
@@ -380,7 +380,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Enter'],
-            label: 'Filter-Chips, Sortierkoepfe und Schaltflaechen ausloesen',
+            label: 'Filter-Chips, Sortierköpfe und Schaltflächen auslösen',
           },
           {
             label: 'Vergleichsmatrix, Detailtabelle und Verlauf reagieren komplett auf Fokus statt auf Mauszwang.',
@@ -392,13 +392,13 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'helpCircle',
         items: [
           {
-            label: 'Ueberblick: Gesamtsiege, Bestzeiten, Durchschnitte und Streaks.',
+            label: 'Überblick: Gesamtsiege, Bestzeiten, Durchschnitte und Streaks.',
           },
           {
-            label: 'Vergleichsmatrix: Jede Schwierigkeit im direkten Vergleich nach Zeit, Zuegen und Anteil ohne Hilfe.',
+            label: 'Vergleichsmatrix: Jede Schwierigkeit im direkten Vergleich nach Zeit, Zügen und Anteil ohne Hilfe.',
           },
           {
-            label: 'Verlaufstabelle: Jedes geloeste Puzzle einzeln, filterbar nach Schwierigkeit und sortierbar.',
+            label: 'Verlaufstabelle: Jedes gelöste Puzzle einzeln, filterbar nach Schwierigkeit und sortierbar.',
           },
         ],
       },
@@ -407,17 +407,17 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'medal',
         items: [
           {
-            label: 'Die Medaillen-Ansicht gruppiert Challenge-Laeufe pro Motiv und zeigt nur echte Aufstiege.',
+            label: 'Die Medaillen-Ansicht gruppiert Challenge-Läufe pro Motiv und zeigt nur echte Aufstiege.',
           },
           {
-            label: 'Pro Motiv zaehlt in der Verteilung ausschliesslich die beste erreichte Medaille.',
+            label: 'Pro Motiv zählt in der Verteilung ausschließlich die beste erreichte Medaille.',
           },
           {
             label: 'Medaillenfilter, Sortierung und Motivkarten helfen dir, Aufstiegswege gezielt nachzuvollziehen.',
           },
           {
             keys: ['F8'],
-            label: 'Medaillen-Aufstiege direkt oeffnen',
+            label: 'Medaillen-Aufstiege direkt öffnen',
             detail: 'Suche in den Schnellaktionen nach Medaillen-Aufstiege.',
           },
         ],
@@ -426,11 +426,11 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
   },
   'upload-gallery': {
     kicker: 'Galerie',
-    title: 'Geloeste Motive und Filter',
-    description: 'Galerieeintraege, Filter und Rueckwege lassen sich direkt ueber Fokus und Aktionen bedienen.',
+    title: 'Gelöste Motive und Filter',
+    description: 'Galerieeinträge, Filter und Rückwege lassen sich direkt über Fokus und Aktionen bedienen.',
     sections: [
       {
-        title: 'Filter und Eintraege',
+        title: 'Filter und Einträge',
         icon: 'image',
         items: [
           {
@@ -447,10 +447,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Enter'],
-            label: 'Details oeffnen, Motiv erneut spielen oder Eintraege loeschen',
+            label: 'Details öffnen, Motiv erneut spielen oder Einträge löschen',
           },
           {
-            label: 'Filter, Sortierung und Zuruecksetzen lassen sich komplett ohne Maus steuern.',
+            label: 'Filter, Sortierung und Zurücksetzen lassen sich komplett ohne Maus steuern.',
           },
         ],
       },
@@ -464,10 +464,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Pfeile'],
-            label: 'Auf den grossen Bereichskarten zwischen Start, Spielstaenden, Statistik und Galerie wechseln',
+            label: 'Auf den großen Bereichskarten zwischen Start, Spielständen, Statistik und Galerie wechseln',
           },
           {
-            label: 'Von jeder Galerieansicht kommst du direkt zur Statistik, zu Spielstaenden oder zur Auswahl zurueck.',
+            label: 'Von jeder Galerieansicht kommst du direkt zur Statistik, zu Spielständen oder zur Auswahl zurück.',
           },
         ],
       },
@@ -476,10 +476,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'move',
         items: [
           {
-            label: 'Klicke auf das Vorschaubild oder Details, um die Motiv-Detailansicht zu oeffnen.',
+            label: 'Klicke auf das Vorschaubild oder Details, um die Motiv-Detailansicht zu öffnen.',
           },
           {
-            label: 'Ueber die Filter-Selects oben kannst du Schwierigkeit und Laufart einschraenken.',
+            label: 'Über die Filter-Selects oben kannst du Schwierigkeit und Laufart einschränken.',
           },
         ],
       },
@@ -488,16 +488,16 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'archive',
         items: [
           {
-            label: 'Fuege ein geloestes Motiv in der Galerie einer bestehenden oder direkt einer neuen Sammlung hinzu.',
+            label: 'Füge ein gelöstes Motiv in der Galerie einer bestehenden oder direkt einer neuen Sammlung hinzu.',
           },
           {
-            label: 'Aus einem aktiven Tag kannst du passende Galerie-Motive gemeinsam als neue Sammlung uebernehmen oder eine bestehende Sammlung ergaenzen.',
+            label: 'Aus einem aktiven Tag kannst du passende Galerie-Motive gemeinsam als neue Sammlung übernehmen oder eine bestehende Sammlung ergänzen.',
           },
           {
-            label: 'In der Sammlungsansicht kannst du Name und Beschreibung bearbeiten, Motive oeffnen und einzelne Motive wieder entfernen.',
+            label: 'In der Sammlungsansicht kannst du Name und Beschreibung bearbeiten, Motive öffnen und einzelne Motive wieder entfernen.',
           },
           {
-            label: 'Das Entfernen eines Motivs oder das Loeschen einer Sammlung loescht keine Galerie-Eintraege.',
+            label: 'Das Entfernen eines Motivs oder das Löschen einer Sammlung löscht keine Galerie-Einträge.',
           },
         ],
       },
@@ -506,20 +506,20 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'helpCircle',
         items: [
           {
-            label: 'Bild-Tags stammen aus der Gemini-Analyse, aus importierten Daten oder aus deinen manuellen Ergaenzungen.',
+            label: 'Bild-Tags stammen aus der KI-Analyse, aus importierten Daten oder aus deinen manuellen Ergänzungen.',
           },
           {
             label: 'Die Kategorie eines Tags kommt getrennt davon aus der statischen Taxonomie, einer manuellen Zuordnung oder dem lokal gespeicherten KI-Lerncache.',
           },
           {
-            label: 'Im Tag-Manager kannst du Tags suchen, filtern, umbenennen, zusammenfuehren, gesammelt hinzufuegen oder aus betroffenen Motiven entfernen.',
+            label: 'Im Tag-Manager kannst du Tags suchen, filtern, umbenennen, zusammenführen, gesammelt hinzufügen oder aus betroffenen Motiven entfernen.',
           },
           {
-            label: 'Entfernte Gemini-Tags werden dauerhaft als abgelehnt gespeichert und bei einer erneuten KI-Analyse nicht wieder hinzugefuegt.',
-            detail: 'Diese Sperrliste wird intern als rejectedAiTags gespeichert. Ein bewusst erneut manuell hinzugefuegter Tag ist davon ausgenommen.',
+            label: 'Entfernte KI-Tags bleiben abgelehnt und erscheinen bei einer erneuten Analyse nicht wieder.',
+            detail: 'Wenn du einen solchen Tag später selbst hinzufügst, wird er wieder verwendet.',
           },
           {
-            label: 'KI-Tags und Sammlungsvorschlaege sind von der lokalen Bildstimmungsanalyse fuer das Emotion-Theme getrennt.',
+            label: 'KI-Tags und Sammlungsvorschläge sind von der lokalen Bildstimmungsanalyse für das Emotion-Theme getrennt.',
           },
         ],
       },
@@ -531,21 +531,21 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
             label: 'Bronze: Absolut clean genau ein Ziel der Vorlage strikt unterbieten.',
           },
           {
-            label: 'Silber: Absolut clean Zeit und Zuege strikt unterbieten.',
+            label: 'Silber: Absolut clean Zeit und Züge strikt unterbieten.',
           },
           {
-            label: 'Gold: Absolut clean Zeit und Zuege jeweils um mindestens 20 % unterbieten.',
+            label: 'Gold: Absolut clean Zeit und Züge jeweils um mindestens 20 % unterbieten.',
           },
           {
-            label: 'Diamant: Gold erreichen und zusaetzlich exakt solver-optimal loesen.',
+            label: 'Diamant: Gold erreichen und zusätzlich exakt solver-optimal lösen.',
           },
           {
-            label: 'Gold oder Diamant koennen fuer einzelne Vorlagen mathematisch nicht erreichbar sein.',
+            label: 'Gold oder Diamant können für einzelne Vorlagen mathematisch nicht erreichbar sein.',
           },
           {
             keys: ['F8'],
-            label: 'Medaillen-Jagd direkt oeffnen',
-            detail: 'Zeigt upgradefaehige Motive zuerst nach ihrem besten Upgrade-Potenzial.',
+            label: 'Medaillen-Jagd direkt öffnen',
+            detail: 'Zeigt upgradefähige Motive zuerst nach ihrem besten Upgrade-Potenzial.',
           },
         ],
       },
@@ -586,11 +586,11 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['R'],
-            label: 'Den Zuschnitt auf den Ausgangspunkt zuruecksetzen',
+            label: 'Den Zuschnitt auf den Ausgangspunkt zurücksetzen',
           },
           {
             keys: ['Pfeile', 'Pos1', 'Ende'],
-            label: 'In Rotations- und Aktionsreihen zwischen den sichtbaren Schaltflaechen wechseln',
+            label: 'In Rotations- und Aktionsreihen zwischen den sichtbaren Schaltflächen wechseln',
           },
         ],
       },
@@ -619,10 +619,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Esc'],
-            label: 'Aus dem Zuschnitt jederzeit zur Auswahlansicht zurueckkehren',
+            label: 'Aus dem Zuschnitt jederzeit zur Auswahlansicht zurückkehren',
           },
           {
-            label: 'Zurueck kehrt in die Auswahlansicht zurueck, ohne die App zu verlassen.',
+            label: 'Zurück kehrt in die Auswahlansicht zurück, ohne die App zu verlassen.',
           },
           {
             label: 'Bei Zufallsbildern kannst du direkt ein anderes Motiv nachladen.',
@@ -634,7 +634,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
   playing: {
     kicker: 'Puzzle',
     title: 'Aktive Runde',
-    description: 'Das Puzzlebrett und alle Hilfswerkzeuge sind ueber Fokus, Hotkeys und Schaltflaechen erreichbar.',
+    description: 'Hier findest du die wichtigsten Tasten für Brett, Hilfen und Navigation.',
     sections: [
       {
         title: 'Brett und Bewegung',
@@ -646,7 +646,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['B'],
-            label: 'Den Fokus jederzeit direkt zurueck auf das Puzzlebrett holen',
+            label: 'Den Fokus jederzeit direkt zurück auf das Puzzlebrett holen',
           },
           {
             keys: ['P'],
@@ -659,7 +659,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['W', 'A', 'S', 'D'],
-            label: 'Alternative Brettsteuerung fuer die gleichen Bewegungen',
+            label: 'Alternative Brettsteuerung für die gleichen Bewegungen',
           },
         ],
       },
@@ -682,17 +682,17 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           {
             keys: ['G'],
             label: 'Geisteransicht umschalten',
-            detail: 'Legt das Originalbild halbtransparent ueber offene Kacheln. Im Modus-Wechsel stehen Vollbild, Konturen und Kanten zur Verfuegung.',
+            detail: 'Legt das Originalbild halbtransparent über offene Kacheln.',
           },
           {
             keys: ['M'],
             label: 'Heatmap umschalten',
-            detail: 'Zeigt Entfernung, Zielrichtung oder den Verlauf und bewertet gleichzeitig alle beweglichen Kacheln: Gruen verbessert, Gelb bereitet vor, Rot verschlechtert. Die beste Option traegt eine 1; der interaktive Zielpfad erklaert bis zu vier Solver-Zuege, zaehlt erledigte Schritte und berechnet Abweichungen neu. X/Y-Distanzen wechseln automatisch zu Farbflaechen; X+ zeigt rechts und Y+ zeigt oben.',
+            detail: 'Bewertet bewegliche Kacheln: Grün verbessert, Gelb bereitet vor, Rot verschlechtert.',
           },
           {
             keys: ['N'],
             label: 'Nummern kurz einblenden',
-            detail: 'Zeigt 5 Sekunden lang die Soll-Position jeder Kachel und animiert korrekte gruen, falsche rot.',
+            detail: 'Zeigt fünf Sekunden lang die Soll-Position jeder Kachel.',
           },
         ],
       },
@@ -702,11 +702,11 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         items: [
           {
             keys: ['Strg', 'Z'],
-            label: 'Letzten Zug rueckgaengig machen',
+            label: 'Letzten Zug rückgängig machen',
           },
           {
             keys: ['Strg', 'Y'],
-            label: 'Rueckgaengigen Zug wiederholen',
+            label: 'Rückgängigen Zug wiederholen',
           },
           {
             keys: ['Strg', 'Shift', 'Z'],
@@ -718,7 +718,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Esc'],
-            label: 'Runde abbrechen und zur Auswahl zurueckkehren',
+            label: 'Runde abbrechen und zur Auswahl zurückkehren',
           },
         ],
       },
@@ -730,13 +730,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
             label: 'Klicke auf eine Kachel neben dem Leerfeld, um sie dorthin zu schieben.',
           },
           {
-            label: 'Doppelklick auf eine korrekt platzierte Kachel spielt eine gruene Bestaetigungsanimation.',
-          },
-          {
             label: 'Doppelklick auf eine falsch platzierte Kachel hebt ihre Zielposition auf dem Brett hervor.',
           },
           {
-            label: 'Rechtsklick auf das Brett oeffnet ein Kontextmenue mit Shortcuts und Aktionen.',
+            label: 'Rechtsklick auf das Brett öffnet ein Kontextmenü mit Shortcuts und Aktionen.',
           },
         ],
       },
@@ -750,7 +747,7 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Enter'],
-            label: 'Die fokussierte Werkzeugaktion ausloesen',
+            label: 'Die fokussierte Werkzeugaktion auslösen',
           },
           {
             label: 'Im rechten Panel findest du Referenzbild, Strategiefokus und Musiksteuerung.',
@@ -765,13 +762,13 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
             label: 'Die Live-Prognose zeigt die beste Medaille, die mit dem aktuellen Stand noch erreichbar ist.',
           },
           {
-            label: 'Silber verlangt zwei strikt verbesserte Ziele; Gold verlangt bei Zeit und Zuegen jeweils mindestens 20 % Verbesserung.',
+            label: 'Geschätzte Vergleiche erlauben Hilfen; der Lauf zählt dann als unterstützt.',
           },
           {
-            label: 'Jede Hilfe verhindert alle Medaillen; der Abschluss wird als verwandter Startzustandslauf gespeichert.',
+            label: 'Qualifikations- und Medaillenläufe sperren alle Spielhilfen.',
           },
           {
-            label: 'Diamant ist nur verfuegbar, wenn Gold erreichbar und eine exakte optimale Zugzahl bekannt ist.',
+            label: 'Silber verbessert beide Ziele, Gold beide um mindestens 20 % und Diamant beide um mindestens 40 %.',
           },
         ],
       },
@@ -780,15 +777,15 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
   solved: {
     kicker: 'Geschafft',
     title: 'Runde abgeschlossen',
-    description: 'Die Gewinnansicht fasst den Lauf zusammen und bietet die naechsten Schritte an.',
+    description: 'Die Gewinnansicht fasst den Lauf zusammen und bietet die nächsten Schritte an.',
     sections: [
       {
-        title: 'Naechste Schritte',
+        title: 'Nächste Schritte',
         icon: 'zap',
         items: [
           {
             keys: ['Tab'],
-            label: 'Zwischen Nochmal spielen, naechster Schwierigkeit und Rueckwegen wechseln',
+            label: 'Zwischen Nochmal spielen, nächster Schwierigkeit und Rückwegen wechseln',
           },
           {
             keys: ['Pfeile'],
@@ -800,10 +797,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
           },
           {
             keys: ['Enter'],
-            label: 'Die fokussierte Folgeaktion sofort ausloesen',
+            label: 'Die fokussierte Folgeaktion sofort auslösen',
           },
           {
-            label: 'Die Statistikmeldung bleibt lesbar, waehrend du schon die naechste Aktion waehlen kannst.',
+            label: 'Die Statistikmeldung bleibt lesbar, während du schon die nächste Aktion wählen kannst.',
           },
         ],
       },
@@ -812,10 +809,10 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'grid',
         items: [
           {
-            label: 'Der Dialog zeigt deine Zeit, Zuege, Netto-Zuege und ob du Hilfen benutzt hast.',
+            label: 'Der Dialog zeigt deine Zeit, Züge, Netto-Züge und ob du Hilfen benutzt hast.',
           },
           {
-            label: 'Neue Bestzeiten und Best-Zuege werden sofort angezeigt.',
+            label: 'Neue Bestzeiten und Best-Züge werden sofort angezeigt.',
           },
           {
             label: 'Die Runde wird automatisch in der Statistik und der Galerie vermerkt.',
@@ -827,13 +824,13 @@ const HELP_VIEWS: Record<HelpContext, HelpView> = {
         icon: 'medal',
         items: [
           {
-            label: 'Der Gewinn-Dialog erklaert deine erreichte Medaille und ob sie einen neuen Aufstieg darstellt.',
+            label: 'Der Gewinn-Dialog erklärt deine erreichte Medaille und ob sie einen neuen Aufstieg darstellt.',
           },
           {
-            label: 'Das naechste Medaillenziel nennt konkret, welche Zeit, Zugzahl oder Hilfe-Bedingung noch fehlt.',
+            label: 'Das nächste Medaillenziel nennt konkret, welche Zeit, Zugzahl oder Hilfe-Bedingung noch fehlt.',
           },
           {
-            label: 'Ein Challenge-Abschluss ohne Medaille entfernt keine bereits frueher erreichte Medaille.',
+            label: 'Ein Challenge-Abschluss ohne Medaille entfernt keine bereits früher erreichte Medaille.',
           },
         ],
       },

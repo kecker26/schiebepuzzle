@@ -34,7 +34,7 @@ function createEntry(overrides: Partial<SolvedGalleryEntry> = {}): SolvedGallery
 }
 
 describe('galleryReplaySetup', () => {
-  it('akzeptiert einen vollstaendigen Startzustand fuer die passende Puzzle-Groesse', () => {
+  it('akzeptiert einen vollstaendigen Startzustand für die passende Puzzle-Groesse', () => {
     expect(isGalleryReplaySetupCompatible({
       version: 1,
       startBoard: [1, 2, 0, 3],

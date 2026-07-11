@@ -70,7 +70,7 @@ function getContextMenuGroupIcon(title: string, explicitIcon?: GlobalUiIconName)
       return 'grid'
     case 'Backups':
       return 'archive'
-    case 'Zuege':
+    case 'Züge':
       return 'move'
     case 'Ansicht':
       return 'eye'

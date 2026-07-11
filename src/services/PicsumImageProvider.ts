@@ -69,7 +69,7 @@ function resolvePicsumImageSize(entry: PicsumImageListEntry, maxEdge: number): {
 async function fetchImageAsDataUrl(url: string): Promise<string> {
   const response = await fetch(url, { cache: 'no-store' })
   if (!response.ok) {
-    throw new Error(`Zufaelliges Bild konnte nicht geladen werden (${response.status})`)
+    throw new Error(`Zufälliges Bild konnte nicht geladen werden (${response.status})`)
   }
 
   return readBlobAsDataUrl(await response.blob())

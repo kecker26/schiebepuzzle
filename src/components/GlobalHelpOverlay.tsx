@@ -185,7 +185,7 @@ export default function GlobalHelpOverlay({ helpContext, onClose, paletteStyle }
           Gib hier Shortcuts, Funktionen oder Bereichsnamen ein, um die Hilfe zu filtern.
         </p>
         <p id="global-help-context-hint" className="visually-hidden">
-          Wechselt die Hilfe zwischen Auswahl, Spielstaenden, Statistik, Galerie, Crop und Puzzle.
+          Wechselt die Hilfe zwischen Auswahl, Spielständen, Statistik, Galerie, Zuschnitt und Puzzle.
         </p>
         <p id="global-help-scroll-hint" className="visually-hidden">
           Mit Pfeiltasten, Bild hoch, Bild runter, Pos1, Ende und Leertaste kannst du den Hilfeinhalt scrollen.
@@ -193,7 +193,7 @@ export default function GlobalHelpOverlay({ helpContext, onClose, paletteStyle }
         <div className="global-help-toolbar">
           <div
             className="global-help-search-shell"
-            data-app-tooltip="Hilfeeintraege nach Shortcut, Bereich oder Funktion filtern."
+            data-app-tooltip="Hilfeeinträge nach Shortcut, Bereich oder Funktion filtern."
             data-app-tooltip-align="start"
           >
             <GlobalUiIcon name="helpCircle" className="global-help-search-icon" />
@@ -252,12 +252,12 @@ export default function GlobalHelpOverlay({ helpContext, onClose, paletteStyle }
                   className="secondary global-help-close"
                   data-page-primary-focus="true"
                   onClick={onClose}
-                  data-app-tooltip="Hilfe schliessen."
+                  data-app-tooltip="Hilfe schließen."
                   data-app-tooltip-align="end"
                   reveal
                   revealLevel="subtle"
                 >
-                  Schliessen
+                  Schließen
                 </AnimatedButton>
               </div>
             </AnimatedReveal>
@@ -286,8 +286,8 @@ export default function GlobalHelpOverlay({ helpContext, onClose, paletteStyle }
 
             {filteredSections.length === 0 && searchQuery && (
               <div className="global-help-empty">
-                <p>Keine Treffer fuer <strong>„{searchQuery}"</strong>.</p>
-                <p>Versuche einen anderen Suchbegriff oder loesche das Suchfeld.</p>
+                <p>Keine Treffer für <strong>„{searchQuery}"</strong>.</p>
+                <p>Versuche einen anderen Suchbegriff oder lösche das Suchfeld.</p>
               </div>
             )}
 
@@ -340,7 +340,7 @@ export default function GlobalHelpOverlay({ helpContext, onClose, paletteStyle }
             {globalSections.length > 0 && contextSections.length > 0 && (
               <div className="global-help-divider" role="separator">
                 <span className="global-help-divider-line" />
-                <span className="global-help-divider-label">Gilt ueberall</span>
+                <span className="global-help-divider-label">Gilt überall</span>
                 <span className="global-help-divider-line" />
               </div>
             )}

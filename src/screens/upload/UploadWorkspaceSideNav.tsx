@@ -57,7 +57,7 @@ export default function UploadWorkspaceSideNav({
     },
     {
       window: 'savedGames',
-      label: 'Spielstaende',
+      label: 'Spielstände',
       iconName: 'folder',
       copy: `${savedGamesCount} Partien`,
       buttonRef: savedGamesNavButtonRef,
@@ -80,7 +80,7 @@ export default function UploadWorkspaceSideNav({
       window: 'collections',
       label: 'Sammlungen',
       iconName: 'folderHeart',
-      copy: `${collectionsCount} Kollektionen`,
+      copy: `${collectionsCount} ${collectionsCount === 1 ? 'Sammlung' : 'Sammlungen'}`,
       buttonRef: collectionsNavButtonRef,
     },
   ]
@@ -115,7 +115,7 @@ export default function UploadWorkspaceSideNav({
           data-workspace-window-nav={item.window}
           aria-current={activeWindow === item.window ? 'page' : undefined}
           onClick={() => onWindowChange(item.window)}
-          data-app-tooltip={item.isReturn ? 'Zum Auswahl-Dashboard zurueckkehren.' : `${item.label} oeffnen: ${item.copy}.`}
+          data-app-tooltip={item.isReturn ? 'Zum Auswahl-Dashboard zurückkehren.' : `${item.label} öffnen: ${item.copy}.`}
           data-app-tooltip-position="right"
           reveal
           revealLevel="subtle"

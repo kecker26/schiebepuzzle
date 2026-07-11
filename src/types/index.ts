@@ -16,7 +16,7 @@ export interface Tile {
   row: number
   col: number
   index: number
-  // Soll-Position (fuer Win-Check)
+  // Soll-Position (für Win-Check)
   correctRow: number
   correctCol: number
   correctIndex: number
@@ -28,7 +28,7 @@ export interface Tile {
   canMove?: boolean
 }
 
-// Bild-Daten fuer Canvas
+// Bild-Daten für Canvas
 export interface CanvasImageData {
   sourceX: number
   sourceY: number
@@ -39,7 +39,7 @@ export interface CanvasImageData {
 // Puzzle Board State
 export interface PuzzleState {
   tiles: Tile[]
-  board: number[] // Array von Tile-IDs fuer schnelle Lookups
+  board: number[] // Array von Tile-IDs für schnelle Lookups
   emptyIndex: number
   emptyRow: number
   emptyCol: number

@@ -45,7 +45,7 @@ export function useSolvedGallery(): SolvedGalleryResult {
       setGallery(emptyGallery)
       setGalleryError(null)
     } catch (error) {
-      setGalleryError(`Galerie konnte nicht geloescht werden: ${getErrorMessage(error)}`)
+      setGalleryError(`Galerie konnte nicht gelöscht werden: ${getErrorMessage(error)}`)
       throw error
     } finally {
       setIsResettingGallery(false)

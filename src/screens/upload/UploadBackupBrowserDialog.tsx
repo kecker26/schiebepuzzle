@@ -179,8 +179,8 @@ export default function UploadBackupBrowserDialog({
         <span className="upload-kicker">Backup-Ordner</span>
         <h3 id="backup-browser-title">Backup importieren</h3>
         <p id="backup-browser-description">
-          Hier werden nur die bereits vorhandenen Backup-Dateien der App angezeigt. Waehle ein Backup
-          aus, das du importieren moechtest.
+          Hier werden nur die bereits vorhandenen Backup-Dateien der App angezeigt. Wähle ein Backup
+          aus, das du importieren möchtest.
         </p>
       </div>
 
@@ -189,7 +189,7 @@ export default function UploadBackupBrowserDialog({
           <AsyncStatusPanel
             compact
             className="backup-browser-empty"
-            title="Verfuegbare Backups werden geladen"
+            title="Verfügbare Backups werden geladen"
             detail="Der lokale Backup-Ordner wird eingelesen."
           />
         ) : backups.length === 0 ? (
@@ -209,7 +209,7 @@ export default function UploadBackupBrowserDialog({
                   Zuletzt gespeichert: {formatBackupTimestamp(backup.modifiedAt)}
                 </p>
                 <div className="dashboard-inline-chips backup-browser-chips">
-                  <span className="saved-game-chip">{backup.savedGamesCount} Spielstaende</span>
+                  <span className="saved-game-chip">{backup.savedGamesCount} Spielstände</span>
                   <span className="saved-game-chip">{backup.totalSolved} Siege</span>
                   <span className="saved-game-chip">{formatBackupMotifsCount(backup)}</span>
                   <span className="saved-game-chip">{formatBackupSize(backup.size)}</span>
@@ -226,10 +226,10 @@ export default function UploadBackupBrowserDialog({
                   }}
                   onKeyDown={handleBackupActionKeyDown}
                   disabled={isLoading || deletingFileName !== null}
-                  data-app-tooltip="Backup-Datei aus dem lokalen Backup-Ordner loeschen."
+                  data-app-tooltip="Backup-Datei aus dem lokalen Backup-Ordner löschen."
                   data-app-tooltip-position="top"
                 >
-                  {deletingFileName === backup.fileName ? <BusyIndicator label="Loesche ..." /> : 'Loeschen'}
+                  {deletingFileName === backup.fileName ? <BusyIndicator label="Lösche ..." /> : 'Löschen'}
                 </button>
                 <button
                   type="button"
@@ -241,10 +241,10 @@ export default function UploadBackupBrowserDialog({
                   }}
                   onKeyDown={handleBackupActionKeyDown}
                   disabled={isLoading || deletingFileName !== null}
-                  data-app-tooltip="Dieses Backup fuer den Import auswaehlen."
+                  data-app-tooltip="Dieses Backup für den Import auswählen."
                   data-app-tooltip-position="top"
                 >
-                  Auswaehlen
+                  Auswählen
                 </button>
               </div>
             </article>
@@ -260,10 +260,10 @@ export default function UploadBackupBrowserDialog({
           data-page-primary-focus={!isLoading && backups.length === 0 ? 'true' : undefined}
           onClick={onClose}
           disabled={!canClose}
-          data-app-tooltip="Backup-Auswahl schliessen."
+          data-app-tooltip="Backup-Auswahl schließen."
           data-app-tooltip-position="top"
         >
-          Schliessen
+          Schließen
         </button>
       </div>
     </AnimatedDialog>

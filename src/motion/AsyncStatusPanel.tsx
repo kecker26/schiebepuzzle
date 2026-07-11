@@ -16,7 +16,7 @@ export default function AsyncStatusPanel({
   title,
   detail,
   phase,
-  longWaitDetail = 'Der Vorgang laeuft weiterhin. Du kannst die App waehrenddessen geoeffnet lassen.',
+  longWaitDetail = 'Der Vorgang läuft weiterhin. Du kannst die App währenddessen geöffnet lassen.',
   className,
   compact = false,
   floating = false,

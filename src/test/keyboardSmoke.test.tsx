@@ -409,7 +409,7 @@ describe('keyboard smoke tests', () => {
     expect(getDefaultHelpContext('idle')).toBe('upload-start')
 
     const savedGamesView = getHelpView('upload-savedGames')
-    expect(savedGamesView.kicker).toBe('Spielstaende')
+    expect(savedGamesView.kicker).toBe('Spielstände')
     expect(savedGamesView.sections[0]?.title).toBe('Im Fenster navigieren')
 
     const statsView = getHelpView('upload-stats')
@@ -419,7 +419,7 @@ describe('keyboard smoke tests', () => {
 
     const galleryView = getHelpView('upload-gallery')
     expect(galleryView.kicker).toBe('Galerie')
-    expect(galleryView.sections[0]?.title).toBe('Filter und Eintraege')
+    expect(galleryView.sections[0]?.title).toBe('Filter und Einträge')
     expect(galleryView.sections.some((section) => section.title === 'Sammlungen erstellen & verwalten')).toBe(true)
     expect(galleryView.sections.some((section) => section.title === 'Tags und Tag-Manager')).toBe(true)
 
@@ -430,8 +430,8 @@ describe('keyboard smoke tests', () => {
     expect(backupSection?.items.some((item) => item.label.includes('ersetzt den aktuellen Datenstand komplett'))).toBe(true)
 
     const appearanceSection = galleryView.sections.find((section) => section.title === 'Musik und Darstellung')
-    expect(appearanceSection?.items.some((item) => item.label.includes('nur lokal im Browser'))).toBe(true)
-    expect(appearanceSection?.items.some((item) => item.label.includes('keine Gemini-Anfrage'))).toBe(true)
+    expect(appearanceSection?.items.some((item) => item.label.includes('direkt auf deinem Gerät'))).toBe(true)
+    expect(appearanceSection?.items.some((item) => item.label.includes('keine Bilddaten an die KI'))).toBe(true)
 
     const playingView = getHelpView('playing')
     expect(playingView.kicker).toBe('Puzzle')
@@ -622,7 +622,7 @@ describe('keyboard smoke tests', () => {
       </AnimatePresence>
     )
 
-    const laterButton = await screen.findByRole('button', { name: 'Spaeter' })
+    const laterButton = await screen.findByRole('button', { name: 'Später' })
     const declineButton = screen.getByRole('button', { name: 'Nicht fortsetzen' })
     const resumeButton = screen.getByRole('button', { name: 'Spielstand fortsetzen' })
     const actionGroup = screen.getByRole('group', { name: 'Wiederherstellungsaktionen' })
@@ -722,7 +722,7 @@ describe('keyboard smoke tests', () => {
 
     const firstRender = render(<RecoveryLaterHarness />)
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Spaeter' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Später' }))
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: 'Unterbrochene Runde gefunden' })).toBeNull()
@@ -768,7 +768,7 @@ describe('keyboard smoke tests', () => {
                 onDismiss={vi.fn()}
                 onDecline={() => {
                   setRecoveryResumePrompt(null)
-                  showToast('Nicht fortgesetzt. Der Spielstand bleibt unter Spielstaende erhalten.')
+                  showToast('Nicht fortgesetzt. Der Spielstand bleibt unter Spielstände erhalten.')
                 }}
                 onResume={vi.fn()}
               />
@@ -795,7 +795,7 @@ describe('keyboard smoke tests', () => {
     })
 
     const status = await screen.findByRole('status')
-    expect(within(status).getByText('Nicht fortgesetzt. Der Spielstand bleibt unter Spielstaende erhalten.')).toBeTruthy()
+    expect(within(status).getByText('Nicht fortgesetzt. Der Spielstand bleibt unter Spielstände erhalten.')).toBeTruthy()
   })
 
   it('offers a start-screen action for resuming the last session', async () => {
@@ -811,7 +811,7 @@ describe('keyboard smoke tests', () => {
         heroImage={null}
         registerAppContextMenuHandler={vi.fn()}
         resumeActionLabel="Letzte Sitzung fortsetzen"
-        resumeActionDetail="Statistik zuletzt geoeffnet."
+        resumeActionDetail="Statistik zuletzt geöffnet."
         savedGamesCount={3}
         solvedCount={12}
         galleryCount={8}
@@ -824,7 +824,7 @@ describe('keyboard smoke tests', () => {
       expect(document.activeElement).toBe(resumeButton)
     })
 
-    expect(screen.getByText('Statistik zuletzt geoeffnet.')).toBeTruthy()
+    expect(screen.getByText('Statistik zuletzt geöffnet.')).toBeTruthy()
 
     fireEvent.click(resumeButton)
     expect(onResumeSession).toHaveBeenCalledTimes(1)
@@ -861,10 +861,10 @@ describe('keyboard smoke tests', () => {
         <button
           type="button"
           onClick={() => {
-            announceAccessibility(`Hilfe geoeffnet: ${getHelpView('upload-stats').kicker}.`)
+            announceAccessibility(`Hilfe geöffnet: ${getHelpView('upload-stats').kicker}.`)
           }}
         >
-          Hilfe oeffnen
+          Hilfe öffnen
         </button>
       )
     }
@@ -895,8 +895,8 @@ describe('keyboard smoke tests', () => {
       </>
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Hilfe oeffnen' }))
-    expect(screen.getByTestId('accessibility-announcer-polite').textContent).toContain('Hilfe geoeffnet: Statistik.')
+    fireEvent.click(screen.getByRole('button', { name: 'Hilfe öffnen' }))
+    expect(screen.getByTestId('accessibility-announcer-polite').textContent).toContain('Hilfe geöffnet: Statistik.')
 
     fireEvent.click(screen.getByRole('button', { name: 'Normal 4x4' }))
     expect(screen.getByTestId('accessibility-announcer-polite').textContent).toContain('Verlauffilter: Normal 4x4.')
@@ -929,8 +929,8 @@ describe('keyboard smoke tests', () => {
 
     const saveItems = Array.from(container.querySelectorAll<HTMLElement>('.saved-game-item'))
     const firstLoadButton = within(saveItems[0]!).getByRole('button', { name: 'Weiterspielen' })
-    const firstDeleteButton = within(saveItems[0]!).getByRole('button', { name: 'Loeschen' })
-    const secondDeleteButton = within(saveItems[1]!).getByRole('button', { name: 'Loeschen' })
+    const firstDeleteButton = within(saveItems[0]!).getByRole('button', { name: 'Löschen' })
+    const secondDeleteButton = within(saveItems[1]!).getByRole('button', { name: 'Löschen' })
 
     firstLoadButton.focus()
     fireEvent.keyDown(firstLoadButton, { key: 'ArrowRight' })
@@ -982,8 +982,8 @@ describe('keyboard smoke tests', () => {
     )
 
     const uploadButton = screen.getByRole('button', { name: /Foto hochladen/i })
-    const randomButton = screen.getByRole('button', { name: /Zufaelliges Bild/i })
-    const savedGamesButton = screen.getByRole('button', { name: /Spielstaende/i })
+    const randomButton = screen.getByRole('button', { name: /Zufälliges Bild/i })
+    const savedGamesButton = screen.getByRole('button', { name: /Spielstände/i })
     const statsButton = screen.getByRole('button', { name: /Statistik/i })
     const galleryButton = screen.getByRole('button', { name: /Galerie/i })
     const collectionsButton = screen.getByRole('button', { name: /Sammlungen/i })
@@ -1069,15 +1069,15 @@ describe('keyboard smoke tests', () => {
     const queryInput = screen.getByLabelText('Suchbegriffe')
     fireEvent.change(queryInput, { target: { value: 'Stadt Nacht' } })
 
-    fireEvent.click(screen.getByText('Zufaelliges Bild'))
+    fireEvent.click(screen.getByText('Zufälliges Bild'))
     expect(onFetchRandomImage).toHaveBeenCalledWith('Stadt Nacht')
 
     onFetchRandomImage.mockClear()
-    await user.click(screen.getByRole('button', { name: 'Zufaelliges Bild starten' }))
+    await user.click(screen.getByRole('button', { name: 'Zufälliges Bild starten' }))
 
     expect(onFetchRandomImage).toHaveBeenCalledWith('Stadt Nacht')
 
-    await user.click(screen.getByRole('button', { name: 'Suchbegriffe loeschen' }))
+    await user.click(screen.getByRole('button', { name: 'Suchbegriffe löschen' }))
     await waitFor(() => {
       expect((screen.getByLabelText('Suchbegriffe') as HTMLInputElement).value).toBe('')
     })
@@ -1126,7 +1126,7 @@ describe('keyboard smoke tests', () => {
 
     await waitFor(() => {
       const workspaceNavigation = screen.getByRole('navigation', { name: 'Bereiche wechseln' })
-      expect(document.activeElement).toBe(within(workspaceNavigation).getByRole('button', { name: /Spielstaende/i }))
+      expect(document.activeElement).toBe(within(workspaceNavigation).getByRole('button', { name: /Spielstände/i }))
     })
 
     rerender(
@@ -1160,7 +1160,7 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(within(workspaceNavigation).getByRole('button', { name: /Auswahl/i }))
   })
 
-  it('ignores workspace overlay clicks while allowing Escape and Auswahl to close', () => {
+  it('ignores workspace overlay clicks while allowing Escape and Schließen to close', () => {
     const onWindowChange = vi.fn()
 
     render(
@@ -1207,7 +1207,7 @@ describe('keyboard smoke tests', () => {
     expect(onWindowChange).toHaveBeenCalledWith('start')
 
     onWindowChange.mockClear()
-    fireEvent.click(screen.getAllByRole('button', { name: 'Auswahl' })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }))
     expect(onWindowChange).toHaveBeenCalledOnce()
     expect(onWindowChange).toHaveBeenCalledWith('start')
   })
@@ -1249,8 +1249,8 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    const resetButton = await screen.findByRole('button', { name: 'Galerie loeschen' })
-    const startButton = screen.getByRole('button', { name: 'Auswahl' })
+    const resetButton = await screen.findByRole('button', { name: 'Galerie löschen' })
+    const startButton = screen.getByRole('button', { name: 'Schließen' })
 
     mockElementRect(resetButton, { left: 0, top: 0, width: 180, height: 44 })
     mockElementRect(startButton, { left: 220, top: 0, width: 180, height: 44 })
@@ -1289,13 +1289,13 @@ describe('keyboard smoke tests', () => {
     const assistanceSelect = screen.getByRole('combobox', { name: 'Laufart' })
     fireEvent.change(assistanceSelect, { target: { value: 'hinted' } })
 
-    const resetButton = await screen.findByRole('button', { name: 'Zuruecksetzen' })
+    const resetButton = await screen.findByRole('button', { name: 'Alle Filter zurücksetzen' })
     resetButton.focus()
     fireEvent.click(resetButton)
 
     await waitFor(() => {
       expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'Schwierigkeit' }))
-      expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Zuruecksetzen' }).disabled).toBe(true)
+      expect(screen.queryByRole('button', { name: 'Alle Filter zurücksetzen' })).toBeNull()
     })
   })
 
@@ -1346,7 +1346,7 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('1 von 3 Motiven sichtbar')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Gold-Medaillen filtern, 1 Motiv' }).getAttribute('aria-pressed')).toBe('true')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Zuruecksetzen' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Alle Filter zurücksetzen' }))
     await waitFor(() => {
       expect(screen.getByText('3 von 3 Motiven sichtbar')).toBeTruthy()
       expect(screen.getByRole('button', { name: 'Gold-Medaillen filtern, 1 Motiv' }).getAttribute('aria-pressed')).toBe('false')
@@ -1396,19 +1396,19 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    let huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Jagd' })
+    let huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Ziel' })
     let sortSelect = screen.getByRole('combobox', { name: 'Sortierung' })
 
     expect(Array.from((huntSelect as HTMLSelectElement).options).map((option) => option.value)).not.toContain('near-upgrade')
 
-    huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Jagd' })
+    huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Ziel' })
     fireEvent.change(huntSelect, { target: { value: 'upgradeable' } })
     await waitFor(() => {
       expect(screen.getByText('1 von 2 Motiven sichtbar')).toBeTruthy()
       expect(screen.getByText('Medaillen-Jagd aktiv')).toBeTruthy()
     })
 
-    huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Jagd' })
+    huntSelect = screen.getByRole('combobox', { name: 'Medaillen-Ziel' })
     fireEvent.change(huntSelect, { target: { value: 'all' } })
     await waitFor(() => {
       expect(screen.getByText('2 von 2 Motiven sichtbar')).toBeTruthy()
@@ -1419,9 +1419,9 @@ describe('keyboard smoke tests', () => {
     expect((sortSelect as HTMLSelectElement).value).toBe('upgrade-potential')
     expect(screen.getAllByText('Jagd-Ziel')).toHaveLength(2)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Zuruecksetzen' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Alle Filter zurücksetzen' }))
     await waitFor(() => {
-      expect((screen.getByRole('combobox', { name: 'Medaillen-Jagd' }) as HTMLSelectElement).value).toBe('all')
+      expect((screen.getByRole('combobox', { name: 'Medaillen-Ziel' }) as HTMLSelectElement).value).toBe('all')
       expect((screen.getByRole('combobox', { name: 'Sortierung' }) as HTMLSelectElement).value).toBe('latest')
     })
   })
@@ -1498,7 +1498,7 @@ describe('keyboard smoke tests', () => {
       expect(screen.getByText('1 von 3 Motiven sichtbar')).not.toBeNull()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Tags zuruecksetzen' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tags zurücksetzen' }))
     await waitFor(() => {
       expect(screen.queryByLabelText('Tags als UND-Filter')).toBeNull()
       expect(screen.getByText('3 von 3 Motiven sichtbar')).not.toBeNull()
@@ -1679,8 +1679,8 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    const resetButton = await screen.findByRole('button', { name: 'Statistik loeschen' })
-    const headerStartButton = screen.getByRole('button', { name: 'Auswahl' })
+    const resetButton = await screen.findByRole('button', { name: 'Statistik löschen' })
+    const headerStartButton = screen.getByRole('button', { name: 'Schließen' })
 
     resetButton.focus()
     fireEvent.keyDown(resetButton, { key: 'End' })
@@ -1731,10 +1731,10 @@ describe('keyboard smoke tests', () => {
       name: /^details zu normal 4x4 vom/i,
     })
     const firstDetailsActionButton = within(galleryCards[0]!).getByRole('button', {
-      name: /spielen und details zu normal 4x4 vom/i,
+      name: /laufdetails zu normal 4x4 vom/i,
     })
     const secondDetailsActionButton = within(galleryCards[1]!).getByRole('button', {
-      name: /spielen und details zu normal 4x4 vom/i,
+      name: /laufdetails zu normal 4x4 vom/i,
     })
     const secondPreviewButton = within(galleryCards[1]!).getByRole('button', {
       name: /^details zu normal 4x4 vom/i,
@@ -1780,7 +1780,7 @@ describe('keyboard smoke tests', () => {
     const stadtTagButton = screen.getByRole('button', { name: '#Stadt' })
     const nachtTagButton = screen.getByRole('button', { name: '#Nacht' })
     const detailsButton = screen.getByRole('button', {
-      name: /spielen und details zu normal 4x4 vom/i,
+      name: /laufdetails zu normal 4x4 vom/i,
     })
 
     stadtTagButton.focus()
@@ -2067,10 +2067,10 @@ describe('keyboard smoke tests', () => {
     const fourthPreviewButton = within(galleryCards[3]!).getByRole('button', {
       name: /^details zu normal 4x4 vom/i,
     })
-    const firstDetailsButton = within(galleryCards[0]!).getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })
-    const secondDetailsButton = within(galleryCards[1]!).getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })
-    const thirdDetailsButton = within(galleryCards[2]!).getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })
-    const fourthDetailsButton = within(galleryCards[3]!).getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })
+    const firstDetailsButton = within(galleryCards[0]!).getByRole('button', { name: /laufdetails zu normal 4x4 vom/i })
+    const secondDetailsButton = within(galleryCards[1]!).getByRole('button', { name: /laufdetails zu normal 4x4 vom/i })
+    const thirdDetailsButton = within(galleryCards[2]!).getByRole('button', { name: /laufdetails zu normal 4x4 vom/i })
+    const fourthDetailsButton = within(galleryCards[3]!).getByRole('button', { name: /laufdetails zu normal 4x4 vom/i })
 
     mockElementRect(firstPreviewButton, { left: 0, top: 0, width: 180, height: 120 })
     mockElementRect(secondPreviewButton, { left: 220, top: 0, width: 180, height: 120 })
@@ -2131,7 +2131,7 @@ describe('keyboard smoke tests', () => {
 
     expect(screen.queryByRole('button', { name: /motivweiten schnellstart/i })).toBeNull()
     expect(screen.queryByRole('button', { name: /bestzeit spielen/i })).toBeNull()
-    expect(screen.getByRole('button', { name: /spielen und details zu normal 4x4 vom/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /laufdetails zu normal 4x4 vom/i })).toBeTruthy()
     expect(screen.queryByText('+0:17 zur Bestzeit')).toBeNull()
   })
 
@@ -2173,7 +2173,7 @@ describe('keyboard smoke tests', () => {
       name: /^details zu normal 4x4 vom/i,
     })
     const replayButton = within(galleryCard).getByRole('button', {
-      name: /spielen und details zu normal 4x4 vom/i,
+      name: /laufdetails zu normal 4x4 vom/i,
     })
     const replayScrollIntoView = vi.fn()
 
@@ -2301,7 +2301,7 @@ describe('keyboard smoke tests', () => {
     fireEvent.click(firstDeleteButton)
 
     const dialog = await screen.findByRole('alertdialog')
-    const confirmButton = within(dialog).getByRole('button', { name: 'Loeschen' })
+    const confirmButton = within(dialog).getByRole('button', { name: 'Löschen' })
     fireEvent.click(confirmButton)
 
     await waitFor(() => {
@@ -2318,7 +2318,7 @@ describe('keyboard smoke tests', () => {
     const { rerender, container } = render(
       <div className="workspace-window-shell">
         <button type="button" className="workspace-window-nav-button" aria-current="page">
-          Spielstaende
+          Spielstände
         </button>
         <UploadSavedGamesPanel
           isLoadingSavedGames={false}
@@ -2342,7 +2342,7 @@ describe('keyboard smoke tests', () => {
     rerender(
       <div className="workspace-window-shell">
         <button type="button" className="workspace-window-nav-button" aria-current="page">
-          Spielstaende
+          Spielstände
         </button>
         <UploadSavedGamesPanel
           isLoadingSavedGames={false}
@@ -2381,13 +2381,13 @@ describe('keyboard smoke tests', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Schliessen' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Schließen' })).toBeTruthy()
     })
 
     const backupItems = Array.from(document.body.querySelectorAll<HTMLElement>('.backup-browser-item'))
-    const firstDeleteButton = within(backupItems[0]!).getByRole('button', { name: 'Loeschen' })
-    const firstSelectButton = within(backupItems[0]!).getByRole('button', { name: 'Auswaehlen' })
-    const secondSelectButton = within(backupItems[1]!).getByRole('button', { name: 'Auswaehlen' })
+    const firstDeleteButton = within(backupItems[0]!).getByRole('button', { name: 'Löschen' })
+    const firstSelectButton = within(backupItems[0]!).getByRole('button', { name: 'Auswählen' })
+    const secondSelectButton = within(backupItems[1]!).getByRole('button', { name: 'Auswählen' })
 
     firstDeleteButton.focus()
     fireEvent.keyDown(firstDeleteButton, { key: 'ArrowRight' })
@@ -2410,15 +2410,15 @@ describe('keyboard smoke tests', () => {
       return (
         <div>
           <button type="button" onClick={() => setIsOpen(true)}>
-            Dialog oeffnen
+            Dialog öffnen
           </button>
           {isOpen ? (
             <UploadConfirmDialog
               titleId="confirm-test-title"
-              title="Wirklich loeschen?"
-              description={<p>Dieser Schritt ist endgueltig.</p>}
-              confirmLabel="Loeschen"
-              busyLabel="Loesche ..."
+              title="Wirklich löschen?"
+              description={<p>Dieser Schritt ist endgültig.</p>}
+              confirmLabel="Löschen"
+              busyLabel="Lösche ..."
               isBusy={false}
               onCancel={() => setIsOpen(false)}
               onConfirm={vi.fn()}
@@ -2430,7 +2430,7 @@ describe('keyboard smoke tests', () => {
 
     render(<ConfirmDialogHarness />)
 
-    const opener = screen.getByRole('button', { name: 'Dialog oeffnen' })
+    const opener = screen.getByRole('button', { name: 'Dialog öffnen' })
     opener.focus()
     fireEvent.click(opener)
 
@@ -2438,10 +2438,10 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(cancelButton)
 
     fireEvent.click(document.body.querySelector<HTMLElement>('.delete-confirm-overlay')!)
-    expect(screen.getByRole('alertdialog', { name: 'Wirklich loeschen?' })).toBeTruthy()
+    expect(screen.getByRole('alertdialog', { name: 'Wirklich löschen?' })).toBeTruthy()
 
     fireEvent.keyDown(cancelButton, { key: 'ArrowRight' })
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Loeschen' }))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Löschen' }))
 
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'ArrowLeft' })
     expect(document.activeElement).toBe(cancelButton)
@@ -2535,7 +2535,7 @@ describe('keyboard smoke tests', () => {
                 setIsOpen(true)
               }}
             >
-              Dialog oeffnen
+              Dialog öffnen
             </button>
           ) : (
             <button ref={fallbackButtonRef} type="button">
@@ -2561,7 +2561,7 @@ describe('keyboard smoke tests', () => {
 
     render(<ConfirmDialogFallbackHarness />)
 
-    const opener = screen.getByRole('button', { name: 'Dialog oeffnen' })
+    const opener = screen.getByRole('button', { name: 'Dialog öffnen' })
     opener.focus()
     fireEvent.click(opener)
 
@@ -3396,7 +3396,7 @@ describe('keyboard smoke tests', () => {
       return (
         <div>
           <button type="button" onClick={() => setIsOpen(true)}>
-            Backupbrowser oeffnen
+            Backupbrowser öffnen
           </button>
           {isOpen ? (
             <UploadBackupBrowserDialog
@@ -3414,11 +3414,11 @@ describe('keyboard smoke tests', () => {
 
     render(<BackupDialogHarness />)
 
-    const opener = screen.getByRole('button', { name: 'Backupbrowser oeffnen' })
+    const opener = screen.getByRole('button', { name: 'Backupbrowser öffnen' })
     opener.focus()
     fireEvent.click(opener)
 
-    const selectButtons = await screen.findAllByRole('button', { name: 'Auswaehlen' })
+    const selectButtons = await screen.findAllByRole('button', { name: 'Auswählen' })
     const firstSelectButton = selectButtons[0]!
     expect(document.activeElement).toBe(firstSelectButton)
 
@@ -3465,7 +3465,7 @@ describe('keyboard smoke tests', () => {
       return (
         <div>
           <button type="button" onClick={() => setIsOpen(true)}>
-            Galerie-Detail oeffnen
+            Galerie-Detail öffnen
           </button>
           {isOpen ? (
             <UploadGalleryDetailDialog
@@ -3481,20 +3481,20 @@ describe('keyboard smoke tests', () => {
 
     render(<GalleryDetailHarness />)
 
-    const opener = screen.getByRole('button', { name: 'Galerie-Detail oeffnen' })
+    const opener = screen.getByRole('button', { name: 'Galerie-Detail öffnen' })
     opener.focus()
     fireEvent.click(opener)
 
     fireEvent.click(document.body.querySelector<HTMLElement>('.gallery-detail-overlay')!)
     expect(screen.getByRole('dialog', { name: /Normal 4x4/i })).toBeTruthy()
 
-    const collectButton = screen.getByRole('button', { name: /zu einer Sammlung hinzufuegen/i })
-    const closeButton = screen.getByRole('button', { name: 'Schliessen' })
+    const collectButton = screen.getByRole('button', { name: /zu einer Sammlung hinzufügen/i })
+    const closeButton = screen.getByRole('button', { name: 'Schließen' })
     collectButton.focus()
     fireEvent.keyDown(collectButton, { key: 'ArrowRight' })
     expect(document.activeElement).toBe(closeButton)
 
-    expect(screen.getByText('Eigenstaendige Laeufe')).toBeTruthy()
+    expect(screen.getByText('Eigenständige Läufe')).toBeTruthy()
     expect(screen.getByText('Aktuell')).toBeTruthy()
     expect(screen.getByText('Bestzeit')).toBeTruthy()
     expect(screen.getByText('Bestweg')).toBeTruthy()
@@ -3547,7 +3547,7 @@ describe('keyboard smoke tests', () => {
 
     render(<SimilarMotifHarness />)
 
-    const similarButtons = screen.getAllByRole('button', { name: /Aehnliches Motiv/i })
+    const similarButtons = screen.getAllByRole('button', { name: /Ähnliches Motiv/i })
     mockElementRect(similarButtons[0]!, { left: 0, top: 0, width: 180, height: 120 })
     mockElementRect(similarButtons[1]!, { left: 220, top: 0, width: 180, height: 120 })
 
@@ -3616,9 +3616,9 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Challenge-Startzustand-Serien')).toBeTruthy()
     expect(screen.queryByText('2 Versuche')).toBeNull()
     expect(screen.queryByText('1 mit verbessertem Zielwert')).toBeNull()
-    expect(screen.getByText('Eigenstaendiger Lauf')).toBeTruthy()
+    expect(screen.getByText('Eigenständiger Lauf')).toBeTruthy()
     expect(screen.getByText('Startzustand-Serie 1')).toBeTruthy()
-    expect(screen.getByText((_, element) => element?.textContent === 'Bester Lauf: 1:45 - 36 Zuege')).toBeTruthy()
+    expect(screen.getByText((_, element) => element?.textContent === 'Bester Lauf: 1:45 - 36 Züge')).toBeTruthy()
     const initialExpandButton = screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' })
     expect(initialExpandButton.getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByText('Vorlage dieser Serie')).toBeNull()
@@ -3629,7 +3629,7 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
     expect(screen.getByText('Medaillen-Entwicklung')).toBeTruthy()
     expect(screen.getByLabelText('Medaillen-Entwicklung: Gold zu Bronze')).toBeTruthy()
-    expect(screen.getByText('Medaillenlaeufe')).toBeTruthy()
+    expect(screen.getByText('Medaillenläufe')).toBeTruthy()
     expect(screen.getByText('Versuch 1 von 2')).toBeTruthy()
     expect(screen.getByText('Versuch 2 von 2')).toBeTruthy()
     const attemptRows = document.querySelectorAll<HTMLElement>('.gallery-detail-challenge-attempt')
@@ -3640,10 +3640,10 @@ describe('keyboard smoke tests', () => {
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile')).toHaveLength(16)
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile.is-empty')).toHaveLength(1)
     expect(screen.getByText(/Gold · Bester Versuch/)).toBeTruthy()
-    expect(screen.getByText('Noch keine Uebungslaeufe fuer diesen Startzustand.')).toBeTruthy()
+    expect(screen.getByText('Noch keine Übungsläufe für diesen Startzustand.')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', {
-      name: 'Startzustand der Challenge-Serie 1 als Uebung starten',
+      name: 'Startzustand der Challenge-Serie 1 als Übung starten',
     }))
     expect(onReplayEntry).toHaveBeenCalledWith(target, 'practice')
     onReplayEntry.mockClear()
@@ -3731,11 +3731,11 @@ describe('keyboard smoke tests', () => {
     )
 
     expect(screen.getByText('Startzustand-Serie 1')).toBeTruthy()
-    expect(screen.getByText(/Gestartet mit geschaetztem Ziel/)).toBeTruthy()
+    expect(screen.getByText(/Gestartet mit geschätztem Ziel/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' }).getAttribute('aria-expanded')).toBe('false')
     fireEvent.click(screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' }))
-    expect(screen.getByText('Geschaetztes Ziel')).toBeTruthy()
-    expect(screen.getByLabelText('Werte des geschaetzten Ziels')).toBeTruthy()
+    expect(screen.getByText('Geschätztes Ziel')).toBeTruthy()
+    expect(screen.getByLabelText('Werte des geschätzten Ziels')).toBeTruthy()
     expect(screen.queryByText('Echte Vorlage')).toBeNull()
     expect(screen.queryByText(/und die echte Vorlage dieses Startbretts/)).toBeNull()
     expect(screen.queryByText('Archiv')).toBeNull()
@@ -3744,7 +3744,7 @@ describe('keyboard smoke tests', () => {
     expect(document.querySelectorAll('.gallery-detail-challenge-start-board .gallery-start-board-preview-tile.is-empty')).toHaveLength(1)
 
     fireEvent.click(screen.getByRole('button', {
-      name: 'Startzustand der Challenge-Serie 1 als Uebung starten',
+      name: 'Startzustand der Challenge-Serie 1 als Übung starten',
     }))
     expect(onReplayEntry).toHaveBeenCalledWith(softRun, 'practice')
   })
@@ -3797,20 +3797,20 @@ describe('keyboard smoke tests', () => {
 
     expect(screen.getByText('Challenge-Startzustand-Serien')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Challenge-Serie 1 ausklappen' }))
-    expect(screen.getByText('Weitere Laeufe dieses Startbretts')).toBeTruthy()
+    expect(screen.getByText('Weitere Läufe dieses Startbretts')).toBeTruthy()
     expect(screen.getByText('Verwandter Ursprung')).toBeTruthy()
     expect(screen.getByText(/nicht Teil der Medaillenwertung/i)).toBeTruthy()
     expect(Boolean(
-      screen.getByText('Medaillenlaeufe').compareDocumentPosition(
-        screen.getByText('Weitere Laeufe dieses Startbretts')
+      screen.getByText('Medaillenläufe').compareDocumentPosition(
+        screen.getByText('Weitere Läufe dieses Startbretts')
       ) & Node.DOCUMENT_POSITION_FOLLOWING
     )).toBe(true)
     expect(screen.queryByText('Startzustand-Serien')).toBeNull()
-    expect(screen.queryByText('Eigenstaendige Laeufe')).toBeNull()
+    expect(screen.queryByText('Eigenständige Läufe')).toBeNull()
 
-    expect(screen.getAllByRole('button', { name: /Startzustand.*ueben/i })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /Startzustand.*üben/i })).toHaveLength(1)
     fireEvent.click(screen.getByRole('button', {
-      name: 'Gemeinsamen Startzustand der verwandten Laeufe ueben',
+      name: 'Gemeinsamen Startzustand der verwandten Läufe üben',
     }))
     expect(onReplayEntry).toHaveBeenCalledWith(target, 'practice')
   })
@@ -3854,13 +3854,13 @@ describe('keyboard smoke tests', () => {
     )).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' }).getAttribute('aria-expanded')).toBe('false')
     fireEvent.click(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' }))
-    expect(screen.getByText('Uebungslaeufe fuer diesen Startzustand')).toBeTruthy()
-    expect(screen.getByText('Noch keine Uebungslaeufe fuer diesen Startzustand.')).toBeTruthy()
+    expect(screen.getByText('Übungsläufe für diesen Startzustand')).toBeTruthy()
+    expect(screen.getByText('Noch keine Übungsläufe für diesen Startzustand.')).toBeTruthy()
     expect(document.querySelectorAll('.gallery-detail-start-state-run')).toHaveLength(0)
-    expect(screen.queryByText('Eigenstaendige Laeufe')).toBeNull()
+    expect(screen.queryByText('Eigenständige Läufe')).toBeNull()
 
     fireEvent.click(screen.getByRole('button', {
-      name: 'Startzustand der Startzustand-Serie 1 als Uebung starten',
+      name: 'Startzustand der Startzustand-Serie 1 als Übung starten',
     }))
     expect(onReplayEntry).toHaveBeenCalledWith(cleanTemplate, 'practice')
   })
@@ -3911,16 +3911,16 @@ describe('keyboard smoke tests', () => {
     expect(screen.getAllByText('Startzustand-Serie 1')).toHaveLength(1)
     fireEvent.click(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' }))
     expect(screen.getByText('Gemeinsamer Startzustand')).toBeTruthy()
-    expect(screen.getByText('Zugehoerige Laeufe')).toBeTruthy()
+    expect(screen.getByText('Zugehörige Läufe')).toBeTruthy()
     expect(screen.getAllByText('Ursprung').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Uebung 2')).toBeTruthy()
-    expect(screen.queryByText('Eigenstaendige Laeufe')).toBeNull()
-    expect(screen.queryByText('Eigenstaendiger Lauf')).toBeNull()
+    expect(screen.getByText('Übung 2')).toBeTruthy()
+    expect(screen.queryByText('Eigenständige Läufe')).toBeNull()
+    expect(screen.queryByText('Eigenständiger Lauf')).toBeNull()
 
     const practiceButton = screen.getByRole('button', {
-      name: 'Gemeinsamen Startzustand der Startzustand-Serie 1 ueben',
+      name: 'Gemeinsamen Startzustand der Startzustand-Serie 1 üben',
     })
-    expect(screen.getAllByRole('button', { name: /Startzustand.*ueben/i })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /Startzustand.*üben/i })).toHaveLength(1)
     fireEvent.click(practiceButton)
     expect(onReplayEntry).toHaveBeenCalledWith(practice, 'practice')
   })
@@ -3974,19 +3974,19 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Cleane Vorlage')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' }).getAttribute('aria-expanded')).toBe('false')
     fireEvent.click(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' }))
-    expect(screen.getByText('Uebungslauf 1')).toBeTruthy()
-    expect(screen.getByText('Uebungslaeufe fuer diesen Startzustand')).toBeTruthy()
+    expect(screen.getByText('Übungslauf 1')).toBeTruthy()
+    expect(screen.getByText('Übungsläufe für diesen Startzustand')).toBeTruthy()
     expect(screen.getByText('Vorlage dieser Serie')).toBeTruthy()
     expect(screen.getByText('Vorlage herausfordern')).toBeTruthy()
     const templateMetrics = within(screen.getByLabelText('Werte der Startzustand-Serie'))
     expect(templateMetrics.getByText('Zeit')).toBeTruthy()
     expect(templateMetrics.getByText('1:27')).toBeTruthy()
-    expect(templateMetrics.getByText('Netto-Zuege')).toBeTruthy()
+    expect(templateMetrics.getByText('Netto-Züge')).toBeTruthy()
     expect(templateMetrics.getByText('35')).toBeTruthy()
     expect(templateMetrics.queryByText('Stufe')).toBeNull()
-    expect(templateMetrics.queryByText('Laeufe')).toBeNull()
+    expect(templateMetrics.queryByText('Läufe')).toBeNull()
     expect(screen.getByRole('button', {
-      name: 'Startzustand der Startzustand-Serie 1 als Uebung starten',
+      name: 'Startzustand der Startzustand-Serie 1 als Übung starten',
     })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', {
@@ -4001,7 +4001,7 @@ describe('keyboard smoke tests', () => {
 
     expect(screen.getByRole('button', { name: 'Startzustand-Serie 1 ausklappen' })).toBeTruthy()
     expect(screen.queryByText('Gemeinsamer Startzustand')).toBeNull()
-    expect(screen.queryByText('Zugehoerige Laeufe')).toBeNull()
+    expect(screen.queryByText('Zugehörige Läufe')).toBeNull()
   })
 
   it('moves between challenge-series actions in gallery details', () => {
@@ -4059,8 +4059,8 @@ describe('keyboard smoke tests', () => {
       screen.getByRole('button', { name: 'Challenge-Serie 2 einklappen' }),
     ]
     const practiceButtons = [
-      screen.getByRole('button', { name: 'Startzustand der Challenge-Serie 1 als Uebung starten' }),
-      screen.getByRole('button', { name: 'Startzustand der Challenge-Serie 2 als Uebung starten' }),
+      screen.getByRole('button', { name: 'Startzustand der Challenge-Serie 1 als Übung starten' }),
+      screen.getByRole('button', { name: 'Startzustand der Challenge-Serie 2 als Übung starten' }),
     ]
     expect(challengeButtons).toHaveLength(2)
 
@@ -4081,7 +4081,7 @@ describe('keyboard smoke tests', () => {
     expect(document.activeElement).toBe(practiceButtons[1])
   })
 
-  it('erklaert eine assistierte Challenge als medaillenlosen verwandten Uebungslauf', () => {
+  it('erklärt eine assistierte Challenge als medaillenlosen verwandten Übungslauf', () => {
     render(
       <WinDialog
         stats={{
@@ -4123,18 +4123,18 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    expect(screen.getByText(/Dieser Lauf bleibt eine Uebung und erhaelt keine Medaille/)).toBeTruthy()
+    expect(screen.getByText(/Dieser Lauf bleibt eine Übung und erhält keine Medaille/)).toBeTruthy()
     expect(screen.getByText('Ghost 1x / 12s')).toBeTruthy()
     expect(screen.getByText('Heatmap 1x / 8s')).toBeTruthy()
     expect(screen.getByText(/1x Ghost \(12s\)/)).toBeTruthy()
     expect(screen.getByText(/1x Heatmap \(8s\)/)).toBeTruthy()
-    expect(screen.getByText('Mit Hilfe: als verwandter Uebungslauf gespeichert')).toBeTruthy()
-    expect(screen.getByText('Uebung abgeschlossen')).toBeTruthy()
-    expect(screen.getByText('Fuer Bronze')).toBeTruthy()
-    expect(screen.getByText(/Medaillen werden nur fuer absolut cleane Laeufe vergeben/)).toBeTruthy()
+    expect(screen.getByText('Mit Hilfe: als verwandter Übungslauf gespeichert')).toBeTruthy()
+    expect(screen.getByText('Übung abgeschlossen')).toBeTruthy()
+    expect(screen.getByText('Für Bronze')).toBeTruthy()
+    expect(screen.getByText(/Medaillen werden nur für absolut cleane Läufe vergeben/)).toBeTruthy()
     expect(screen.getByText('Stufenvergleich')).toBeTruthy()
     expect(screen.getByText('Aktueller Lauf - Zeit')).toBeTruthy()
-    expect(screen.getByText('Aktueller Lauf - Netto-Zuege')).toBeTruthy()
+    expect(screen.getByText('Aktueller Lauf - Netto-Züge')).toBeTruthy()
     expect(screen.getByText('Aktueller Lauf - Laufart')).toBeTruthy()
     expect(screen.getByText(/Die Challenge-Vorlage wird oben separat verglichen/)).toBeTruthy()
     expect(screen.getByText(/Letzter abgeschlossener Normal 4x4-Lauf/)).toBeTruthy()
@@ -4183,8 +4183,8 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Keine Medaille')).toBeTruthy()
     expect(screen.getByText('Challenge abgeschlossen: keine Medaille')).toBeTruthy()
     expect(screen.getByText(/kein Ziel der Vorlage strikt unterboten/)).toBeTruthy()
-    expect(screen.getByText('Fuer Bronze')).toBeTruthy()
-    expect(screen.getByText('6 Sek. schneller oder 3 Zuege weniger')).toBeTruthy()
+    expect(screen.getByText('Für Bronze')).toBeTruthy()
+    expect(screen.getByText('6 Sek. schneller oder 3 Züge weniger')).toBeTruthy()
   })
 
   it('weist auf ein mathematisch unerreichbares 20-Prozent-Goldziel hin', () => {
@@ -4225,7 +4225,7 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    expect(screen.getByText('Fuer Gold')).toBeTruthy()
+    expect(screen.getByText('Für Gold')).toBeTruthy()
     expect(screen.getByText(/12 Sek. schneller bis zum 20-Prozent-Zeitziel/)).toBeTruthy()
   })
 
@@ -4297,8 +4297,8 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Eigenen Tag hinzufuegen' }), { target: { value: 'Urlaub' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Eigenen Tag hinzufuegen' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Eigenen Tag hinzufügen' }), { target: { value: 'Urlaub' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Eigenen Tag hinzufügen' }))
     await waitFor(() => {
       expect(onEditTags).toHaveBeenCalledWith(
         detailEntry.allEntries.map((entry) => entry.id),
@@ -4717,7 +4717,7 @@ describe('keyboard smoke tests', () => {
     expect(within(motifCards).getByText('Normal 4x4')).toBeTruthy()
     expect(within(motifCards).getByText('1 Versuch gegen diese Vorlage')).toBeTruthy()
     expect(within(motifCards).getByText(/Bester Versuch zur Vorlage:/)).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Vollstaendige Detailkarte fuer das Silber-Motiv oeffnen' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Vollständige Detailkarte für das Silber-Motiv öffnen' })).toBeTruthy()
     const medalSummary = screen.getByLabelText('Aktuelle beste Medaillen pro Motiv')
     expect(within(medalSummary).getByRole('button', { name: /Alle/ }).getAttribute('aria-pressed')).toBe('true')
     const medalCard = container.querySelector<HTMLElement>('.stats-visual-medal-trend-card')
@@ -4802,7 +4802,7 @@ describe('keyboard smoke tests', () => {
     fireEvent.keyDown(summaryButtons[1]!, { key: 'End' })
     expect(document.activeElement).toBe(summaryButtons[summaryButtons.length - 1])
 
-    const previewButtons = screen.getAllByRole('button', { name: /Vollstaendige Detailkarte/i })
+    const previewButtons = screen.getAllByRole('button', { name: /Vollständige Detailkarte/i })
     expect(previewButtons).toHaveLength(2)
     mockElementRect(previewButtons[0]!, { left: 0, top: 0, width: 220, height: 160 })
     mockElementRect(previewButtons[1]!, { left: 0, top: 240, width: 220, height: 160 })
@@ -4810,7 +4810,7 @@ describe('keyboard smoke tests', () => {
     fireEvent.keyDown(previewButtons[0]!, { key: 'ArrowDown' })
     expect(document.activeElement).toBe(previewButtons[1])
 
-    const seriesSwitcher = screen.getByLabelText('Challenge-Serie dieses Motivs auswaehlen')
+    const seriesSwitcher = screen.getByLabelText('Challenge-Serie dieses Motivs auswählen')
     const seriesButtons = within(seriesSwitcher).getAllByRole('button')
     expect(seriesButtons).toHaveLength(2)
     mockElementRect(seriesButtons[0]!, { left: 0, top: 0, width: 90, height: 36 })
@@ -4861,7 +4861,7 @@ describe('keyboard smoke tests', () => {
     expect(updatedRunTypeCard).toBeTruthy()
     expect(within(updatedRunTypeCard!).getByRole('button', { name: 'Alle' }).getAttribute('aria-pressed')).toBe('false')
     expect(within(updatedRunTypeCard!).getByRole('button', { name: 'Normal' }).getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByText(/Durchschnittlicher Score fuer Normal/)).toBeTruthy()
+    expect(screen.getByText(/Durchschnittlicher Score für Normal/)).toBeTruthy()
     expect(screen.getByText('Challenge-Erfolge')).toBeTruthy()
   })
 
@@ -4896,7 +4896,7 @@ describe('keyboard smoke tests', () => {
     expect(screen.queryByText('Gemeinsame Legende')).toBeNull()
     expect(screen.getByLabelText('Farblegende Trenddiagramm')).toBeTruthy()
     expect(screen.getByLabelText('Farblegende Histogramm')).toBeTruthy()
-    expect(screen.getByText('Verteilung der Loesungszeiten')).toBeTruthy()
+    expect(screen.getByText('Verteilung der Lösungszeiten')).toBeTruthy()
     expect(screen.queryByText('Lauf-Score')).toBeNull()
     const pageTopButtons = screen.getAllByRole('button', { name: 'Zum Seitenanfang' })
     const backToSelectionButtons = screen.getAllByRole('button', { name: 'Zur Auswahl' })
@@ -4904,17 +4904,17 @@ describe('keyboard smoke tests', () => {
     expect(backToSelectionButtons).toHaveLength(2)
     expect(pageTopButtons.every((button) => button.querySelector('svg'))).toBe(true)
     expect(backToSelectionButtons.every((button) => button.querySelector('svg'))).toBe(true)
-    expect(container.textContent).toContain('5 sichtbare Laeufe')
+    expect(container.textContent).toContain('5 sichtbare Läufe')
     expect(container.querySelectorAll('.stats-recharts-histogram-frame')).toHaveLength(1)
-    expect(container.textContent).toContain('Hauptbereich: 15-Sekunden-Intervalle, danach zunehmend groesser')
-    expect(container.textContent).toContain('Leerluecken als ... verdichtet')
+    expect(container.textContent).toContain('Hauptbereich: 15-Sekunden-Intervalle, danach zunehmend größer')
+    expect(container.textContent).toContain('Leerlücken als ... verdichtet')
     expect(container.textContent).not.toContain('1:00+')
     const histogramFrame = container.querySelector('.stats-recharts-histogram-frame')
     expect(Number(histogramFrame?.getAttribute('data-gap-count'))).toBeGreaterThan(0)
     expect(histogramFrame?.getAttribute('data-gap-position-step')).toBe('0.5')
     expect(histogramFrame?.getAttribute('data-core-bucket-step')).toBe('15')
-    expect(within(screen.getByLabelText('Verlaufszeitraum waehlen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
-    expect(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
+    expect(within(screen.getByLabelText('Verlaufszeitraum wählen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
+    expect(within(screen.getByLabelText('Verteilungszeitraum wählen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
     expect(within(screen.getByLabelText('Schwierigkeitsstufe fokussieren')).getByRole('button', { name: 'Alle vergleichen' }).classList.contains('is-active')).toBe(true)
     expect(container.textContent).toContain('Alle sichtbaren Stufen gleichwertig')
     const getTrendFrame = () => container.querySelector<HTMLElement>('.stats-recharts-line-frame:not(.stats-recharts-histogram-frame)')
@@ -4927,8 +4927,8 @@ describe('keyboard smoke tests', () => {
     expect(getTrendFrame()?.getAttribute('data-reference-worst')).toBe('51')
     expect(container.textContent).toContain('1 von 2 Stufen sichtbar')
 
-    const trendMetricControls = screen.getByLabelText('Verlaufsmetrik waehlen')
-    const histogramMetricControls = screen.getByLabelText('Verteilungsmetrik waehlen')
+    const trendMetricControls = screen.getByLabelText('Verlaufsmetrik wählen')
+    const histogramMetricControls = screen.getByLabelText('Verteilungsmetrik wählen')
 
     fireEvent.click(within(histogramMetricControls).getByRole('button', { name: 'Aktionen' }))
     expect(screen.getByText('Verteilung der Aktionen')).toBeTruthy()
@@ -4937,13 +4937,13 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.click(within(trendMetricControls).getByRole('button', { name: 'Zeit' }))
     expect(screen.getByText('Verteilung der Aktionen')).toBeTruthy()
-    expect(within(screen.getByLabelText('Verteilungsmetrik waehlen')).getByRole('button', { name: 'Aktionen' }).classList.contains('is-active')).toBe(true)
+    expect(within(screen.getByLabelText('Verteilungsmetrik wählen')).getByRole('button', { name: 'Aktionen' }).classList.contains('is-active')).toBe(true)
     expect(getTrendFrame()?.getAttribute('data-visible-series-count')).toBe('1')
     expect(getTrendFrame()?.getAttribute('data-trend-point-count')).toBe('3')
 
-    fireEvent.click(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Letzte 12' }))
-    expect(within(screen.getByLabelText('Verteilungszeitraum waehlen')).getByRole('button', { name: 'Letzte 12' }).classList.contains('is-active')).toBe(true)
-    expect(within(screen.getByLabelText('Verlaufszeitraum waehlen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
+    fireEvent.click(within(screen.getByLabelText('Verteilungszeitraum wählen')).getByRole('button', { name: 'Letzte 12' }))
+    expect(within(screen.getByLabelText('Verteilungszeitraum wählen')).getByRole('button', { name: 'Letzte 12' }).classList.contains('is-active')).toBe(true)
+    expect(within(screen.getByLabelText('Verlaufszeitraum wählen')).getByRole('button', { name: 'Alle' }).classList.contains('is-active')).toBe(true)
   })
 
   it('labels sparse same-day statistic trends as individual runs', () => {
@@ -4976,7 +4976,7 @@ describe('keyboard smoke tests', () => {
     expect(screen.getByText('Lauf 1')).toBeTruthy()
     expect(screen.getByText('Lauf 2')).toBeTruthy()
     expect(container.textContent).toContain('365 Aktionen weniger')
-    expect(container.textContent).toContain('X-Achse: 2 Einzellaeufe am 10.04., als Lauf 1-2 gezeigt.')
+    expect(container.textContent).toContain('X-Achse: 2 Einzelläufe am 10.04., als Lauf 1-2 gezeigt.')
   })
 
   it('marks medal runs directly on the statistics trend points', () => {
@@ -5260,14 +5260,14 @@ describe('keyboard smoke tests', () => {
           {
             id: 'start',
             title: 'Zur Startseite',
-            detail: 'Zur Startseite zurueckkehren.',
+            detail: 'Zur Startseite zurückkehren.',
             section: 'Navigation',
             icon: 'grid',
             onSelect: vi.fn(),
           },
           {
             id: 'stats',
-            title: 'Statistik oeffnen',
+            title: 'Statistik öffnen',
             detail: 'Rekorde und Verlauf ansehen.',
             section: 'Navigation',
             icon: 'grid',
@@ -5275,8 +5275,8 @@ describe('keyboard smoke tests', () => {
           },
           {
             id: 'gallery',
-            title: 'Galerie oeffnen',
-            detail: 'Motive und geloeste Eintraege anzeigen.',
+            title: 'Galerie öffnen',
+            detail: 'Motive und gelöste Einträge anzeigen.',
             section: 'Navigation',
             icon: 'image',
             onSelect: onOpenGallery,
@@ -5287,7 +5287,7 @@ describe('keyboard smoke tests', () => {
 
     const searchInput = screen.getByRole('combobox', { name: /Schnellaktionen durchsuchen/i })
     await user.type(searchInput, 'galerie')
-    const galleryButton = screen.getByRole('option', { name: /Galerie oeffnen/i })
+    const galleryButton = screen.getByRole('option', { name: /Galerie öffnen/i })
     galleryButton.focus()
     fireEvent.keyDown(galleryButton, { key: 'Enter' })
 
@@ -5372,7 +5372,7 @@ describe('keyboard smoke tests', () => {
     )
 
     const startButton = screen.getByRole('button', { name: 'Zur Startseite wechseln' })
-    const paletteButton = screen.getByRole('button', { name: 'Command Palette oeffnen' })
+    const paletteButton = screen.getByRole('button', { name: 'Command Palette öffnen' })
     const helpButton = screen.getByRole('button', { name: 'Hilfe und Tastaturbefehle anzeigen' })
     const themeButton = screen.getByRole('button', { name: /Dunkelmodus aktivieren|Hellmodus aktivieren/i })
 
@@ -5543,7 +5543,7 @@ describe('keyboard smoke tests', () => {
     const preventDefault = vi.fn()
     const registeredContextHandler = contextHandler as AppContextMenuHandler | null
     if (!registeredContextHandler) {
-      throw new Error('App-Kontextmenue wurde nicht registriert')
+      throw new Error('App-Kontextmenü wurde nicht registriert')
     }
 
     registeredContextHandler({
@@ -5554,14 +5554,14 @@ describe('keyboard smoke tests', () => {
     })
 
     expect(preventDefault).toHaveBeenCalledTimes(1)
-    await screen.findByRole('menuitem', { name: /Prompt einfuegen/i })
+    await screen.findByRole('menuitem', { name: /Prompt einfügen/i })
 
     await waitFor(() => {
       expect(hasClipboardImageSpy).toHaveBeenCalledTimes(1)
-      expect((screen.getByRole('menuitem', { name: /Prompt einfuegen/i }) as HTMLButtonElement).disabled).toBe(false)
+      expect((screen.getByRole('menuitem', { name: /Prompt einfügen/i }) as HTMLButtonElement).disabled).toBe(false)
     })
 
-    await userEvent.click(screen.getByRole('menuitem', { name: /Prompt einfuegen/i }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Prompt einfügen/i }))
 
     await waitFor(() => {
       expect(readClipboardTextSpy).toHaveBeenCalledTimes(1)
@@ -5625,7 +5625,7 @@ describe('keyboard smoke tests', () => {
 
     const registeredContextHandler = contextHandler as AppContextMenuHandler | null
     if (!registeredContextHandler) {
-      throw new Error('App-Kontextmenue wurde nicht registriert')
+      throw new Error('App-Kontextmenü wurde nicht registriert')
     }
 
     registeredContextHandler({
@@ -5635,11 +5635,11 @@ describe('keyboard smoke tests', () => {
       preventDefault: vi.fn(),
     })
 
-    const pastePromptItem = await screen.findByRole('menuitem', { name: /Prompt einfuegen/i })
+    const pastePromptItem = await screen.findByRole('menuitem', { name: /Prompt einfügen/i })
 
     await waitFor(() => {
       expect(hasClipboardImageSpy).toHaveBeenCalledTimes(1)
-      expect((screen.getByRole('menuitem', { name: /Prompt einfuegen/i }) as HTMLButtonElement).disabled).toBe(true)
+      expect((screen.getByRole('menuitem', { name: /Prompt einfügen/i }) as HTMLButtonElement).disabled).toBe(true)
     })
 
     await userEvent.click(pastePromptItem)
@@ -5715,7 +5715,7 @@ describe('keyboard smoke tests', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Einzellauf-Tabelle' }))
 
     await waitFor(() => {
-      expect(screen.getByText('1 von 2 Eintraegen sichtbar')).toBeTruthy()
+      expect(screen.getByText('1 von 2 Einträgen sichtbar')).toBeTruthy()
     })
 
     expect(
@@ -6063,7 +6063,7 @@ describe('keyboard smoke tests', () => {
       />
     )
 
-    expect(savedGamesActionRef.current).toBe(screen.getByRole('button', { name: /Spielstaende/i }))
+    expect(savedGamesActionRef.current).toBe(screen.getByRole('button', { name: /Spielstände/i }))
     expect(statsActionRef.current).toBe(screen.getByRole('button', { name: /Statistik/i }))
     expect(galleryActionRef.current).toBe(screen.getByRole('button', { name: /Galerie/i }))
   })
@@ -6109,7 +6109,7 @@ describe('keyboard smoke tests', () => {
     importButton.focus()
     fireEvent.click(importButton)
 
-    const selectBackupButton = await screen.findByRole('button', { name: 'Auswaehlen' })
+    const selectBackupButton = await screen.findByRole('button', { name: 'Auswählen' })
     fireEvent.click(selectBackupButton)
 
     const cancelButton = await screen.findByRole('button', { name: 'Abbrechen' })
@@ -6164,7 +6164,7 @@ describe('keyboard smoke tests', () => {
     importButton.focus()
     fireEvent.click(importButton)
 
-    await screen.findByRole('button', { name: 'Schliessen' })
+    await screen.findByRole('button', { name: 'Schließen' })
     fireEvent.keyDown(document, { key: 'Escape' })
 
     await waitFor(() => {
@@ -6219,14 +6219,14 @@ describe('keyboard smoke tests', () => {
 
     render(<DeleteAllSavedGamesHarness />)
 
-    fireEvent.click(screen.getByRole('button', { name: /Spielstaende/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Spielstände/i }))
 
-    const deleteAllButton = await screen.findByRole('button', { name: 'Alle loeschen' })
+    const deleteAllButton = await screen.findByRole('button', { name: 'Alle löschen' })
     deleteAllButton.focus()
     fireEvent.click(deleteAllButton)
 
-    const dialog = await screen.findByRole('alertdialog', { name: 'Alle Spielstaende loeschen?' })
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Alle loeschen' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Alle Spielstände löschen?' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Alle löschen' }))
 
     await waitFor(() => {
       expect(screen.queryByRole('alertdialog')).toBeNull()
@@ -6281,12 +6281,12 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Statistik/i }))
 
-    const resetButton = await screen.findByRole('button', { name: 'Statistik loeschen' })
+    const resetButton = await screen.findByRole('button', { name: 'Statistik löschen' })
     resetButton.focus()
     fireEvent.click(resetButton)
 
-    const dialog = await screen.findByRole('alertdialog', { name: 'Statistik loeschen?' })
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Statistik loeschen' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Statistik löschen?' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Statistik löschen' }))
 
     await waitFor(() => {
       expect(screen.queryByRole('alertdialog')).toBeNull()
@@ -6343,12 +6343,12 @@ describe('keyboard smoke tests', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Galerie/i }))
 
-    const resetButton = await screen.findByRole('button', { name: 'Galerie loeschen' })
+    const resetButton = await screen.findByRole('button', { name: 'Galerie löschen' })
     resetButton.focus()
     fireEvent.click(resetButton)
 
-    const dialog = await screen.findByRole('alertdialog', { name: 'Galerie loeschen?' })
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Galerie loeschen' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Galerie löschen?' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Galerie löschen' }))
 
     await waitFor(() => {
       expect(screen.queryByRole('alertdialog')).toBeNull()
@@ -6488,8 +6488,8 @@ describe('keyboard smoke tests', () => {
               commands={[
                 {
                   id: 'gallery',
-                  title: 'Galerie oeffnen',
-                  detail: 'Motive und geloeste Eintraege anzeigen.',
+                  title: 'Galerie öffnen',
+                  detail: 'Motive und gelöste Einträge anzeigen.',
                   section: 'Navigation',
                   icon: 'image',
                   onSelect: vi.fn(),

@@ -20,7 +20,7 @@ function createMotifEntry(id: string, tags: GalleryImageTag[]) {
 }
 
 describe('galleryTagCollectionSync', () => {
-  it('schlaegt namensgleiche Sammlungen fuer aktuelle Motiv-Tags vor', () => {
+  it('schlaegt namensgleiche Sammlungen für aktuelle Motiv-Tags vor', () => {
     const suggestions = getTagCollectionSuggestions(
       [
         createCollection('nature', 'Natur', []),
@@ -53,7 +53,7 @@ describe('galleryTagCollectionSync', () => {
     expect(suggestions.map(({ collection }) => collection.id)).toEqual(['nature', 'art'])
   })
 
-  it('schlaegt keine Sammlung vor, die das Motiv bereits ueber einen anderen Lauf enthaelt', () => {
+  it('schlaegt keine Sammlung vor, die das Motiv bereits über einen anderen Lauf enthaelt', () => {
     expect(getTagCollectionSuggestions(
       [createCollection('nature', 'Natur', ['motif-old'])],
       [
@@ -79,7 +79,7 @@ describe('galleryTagCollectionSync', () => {
     }])
   })
 
-  it('liefert keine Entfernung fuer nicht enthaltene Motive', () => {
+  it('liefert keine Entfernung für nicht enthaltene Motive', () => {
     expect(getTagCollectionImageRemovals(
       [createCollection('art', 'Kunst', ['other'])],
       ['motif'],

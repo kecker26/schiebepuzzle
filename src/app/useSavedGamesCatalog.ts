@@ -27,7 +27,7 @@ export function useSavedGamesCatalog(): SavedGamesCatalogResult {
       setSavedGames(items)
       setSavedGamesError(null)
     } catch (error) {
-      setSavedGamesError(`Spielstaende konnten nicht geladen werden: ${getErrorMessage(error)}`)
+      setSavedGamesError(`Spielstände konnten nicht geladen werden: ${getErrorMessage(error)}`)
     } finally {
       if (showSpinner) {
         setIsLoadingSavedGames(false)

@@ -45,7 +45,7 @@ export function usePuzzleStats(): PuzzleStatsResult {
       setStatsOverview(emptyStats)
       setStatsError(null)
     } catch (error) {
-      setStatsError(`Statistiken konnten nicht geloescht werden: ${getErrorMessage(error)}`)
+      setStatsError(`Statistiken konnten nicht gelöscht werden: ${getErrorMessage(error)}`)
       throw error
     } finally {
       setIsResettingStats(false)
