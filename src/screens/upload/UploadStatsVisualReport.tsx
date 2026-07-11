@@ -177,6 +177,14 @@ interface ScoreBreakdownDatum {
   color: string
 }
 
+interface ScoreBreakdownTickProps {
+  x?: string | number
+  y?: string | number
+  payload?: {
+    value?: string | number
+  }
+}
+
 interface FavoriteDifficultyDatum {
   key: string
   label: string
@@ -1708,60 +1716,68 @@ function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string) {
 
   return (
     <div className="stats-score-breakdown-frame" aria-label={label}>
-      <div className="stats-score-breakdown-layout">
-        <div className="stats-score-breakdown-categories" aria-label="Score-Kategorien">
-          {data.map((datum) => {
-            return (
-              <div key={datum.key} className="stats-score-breakdown-category">
-                <span>{datum.label}</span>
-                <button
-                  type="button"
-                  className="stats-score-breakdown-help-badge"
-                  aria-label={`${datum.label}: ${datum.detail}`}
-                  data-app-tooltip={`${datum.label}: ${datum.detail} Wert: ${datum.displayValue}.`}
-                >
-                  ?
-                </button>
-              </div>
-            )
-          })}
-        </div>
-        <div className="stats-score-breakdown-chart">
-          <ResponsiveContainer width="100%" height={150}>
-            <BarChart
-              data={data}
-              layout="vertical"
-              margin={{ top: 10, right: 54, bottom: 8, left: 0 }}
-            >
-              <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-              <XAxis
-                type="number"
-                domain={[0, 100]}
-                ticks={[0, 50, 100]}
-                tickFormatter={(value) => `${value}`}
-              />
-              <YAxis
-                type="category"
-                dataKey="label"
-                width={0}
-                tick={false}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Bar dataKey="value" radius={[0, 999, 999, 0]} barSize={16}>
-                {data.map((datum) => (
-                  <Cell key={datum.key} fill={datum.color} />
-                ))}
-                <LabelList dataKey="displayValue" position="right" className="stats-score-breakdown-label" />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <ResponsiveContainer width="100%" height={150}>
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 10, right: 54, bottom: 8, left: 0 }}
+        >
+          <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+          <XAxis
+            type="number"
+            domain={[0, 100]}
+            ticks={[0, 50, 100]}
+            tickFormatter={(value) => `${value}`}
+          />
+          <YAxis
+            type="category"
+            dataKey="label"
+            width={124}
+            tick={(tickProps: ScoreBreakdownTickProps) => renderScoreBreakdownTick(tickProps, data)}
+            tickLine={false}
+            axisLine={false}
+            interval={0}
+          />
+          <Bar dataKey="value" radius={[0, 999, 999, 0]} barSize={16}>
+            {data.map((datum) => (
+              <Cell key={datum.key} fill={datum.color} />
+            ))}
+            <LabelList dataKey="displayValue" position="right" className="stats-score-breakdown-label" />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
       <p className="stats-score-breakdown-note">
         100 Startpunkte minus Abzüge. Die Auto-Zug-Strafe ist bei 36 Punkten gedeckelt.
       </p>
     </div>
+  )
+}
+
+function renderScoreBreakdownTick({ x = 0, y = 0, payload }: ScoreBreakdownTickProps, data: ScoreBreakdownDatum[]) {
+  const tickX = typeof x === 'number' ? x : Number(x)
+  const tickY = typeof y === 'number' ? y : Number(y)
+  const rawLabel = payload?.value
+  const label = rawLabel === undefined ? '' : String(rawLabel)
+  const datum = data.find((entry) => entry.label === label)
+
+  return (
+    <g className="stats-score-breakdown-tick" transform={`translate(${Number.isFinite(tickX) ? tickX : 0},${Number.isFinite(tickY) ? tickY : 0})`}>
+      <text className="stats-score-breakdown-tick-label" x={-22} y={4} textAnchor="end">
+        {label}
+      </text>
+      {datum ? (
+        <foreignObject className="stats-score-breakdown-tick-help" x={-17} y={-8} width={17} height={17}>
+          <button
+            type="button"
+            className="stats-score-breakdown-help-badge"
+            aria-label={`${datum.label}: ${datum.detail}`}
+            data-app-tooltip={`${datum.label}: ${datum.detail} Wert: ${datum.displayValue}.`}
+          >
+            ?
+          </button>
+        </foreignObject>
+      ) : null}
+    </g>
   )
 }
 
