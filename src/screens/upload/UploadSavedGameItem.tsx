@@ -77,7 +77,7 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
           </span>
           <span className="saved-game-chip">
             <UploadScreenIcon name="mousePointerClick" className="saved-game-chip-icon" />
-            {save.moves} Zuege
+            {save.moves} Züge
           </span>
           <span className="saved-game-chip">
             <UploadScreenIcon name="timer" className="saved-game-chip-icon" />
@@ -109,11 +109,11 @@ const UploadSavedGameItem = memo(function UploadSavedGameItem({
           onClick={handleDeleteClick}
           onKeyDown={onActionKeyDown}
           disabled={isBusy}
-          data-app-tooltip="Spielstand dauerhaft aus der lokalen Liste loeschen."
+          data-app-tooltip="Spielstand dauerhaft aus der lokalen Liste löschen."
           data-app-tooltip-position="top"
         >
           <UploadScreenIcon name="trash" className="saved-game-action-icon" />
-          <span>{isDeleting ? <BusyIndicator label="Loesche ..." /> : 'Loeschen'}</span>
+          <span>{isDeleting ? <BusyIndicator label="Lösche ..." /> : 'Löschen'}</span>
         </button>
       </div>
     </li>

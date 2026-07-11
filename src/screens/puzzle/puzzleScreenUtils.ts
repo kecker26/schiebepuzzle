@@ -367,7 +367,7 @@ export function buildHeatmapTargetPath(
           ? `Abstand -${distanceChange}`
           : worksOnFocus
             ? 'Fokus vorbereiten'
-            : 'Weg oeffnen'
+            : 'Weg öffnen'
     const reasonTone: HeatmapMovePotentialTone =
       reachesTarget || distanceChange > 0 ? 'positive' : 'neutral'
     const directionSymbol =
@@ -583,7 +583,7 @@ export function buildHintPreview(
   const confidenceLabel = source === 'greedy' ? 'Mittel' : 'Hoch'
   const sourceLabel =
     source === 'exact'
-      ? 'Direkter Loesungspfad'
+      ? 'Direkter Lösungspfad'
       : source === 'tracked'
         ? 'Pfad aus deinem Verlauf'
         : 'Lokale Heuristik'
@@ -597,10 +597,10 @@ export function buildHintPreview(
     distanceAfterMove === 0
       ? 'Damit sitzt die Kachel direkt an ihrer Zielposition.'
       : distanceAfterMove < distance
-        ? 'Dadurch kommt sie ihrer Zielposition einen Schritt naeher.'
+        ? 'Dadurch kommt sie ihrer Zielposition einen Schritt näher.'
         : distanceAfterMove > distance
-          ? 'Dieser Zwischenschritt oeffnet den weiteren Loesungsweg.'
-          : 'Dieser Zug haelt den weiteren Loesungsweg offen.'
+          ? 'Dieser Zwischenschritt öffnet den weiteren Lösungsweg.'
+          : 'Dieser Zug hält den weiteren Lösungsweg offen.'
 
   return {
     tileId,
@@ -668,10 +668,10 @@ export function buildHintPathObjective(
         preparationMoveCount,
         label: preparationMoveCount === 0
           ? `${tileLabel} an die Zielposition setzen`
-          : `Platz fuer ${tileLabel} schaffen`,
+          : `Platz für ${tileLabel} schaffen`,
         detail: preparationMoveCount === 0
-          ? `${tileLabel} kann mit dem naechsten Zug richtig eingesetzt werden.`
-          : `Noch ${preparationMoveCount} ${preparationMoveCount === 1 ? 'vorbereitender Zug' : 'vorbereitende Zuege'}, dann kann ${tileLabel} richtig eingesetzt werden.`,
+          ? `${tileLabel} kann mit dem nächsten Zug richtig eingesetzt werden.`
+          : `Noch ${preparationMoveCount} ${preparationMoveCount === 1 ? 'vorbereitender Zug' : 'vorbereitende Züge'}, dann kann ${tileLabel} richtig eingesetzt werden.`,
       }
     }
 
@@ -685,7 +685,7 @@ export function buildPuzzleMoveFeedback(input: PuzzleMoveFeedbackInput): PuzzleM
   if (input.nextFocusRow !== input.previousFocusRow) {
     return {
       message: input.nextFocusRow === null
-        ? 'Alle Zielbereiche sind vollstaendig.'
+        ? 'Alle Zielbereiche sind vollständig.'
         : `${input.previousFocusTitle} abgeschlossen. Weiter mit ${input.nextFocusTitle.toLowerCase()}.`,
       tone: 'positive',
     }
@@ -700,14 +700,14 @@ export function buildPuzzleMoveFeedback(input: PuzzleMoveFeedbackInput): PuzzleM
 
   if (input.tileDistanceAfter < input.tileDistanceBefore) {
     return {
-      message: `${input.tileLabel} ist jetzt naeher an ihrer Zielposition.`,
+      message: `${input.tileLabel} ist jetzt näher an ihrer Zielposition.`,
       tone: 'positive',
     }
   }
 
   if (input.heuristicAfter < input.heuristicBefore) {
     return {
-      message: 'Der Zug verbessert die Loesungsnaehe des gesamten Bretts.',
+      message: 'Der Zug verbessert die Lösungsnähe des gesamten Bretts.',
       tone: 'positive',
     }
   }
@@ -715,15 +715,15 @@ export function buildPuzzleMoveFeedback(input: PuzzleMoveFeedbackInput): PuzzleM
   if (input.nextFocusProgress < input.previousFocusProgress) {
     return {
       message: input.isSuggested
-        ? 'Vorbereitender Zug: Der Loesungsweg bleibt auf den Fokusbereich ausgerichtet.'
-        : 'Der aktuelle Fokusbereich wurde wieder geoeffnet.',
+        ? 'Vorbereitender Zug: Der Lösungsweg bleibt auf den Fokusbereich ausgerichtet.'
+        : 'Der aktuelle Fokusbereich wurde wieder geöffnet.',
       tone: input.isSuggested ? 'neutral' : 'caution',
     }
   }
 
   if (input.isSuggested) {
     return {
-      message: 'Vorbereitender Zug fuer das aktuelle Teilziel.',
+      message: 'Vorbereitender Zug für das aktuelle Teilziel.',
       tone: 'neutral',
     }
   }

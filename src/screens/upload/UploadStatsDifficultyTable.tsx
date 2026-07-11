@@ -31,11 +31,11 @@ type DifficultySortKey =
 const DIFFICULTY_COLUMN_HELP: Partial<Record<DifficultySortKey, string>> = {
   solveCount: 'Alle abgeschlossenen Siege dieser Stufe. Der Zellhinweis nennt den Anteil ohne Hilfe.',
   bestTime: 'Die schnellste bisher gespeicherte Siegzeit dieser Stufe.',
-  bestMoves: 'Die niedrigste Zahl an Netto-Zuegen, also reine Puzzle-Zuege ohne Zusatzaktionen.',
-  medianTime: 'Der mittlere Zeitwert dieser Stufe. Ausreisser zaehlen dadurch weniger stark als beim Durchschnitt.',
-  medianMoves: 'Der mittlere Wert der Netto-Zuege dieser Stufe.',
-  averageExtraMoves: 'Durchschnittliche Korrekturen (Undos): Gesamtaktionen minus Netto-Zuege. Nur mit Laufprofilen berechenbar.',
-  lastCompletedAt: 'Der zuletzt gespeicherte Sieg dieser Stufe mit Zeit und Netto-Zuegen.',
+  bestMoves: 'Die niedrigste Zahl an Netto-Zügen, also reine Puzzle-Züge ohne Zusatzaktionen.',
+  medianTime: 'Der mittlere Zeitwert dieser Stufe. Ausreisser zählen dadurch weniger stark als beim Durchschnitt.',
+  medianMoves: 'Der mittlere Wert der Netto-Züge dieser Stufe.',
+  averageExtraMoves: 'Durchschnittliche Korrekturen (Undos): Gesamtaktionen minus Netto-Züge. Nur mit Laufprofilen berechenbar.',
+  lastCompletedAt: 'Der zuletzt gespeicherte Sieg dieser Stufe mit Zeit und Netto-Zügen.',
 }
 
 interface UploadStatsDifficultyTableProps {
@@ -251,11 +251,11 @@ export default function UploadStatsDifficultyTable({
       className="stats-report-section-table"
       kicker="Detailtabelle"
       title="Sortierbarer Vergleich je Schwierigkeit"
-      copy="Jede Spalte laesst sich sortieren. Die Tabelle konzentriert sich auf Siege, typische Werte, Rekorde und den letzten Abschluss je Stufe."
+      copy="Jede Spalte lässt sich sortieren. Die Tabelle konzentriert sich auf Siege, typische Werte, Rekorde und den letzten Abschluss je Stufe."
       summaryMeta={
         <>
           <span className="stats-report-summary-pill">
-            {solvedDifficultyCount} von {difficultyRows.length} geloest
+            {solvedDifficultyCount} von {difficultyRows.length} gelöst
           </span>
           <span className="stats-report-summary-pill">
             {stats?.totalSolved ?? 0} Siege gesamt
@@ -298,8 +298,8 @@ export default function UploadStatsDifficultyTable({
                 {renderColumnHelpBadge('bestTime')}
               </th>
               <th scope="col" aria-sort={sortKey === 'bestMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('bestMoves')}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach wenigsten Netto-Zuegen sortieren." data-app-tooltip-position="top" onClick={() => handleSort('bestMoves')} onKeyDown={handleSortButtonKeyDown}>
-                  {renderHeaderLabel('Wenigste Zuege')}
+                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach wenigsten Netto-Zügen sortieren." data-app-tooltip-position="top" onClick={() => handleSort('bestMoves')} onKeyDown={handleSortButtonKeyDown}>
+                  {renderHeaderLabel('Wenigste Züge')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('bestMoves', sortKey, sortDirection)}
                   </span>
@@ -316,8 +316,8 @@ export default function UploadStatsDifficultyTable({
                 {renderColumnHelpBadge('medianTime')}
               </th>
               <th scope="col" aria-sort={sortKey === 'medianMoves' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'} {...getHelpHeaderProps('medianMoves')}>
-                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach Median der Netto-Zuege sortieren." data-app-tooltip-position="top" onClick={() => handleSort('medianMoves')} onKeyDown={handleSortButtonKeyDown}>
-                  {renderHeaderLabel('Median-Zuege')}
+                <AnimatedButton className="stats-table-sort" interaction="chip" data-app-tooltip="Nach Median der Netto-Züge sortieren." data-app-tooltip-position="top" onClick={() => handleSort('medianMoves')} onKeyDown={handleSortButtonKeyDown}>
+                  {renderHeaderLabel('Median-Züge')}
                   <span className="stats-table-sort-indicator" aria-hidden="true">
                     {getSortIndicator('medianMoves', sortKey, sortDirection)}
                   </span>
@@ -384,7 +384,7 @@ export default function UploadStatsDifficultyTable({
                   <td>
                     <span className="stats-data-cell-main">{formatExtraMoves(row.averageExtraMoves)}</span>
                     <span className="stats-data-cell-copy">
-                      {row.profiledSolveCount > 0 ? `${formatPercent(row.profileCoverage)} Datenqualitaet` : 'kein Laufprofil'}
+                      {row.profiledSolveCount > 0 ? `${formatPercent(row.profileCoverage)} Datenqualität` : 'kein Laufprofil'}
                     </span>
                   </td>
                   <td>

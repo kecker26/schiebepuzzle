@@ -28,7 +28,7 @@ function createReplayDescription(entry: SolvedGalleryEntry, fallback: string): s
 
   return isGalleryChallengeTargetEligible(entry)
     ? `Startet die cleane Medaillen-Vorlage vom ${formatDate(entry.completedAt)} erneut.`
-    : `Wiederholt den gespeicherten Startzustand vom ${formatDate(entry.completedAt)} als Uebung ohne Medaille.`
+    : `Wiederholt den gespeicherten Startzustand vom ${formatDate(entry.completedAt)} als Übung ohne Medaille.`
 }
 
 export function getGalleryReplayActions(entry: GalleryDisplayEntry): GalleryReplayAction[] {
@@ -75,7 +75,7 @@ export function getGalleryReplayActions(entry: GalleryDisplayEntry): GalleryRepl
       motifReplaySummary.lastReplayableEntry
         ? createReplayDescription(
           motifReplaySummary.lastReplayableEntry,
-          `Startet den juengsten noch spielbaren Galerie-Eintrag vom ${formatDate(motifReplaySummary.lastReplayableEntry.completedAt)} neu.`
+          `Startet den jüngsten noch spielbaren Galerie-Eintrag vom ${formatDate(motifReplaySummary.lastReplayableEntry.completedAt)} neu.`
         )
         : ''
     )

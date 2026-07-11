@@ -234,13 +234,13 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
         onKeyDown={handleActionKeyDown}
         disabled={isDeleting}
         aria-label={`Details zu ${difficultyLabel} vom ${completedAtLabel} anzeigen`}
-        data-app-tooltip="Galerie-Details, Laufverlauf und Replay-Optionen oeffnen."
+        data-app-tooltip="Galerie-Details, Laufverlauf und Replay-Optionen öffnen."
         data-app-tooltip-align="start"
       >
         {representativeEntry.previewImage ? (
           <img
             src={representativeEntry.previewImage}
-            alt={`Geloestes Puzzle ${difficultyLabel} vom ${completedAtLabel}`}
+            alt={`Gelöstes Puzzle ${difficultyLabel} vom ${completedAtLabel}`}
             className="gallery-card-preview"
           />
         ) : (
@@ -264,7 +264,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
           <span
             className={`gallery-card-challenge-medal is-${bestChallengeMedal}`}
             aria-label={`Beste Challenge-Medaille: ${formatChallengeMedalLabel(bestChallengeMedal)}`}
-            data-app-tooltip={`${formatChallengeMedalLabel(bestChallengeMedal)} ist die beste Challenge-Medaille fuer dieses Motiv.`}
+            data-app-tooltip={`${formatChallengeMedalLabel(bestChallengeMedal)} ist die beste Challenge-Medaille für dieses Motiv.`}
             data-app-tooltip-position="top"
           >
             <Medal aria-hidden="true" size={18} strokeWidth={2.4} />
@@ -324,8 +324,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
         ) : null}
 
         {aiTags.length > 0 || collectionSuggestions.length > 0 ? (
-          <div className="gallery-card-ai" aria-label="Tags und Sammlungsvorschlaege">
-            <div className="gallery-card-run-count" aria-label={`Gesamtzahl der Laeufe: ${totalSolveCountLabel}`}>
+          <div className="gallery-card-ai" aria-label="Tags und Sammlungsvorschläge">
+            <div className="gallery-card-run-count" aria-label={`Gesamtzahl der Läufe: ${totalSolveCountLabel}`}>
               <UploadScreenIcon name="refreshCw" className="gallery-card-run-count-icon" />
               <span>{totalSolveCountLabel}</span>
             </div>
@@ -373,7 +373,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                       onClick={() => onAddSuggestedCollection?.(collection.id, entry, source)}
                       onKeyDown={handleActionKeyDown}
                       disabled={isDeleting || isBusy || !onAddSuggestedCollection}
-                      data-app-tooltip={reason || `Dieses Motiv zur Sammlung ${collection.name} hinzufuegen.`}
+                      data-app-tooltip={reason || `Dieses Motiv zur Sammlung ${collection.name} hinzufügen.`}
                       data-app-tooltip-position="top"
                     >
                       <UploadScreenIcon name="sparkles" className="gallery-card-action-icon" />
@@ -387,7 +387,7 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
           </div>
         ) : (
           <div className="gallery-card-ai">
-            <div className="gallery-card-run-count" aria-label={`Gesamtzahl der Laeufe: ${totalSolveCountLabel}`}>
+            <div className="gallery-card-run-count" aria-label={`Gesamtzahl der Läufe: ${totalSolveCountLabel}`}>
               <UploadScreenIcon name="refreshCw" className="gallery-card-run-count-icon" />
               <span>{totalSolveCountLabel}</span>
             </div>
@@ -403,12 +403,12 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
             onClick={handleOpenDetails}
             onKeyDown={handleActionKeyDown}
             disabled={isDeleting}
-            aria-label={`Spielen und Details zu ${difficultyLabel} vom ${completedAtLabel} oeffnen`}
-            data-app-tooltip="Details oeffnen, Lauf vergleichen oder Motiv erneut spielen."
+            aria-label={`Laufdetails zu ${difficultyLabel} vom ${completedAtLabel} öffnen`}
+            data-app-tooltip="Laufdetails öffnen, Lauf vergleichen oder Motiv erneut spielen."
             data-app-tooltip-position="top"
           >
             <UploadScreenIcon name="playCircle" className="gallery-card-action-icon" />
-            <span>Details</span>
+            <span>Laufdetails</span>
           </button>
           {!isMedalHuntCompact ? (
             <>
@@ -421,8 +421,8 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                 onClick={handleCollect}
                 onKeyDown={handleActionKeyDown}
                 disabled={isDeleting || !onCollectEntry}
-                aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} zu einer Sammlung hinzufuegen`}
-                data-app-tooltip="Motiv zu einer bestehenden oder neuen Sammlung hinzufuegen."
+                aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} zu einer Sammlung hinzufügen`}
+                data-app-tooltip="Motiv zu einer bestehenden oder neuen Sammlung hinzufügen."
                 data-app-tooltip-position="top"
               >
                 <UploadScreenIcon name="folderHeart" className="gallery-card-action-icon" />
@@ -437,12 +437,12 @@ const UploadGalleryCard = memo(function UploadGalleryCard({
                 onClick={handleDelete}
                 onKeyDown={handleActionKeyDown}
                 disabled={isDeleting}
-                aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} loeschen`}
-                data-app-tooltip="Galerie-Eintrag aus der lokalen Galerie loeschen."
+                aria-label={`Galerie-Bild ${difficultyLabel} vom ${completedAtLabel} löschen`}
+                data-app-tooltip="Galerie-Eintrag aus der lokalen Galerie löschen."
                 data-app-tooltip-position="top"
               >
                 <UploadScreenIcon name="trash" className="gallery-card-action-icon" />
-                <span>{isDeleting ? <BusyIndicator label="Loesche ..." /> : 'Loeschen'}</span>
+                <span>{isDeleting ? <BusyIndicator label="Lösche ..." /> : 'Löschen'}</span>
               </button>
             </>
           ) : null}

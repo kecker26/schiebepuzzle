@@ -207,8 +207,8 @@ export function getNextChallengeMedalGoal(
     return {
       medal: nextAvailableMedal,
       label: nextAvailableMedal
-        ? 'Ohne Hilfe neu starten. Medaillen werden nur fuer absolut cleane Laeufe vergeben.'
-        : 'Diese Vorlage enthaelt keine erreichbaren Medaillenziele.',
+        ? 'Ohne Hilfe neu starten. Medaillen werden nur für absolut cleane Läufe vergeben.'
+        : 'Diese Vorlage enthält keine erreichbaren Medaillenziele.',
     }
   }
 
@@ -216,15 +216,15 @@ export function getNextChallengeMedalGoal(
     return {
       medal: null,
       label: medal === null
-        ? 'Diese Vorlage enthaelt keine erreichbaren Medaillenziele.'
-        : 'Hoechste verfuegbare Medaillenstufe erreicht.',
+        ? 'Diese Vorlage enthält keine erreichbaren Medaillenziele.'
+        : 'Höchste verfügbare Medaillenstufe erreicht.',
     }
   }
 
   if (nextAvailableMedal === 'bronze') {
     const bronzeRequirements = [
       canBeatChallengeTime(target) && timeGapToBeat > 0 ? `${timeGapToBeat} Sek. schneller` : null,
-      canBeatChallengeMoves(target) && movesGapToBeat > 0 ? `${movesGapToBeat} ${movesGapToBeat === 1 ? 'Zug' : 'Zuege'} weniger` : null,
+      canBeatChallengeMoves(target) && movesGapToBeat > 0 ? `${movesGapToBeat} ${movesGapToBeat === 1 ? 'Zug' : 'Züge'} weniger` : null,
     ].filter((requirement): requirement is string => requirement !== null)
 
     return {
@@ -236,34 +236,34 @@ export function getNextChallengeMedalGoal(
   if (nextAvailableMedal === 'diamond') {
     const requirements = [
       timeGapToDiamond > 0 ? `${timeGapToDiamond} Sek. schneller bis zum 40-Prozent-Zeitziel` : null,
-      movesGapToDiamond > 0 ? `${movesGapToDiamond} ${movesGapToDiamond === 1 ? 'Zug' : 'Zuege'} weniger bis zum 40-Prozent-Zugziel` : null,
+      movesGapToDiamond > 0 ? `${movesGapToDiamond} ${movesGapToDiamond === 1 ? 'Zug' : 'Züge'} weniger bis zum 40-Prozent-Zugziel` : null,
     ].filter((requirement): requirement is string => requirement !== null)
 
     return {
       medal: 'diamond',
       label: requirements.length > 0
         ? requirements.join(' + ')
-        : 'Zeit und Zuege jeweils um mindestens 40 % unterbieten.',
+        : 'Zeit und Züge jeweils um mindestens 40 % unterbieten.',
     }
   }
 
   if (nextAvailableMedal === 'gold') {
     const requirements = [
       timeGapToGold > 0 ? `${timeGapToGold} Sek. schneller bis zum 20-Prozent-Zeitziel` : null,
-      movesGapToGold > 0 ? `${movesGapToGold} ${movesGapToGold === 1 ? 'Zug' : 'Zuege'} weniger bis zum 20-Prozent-Zugziel` : null,
+      movesGapToGold > 0 ? `${movesGapToGold} ${movesGapToGold === 1 ? 'Zug' : 'Züge'} weniger bis zum 20-Prozent-Zugziel` : null,
     ].filter((requirement): requirement is string => requirement !== null)
 
     return {
       medal: 'gold',
       label: requirements.length > 0
         ? requirements.join(' + ')
-        : 'Zeit und Zuege jeweils um mindestens 20 % unterbieten.',
+        : 'Zeit und Züge jeweils um mindestens 20 % unterbieten.',
     }
   }
 
   const silverRequirements = [
     canBeatChallengeTime(target) && timeGapToBeat > 0 ? `${timeGapToBeat} Sek. schneller bis unter das Zeitziel` : null,
-    canBeatChallengeMoves(target) && movesGapToBeat > 0 ? `${movesGapToBeat} ${movesGapToBeat === 1 ? 'Zug' : 'Zuege'} weniger bis unter das Zugziel` : null,
+    canBeatChallengeMoves(target) && movesGapToBeat > 0 ? `${movesGapToBeat} ${movesGapToBeat === 1 ? 'Zug' : 'Züge'} weniger bis unter das Zugziel` : null,
   ].filter((requirement): requirement is string => requirement !== null)
 
   return {
@@ -278,16 +278,16 @@ export function getChallengeMedalExplanation(
   medal: ChallengeMedal | null
 ): string {
   if (!isChallengeCleanRun(stats)) {
-    return 'Mit Hilfe abgeschlossen: Dieser Lauf bleibt eine Uebung und erhaelt keine Medaille.'
+    return 'Mit Hilfe abgeschlossen: Dieser Lauf bleibt eine Übung und erhält keine Medaille.'
   }
   if (!CHALLENGE_MEDALS_ASCENDING.some((candidate) => getChallengeMedalAvailability(target)[candidate])) {
-    return 'Challenge abgeschlossen, aber diese Vorlage enthaelt keine erreichbaren Medaillenziele.'
+    return 'Challenge abgeschlossen, aber diese Vorlage enthält keine erreichbaren Medaillenziele.'
   }
   if (medal === null) return 'Challenge abgeschlossen, aber kein Ziel der Vorlage strikt unterboten.'
-  if (medal === 'diamond') return 'Clean geloest und beide Ziele um mindestens 40 % unterboten.'
-  if (medal === 'gold') return 'Clean geloest und beide Ziele um mindestens 20 % unterboten.'
-  if (medal === 'silver') return 'Clean geloest und beide Ziele der Vorlage strikt unterboten.'
-  return 'Clean geloest und genau ein Ziel der Vorlage strikt unterboten.'
+  if (medal === 'diamond') return 'Clean gelöst und beide Ziele um mindestens 40 % unterboten.'
+  if (medal === 'gold') return 'Clean gelöst und beide Ziele um mindestens 20 % unterboten.'
+  if (medal === 'silver') return 'Clean gelöst und beide Ziele der Vorlage strikt unterboten.'
+  return 'Clean gelöst und genau ein Ziel der Vorlage strikt unterboten.'
 }
 
 export function isChallengeCleanRun(metrics: {
@@ -436,10 +436,10 @@ export function getChallengeMedalProgress(
     label: [
       `Aktuell ${formatChallengeMedalLabel(currentMedal)}.`,
       nextMedal
-        ? `Naechstes Ziel: ${formatChallengeMedalLabel(nextMedal)}.`
-        : 'Hoechste verfuegbare Medaillenstufe erreicht.',
+        ? `Nächstes Ziel: ${formatChallengeMedalLabel(nextMedal)}.`
+        : 'Höchste verfügbare Medaillenstufe erreicht.',
       unavailableLabels.length > 0
-        ? `${unavailableLabels.join(' und ')} ${unavailableLabels.length === 1 ? 'ist' : 'sind'} fuer die beste Vorlage nicht erreichbar.`
+        ? `${unavailableLabels.join(' und ')} ${unavailableLabels.length === 1 ? 'ist' : 'sind'} für die beste Vorlage nicht erreichbar.`
         : null,
     ].filter((part): part is string => part !== null).join(' '),
   }

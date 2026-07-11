@@ -59,7 +59,7 @@ function createDisplayEntry(
 }
 
 describe('galleryReplayActions', () => {
-  it('liefert nur den primaeren Wiedereinstieg fuer die Motivkarte', () => {
+  it('liefert nur den primaeren Wiedereinstieg für die Motivkarte', () => {
     const current = createEntry('current', {
       completedAt: '2026-04-24T12:00:00.000Z',
       time: 120,
@@ -97,7 +97,7 @@ describe('galleryReplayActions', () => {
     ])
   })
 
-  it('faellt auf den letzten spielbaren Lauf zurueck, wenn der angezeigte Eintrag kein Replay hat', () => {
+  it('faellt auf den letzten spielbaren Lauf zurück, wenn der angezeigte Eintrag kein Replay hat', () => {
     const archivedRepresentative = createEntry('archived', {
       previewImage: null,
       sourceImage: null,
@@ -121,7 +121,7 @@ describe('galleryReplayActions', () => {
     ])
   })
 
-  it('beschreibt cleane Startzustaende als Medaillen-Vorlage', () => {
+  it('beschreibt cleane Startzustände als Medaillen-Vorlage', () => {
     const current = createEntry('current', {
       assistanceMode: 'clean',
       replaySetup: {
@@ -147,7 +147,7 @@ describe('galleryReplayActions', () => {
     ])
   })
 
-  it('beschreibt assistierte Startzustaende als Uebung ohne Medaille', () => {
+  it('beschreibt assistierte Startzustände als Übung ohne Medaille', () => {
     const current = createEntry('current', {
       assistanceMode: 'auto-assisted',
       replaySetup: {
@@ -168,7 +168,7 @@ describe('galleryReplayActions', () => {
         id: 'current',
         label: 'Spielen',
         entry: { id: 'current' },
-        description: expect.stringContaining('Uebung ohne Medaille'),
+        description: expect.stringContaining('Übung ohne Medaille'),
       },
     ])
   })

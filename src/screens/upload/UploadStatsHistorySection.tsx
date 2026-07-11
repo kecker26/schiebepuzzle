@@ -79,16 +79,16 @@ const HISTORY_SORT_LABELS: Record<HistorySortKey, string> = {
   completedAt: 'Datum',
   difficulty: 'Stufe',
   time: 'Zeit',
-  moves: 'Zuege',
+  moves: 'Züge',
   extraMoves: 'Korrekturen',
   assistanceMode: 'Laufart',
 }
 
 const HISTORY_COLUMN_HELP: Partial<Record<HistorySortKey, string>> = {
   time: 'Die gespeicherte Laufzeit des einzelnen Siegs.',
-  moves: 'Netto-Zuege sind die eigentlichen Puzzle-Zuege bis zur Loesung.',
-  extraMoves: 'Korrekturen (Undos) sind die Differenz aus Gesamtaktionen und Netto-Zuegen. Nur mit Laufprofilen berechenbar.',
-  assistanceMode: 'Clean bedeutet ohne Hilfe. Hinweise und Auto-Zug markieren unterstuetzte Laeufe. Legacy hat kein vollstaendiges Laufprofil.',
+  moves: 'Netto-Züge sind die eigentlichen Puzzle-Züge bis zur Lösung.',
+  extraMoves: 'Korrekturen (Undos) sind die Differenz aus Gesamtaktionen und Netto-Zügen. Nur mit Laufprofilen berechenbar.',
+  assistanceMode: 'Clean bedeutet ohne Hilfe. Hinweise und Auto-Zug markieren unterstützte Läufe. Legacy hat kein vollständiges Laufprofil.',
 }
 
 const HISTORY_ENTRIES_PER_PAGE = 25
@@ -294,7 +294,7 @@ function buildHistoryDisplayEntries(
       isBestMoves,
       isWorstMoves,
       timeBadges: getExtremeBadges(isBestTime, isWorstTime, 'Bestzeit', 'Langsamste Zeit'),
-      moveBadges: getExtremeBadges(isBestMoves, isWorstMoves, 'Wenigste Zuege', 'Meiste Zuege'),
+      moveBadges: getExtremeBadges(isBestMoves, isWorstMoves, 'Wenigste Züge', 'Meiste Züge'),
     }
   })
 }
@@ -573,10 +573,10 @@ export default function UploadStatsHistorySection({
       className="stats-report-section-table"
       kicker="Verlaufstabelle"
       title="Komplette Sieg-Historie"
-      copy="Jeder Abschluss bleibt erhalten und kann nach Datum, Schwierigkeit, Zeit, Zuegen oder Hilfen sortiert werden. Der Filter oben schraenkt die Tabelle auf einzelne Stufen ein."
+      copy="Jeder Abschluss bleibt erhalten und kann nach Datum, Schwierigkeit, Zeit, Zügen oder Hilfen sortiert werden. Der Filter oben schränkt die Tabelle auf einzelne Stufen ein."
       summaryMeta={
         <>
-          <span className="stats-report-summary-pill">{completionHistory.length} Eintraege</span>
+          <span className="stats-report-summary-pill">{completionHistory.length} Einträge</span>
           <span className="stats-report-summary-pill">{sortedHistory.length} sichtbar</span>
         </>
       }
@@ -590,7 +590,7 @@ export default function UploadStatsHistorySection({
           <span className="empty-icon" aria-hidden="true">&#128221;</span>
           <p>Noch kein Verlauf vorhanden.</p>
           <p className="empty-hint">
-            Nach deinem ersten Sieg wird hier jeder Abschluss mit Zeit, Netto-Zuegen und Laufart gelistet.
+            Nach deinem ersten Sieg wird hier jeder Abschluss mit Zeit, Netto-Zügen und Laufart gelistet.
           </p>
         </div>
         ) : (
@@ -611,7 +611,7 @@ export default function UploadStatsHistorySection({
               </div>
 
               <span className="dashboard-section-note">
-                {sortedHistory.length} von {completionHistory.length} Eintraegen sichtbar
+                {sortedHistory.length} von {completionHistory.length} Einträgen sichtbar
                 {historyPageCount > 1 ? `, ${pagedHistory.length} auf dieser Seite` : ''}
               </span>
             </div>
@@ -621,7 +621,7 @@ export default function UploadStatsHistorySection({
                 {sortedHistory.length === 0 ? (
                   <div className="stats-empty-state dashboard-empty-state">
                     <span className="empty-icon" aria-hidden="true">&#128269;</span>
-                    <p>Keine Eintraege fuer diesen Filter.</p>
+                    <p>Keine Einträge für diesen Filter.</p>
                     <p className="empty-hint">
                       Wechsle auf eine andere Schwierigkeit oder zeige wieder alle Siege an.
                     </p>
@@ -699,12 +699,12 @@ export default function UploadStatsHistorySection({
                             className="stats-table-sort"
                             data-history-sort-key="moves"
                             interaction="chip"
-                            data-app-tooltip="Nach Netto-Zuegen sortieren."
+                            data-app-tooltip="Nach Netto-Zügen sortieren."
                             data-app-tooltip-position="top"
                             onClick={() => handleSort('moves')}
                             onKeyDown={handleSortButtonKeyDown}
                           >
-                            {renderHistoryHeaderLabel('Zuege')}
+                            {renderHistoryHeaderLabel('Züge')}
                             <span className="stats-table-sort-indicator" aria-hidden="true">
                               {getSortIndicator('moves', sortKey, sortDirection)}
                             </span>
@@ -720,7 +720,7 @@ export default function UploadStatsHistorySection({
                             className="stats-table-sort"
                             data-history-sort-key="extraMoves"
                             interaction="chip"
-                            data-app-tooltip="Nach Korrekturen sortieren: Aktionen minus Netto-Zuege."
+                            data-app-tooltip="Nach Korrekturen sortieren: Aktionen minus Netto-Züge."
                             data-app-tooltip-position="top"
                             onClick={() => handleSort('extraMoves')}
                             onKeyDown={handleSortButtonKeyDown}
@@ -826,7 +826,7 @@ export default function UploadStatsHistorySection({
                                 {historyEntry.moveBadges.map((badge) => (
                                   <span
                                     key={badge}
-                                    className={`stats-data-badge${badge === 'Wenigste Zuege' ? ' is-positive' : ' is-negative'}`}
+                                    className={`stats-data-badge${badge === 'Wenigste Züge' ? ' is-positive' : ' is-negative'}`}
                                   >
                                     {badge}
                                   </span>

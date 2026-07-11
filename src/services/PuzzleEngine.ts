@@ -35,7 +35,7 @@ export function buildPuzzleContextHint(
 
   if (!firstOpenTile) {
     return {
-      title: 'Zielbild vollstaendig',
+      title: 'Zielbild vollständig',
       focusRow: null,
       body: 'Alle Kacheln liegen an ihrer Zielposition.',
       progressCurrent: playableTiles.length,

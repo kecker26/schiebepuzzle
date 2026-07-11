@@ -111,7 +111,7 @@ function getDashboardMetricIconName(label: string): UploadScreenIconName {
       return 'award'
     case 'Sauber':
       return 'checkCircle'
-    case 'Unterstuetzt':
+    case 'Unterstützt':
       return 'helpCircle'
     case 'Bestzeit':
       return 'clock'
@@ -176,10 +176,10 @@ export default function UploadDashboard({
   const statsNavButtonRef = useRef<HTMLButtonElement>(null)
   const galleryNavButtonRef = useRef<HTMLButtonElement>(null)
   const collectionsNavButtonRef = useRef<HTMLButtonElement>(null)
-  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const savedGamesPrimaryActionRef = useRef<HTMLButtonElement>(null)
   const galleryPrimaryFilterRef = useRef<HTMLSelectElement>(null)
   const collectionsPrimaryActionRef = useRef<HTMLButtonElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const statsPrimaryActionRef = useRef<HTMLButtonElement>(null)
   const standardDifficultyStats: Array<{
     option: DifficultyOption
@@ -597,26 +597,26 @@ export default function UploadDashboard({
     />
   )
 
-  let title = 'Gespeicherte Spielstaende verwalten'
-  let copy = 'Alle laufenden Partien in einem eigenen Fenster mit schneller Navigation zur Statistik, Galerie und Auswahl.'
-  let kicker = 'Spielstandfenster'
+  let title = 'Spielstände'
+  let copy = 'Offene Partien fortsetzen oder nicht mehr benötigte Spielstände löschen.'
+  let kicker = 'Fortsetzen'
 
   if (isStatsWindow) {
-    title = 'Statistik, Verlauf und Rekorde'
-    copy = 'Analysiere deine Siege im Detail und wechsle direkt zu offenen Spielstaenden oder in die Galerie.'
-    kicker = 'Statistikfenster'
+    title = 'Statistik'
+    copy = 'Siege, Rekorde und Verläufe vergleichen.'
+    kicker = 'Auswertung'
   }
 
   if (isGalleryWindow) {
-    title = 'Galerie aller geloesten Spiele'
-    copy = 'Jedes geloeste Motiv als eigener Galerie-Eintrag mit Vorschaubild, Schwierigkeit und Laufdaten.'
-    kicker = 'Galeriefenster'
+    title = 'Galerie'
+    copy = 'Gelöste Motive, Laufdaten und Medaillen durchsuchen.'
+    kicker = 'Rückblick'
   }
 
   if (isCollectionsWindow) {
-    title = 'Sammlungen fuer Lieblingsmotive'
-    copy = 'Ordne geloeste Motive in eigene Gruppen und starte sie direkt aus deinen Kollektionen neu.'
-    kicker = 'Sammlungsfenster'
+    title = 'Sammlungen'
+    copy = 'Gelöste Motive in eigenen Gruppen organisieren und erneut spielen.'
+    kicker = 'Favoriten'
   }
 
   return (
@@ -681,7 +681,7 @@ export default function UploadDashboard({
                   </>
                 ) : (
                   <>
-                    <span className="workspace-window-status">{savedGamesCount} Spielstaende</span>
+                    <span className="workspace-window-status">{savedGamesCount} Spielstände</span>
                     <span className="workspace-window-status">Neuester Stand {latestSavedLabel}</span>
                   </>
                 )}
@@ -694,12 +694,12 @@ export default function UploadDashboard({
                     onClick={onRequestStatsReset}
                     disabled={!hasRecordedStats || isLoadingStats}
                     busy={isResettingStats}
-                    busyLabel="Loesche Statistik ..."
-                    data-app-tooltip="Gespeicherte Statistikdaten loeschen. Galerie und Spielstaende bleiben separat."
+                    busyLabel="Lösche Statistik ..."
+                    data-app-tooltip="Gespeicherte Statistikdaten löschen. Galerie und Spielstände bleiben separat."
                     data-app-tooltip-position="top"
                   >
                     <UploadScreenIcon name="trash" />
-                    Statistik loeschen
+                    Statistik löschen
                   </AnimatedButton>
                 )}
                 {isGalleryWindow && (
@@ -708,23 +708,23 @@ export default function UploadDashboard({
                     onClick={onRequestGalleryReset}
                     disabled={!hasGalleryEntries || isLoadingGallery}
                     busy={isResettingGallery}
-                    busyLabel="Loesche Galerie ..."
-                    data-app-tooltip="Galerie geloester Motive loeschen. Spielstaende bleiben separat."
+                    busyLabel="Lösche Galerie ..."
+                    data-app-tooltip="Galerie gelöster Motive löschen. Spielstände bleiben separat."
                     data-app-tooltip-position="top"
                   >
                     <UploadScreenIcon name="trash" />
-                    Galerie loeschen
+                    Galerie löschen
                   </AnimatedButton>
                 )}
                 <AnimatedButton
                   ref={closeButtonRef}
                   className="secondary workspace-window-close"
                   onClick={handleReturnToStart}
-                  data-app-tooltip="Zum Auswahl-Dashboard zurueckkehren."
+                  data-app-tooltip="Fenster schließen und zur Auswahl zurückkehren."
                   data-app-tooltip-position="top"
                 >
-                  <UploadScreenIcon name="home" />
-                  Auswahl
+                  <UploadScreenIcon name="x" />
+                  Schließen
                 </AnimatedButton>
               </div>
             </div>
@@ -808,12 +808,12 @@ export default function UploadDashboard({
                   {workspaceSideNav}
 
                   <motion.article className="workspace-window-card" variants={staggerItemVariants}>
-                    <span className="saved-games-kicker">Ueberblick</span>
+                    <span className="saved-games-kicker">Überblick</span>
                     <strong className="workspace-window-card-title">Deine Bilanz</strong>
                     <p className="workspace-window-card-copy">
                       {stats && stats.totalSolved > 0
-                        ? `${stats.totalSolved} Siege mit ${formatDuration(stats.totalTime)} Gesamtspielzeit und ${stats.totalMoves} Netto-Zuegen.`
-                        : 'Nach dem ersten Sieg erscheinen hier Gesamtzeit, Zuege und Streaks als schnelle Einordnung.'}
+                        ? `${stats.totalSolved} Siege mit ${formatDuration(stats.totalTime)} Gesamtspielzeit und ${stats.totalMoves} Netto-Zügen.`
+                        : 'Nach dem ersten Sieg erscheinen hier Gesamtzeit, Züge und Streaks als schnelle Einordnung.'}
                     </p>
                     <div className="dashboard-inline-chips">
                       <span className="saved-game-chip">{stats?.totalSolved ?? 0} Siege</span>
@@ -823,12 +823,12 @@ export default function UploadDashboard({
                   </motion.article>
 
                   <motion.article className="workspace-window-card" variants={staggerItemVariants}>
-                    <span className="saved-games-kicker">Zuletzt geloest</span>
+                    <span className="saved-games-kicker">Zuletzt gelöst</span>
                     {latestCompletion ? (
                       <>
                         <strong className="workspace-window-card-title">{formatDifficultyLabel(latestCompletion.config)}</strong>
                         <p className="workspace-window-card-copy">
-                          Letzter Sieg am {formatDate(latestCompletion.completedAt)} mit {formatTime(latestCompletion.time)} und {latestCompletion.moves} Netto-Zuegen.
+                          Letzter Sieg am {formatDate(latestCompletion.completedAt)} mit {formatTime(latestCompletion.time)} und {latestCompletion.moves} Netto-Zügen.
                         </p>
                         <div className="dashboard-inline-chips">
                           <span className="saved-game-chip">{formatPuzzleSize(latestCompletion.config)}</span>
@@ -840,7 +840,7 @@ export default function UploadDashboard({
                       <>
                         <strong className="workspace-window-card-title">Noch kein Lauf</strong>
                         <p className="workspace-window-card-copy">
-                          Loese ein Puzzle und der neueste Lauf bleibt hier neben der Navigation sichtbar.
+                          Löse ein Puzzle und der neueste Lauf bleibt hier neben der Navigation sichtbar.
                         </p>
                       </>
                     )}
@@ -890,12 +890,12 @@ export default function UploadDashboard({
                   {workspaceSideNav}
 
                   <motion.article className="workspace-window-card" variants={staggerItemVariants}>
-                    <span className="saved-games-kicker">Ueberblick</span>
-                    <strong className="workspace-window-card-title">Geloeste Motive</strong>
+                    <span className="saved-games-kicker">Überblick</span>
+                    <strong className="workspace-window-card-title">Gelöste Motive</strong>
                     <p className="workspace-window-card-copy">
                       {hasGalleryEntries
-                        ? `${galleryCardCount} Motive aus ${formatGallerySolveCount(galleryEntriesCount)} ueber ${galleryDifficultySpread} Schwierigkeitsstufen, davon ${galleryCleanCount} sauber und ${galleryProfiledCount} mit vollem Laufprofil.`
-                        : 'Die Galerie fuellt sich automatisch nach jedem Sieg und bleibt bewusst getrennt von Statistik und Spielstaenden loeschbar.'}
+                        ? `${galleryCardCount} Motive aus ${formatGallerySolveCount(galleryEntriesCount)} über ${galleryDifficultySpread} Schwierigkeitsstufen, davon ${galleryCleanCount} sauber und ${galleryProfiledCount} mit vollem Laufprofil.`
+                        : 'Die Galerie füllt sich automatisch nach jedem Sieg und bleibt bewusst getrennt von Statistik und Spielständen löschbar.'}
                     </p>
                     <div className="dashboard-inline-chips">
                       <span className="saved-game-chip">{galleryCardCount} Motive</span>
@@ -907,12 +907,12 @@ export default function UploadDashboard({
                   </motion.article>
 
                   <motion.article className="workspace-window-card" variants={staggerItemVariants}>
-                    <span className="saved-games-kicker">Zuletzt geloest</span>
+                    <span className="saved-games-kicker">Zuletzt gelöst</span>
                     {latestGalleryEntry ? (
                       <>
                         <strong className="workspace-window-card-title">{formatDifficultyLabel(latestGalleryEntry.config)}</strong>
                         <p className="workspace-window-card-copy">
-                          Letzter Galerie-Eintrag vom {formatDate(latestGalleryEntry.completedAt)} mit {formatTime(latestGalleryEntry.time)} und {latestGalleryEntry.moves} Netto-Zuegen.
+                          Letzter Galerie-Eintrag vom {formatDate(latestGalleryEntry.completedAt)} mit {formatTime(latestGalleryEntry.time)} und {latestGalleryEntry.moves} Netto-Zügen.
                         </p>
                         <div className="dashboard-inline-chips">
                           <span className="saved-game-chip">{formatPuzzleSize(latestGalleryEntry.config)}</span>
@@ -929,7 +929,7 @@ export default function UploadDashboard({
                       <>
                         <strong className="workspace-window-card-title">Noch kein Eintrag</strong>
                         <p className="workspace-window-card-copy">
-                          Sobald du ein Puzzle loest, wird das Motiv hier mit Thumbnail und Laufwerten abgelegt.
+                          Sobald du ein Puzzle löst, wird das Motiv hier mit Thumbnail und Laufwerten abgelegt.
                         </p>
                       </>
                     )}
@@ -967,12 +967,12 @@ export default function UploadDashboard({
                   {workspaceSideNav}
 
                   <motion.article className="workspace-window-card" variants={staggerItemVariants}>
-                    <span className="saved-games-kicker">Ueberblick</span>
-                    <strong className="workspace-window-card-title">Deine Kollektionen</strong>
+                    <span className="saved-games-kicker">Überblick</span>
+                    <strong className="workspace-window-card-title">Deine Sammlungen</strong>
                     <p className="workspace-window-card-copy">
                       {collectionsCount > 0
                         ? `${collectionsCount} Sammlungen mit ${collectedImageCount} gespeicherten Galerie-Referenzen.`
-                        : 'Sobald du in der Galerie ein Motiv sammelst, erscheint hier deine erste Kollektion.'}
+                        : 'Sobald du in der Galerie ein Motiv sammelst, erscheint hier deine erste Sammlung.'}
                     </p>
                     <div className="dashboard-inline-chips">
                       <span className="saved-game-chip">{collectionsCount} Sammlungen</span>
@@ -1010,11 +1010,11 @@ export default function UploadDashboard({
                   {workspaceSideNav}
 
                   <motion.article className="workspace-window-card" variants={staggerItemVariants}>
-                    <span className="saved-games-kicker">Ueberblick</span>
+                    <span className="saved-games-kicker">Überblick</span>
                     <strong className="workspace-window-card-title">Aktive Partien</strong>
                     <p className="workspace-window-card-copy">
                       {savedGamesCount > 0
-                        ? `${savedGamesCount} offene Partien mit ${savedGamesTotalMoves} bisher gespielten Zuegen und ${formatDuration(savedGamesTotalTime)} Gesamtspielzeit.`
+                        ? `${savedGamesCount} offene Partien mit ${savedGamesTotalMoves} bisher gespielten Zügen und ${formatDuration(savedGamesTotalTime)} Gesamtspielzeit.`
                         : 'Sobald du ein Puzzle unterbrichst, erscheint es hier sofort als fortsetzbarer Spielstand.'}
                     </p>
                     <div className="dashboard-inline-chips">
@@ -1030,11 +1030,11 @@ export default function UploadDashboard({
                       <>
                         <strong className="workspace-window-card-title">{latestSavedGame.name}</strong>
                         <p className="workspace-window-card-copy">
-                          Letzte Sicherung am {formatDate(latestSavedGame.updatedAt)}. Die Partie liegt auf {formatDifficultyLabel(latestSavedGame.config)} bei {latestSavedGame.moves} Zuegen.
+                          Letzte Sicherung am {formatDate(latestSavedGame.updatedAt)}. Die Partie liegt auf {formatDifficultyLabel(latestSavedGame.config)} bei {latestSavedGame.moves} Zügen.
                         </p>
                         <div className="dashboard-inline-chips">
                           <span className="saved-game-chip">{formatPuzzleSize(latestSavedGame.config)}</span>
-                          <span className="saved-game-chip">{latestSavedGame.moves} Zuege</span>
+                          <span className="saved-game-chip">{latestSavedGame.moves} Züge</span>
                           <span className="saved-game-chip">{formatTime(latestSavedGame.elapsedTime)}</span>
                         </div>
                       </>
@@ -1042,7 +1042,7 @@ export default function UploadDashboard({
                       <>
                         <strong className="workspace-window-card-title">Noch keine Sicherung</strong>
                         <p className="workspace-window-card-copy">
-                          Starte ein neues Puzzle, unterbrich es spaeter und du findest es hier mit Vorschau und Fortschritt wieder.
+                          Starte ein neues Puzzle, unterbrich es später und du findest es hier mit Vorschau und Fortschritt wieder.
                         </p>
                       </>
                     )}

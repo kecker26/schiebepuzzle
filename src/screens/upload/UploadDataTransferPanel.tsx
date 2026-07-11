@@ -11,6 +11,7 @@ interface UploadDataTransferPanelProps {
   savedGamesCount: number
   totalSolved: number
   galleryMotifsCount: number
+  collectionsCount: number
   isExportingBackup: boolean
   isLoadingBackupFiles: boolean
   isImportingBackup: boolean
@@ -24,6 +25,7 @@ export default function UploadDataTransferPanel({
   savedGamesCount,
   totalSolved,
   galleryMotifsCount,
+  collectionsCount,
   isExportingBackup,
   isLoadingBackupFiles,
   isImportingBackup,
@@ -61,13 +63,13 @@ export default function UploadDataTransferPanel({
           </h2>
         </div>
         <p className="data-transfer-text">
-          Sichere Spielstaende, Statistik und Galerie gemeinsam als Backup-Datei. Beim Import wird der
-          aktuelle Datenstand komplett ersetzt.
+          Sichere alle lokalen App-Daten gemeinsam als Backup-Datei. Beim Import wird der aktuelle
+          Datenstand komplett ersetzt.
         </p>
         <div className="dashboard-inline-chips data-transfer-chips">
           <span className="saved-game-chip">
             <UploadScreenIcon name="folder" className="saved-game-chip-icon" />
-            <span>{savedGamesCount} Spielstaende</span>
+            <span>{savedGamesCount} Spielstände</span>
           </span>
           <span className="saved-game-chip">
             <UploadScreenIcon name="award" className="saved-game-chip-icon" />
@@ -76,6 +78,10 @@ export default function UploadDataTransferPanel({
           <span className="saved-game-chip">
             <UploadScreenIcon name="gallery" className="saved-game-chip-icon" />
             <span>{galleryMotifsCount} {galleryMotifsCount === 1 ? 'Motiv' : 'Motive'}</span>
+          </span>
+          <span className="saved-game-chip">
+            <UploadScreenIcon name="folderHeart" className="saved-game-chip-icon" />
+            <span>{collectionsCount} {collectionsCount === 1 ? 'Sammlung' : 'Sammlungen'}</span>
           </span>
         </div>
       </AnimatedReveal>
@@ -91,7 +97,7 @@ export default function UploadDataTransferPanel({
             disabled={isImportingBackup}
             busy={isExportingBackup}
             busyLabel="Exportiere Backup ..."
-            data-app-tooltip="Speichert Spielstaende, Statistik, Galerie und Sammlungen als lokale Backup-Datei."
+            data-app-tooltip="Speichert Spielstände, Statistik, Galerie, Sammlungen, Tags und Bilddaten als lokale Backup-Datei."
             data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"
@@ -105,7 +111,7 @@ export default function UploadDataTransferPanel({
             disabled={isExportingBackup}
             busy={isImportingBackup || isLoadingBackupFiles}
             busyLabel={isLoadingBackupFiles ? 'Lade Backups ...' : 'Importiere Backup ...'}
-            data-app-tooltip="Lokales Backup auswaehlen. Import ersetzt den aktuellen Datenstand komplett."
+            data-app-tooltip="Lokales Backup auswählen. Import ersetzt den aktuellen Datenstand komplett."
             data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"
@@ -116,7 +122,7 @@ export default function UploadDataTransferPanel({
 
         <p className="data-transfer-action-note">
           Es werden immer nur die 3 neuesten lokalen Backups behalten. Beim neuen Export wird das
-          aelteste automatisch entfernt.
+          älteste automatisch entfernt.
         </p>
       </div>
 
@@ -166,7 +172,7 @@ export default function UploadDataTransferPanel({
           </AnimatedReveal>
         ) : (
           <AnimatedReveal as="div" className="data-transfer-status is-muted" level="subtle">
-            Exportiert Spielstaende, Statistik und Galerie in den Backup-Ordner der App und zeigt beim Import nur die dort vorhandenen Backup-Dateien an.
+            Exportiert Spielstände, Statistik, Galerie, Sammlungen, Tags und Bilddaten in den Backup-Ordner der App.
           </AnimatedReveal>
         )}
       </AnimatedStateSwap>

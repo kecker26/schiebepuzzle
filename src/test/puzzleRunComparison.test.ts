@@ -58,7 +58,7 @@ describe('puzzleRunComparison', () => {
     })
   })
 
-  it('uebernimmt das Profil-Flag aus persistierten Laufdaten', () => {
+  it('übernimmt das Profil-Flag aus persistierten Laufdaten', () => {
     expect(
       toComparableRun(
         createCompletionRecord({

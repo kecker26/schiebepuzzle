@@ -445,7 +445,7 @@ export async function extractLocalImageThemePalette(src: string): Promise<ImageT
   const mood = inferLocalMood(stats)
   return buildImageThemePalette(stats.average, mood, 'local-color', {
     confidence: 0.76,
-    reason: 'Lokale Farbanalyse mit dominanter fast-average-color-Basis, Helligkeit, Saettigung, Kontrast und Waermeanteil.',
+    reason: 'Lokale Farbanalyse mit dominanter fast-average-color-Basis, Helligkeit, Sättigung, Kontrast und Waermeanteil.',
   })
 }
 

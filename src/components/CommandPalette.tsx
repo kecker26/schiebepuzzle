@@ -255,19 +255,19 @@ export default function CommandPalette({ commands, contextLabel, onClose, palett
               type="button"
               className="secondary command-palette-close"
               onClick={onClose}
-              data-app-tooltip="Command Palette schliessen."
+              data-app-tooltip="Command Palette schließen."
               data-app-tooltip-align="end"
               reveal
               revealLevel="subtle"
             >
-              Schliessen
+              Schließen
             </AnimatedButton>
           </div>
         </div>
 
         <div
           className="command-palette-search"
-          data-app-tooltip="Aktionen filtern. Enter fuehrt den aktiven Treffer aus."
+          data-app-tooltip="Aktionen filtern. Enter führt den aktiven Treffer aus."
           data-app-tooltip-align="start"
         >
           <label className="visually-hidden" htmlFor={searchInputId}>
@@ -307,7 +307,7 @@ export default function CommandPalette({ commands, contextLabel, onClose, palett
             <div className="command-palette-empty" role="status" aria-live="polite">
               <span className="command-palette-empty-title">Keine passende Aktion gefunden</span>
               <span className="command-palette-empty-copy">
-                Versuche es mit Begriffen wie Hilfe, Spielstaende, Statistik, Galerie oder Musik.
+                Versuche es mit Begriffen wie Hilfe, Spielstände, Statistik, Galerie oder Musik.
               </span>
             </div>
           ) : (

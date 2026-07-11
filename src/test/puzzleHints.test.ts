@@ -375,7 +375,7 @@ describe('puzzle hints', () => {
       move: `${step.compactTileLabel} ${step.directionSymbol}`,
       reason: step.reasonLabel,
     }))).toEqual([
-      { move: 'K6 ↓', reason: 'Weg oeffnen' },
+      { move: 'K6 ↓', reason: 'Weg öffnen' },
       { move: 'K3 ↓', reason: 'Fokus vorbereiten' },
       { move: 'K1 ↑', reason: 'Fokus vorbereiten' },
     ])
@@ -488,7 +488,7 @@ describe('puzzle hints', () => {
       heuristicAfter: 7,
       isSuggested: false,
     })).toMatchObject({
-      message: 'Kachel 2 ist jetzt naeher an ihrer Zielposition.',
+      message: 'Kachel 2 ist jetzt näher an ihrer Zielposition.',
       tone: 'positive',
     })
   })

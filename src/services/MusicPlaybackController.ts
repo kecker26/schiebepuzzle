@@ -337,7 +337,7 @@ export default class MusicPlaybackController {
         providerLabel: this.currentTrack?.providerLabel ?? null,
         isFallback: this.currentTrack?.isFallback ?? false,
         message: this.currentTrack ? 'Stelle Musik wieder her.' : 'Suche passenden Track.',
-        detail: this.currentTrack ? 'Wechsle zu einer stabileren Quelle.' : 'Verbinde die verfuegbaren Musikquellen.',
+        detail: this.currentTrack ? 'Wechsle zu einer stabileren Quelle.' : 'Verbinde die verfügbaren Musikquellen.',
       })
     }
 
@@ -419,7 +419,7 @@ export default class MusicPlaybackController {
       this.isRecovering = false
       this.updateStatus('recovering', {
         message: 'Musik wird erneut versucht.',
-        detail: 'Aktuell ist kein Fallback-Track verfuegbar.',
+        detail: 'Aktuell ist kein Fallback-Track verfügbar.',
       })
       this.scheduleRetry()
       return false
@@ -745,7 +745,7 @@ export default class MusicPlaybackController {
         providerLabel: this.currentTrack.providerLabel,
         isFallback: this.currentTrack.isFallback,
         message: 'Verbindung schwankt.',
-        detail: 'Pruefe die Wiedergabe und stelle die Musik bei Bedarf wieder her.',
+        detail: 'Prüfe die Wiedergabe und stelle die Musik bei Bedarf wieder her.',
       })
     }
   }

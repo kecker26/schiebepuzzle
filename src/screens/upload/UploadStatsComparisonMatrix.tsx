@@ -157,15 +157,15 @@ export default function UploadStatsComparisonMatrix({
     },
     {
       id: 'bestMoves',
-      label: 'Wenigste Netto-Zuege',
+      label: 'Wenigste Netto-Züge',
       copy: 'Effizientester Sieg',
       tone: 'positive',
       renderValue: (column) => formatOptionalMoves(column.bestMoves),
     },
     {
       id: 'worstMoves',
-      label: 'Meiste Netto-Zuege',
-      copy: 'Zaehester Sieg',
+      label: 'Meiste Netto-Züge',
+      copy: 'Zähester Sieg',
       tone: 'negative',
       renderValue: (column) => formatOptionalMoves(column.worstMoves),
     },
@@ -178,22 +178,22 @@ export default function UploadStatsComparisonMatrix({
     },
     {
       id: 'medianMoves',
-      label: 'Median-Zuege',
-      copy: 'Typische Netto-Zuege',
+      label: 'Median-Züge',
+      copy: 'Typische Netto-Züge',
       tone: 'neutral',
       renderValue: (column) => formatOptionalMoves(column.medianMoves),
     },
     {
       id: 'averageExtraMoves',
       label: 'Korrekturen',
-      copy: 'Aktionen minus Netto-Zuege im Schnitt',
+      copy: 'Aktionen minus Netto-Züge im Schnitt',
       tone: 'neutral',
       renderValue: (column) => formatExtraMoves(column.averageExtraMoves),
     },
     {
       id: 'profileCoverage',
-      label: 'Datenqualitaet',
-      copy: 'Volle Laufprofile verfuegbar',
+      label: 'Datenqualität',
+      copy: 'Volle Laufprofile verfügbar',
       tone: 'neutral',
       renderValue: (column) => formatPercent(column.profileCoverage),
     },
@@ -212,7 +212,7 @@ export default function UploadStatsComparisonMatrix({
       className="stats-report-section-table"
       kicker="Expertenansicht"
       title="Erweiterte Vergleichsmatrix"
-      copy="Die Matrix stellt Gesamtwert, Schwierigkeit und Extremwerte direkt nebeneinander. Sie ist als Pruef- und Vergleichsansicht gedacht, wenn du alle Kennzahlen in einer Pivot-Tabelle sehen moechtest."
+      copy="Die Matrix stellt Gesamtwert, Schwierigkeit und Extremwerte direkt nebeneinander. Sie ist als Prüf- und Vergleichsansicht gedacht, wenn du alle Kennzahlen in einer Pivot-Tabelle sehen möchtest."
       summaryMeta={
         <>
           <span className="stats-report-summary-pill">
@@ -237,7 +237,7 @@ export default function UploadStatsComparisonMatrix({
           <span className="empty-icon" aria-hidden="true">&#128221;</span>
           <p>Noch keine Statistikwerte vorhanden.</p>
           <p className="empty-hint">
-            Nach dem ersten Sieg fuellt sich diese Matrix automatisch mit Gesamtwerten und Kennzahlen pro Schwierigkeit.
+            Nach dem ersten Sieg füllt sich diese Matrix automatisch mit Gesamtwerten und Kennzahlen pro Schwierigkeit.
           </p>
         </div>
       ) : (

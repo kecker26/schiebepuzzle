@@ -525,7 +525,7 @@ export default function ThemeSwitcher({
       <div className="theme-switcher-shell">
         <div className="theme-switcher-rail-head">
           <span className="theme-switcher-rail-mark" aria-hidden="true">SP</span>
-          <span className="theme-switcher-rail-title">Menue</span>
+          <span className="theme-switcher-rail-title">Menü</span>
         </div>
 
         <div
@@ -557,9 +557,9 @@ export default function ThemeSwitcher({
                 type="button"
                 className="theme-toggle-btn theme-toggle-btn-style"
                 onClick={handleOpenCommandPalette}
-                aria-label="Command Palette oeffnen"
+                aria-label="Command Palette öffnen"
                 aria-keyshortcuts={COMMAND_PALETTE_SHORTCUT_ACCESSIBLE_LABEL}
-                data-app-tooltip={`Schnellaktionen oeffnen (${COMMAND_PALETTE_SHORTCUT_LABEL}).`}
+                data-app-tooltip={`Schnellaktionen öffnen (${COMMAND_PALETTE_SHORTCUT_LABEL}).`}
                 data-app-tooltip-position="right"
               >
                 <Command className="theme-toggle-icon" />
@@ -610,11 +610,11 @@ export default function ThemeSwitcher({
             className={`theme-toggle-btn${isMusicPopoverOpen ? ' is-active' : ''}`}
             ref={musicTriggerRef}
             onClick={() => togglePopover('music')}
-            aria-label={isMusicMuted ? 'Musikeinstellungen oeffnen. Musik ist ausgeschaltet.' : 'Musikeinstellungen oeffnen. Musik ist eingeschaltet.'}
+            aria-label={isMusicMuted ? 'Musikeinstellungen öffnen. Musik ist ausgeschaltet.' : 'Musikeinstellungen öffnen. Musik ist eingeschaltet.'}
             aria-expanded={isMusicPopoverOpen}
             aria-haspopup="dialog"
             aria-controls={musicPopoverId}
-            data-app-tooltip={isMusicMuted ? 'Musik einschalten, Lautstaerke einstellen oder Quelle pruefen.' : 'Musik ausschalten, Lautstaerke einstellen oder Quelle pruefen.'}
+            data-app-tooltip={isMusicMuted ? 'Musik einschalten, Lautstärke einstellen oder Quelle prüfen.' : 'Musik ausschalten, Lautstärke einstellen oder Quelle prüfen.'}
             data-app-tooltip-position="right"
           >
             {isMusicMuted ? <VolumeX className="theme-toggle-icon" /> : <Volume2 className="theme-toggle-icon" />}
@@ -626,7 +626,7 @@ export default function ThemeSwitcher({
             className={`theme-toggle-btn theme-toggle-btn-style${isStylePickerOpen ? ' is-active' : ''}`}
             ref={styleTriggerRef}
             onClick={() => togglePopover('style')}
-            aria-label={`Musikstil waehlen. Aktuell: ${selectedMusicStyleDefinition.label}`}
+            aria-label={`Musikstil wählen. Aktuell: ${selectedMusicStyleDefinition.label}`}
             aria-expanded={isStylePickerOpen}
             aria-haspopup="dialog"
             aria-controls={stylePopoverId}
@@ -691,7 +691,7 @@ export default function ThemeSwitcher({
                   id={isMusicPopoverOpen ? musicPopoverTitleId : stylePopoverTitleId}
                   className="theme-switcher-popover-title"
                 >
-                  {isMusicPopoverOpen ? 'Musik einstellen' : 'Musikstil waehlen'}
+                  {isMusicPopoverOpen ? 'Musik einstellen' : 'Musikstil wählen'}
                 </p>
               </div>
               {isMusicPopoverOpen && (
@@ -699,7 +699,7 @@ export default function ThemeSwitcher({
                   <div className="theme-switcher-settings-row">
                     <div className="theme-switcher-settings-copy">
                       <span className="theme-switcher-settings-label">Wiedergabe</span>
-                      <p>Schalte die Musik ein oder aus und passe danach die Lautstaerke an.</p>
+                      <p>Schalte die Musik ein oder aus und passe danach die Lautstärke an.</p>
                     </div>
                     <button
                       type="button"
@@ -726,7 +726,7 @@ export default function ThemeSwitcher({
               <div className="theme-switcher-popover-shortcuts" aria-hidden="true">
                 <span className="theme-switcher-popover-shortcut">
                   <span className="theme-switcher-popover-shortcut-key">Esc</span>
-                  <span>Schliessen</span>
+                  <span>Schließen</span>
                 </span>
                 <span className="theme-switcher-popover-shortcut">
                   <span className="theme-switcher-popover-shortcut-key">Tab</span>

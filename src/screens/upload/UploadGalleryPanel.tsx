@@ -431,7 +431,7 @@ export default function UploadGalleryPanel({
       return motifId ? !existingMotifIds.has(motifId) : true
     })
   }, [activeTagCollection, matchingTagImageIds, motifIdByEntryId])
-  const tagCollectionActionLabel = activeTagCollection ? 'Tag-Motive ergaenzen' : 'Sammlung aus Tag'
+  const tagCollectionActionLabel = activeTagCollection ? 'Tag-Motive ergänzen' : 'Sammlung aus Tag'
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, galleryPageCount))
@@ -1009,7 +1009,7 @@ export default function UploadGalleryPanel({
           <div>
             <span className="saved-games-kicker">Galerie</span>
             <h3 id={titleId} className="dashboard-section-title">
-              Geloeste Spiele als Bildwand
+              Gelöste Motive
             </h3>
           </div>
           {!isLoadingGallery && totalSolveCount > 0 && (
@@ -1026,7 +1026,7 @@ export default function UploadGalleryPanel({
               icon={'\u{1F5BC}'}
               iconName="gallery"
               title="Galerie wird geladen ..."
-              detail="Die zuletzt geloesten Motive und Laufdaten werden vorbereitet."
+              detail="Die zuletzt gelösten Motive und Laufdaten werden vorbereitet."
               role="status"
               ariaLive="polite"
               busy
@@ -1035,8 +1035,8 @@ export default function UploadGalleryPanel({
             <UploadStateNotice
               icon={'\u{1F5BC}'}
               iconName="image"
-              title="Noch keine Galerie-Eintraege vorhanden."
-              detail="Nach jedem geloesten Puzzle landet hier automatisch ein Thumbnail mit Zeit, Zuegen und Schwierigkeit."
+              title="Noch keine Galerie-Einträge vorhanden."
+              detail="Nach jedem gelösten Puzzle landet hier automatisch ein Vorschaubild mit Zeit, Zügen und Schwierigkeit."
             />
           ) : (
             <>
@@ -1088,11 +1088,11 @@ export default function UploadGalleryPanel({
                     icon={'\u{1F50E}'}
                     iconName="search"
                     title="Mit den aktuellen Filtern ist gerade kein Galerie-Bild sichtbar."
-                    detail="Probiere eine andere Medaillen-Jagd, Medaille, Schwierigkeit, Laufart oder andere Tags, oder setze die Auswahl wieder auf alle Eintraege zurueck."
+                    detail="Probiere eine andere Medaillen-Jagd, Medaille, Schwierigkeit, Laufart oder andere Tags, oder setze die Auswahl wieder auf alle Einträge zurück."
                     className="gallery-empty-state-filtered"
                   />
                 ) : (
-                  <div className="gallery-grid" aria-label="Galerie geloester Spiele">
+                  <div className="gallery-grid" aria-label="Galerie gelöster Motive">
                     {galleryGridItems.map((item) => {
                       if (item.type === 'medal-heading') {
                         return (
@@ -1164,16 +1164,16 @@ export default function UploadGalleryPanel({
       {pendingDeleteEntry && pendingDeleteLabel && (
         <UploadConfirmDialog
           titleId="gallery-entry-delete-confirm-title"
-          title="Galerie-Eintrag loeschen?"
+          title="Galerie-Eintrag löschen?"
           description={
             <p>
-              Moechtest du <span className="delete-confirm-name">{pendingDeleteLabel}</span> wirklich entfernen?{' '}
-              Dabei werden {formatGallerySolveCount(pendingDeleteEntry.entry.totalSolveCount)} dieses Motivs geloescht.
-              Dieser Schritt kann nicht rueckgaengig gemacht werden.
+              Möchtest du <span className="delete-confirm-name">{pendingDeleteLabel}</span> wirklich entfernen?{' '}
+              Dabei werden {formatGallerySolveCount(pendingDeleteEntry.entry.totalSolveCount)} dieses Motivs gelöscht.
+              Dieser Schritt kann nicht rückgängig gemacht werden.
             </p>
           }
-          confirmLabel="Loeschen"
-          busyLabel="Loesche ..."
+          confirmLabel="Löschen"
+          busyLabel="Lösche ..."
           isBusy={deletingEntryId === pendingDeleteEntry.entry.id}
           onCancel={handleCancelDeleteEntry}
           onConfirm={() => {

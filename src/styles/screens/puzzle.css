@@ -355,7 +355,7 @@
 }
 
 .puzzle-challenge-badge-detail.is-positive {
-  color: #86efac;
+  color: #bbf7d0;
 }
 
 .puzzle-challenge-badge-detail.is-negative {
@@ -2736,7 +2736,7 @@
 
 .puzzle-pause-overlay p {
   max-width: 380px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -2825,7 +2825,7 @@
   cursor: progress;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1380px) {
   .puzzle-wrapper {
     height: auto;
     max-height: none;

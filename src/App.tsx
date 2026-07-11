@@ -214,7 +214,7 @@ function getSavedGameResumeChallengeDetail(save: SavedGameSummary): string | nul
     return null
   }
 
-  return `${formatChallengeMedalLabel(goal.medal)} moeglich - ${formatResumeChallengeGoalRequirement(goal.label)}`
+  return `${formatChallengeMedalLabel(goal.medal)} möglich - ${formatResumeChallengeGoalRequirement(goal.label)}`
 }
 
 function createReplaySetupFromProgress(progress: PersistedPuzzleProgress): GalleryReplaySetup | null {
@@ -291,7 +291,7 @@ function loadCropSourceImage(imageSrc: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const loadedImage = new Image()
     loadedImage.onload = () => resolve(loadedImage)
-    loadedImage.onerror = () => reject(new Error('Bild konnte nicht fuer den gespeicherten Lauf vorbereitet werden.'))
+    loadedImage.onerror = () => reject(new Error('Bild konnte nicht für den gespeicherten Lauf vorbereitet werden.'))
     loadedImage.src = imageSrc
   })
 }
@@ -329,29 +329,29 @@ function formatSaveTime(timestamp: number): string {
 function describeResumeWindow(activeWindow: UploadWorkspaceWindow, historyFilter: HistoryFilter): string {
   switch (activeWindow) {
     case 'savedGames':
-      return 'Spielstaende zuletzt geoeffnet.'
+      return 'Spielstände zuletzt geöffnet.'
     case 'stats':
       return historyFilter === 'all'
-        ? 'Statistik zuletzt geoeffnet.'
-        : `Statistik zuletzt geoeffnet, Filter ${historyFilter}.`
+        ? 'Statistik zuletzt geöffnet.'
+        : `Statistik zuletzt geöffnet, Filter ${historyFilter}.`
     case 'gallery':
-      return 'Galerie zuletzt geoeffnet.'
+      return 'Galerie zuletzt geöffnet.'
     case 'collections':
-      return 'Sammlungen zuletzt geoeffnet.'
+      return 'Sammlungen zuletzt geöffnet.'
     case 'start':
     default:
-      return 'Auswahlansicht zuletzt geoeffnet.'
+      return 'Auswahlansicht zuletzt geöffnet.'
   }
 }
 
 function describeCropResume(snapshot: CropDraftSnapshot): string {
   if (snapshot.isRandomImage) {
     return snapshot.randomImageSource?.label
-      ? `Bildzuschnitt zuletzt geoeffnet, Zufallsbild von ${snapshot.randomImageSource.label}.`
-      : 'Bildzuschnitt zuletzt mit einem Zufallsbild geoeffnet.'
+      ? `Bildzuschnitt zuletzt geöffnet, Zufallsbild von ${snapshot.randomImageSource.label}.`
+      : 'Bildzuschnitt zuletzt mit einem Zufallsbild geöffnet.'
   }
 
-  return 'Bildzuschnitt zuletzt geoeffnet.'
+  return 'Bildzuschnitt zuletzt geöffnet.'
 }
 
 function hasMeaningfulUploadResume(snapshot: LastSessionSnapshot): boolean {
@@ -720,7 +720,7 @@ export default function App() {
 
   useEffect(() => {
     if (isHelpOpen && !wasHelpOpenRef.current) {
-      announceAccessibility(`Hilfe geoeffnet: ${getHelpView(helpContext).kicker}.`)
+      announceAccessibility(`Hilfe geöffnet: ${getHelpView(helpContext).kicker}.`)
     }
 
     wasHelpOpenRef.current = isHelpOpen
@@ -731,7 +731,7 @@ export default function App() {
       return
     }
 
-    announceAccessibility('Schnellaktionen geoeffnet.')
+    announceAccessibility('Schnellaktionen geöffnet.')
   }, [announceAccessibility, isCommandPaletteOpen])
 
   const startScreenHeroImage = useStartScreenHero({
@@ -1058,7 +1058,7 @@ export default function App() {
       save: matchingSave,
       interruptedAt: recoverySnapshot.interruptedAt,
     })
-    announceAccessibility('Unterbrochene Runde gefunden. Wiederherstellen ist moeglich.')
+    announceAccessibility('Unterbrochene Runde gefunden. Wiederherstellen ist möglich.')
   }, [
     announceAccessibility,
     appState,
@@ -1228,7 +1228,7 @@ export default function App() {
               ))
             })
             .catch(() => {
-              // KI-Titel sind Komfort-Metadaten; Speichern und Spielen bleiben davon unabhaengig.
+              // KI-Titel sind Komfort-Metadaten; Speichern und Spielen bleiben davon unabhängig.
             })
             .finally(() => {
               changeBackgroundActivity('saveTitleAi', -1)
@@ -1628,7 +1628,7 @@ export default function App() {
     }
 
     setRecoveryResumePrompt(null)
-    showStatusToast('Nicht fortgesetzt. Der Spielstand bleibt unter Spielstaende erhalten.')
+    showStatusToast('Nicht fortgesetzt. Der Spielstand bleibt unter Spielstände erhalten.')
   }, [commitLastSessionSnapshot, recoveryResumePrompt, rememberIgnoredRecoverySave, showStatusToast])
 
   const handleResumeRecoveredSave = useCallback(async () => {
@@ -1657,7 +1657,7 @@ export default function App() {
 
       setSavedGamesError(null)
     } catch (error) {
-      setSavedGamesError(`Spielstand konnte nicht geloescht werden: ${getErrorMessage(error)}`)
+      setSavedGamesError(`Spielstand konnte nicht gelöscht werden: ${getErrorMessage(error)}`)
     }
   }
 
@@ -1672,7 +1672,7 @@ export default function App() {
       clearIgnoredRecoverySave()
       setSavedGamesError(null)
     } catch (error) {
-      setSavedGamesError(`Spielstaende konnten nicht geloescht werden: ${getErrorMessage(error)}`)
+      setSavedGamesError(`Spielstände konnten nicht gelöscht werden: ${getErrorMessage(error)}`)
     }
   }
 
@@ -1705,7 +1705,7 @@ export default function App() {
       setGalleryError(null)
       await refreshCollections(false)
     } catch (error) {
-      setGalleryError(`Galerie-Bild konnte nicht geloescht werden: ${getErrorMessage(error)}`)
+      setGalleryError(`Galerie-Bild konnte nicht gelöscht werden: ${getErrorMessage(error)}`)
       throw error
     }
   }, [refreshCollections, setGallery, setGalleryError])
@@ -1789,7 +1789,7 @@ export default function App() {
       setCollectionsError(null)
       return nextCollections
     } catch (error) {
-      setCollectionsError(`Sammlung konnte nicht geloescht werden: ${getErrorMessage(error)}`)
+      setCollectionsError(`Sammlung konnte nicht gelöscht werden: ${getErrorMessage(error)}`)
       throw error
     }
   }, [setCollections, setCollectionsError])
@@ -1804,7 +1804,7 @@ export default function App() {
       setCollectionsError(null)
       return nextCollections
     } catch (error) {
-      setCollectionsError(`Bild konnte nicht zur Sammlung hinzugefuegt werden: ${getErrorMessage(error)}`)
+      setCollectionsError(`Bild konnte nicht zur Sammlung hinzugefügt werden: ${getErrorMessage(error)}`)
       throw error
     }
   }, [setCollections, setCollectionsError])
@@ -1927,7 +1927,7 @@ export default function App() {
 
     window.setTimeout(() => {
       if (!window.closed) {
-        setQuitHint('Der Browser blockiert das automatische Beenden. Bitte schliesse das Tab oder Fenster manuell.')
+        setQuitHint('Der Browser blockiert das automatische Beenden. Bitte schließe das Tab oder Fenster manuell.')
       }
     }, 180)
   }, [prepareToLeavePlayingRun])
@@ -2307,7 +2307,7 @@ export default function App() {
       const randomImage = await fetchRandomPuzzleImageResult(searchQuery || undefined)
       handleImageLoaded(randomImage.imageSrc, true, randomImage.source, searchQuery)
     } catch (error) {
-      setRandomImageError(`${searchQuery ? `Bildsuche fuer "${searchQuery}"` : 'Zufaelliges Bild'} konnte nicht geladen werden: ${getErrorMessage(error)}`)
+      setRandomImageError(`${searchQuery ? `Bildsuche für "${searchQuery}"` : 'Zufälliges Bild'} konnte nicht geladen werden: ${getErrorMessage(error)}`)
       setPendingCropImageQuery(null)
     } finally {
       setIsFetchingRandom(false)
@@ -2712,8 +2712,8 @@ export default function App() {
 
     return {
       medal: targetMedal,
-      label: `${totalCount} ${totalCount === 1 ? 'upgradefaehiges Motiv' : 'upgradefaehige Motive'}`,
-      detail: `Beste Chance: ${formatChallengeMedalLabel(targetMedal)}, sortiert nach Naehe zum naechsten Ziel.`,
+      label: `${totalCount} ${totalCount === 1 ? 'upgradefähiges Motiv' : 'upgradefähige Motive'}`,
+      detail: `Beste Chance: ${formatChallengeMedalLabel(targetMedal)}, sortiert nach Nähe zum nächsten Ziel.`,
       medalCounts: START_SCREEN_MEDAL_ORDER.map((medal) => ({
         medal,
         count: countsByNextMedal.get(medal) ?? 0,
@@ -2865,7 +2865,7 @@ export default function App() {
       commands.push({
         id: 'nav-selection',
         title: 'Zur Auswahl',
-        detail: 'Upload, Zufallsbild und Datenbereiche der App oeffnen.',
+        detail: 'Upload, Zufallsbild und Datenbereiche der App öffnen.',
         section: 'Navigation',
         icon: 'navigation',
         keywords: ['upload', 'auswahl', 'bild laden'],
@@ -2887,7 +2887,7 @@ export default function App() {
       commands.push({
         id: 'nav-start',
         title: 'Zur Startseite',
-        detail: 'Zur ruhigen Startseite mit Einstieg und Beenden zurueckkehren.',
+        detail: 'Zur ruhigen Startseite mit Einstieg und Beenden zurückkehren.',
         section: 'Navigation',
         icon: 'grid',
         keywords: ['start', 'willkommen', 'home'],
@@ -2898,7 +2898,7 @@ export default function App() {
     commands.push(
       {
         id: 'nav-saved-games',
-        title: 'Spielstaende oeffnen',
+        title: 'Spielstände öffnen',
         detail: `${savedGames.length} offene Partien direkt im Workspace-Fenster anzeigen.`,
         section: 'Navigation',
         icon: 'archive',
@@ -2907,7 +2907,7 @@ export default function App() {
       },
       {
         id: 'nav-stats',
-        title: 'Statistik oeffnen',
+        title: 'Statistik öffnen',
         detail: `${statsOverview?.totalSolved ?? 0} Siege, Rekorde und Verlauf in den Fokus holen.`,
         section: 'Navigation',
         icon: 'grid',
@@ -2916,16 +2916,16 @@ export default function App() {
       },
       {
         id: 'nav-gallery',
-        title: 'Galerie oeffnen',
-        detail: `${gallery?.entries.length ?? 0} geloeste Eintraege und Motivkarten ansehen.`,
+        title: 'Galerie öffnen',
+        detail: `${gallery?.entries.length ?? 0} gelöste Einträge und Motivkarten ansehen.`,
         section: 'Navigation',
         icon: 'image',
-        keywords: ['motive', 'bilder', 'geloest'],
+        keywords: ['motive', 'bilder', 'gelöst'],
         onSelect: () => handleOpenUploadSurface('open-gallery'),
       },
       {
         id: 'nav-medal-stats',
-        title: 'Medaillen-Aufstiege oeffnen',
+        title: 'Medaillen-Aufstiege öffnen',
         detail: 'Direkt zu deinen besten Challenge-Medaillen und echten Aufstiegen pro Motiv springen.',
         section: 'Medaillen',
         icon: 'medal',
@@ -2934,17 +2934,17 @@ export default function App() {
       },
       {
         id: 'nav-medal-hunt',
-        title: 'Medaillen-Jagd oeffnen',
-        detail: 'Upgradefaehige Galerie-Motive nach ihrem besten Medaillen-Potenzial anzeigen.',
+        title: 'Medaillen-Jagd öffnen',
+        detail: 'Upgradefähige Galerie-Motive nach ihrem besten Medaillen-Potenzial anzeigen.',
         section: 'Medaillen',
         icon: 'medal',
-        keywords: ['medaillen', 'medaille', 'jagd', 'challenge', 'upgrade', 'naechstes ziel'],
+        keywords: ['medaillen', 'medaille', 'jagd', 'challenge', 'upgrade', 'nächstes ziel'],
         onSelect: () => handleOpenUploadSurface('open-medal-hunt'),
       },
       {
         id: 'nav-collections',
-        title: 'Sammlungen oeffnen',
-        detail: `${collections?.totalCollections ?? 0} eigene Kollektionen fuer Lieblingsmotive ansehen.`,
+        title: 'Sammlungen öffnen',
+        detail: `${collections?.totalCollections ?? 0} eigene Kollektionen für Lieblingsmotive ansehen.`,
         section: 'Navigation',
         icon: 'archive',
         keywords: ['sammlungen', 'kollektionen', 'favoriten'],
@@ -2980,10 +2980,10 @@ export default function App() {
       commands.push({
         id: 'quick-latest-gallery',
         title: 'Letztes Galerie-Motiv erneut spielen',
-        detail: `${latestGalleryEntry.config.rows}x${latestGalleryEntry.config.cols} - ${formatCommandTime(latestGalleryEntry.time)} - zuletzt geloestes Motiv.`,
+        detail: `${latestGalleryEntry.config.rows}x${latestGalleryEntry.config.cols} - ${formatCommandTime(latestGalleryEntry.time)} - zuletzt gelöstes Motiv.`,
         section: 'Schnellstart',
         icon: 'image',
-        keywords: ['galerie motiv', 'nochmal spielen', 'zuletzt geloest'],
+        keywords: ['galerie motiv', 'nochmal spielen', 'zuletzt gelöst'],
         onSelect: handleReplayLatestGalleryEntry,
       })
     }
@@ -3002,7 +3002,7 @@ export default function App() {
       {
         id: 'data-export-backup',
         title: 'Backup exportieren',
-        detail: 'Spielstaende, Statistik, Galerie und Sammlungen als lokales Backup sichern.',
+        detail: 'Spielstände, Statistik, Galerie und Sammlungen als lokales Backup sichern.',
         section: 'Daten',
         icon: 'archive',
         keywords: ['backup', 'export', 'sichern'],
@@ -3046,7 +3046,7 @@ export default function App() {
           detail: 'Die aktuelle Runde verlassen; der Spielstand bleibt erhalten.',
           section: 'Aktuelle Runde',
           icon: 'navigation',
-          keywords: ['abbrechen', 'zurueck', 'auswahl'],
+          keywords: ['abbrechen', 'zurück', 'auswahl'],
           onSelect: handleReset,
         }
       )
@@ -3055,8 +3055,8 @@ export default function App() {
     commands.push(
       {
         id: isHelpOpen ? 'help-close' : 'help-open',
-        title: isHelpOpen ? 'Hilfe schliessen' : 'Hilfe oeffnen',
-        detail: 'Shortcut-Hilfe und Bedienhinweise ueber der aktuellen Ansicht anzeigen.',
+        title: isHelpOpen ? 'Hilfe schließen' : 'Hilfe öffnen',
+        detail: 'Shortcut-Hilfe und Bedienhinweise über der aktuellen Ansicht anzeigen.',
         section: 'Werkzeuge',
         icon: 'helpCircle',
         shortcut: 'F1',
@@ -3166,7 +3166,7 @@ export default function App() {
 
   const handleChallengeFollowUp = useCallback(() => {
     if (!winGalleryEntry) {
-      setGalleryError('Die neue Vorlage ist noch nicht in der Galerie verfuegbar. Bitte kurz erneut versuchen.')
+      setGalleryError('Die neue Vorlage ist noch nicht in der Galerie verfügbar. Bitte kurz erneut versuchen.')
       return
     }
 
@@ -3223,7 +3223,7 @@ export default function App() {
               fallback={
                 <AppScreenFallback
                   title="Auswahlansicht wird vorbereitet"
-                  copy="Spielstaende, Galerie und Statistik werden geladen."
+                  copy="Spielstände, Galerie und Statistik werden geladen."
                 />
               }
             >
@@ -3285,7 +3285,7 @@ export default function App() {
                     fallback={
                       <AppScreenFallback
                         title="Bildzuschnitt wird vorbereitet"
-                        copy="Werkzeuge und Vorschau werden fuer dein Motiv geladen."
+                        copy="Werkzeuge und Vorschau werden für dein Motiv geladen."
                       />
                     }
                   >
@@ -3321,8 +3321,8 @@ export default function App() {
                     title="Online-Motiv wird gesucht"
                     copy={
                       pendingCropImageQuery
-                        ? `Die Bildsuche fuer #${pendingCropImageQuery} laeuft. Danach geht es direkt in den Zuschnitt.`
-                        : 'Die Bildsuche laeuft. Danach geht es direkt in den Zuschnitt.'
+                        ? `Die Bildsuche für #${pendingCropImageQuery} läuft. Danach geht es direkt in den Zuschnitt.`
+                        : 'Die Bildsuche läuft. Danach geht es direkt in den Zuschnitt.'
                     }
                   />
                 ),

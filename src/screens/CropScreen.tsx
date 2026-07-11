@@ -619,7 +619,7 @@ export default function CropScreen({
       disabled: !sourceImage || Boolean(isFetchingRandom),
     },
     {
-      label: 'Zurueck',
+      label: 'Zurück',
       icon: 'arrowLeft',
       meta: 'Upload',
       onClick: onBack,
@@ -652,7 +652,7 @@ export default function CropScreen({
     {
       label: useFullImage ? 'Rotation resetten' : 'Ausschnitt resetten',
       icon: 'rotateCcw',
-      meta: 'Reset',
+      meta: 'Zurücksetzen',
       onClick: handleResetCrop,
       disabled: !sourceImage,
     },
@@ -664,7 +664,7 @@ export default function CropScreen({
           {
             label: 'Anderes Bild laden',
             icon: 'refreshCw',
-            meta: isFetchingRandom ? 'Laedt ...' : 'Zufall',
+            meta: isFetchingRandom ? 'Lädt ...' : 'Zufall',
             onClick: handleFetchRandomWithCurrentQuery,
             disabled: Boolean(isFetchingRandom),
           } satisfies ContextMenuItem,
@@ -770,7 +770,7 @@ export default function CropScreen({
                   aria-checked={option.rows === config.rows && option.cols === config.cols}
                   data-page-primary-focus={option.rows === config.rows && option.cols === config.cols ? 'true' : undefined}
                   onClick={() => onConfigChange(option.rows, option.cols)}
-                  data-app-tooltip={`${option.label}: ${option.description}, ${option.tileCount} spielbare Kacheln.`}
+                  data-app-tooltip={`${option.label}: ${option.description}, ${option.tileCount - 1} bewegliche Teile und ein Leerfeld.`}
                   data-app-tooltip-align="start"
                 >
                   <span className="crop-difficulty-card-top">
@@ -789,7 +789,10 @@ export default function CropScreen({
                       <span key={index} />
                     ))}
                   </span>
-                  <span className="crop-difficulty-card-meta">{option.tileCount} Kacheln</span>
+                  <span className="crop-difficulty-card-meta">
+                    <span>{option.tileCount - 1} Teile</span>
+                    <span>+ Leerfeld</span>
+                  </span>
                 </button>
               ))}
             </AnimatedStaggerGroup>
@@ -829,8 +832,8 @@ export default function CropScreen({
               </span>
               <span className="crop-hint-copy">
               {useFullImage
-                ? 'Komplettes Bild aktiv: B fokussiert die Vorschau, Q/E oder die Rotationstasten drehen das Bild, R setzt zurueck, Enter startet direkt.'
-                : 'Ausschnitt aktiv: B fokussiert die Vorschau, danach mit Pfeiltasten, Shift plus Pfeiltasten, Plus/Minus, Q/E und R arbeiten oder per Ziehen verschieben.'}
+                ? 'B fokussiert die Vorschau. Mit Q/E drehen, mit R zurücksetzen und mit Enter starten.'
+                : 'B fokussiert die Vorschau. Ziehen verschiebt, Plus/Minus zoomt, Q/E dreht und R setzt zurück.'}
               </span>
             </p>
           </AnimatedReveal>
@@ -850,12 +853,12 @@ export default function CropScreen({
               aria-describedby="crop-hint"
               aria-label={
                 useFullImage
-                  ? 'Bildvorschau. B fokussiert diese Vorschau, Enter startet das Spiel, Escape geht zurueck.'
-                  : 'Bildzuschnitt. B fokussiert diese Vorschau, Pfeiltasten verschieben den Ausschnitt, Plus und Minus zoomen, Q und E drehen, R setzt zurueck, Enter startet das Spiel.'
+                  ? 'Bildvorschau. B fokussiert diese Vorschau, Enter startet das Spiel, Escape geht zurück.'
+                  : 'Bildzuschnitt. B fokussiert diese Vorschau, Pfeiltasten verschieben den Ausschnitt, Plus und Minus zoomen, Q und E drehen, R setzt zurück, Enter startet das Spiel.'
               }
               onKeyDown={handlePreviewKeyDown}
               data-app-tooltip={useFullImage
-                ? 'Fokussieren mit B. Q/E drehen, R setzt zurueck, Enter startet.'
+                ? 'Fokussieren mit B. Q/E drehen, R setzt zurück, Enter startet.'
                 : 'Fokussieren mit B. Ziehen, Pfeile, Shift+Pfeile, Plus/Minus, Q/E und R steuern den Zuschnitt.'}
               data-app-tooltip-align="start"
             >
@@ -921,23 +924,23 @@ export default function CropScreen({
             <div className="crop-load-error">
               <span className="crop-load-error-icon" aria-hidden="true">⚠️</span>
               <strong>Das Bild konnte nicht geladen werden.</strong>
-              <p>Bitte gehe zurueck und waehle ein anderes Bild.</p>
+              <p>Bitte gehe zurück und wähle ein anderes Bild.</p>
               <AnimatedButton
                 onClick={onBack}
                 className="secondary"
-                data-app-tooltip="Zur Bildauswahl zurueckkehren."
+                data-app-tooltip="Zur Bildauswahl zurückkehren."
                 data-app-tooltip-position="top"
                 reveal
                 revealLevel="subtle"
               >
-                Zurueck
+                Zurück
               </AnimatedButton>
             </div>
           ) : (
             <AsyncStatusPanel
               className="crop-loading"
               title="Bild wird geladen"
-              detail="Das Motiv wird dekodiert und fuer den Zuschnitt vorbereitet."
+              detail="Das Motiv wird dekodiert und für den Zuschnitt vorbereitet."
             />
           )}
         </AnimatedReveal>
@@ -1002,7 +1005,7 @@ export default function CropScreen({
                 revealLevel="subtle"
               >
                 <CropScreenIcon name="refreshCw" className="crop-toolbar-icon" />
-                <span>Reset</span>
+                <span>Zurücksetzen</span>
               </AnimatedButton>
             </div>
           </AnimatedReveal>
@@ -1030,7 +1033,7 @@ export default function CropScreen({
                 <label
                   className="crop-random-search-label"
                   htmlFor="crop-random-query-input"
-                  data-app-tooltip="Suchbegriffe fuer das naechste Online-Motiv."
+                  data-app-tooltip="Suchbegriffe für das nächste Online-Motiv."
                   data-app-tooltip-position="top"
                 >
                   Suchbegriffe
@@ -1045,16 +1048,16 @@ export default function CropScreen({
                       onChange={(event) => onRandomImageQueryChange?.(event.target.value)}
                       placeholder="Leer = echter Zufall"
                       disabled={Boolean(isFetchingRandom)}
-                      data-app-tooltip="Suchbegriffe fuer das naechste Online-Motiv."
+                      data-app-tooltip="Suchbegriffe für das nächste Online-Motiv."
                       data-app-tooltip-position="top"
                     />
                     <button
                       type="button"
                       className="crop-random-search-clear"
-                      aria-label="Suchbegriffe loeschen"
+                      aria-label="Suchbegriffe löschen"
                       onClick={() => onRandomImageQueryChange?.('')}
                       disabled={!trimmedRandomImageQuery || Boolean(isFetchingRandom)}
-                      data-app-tooltip="Suchbegriffe loeschen."
+                      data-app-tooltip="Suchbegriffe löschen."
                       data-app-tooltip-position="top"
                     >
                       <CropScreenIcon name="x" className="crop-random-search-icon" />
@@ -1077,17 +1080,17 @@ export default function CropScreen({
           <AnimatedButton
             onClick={onBack}
             className="secondary"
-            data-app-tooltip="Zur Bildauswahl zurueckkehren."
+            data-app-tooltip="Zur Bildauswahl zurückkehren."
             data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"
           >
-            Zurueck
+            Zurück
           </AnimatedButton>
           <AnimatedButton
             onClick={handleConfirm}
             disabled={!sourceImage || imageLoadError || isFetchingRandom}
-            data-app-tooltip="Aktuellen Zuschnitt uebernehmen und Puzzle starten."
+            data-app-tooltip="Aktuellen Zuschnitt übernehmen und Puzzle starten."
             data-app-tooltip-position="top"
             reveal
             revealLevel="subtle"

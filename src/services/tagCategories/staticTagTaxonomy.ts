@@ -6,8 +6,8 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
     label: 'Menschen',
     iconId: 'smile',
     keywords: [
-      'mensch', 'person', 'people', 'portrait', 'portraet', 'gesicht', 'face', 'mann', 'frau',
-      'kind', 'junge', 'maedchen', 'familie', 'gruppe', 'baby', 'hand', 'haende', 'haare', 'figur',
+      'mensch', 'person', 'people', 'portrait', 'porträt', 'gesicht', 'face', 'mann', 'frau',
+      'kind', 'junge', 'mädchen', 'familie', 'gruppe', 'baby', 'hand', 'hände', 'haare', 'figur',
     ],
   },
   {
@@ -15,13 +15,13 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
     label: 'Tiere',
     iconId: 'paw',
     keywords: [
-      'tier', 'animal', 'tierportrait', 'tierportraet', 'animalportrait', 'wildtier', 'wildlife',
+      'tier', 'animal', 'tierportrait', 'tierporträt', 'animalportrait', 'wildtier', 'wildlife',
       'hund', 'dog', 'katze', 'cat', 'vogel', 'bird',
-      'schwan', 'schwaene', 'swan', 'ente', 'duck', 'gans', 'goose', 'adler', 'eagle', 'eule', 'owl',
+      'schwan', 'schwäne', 'swan', 'ente', 'duck', 'gans', 'goose', 'adler', 'eagle', 'eule', 'owl',
       'pferd', 'horse', 'kuh', 'cow', 'schaf', 'sheep', 'ziege', 'goat', 'fisch', 'fish',
       'wal', 'whale', 'delfin', 'dolphin', 'hai', 'shark', 'biene', 'bee', 'insekt', 'insect',
-      'schmetterling', 'butterfly', 'loewe', 'lion', 'tiger', 'baer', 'bear', 'affe', 'monkey',
-      'fuchs', 'fox', 'wolf', 'reh', 'deer', 'eichhoernchen', 'squirrel', 'hase', 'rabbit', 'zoo',
+      'schmetterling', 'butterfly', 'löwe', 'lion', 'tiger', 'bär', 'bear', 'affe', 'monkey',
+      'fuchs', 'fox', 'wolf', 'reh', 'deer', 'eichhörnchen', 'squirrel', 'hase', 'rabbit', 'zoo',
     ],
   },
   {
@@ -30,7 +30,7 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
     iconId: 'sprout',
     keywords: [
       'pflanze', 'plant', 'blume', 'flower', 'rose', 'tulpe', 'tulip', 'lavendel', 'lavender',
-      'blatt', 'leaf', 'kaktus', 'cactus', 'pilz', 'mushroom', 'garten', 'garden', 'fruehling', 'spring',
+      'blatt', 'leaf', 'kaktus', 'cactus', 'pilz', 'mushroom', 'garten', 'garden', 'frühling', 'spring',
     ],
   },
   {
@@ -38,10 +38,10 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
     label: 'Natur & Landschaft',
     iconId: 'tree',
     keywords: [
-      'natur', 'landschaft', 'landscape', 'baum', 'baeume', 'tree', 'wald', 'forest', 'berg',
+      'natur', 'landschaft', 'landscape', 'baum', 'bäume', 'tree', 'wald', 'forest', 'berg',
       'mountain', 'see', 'lake', 'fluss', 'river', 'meer', 'ocean', 'strand', 'beach', 'wiese',
-      'wasser', 'water', 'teich', 'fjord', 'wueste', 'desert', 'insel', 'island', 'wasserfall',
-      'waterfall', 'hoehle', 'cave', 'outdoor', 'imfreien',
+      'wasser', 'water', 'teich', 'fjord', 'wüste', 'desert', 'insel', 'island', 'wasserfall',
+      'waterfall', 'höhle', 'cave', 'outdoor', 'imfreien',
     ],
   },
   {
@@ -59,9 +59,9 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
     label: 'Orte & Architektur',
     iconId: 'building',
     keywords: [
-      'architektur', 'architecture', 'gebaeude', 'building', 'haus', 'home', 'stadt', 'city',
-      'strasse', 'street', 'bruecke', 'bridge', 'turm', 'tower', 'kirche', 'church', 'museum',
-      'innenraum', 'interior', 'fenster', 'window', 'tuer', 'door', 'park', 'dorf', 'village',
+      'architektur', 'architecture', 'gebäude', 'building', 'haus', 'home', 'stadt', 'city',
+      'straße', 'street', 'brücke', 'bridge', 'turm', 'tower', 'kirche', 'church', 'museum',
+      'innenraum', 'interior', 'fenster', 'window', 'tür', 'door', 'park', 'dorf', 'village',
       'fabrik', 'factory', 'festung', 'burg', 'castle', 'platz', 'place', 'tempel', 'temple',
     ],
   },
@@ -70,7 +70,7 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
     label: 'Kunst & Illustration',
     iconId: 'brush',
     keywords: [
-      'kunst', 'art', 'gemaelde', 'painting', 'malen', 'illustration', 'zeichnung', 'drawing',
+      'kunst', 'art', 'gemälde', 'painting', 'malen', 'illustration', 'zeichnung', 'drawing',
       'skulptur', 'sculpture', 'grafik', 'graphic', 'comic', 'streetart', 'graffiti',
     ],
   },
@@ -89,8 +89,8 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
     label: 'Essen & Trinken',
     iconId: 'utensils',
     keywords: [
-      'essen', 'food', 'getraenk', 'drink', 'obst', 'fruit', 'gemuese', 'vegetable', 'kaffee',
-      'coffee', 'tee', 'tea', 'kuchen', 'cake', 'brot', 'bread', 'restaurant', 'kueche', 'kitchen',
+      'essen', 'food', 'getränk', 'drink', 'obst', 'fruit', 'gemüse', 'vegetable', 'kaffee',
+      'coffee', 'tee', 'tea', 'kuchen', 'cake', 'brot', 'bread', 'restaurant', 'küche', 'kitchen',
     ],
   },
   {
@@ -99,8 +99,8 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
     iconId: 'palette',
     keywords: [
       'farbe', 'color', 'bunt', 'colorful', 'dunkel', 'dark', 'hell', 'bright', 'rot', 'red',
-      'blau', 'blue', 'gruen', 'green', 'gelb', 'yellow', 'schwarz', 'black', 'weiss', 'white',
-      'ruhig', 'calm', 'dramatisch', 'dramatic', 'froehlich', 'joyful', 'duester', 'moody',
+      'blau', 'blue', 'grün', 'green', 'gelb', 'yellow', 'schwarz', 'black', 'weiß', 'white',
+      'ruhig', 'calm', 'dramatisch', 'dramatic', 'fröhlich', 'joyful', 'düster', 'moody',
     ],
   },
   {
@@ -133,10 +133,10 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
   },
   {
     id: 'activities',
-    label: 'Aktivitaeten & Sport',
+    label: 'Aktivitäten & Sport',
     iconId: 'activity',
     keywords: [
-      'aktivitaet', 'activity', 'sport', 'spiel', 'game', 'laufen', 'running', 'schwimmen',
+      'aktivität', 'activity', 'sport', 'spiel', 'game', 'laufen', 'running', 'schwimmen',
       'swimming', 'wandern', 'hiking', 'tanzen', 'dancing', 'fussball', 'football', 'musik', 'music',
     ],
   },
@@ -160,7 +160,7 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
   },
   {
     id: 'materials',
-    label: 'Materialien & Oberflaechen',
+    label: 'Materialien & Oberflächen',
     iconId: 'shapes',
     keywords: [
       'material', 'holz', 'wood', 'metall', 'metal', 'glas', 'glass', 'stein', 'stone', 'stoff',
@@ -172,7 +172,7 @@ export const STATIC_TAG_CATEGORIES: TagCategoryDefinition[] = [
     label: 'Objekte',
     iconId: 'shapes',
     keywords: [
-      'objekt', 'object', 'moebel', 'furniture', 'stuhl', 'chair', 'tisch', 'table', 'lampe',
+      'objekt', 'object', 'möbel', 'furniture', 'stuhl', 'chair', 'tisch', 'table', 'lampe',
       'lamp', 'uhr', 'clock', 'werkzeug', 'tool', 'buch', 'book', 'spielzeug', 'toy',
     ],
   },

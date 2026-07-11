@@ -1,4 +1,4 @@
-import type { RefObject } from 'react'
+import { useEffect, useState, type RefObject } from 'react'
 import { handleDirectionalFocusNavigation } from '../../app/directionalFocusNavigation.ts'
 import { FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE } from '../../app/focusVisibility.ts'
 import {
@@ -98,12 +98,12 @@ export default function UploadGalleryToolbar({
           ? 'Diese Motive warten noch auf ihre erste Challenge-Medaille.'
           : medalHuntFilter === 'no-gold'
             ? 'Diese Motive haben noch keine Gold- oder Diamant-Medaille.'
-            : 'Diese Motive besitzen noch eine erreichbare naechste Medaillenstufe.',
+            : 'Diese Motive besitzen noch eine erreichbare nächste Medaillenstufe.',
       }
     : isUpgradePotentialSort
       ? {
           title: 'Bestes Upgrade-Potenzial',
-          detail: 'Upgradefaehige Motive und besonders nahe Ziele stehen zuerst.',
+          detail: 'Upgradefähige Motive und besonders nahe Ziele stehen zuerst.',
         }
       : null
   const hasActiveCriteria =
@@ -113,6 +113,15 @@ export default function UploadGalleryToolbar({
     hasActiveMedalFilter ||
     activeTagFilterCount > 0 ||
     sortOption !== 'latest'
+  const [areMoreFiltersOpen, setAreMoreFiltersOpen] = useState(
+    medalHuntFilter !== 'all' || assistanceFilter !== 'all'
+  )
+
+  useEffect(() => {
+    if (medalHuntFilter !== 'all' || assistanceFilter !== 'all') {
+      setAreMoreFiltersOpen(true)
+    }
+  }, [assistanceFilter, medalHuntFilter])
 
   return (
     <div className="gallery-toolbar" role="group" aria-label="Galerie filtern und sortieren">
@@ -140,7 +149,7 @@ export default function UploadGalleryToolbar({
         <div className="gallery-toolbar-filters">
           <label
             className="gallery-toolbar-field"
-            data-app-tooltip="Galerie auf eine Puzzle-Schwierigkeit einschraenken."
+            data-app-tooltip="Galerie auf eine Puzzle-Schwierigkeit einschränken."
             data-app-tooltip-align="start"
           >
             <span>Schwierigkeit</span>
@@ -149,7 +158,7 @@ export default function UploadGalleryToolbar({
               value={difficultyFilter}
               onKeyDown={handleSelectEnterKeyDown}
               onChange={(event) => onDifficultyFilterChange(event.target.value as GalleryDifficultyFilter)}
-              data-app-tooltip="Galerie auf eine Puzzle-Schwierigkeit einschraenken."
+              data-app-tooltip="Galerie auf eine Puzzle-Schwierigkeit einschränken."
               data-app-tooltip-align="start"
             >
               {difficultyOptions.map((option) => (
@@ -160,49 +169,46 @@ export default function UploadGalleryToolbar({
             </select>
           </label>
 
-          <label
-            className="gallery-toolbar-field"
-            data-app-tooltip="Motive fuer die naechste Medaillen-Jagd eingrenzen."
-            data-app-tooltip-align="start"
+          <details
+            className="gallery-toolbar-more-filters"
+            open={areMoreFiltersOpen}
+            onToggle={(event) => setAreMoreFiltersOpen(event.currentTarget.open)}
           >
-            <span>Medaillen-Jagd</span>
-            <select
-              ref={medalHuntSelectRef}
-              value={medalHuntFilter}
-              onKeyDown={handleSelectEnterKeyDown}
-              onChange={(event) => onMedalHuntFilterChange(event.target.value as GalleryMedalHuntFilter)}
-              data-app-tooltip="Motive ohne Medaille, ohne Gold oder mit nahem Upgrade anzeigen."
-              data-app-tooltip-align="start"
-            >
-              {GALLERY_MEDAL_HUNT_FILTER_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <summary>Weitere Filter</summary>
+            <div className="gallery-toolbar-more-filter-grid">
+              <label className="gallery-toolbar-field">
+                <span>Medaillen-Ziel</span>
+                <select
+                  ref={medalHuntSelectRef}
+                  value={medalHuntFilter}
+                  onKeyDown={handleSelectEnterKeyDown}
+                  onChange={(event) => onMedalHuntFilterChange(event.target.value as GalleryMedalHuntFilter)}
+                >
+                  {GALLERY_MEDAL_HUNT_FILTER_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          <label
-            className="gallery-toolbar-field"
-            data-app-tooltip="Nach cleanen, unterstuetzten oder Legacy-Laeufen filtern."
-            data-app-tooltip-align="start"
-          >
-            <span>Laufart</span>
-            <select
-              ref={assistanceSelectRef}
-              value={assistanceFilter}
-              onKeyDown={handleSelectEnterKeyDown}
-              onChange={(event) => onAssistanceFilterChange(event.target.value as GalleryAssistanceFilter)}
-              data-app-tooltip="Nach cleanen, unterstuetzten oder Legacy-Laeufen filtern."
-              data-app-tooltip-align="start"
-            >
-              {GALLERY_ASSISTANCE_FILTER_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              <label className="gallery-toolbar-field">
+                <span>Laufart</span>
+                <select
+                  ref={assistanceSelectRef}
+                  value={assistanceFilter}
+                  onKeyDown={handleSelectEnterKeyDown}
+                  onChange={(event) => onAssistanceFilterChange(event.target.value as GalleryAssistanceFilter)}
+                >
+                  {GALLERY_ASSISTANCE_FILTER_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </details>
 
           <label
             className="gallery-toolbar-field"
@@ -228,46 +234,46 @@ export default function UploadGalleryToolbar({
         </div>
 
         <div className="gallery-toolbar-actions">
-          <AnimatedButton
-            className="secondary gallery-toolbar-tag-collection"
-            onClick={onCreateCollectionFromTag}
-            disabled={!hasActiveTagCollection}
-            busy={isCreatingTagCollection}
-            busyLabel="Sortiere Motive ..."
-            data-app-tooltip={
-              activeTagFilterLabel
+          {activeTagFilterCount > 0 ? (
+            <AnimatedButton
+              className="secondary gallery-toolbar-tag-collection"
+              onClick={onCreateCollectionFromTag}
+              disabled={!hasActiveTagCollection}
+              busy={isCreatingTagCollection}
+              busyLabel="Sortiere Motive ..."
+              data-app-tooltip={activeTagFilterLabel
                 ? `Sammlung aus #${activeTagFilterLabel} erstellen.`
-                : activeTagFilterCount > 1
-                  ? 'Nur fuer einen einzelnen Tag verfuegbar.'
-                  : 'Waehle zuerst einen Tag.'
-            }
-            data-app-tooltip-position="top"
-          >
-            {tagCollectionActionLabel}
-          </AnimatedButton>
+                : 'Nur für einen einzelnen Tag verfügbar.'}
+              data-app-tooltip-position="top"
+            >
+              {tagCollectionActionLabel}
+            </AnimatedButton>
+          ) : null}
 
-          <button
-            type="button"
-            className="secondary gallery-toolbar-tag-manager"
-            onClick={onManageTags}
-            disabled={!canManageTags}
-            data-app-tooltip="Tags durchsuchen, kombinieren und als Galerie-Filter anwenden."
-            data-app-tooltip-position="top"
-          >
-            Tags verwalten
-          </button>
+          {canManageTags ? (
+            <button
+              type="button"
+              className="secondary gallery-toolbar-tag-manager"
+              onClick={onManageTags}
+              data-app-tooltip="Tags durchsuchen, kombinieren und als Galerie-Filter anwenden."
+              data-app-tooltip-position="top"
+            >
+              Tags verwalten
+            </button>
+          ) : null}
 
-          <button
-            ref={resetButtonRef}
-            type="button"
-            className="secondary gallery-toolbar-reset"
-            onClick={onReset}
-            disabled={!hasActiveCriteria}
-            data-app-tooltip="Alle Galerie-Filter und Sortierung auf Standard zuruecksetzen."
-            data-app-tooltip-position="top"
-          >
-            Alle Filter zuruecksetzen
-          </button>
+          {hasActiveCriteria ? (
+            <button
+              ref={resetButtonRef}
+              type="button"
+              className="secondary gallery-toolbar-reset"
+              onClick={onReset}
+              data-app-tooltip="Alle Galerie-Filter und die Sortierung auf Standard zurücksetzen."
+              data-app-tooltip-position="top"
+            >
+              Alle Filter zurücksetzen
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -288,9 +294,9 @@ export default function UploadGalleryToolbar({
                   className="gallery-toolbar-tag-chip"
                   {...{ [FOCUS_VISIBILITY_ANCHOR_ATTRIBUTE]: '.gallery-toolbar-tag-chips' }}
                   aria-pressed={isActive}
-                  aria-label={`Tag #${tagOption.label} ${isActive ? 'entfernen' : 'hinzufuegen'}, ${tagOption.count} ${tagOption.count === 1 ? 'Motiv' : 'Motive'}`}
+                  aria-label={`Tag #${tagOption.label} ${isActive ? 'entfernen' : 'hinzufügen'}, ${tagOption.count} ${tagOption.count === 1 ? 'Motiv' : 'Motive'}`}
                   onClick={() => onTagFilterToggle(tagOption.id)}
-                  data-app-tooltip={`${isActive ? 'Tag aus dem UND-Filter entfernen' : 'Tag zum UND-Filter hinzufuegen'}: #${tagOption.label}.`}
+                  data-app-tooltip={`${isActive ? 'Tag aus dem UND-Filter entfernen' : 'Tag zum UND-Filter hinzufügen'}: #${tagOption.label}.`}
                   data-app-tooltip-position="top"
                 >
                   <span>#{tagOption.label}</span>
@@ -307,7 +313,7 @@ export default function UploadGalleryToolbar({
                 data-app-tooltip="Alle aktiven Tag-Filter entfernen."
                 data-app-tooltip-position="top"
               >
-                Tags zuruecksetzen
+                Tags zurücksetzen
               </button>
             ) : null}
           </div>

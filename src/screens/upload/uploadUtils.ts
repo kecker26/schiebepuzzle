@@ -130,7 +130,7 @@ export function buildStatsDifficultyColorMap(rows: DifficultyReportRow[]): Map<s
 export const STATS_DASHBOARD_TABS: DashboardTabDefinition[] = [
   {
     id: 'overview',
-    label: 'Ueberblick',
+    label: 'Überblick',
     description: 'Kernwerte und Einordnung auf einen Blick',
   },
   {
@@ -168,7 +168,7 @@ export function validateImageFile(file: File): string | null {
 
   if (!file.type.startsWith('image/')) {
     const displayType = file.type || 'unbekannt'
-    return `Dateityp \u201E${displayType}\u201C wird nicht unterstuetzt. Bitte verwende JPG, PNG, WebP oder GIF.`
+    return `Dateityp \u201E${displayType}\u201C wird nicht unterstützt. Bitte verwende JPG, PNG, WebP oder GIF.`
   }
 
   return null
@@ -206,7 +206,7 @@ export async function optimizeImageForPuzzle(file: File): Promise<string> {
     const image = await loadHtmlImage(rawDataUrl)
 
     if (image.width <= 0 || image.height <= 0) {
-      throw new Error('Das Bild hat keine gueltigen Abmessungen.')
+      throw new Error('Das Bild hat keine gültigen Abmessungen.')
     }
 
     const maxEdge = 2200
@@ -500,7 +500,7 @@ export function getGalleryDifficultyFilterOptions(): GallerySelectOption<Gallery
 export const GALLERY_ASSISTANCE_FILTER_OPTIONS: GallerySelectOption<GalleryAssistanceFilter>[] = [
   { id: 'all', label: 'Alle Laufarten' },
   { id: 'clean', label: 'Nur clean' },
-  { id: 'assisted', label: 'Nur unterstuetzt' },
+  { id: 'assisted', label: 'Nur unterstützt' },
   { id: 'hinted', label: 'Nur mit Hilfen' },
   { id: 'auto-assisted', label: 'Nur mit Auto-Zug' },
   { id: 'legacy', label: 'Nur Legacy-Daten' },
@@ -510,14 +510,14 @@ export const GALLERY_MEDAL_HUNT_FILTER_OPTIONS: GallerySelectOption<GalleryMedal
   { id: 'all', label: 'Alle Motive' },
   { id: 'no-medal', label: 'Ohne Medaille' },
   { id: 'no-gold', label: 'Ohne Gold oder Diamant' },
-  { id: 'upgradeable', label: 'Noch upgradefaehig' },
+  { id: 'upgradeable', label: 'Noch upgradefähig' },
 ]
 
 export const GALLERY_SORT_OPTIONS: GallerySelectOption<GallerySortOption>[] = [
   { id: 'latest', label: 'Neueste zuerst' },
-  { id: 'oldest', label: 'Aelteste zuerst' },
+  { id: 'oldest', label: 'Älteste zuerst' },
   { id: 'fastest', label: 'Schnellste Zeit' },
-  { id: 'fewest-moves', label: 'Wenigste Netto-Zuege' },
+  { id: 'fewest-moves', label: 'Wenigste Netto-Züge' },
   { id: 'fewest-actions', label: 'Wenigste Aktionen' },
   { id: 'fewest-detours', label: 'Wenigste Korrekturen' },
   { id: 'upgrade-potential', label: 'Bestes Upgrade-Potenzial' },

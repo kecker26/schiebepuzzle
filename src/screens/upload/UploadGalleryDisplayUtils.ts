@@ -179,7 +179,7 @@ function formatMissingTime(seconds: number): string {
 
 function formatMissingMoves(moves: number): string {
   if (moves <= 0) return 'Zugziel erreicht'
-  return `${moves} ${moves === 1 ? 'Zug' : 'Zuege'} weniger`
+  return `${moves} ${moves === 1 ? 'Zug' : 'Züge'} weniger`
 }
 
 function formatMedalHuntGap(status: GalleryMedalHuntStatus): string | null {
@@ -254,8 +254,8 @@ export function getGalleryMedalHuntRecommendation(
 ): GalleryMedalHuntRecommendation {
   if (!status.nextMedal) {
     return {
-      label: 'Hoechste verfuegbare Stufe',
-      detail: 'Fuer dieses Motiv ist aktuell kein weiteres Medaillen-Upgrade verfuegbar.',
+      label: 'Höchste verfügbare Stufe',
+      detail: 'Für dieses Motiv ist aktuell kein weiteres Medaillen-Upgrade verfügbar.',
       tone: 'complete',
     }
   }
@@ -263,7 +263,7 @@ export function getGalleryMedalHuntRecommendation(
   if (!status.hasStarted) {
     return {
       label: 'Erste Medaille holen',
-      detail: 'Unterbiete in einem absolut cleanen Lauf Zeit oder Zuege einer Vorlage strikt, um Bronze zu sichern.',
+      detail: 'Unterbiete in einem absolut cleanen Lauf Zeit oder Züge einer Vorlage strikt, um Bronze zu sichern.',
       tone: 'new',
     }
   }
@@ -271,7 +271,7 @@ export function getGalleryMedalHuntRecommendation(
   if (status.proximityScore === null) {
     return {
       label: 'Neues Upgrade-Ziel',
-      detail: 'Starte einen weiteren Challenge-Lauf, um dich der naechsten Stufe zu naehern.',
+      detail: 'Starte einen weiteren Challenge-Lauf, um dich der nächsten Stufe zu nähern.',
       tone: 'open',
     }
   }
@@ -280,7 +280,7 @@ export function getGalleryMedalHuntRecommendation(
   if (gapLabel) {
     return {
       label: `Zeit: ${formatMissingTime(status.missingTimeSeconds ?? 0)}`,
-      detail: `Zuege: ${formatMissingMoves(status.missingMoves ?? 0)}`,
+      detail: `Züge: ${formatMissingMoves(status.missingMoves ?? 0)}`,
       tone: status.proximityScore <= 0.2 ? 'near' : status.proximityScore <= 0.5 ? 'reachable' : 'open',
     }
   }
@@ -288,7 +288,7 @@ export function getGalleryMedalHuntRecommendation(
   if (status.proximityScore <= 0.05) {
     return {
       label: 'Sehr nah am Upgrade',
-      detail: 'Nur eine kleine Verbesserung trennt dieses Motiv von der naechsten Medaille.',
+      detail: 'Nur eine kleine Verbesserung trennt dieses Motiv von der nächsten Medaille.',
       tone: 'near',
     }
   }
@@ -296,7 +296,7 @@ export function getGalleryMedalHuntRecommendation(
   if (status.proximityScore <= 0.2) {
     return {
       label: 'Nah am Upgrade',
-      detail: 'Dieses Motiv gehoert zu deinen aussichtsreichsten Medaillen-Jagden.',
+      detail: 'Dieses Motiv gehört zu deinen aussichtsreichsten Medaillen-Jagden.',
       tone: 'near',
     }
   }
@@ -304,14 +304,14 @@ export function getGalleryMedalHuntRecommendation(
   if (status.proximityScore <= 0.5) {
     return {
       label: 'Upgrade in Reichweite',
-      detail: 'Mit einem verbesserten Challenge-Lauf ist die naechste Stufe realistisch.',
+      detail: 'Mit einem verbesserten Challenge-Lauf ist die nächste Stufe realistisch.',
       tone: 'reachable',
     }
   }
 
   return {
     label: 'Upgrade offen',
-    detail: 'Die naechste Medaille braucht noch einen deutlich staerkeren Challenge-Lauf.',
+    detail: 'Die nächste Medaille braucht noch einen deutlich stärkeren Challenge-Lauf.',
     tone: 'open',
   }
 }
@@ -1031,8 +1031,8 @@ export function getSimilarGalleryEntries(
 
 export function formatGallerySolveCount(totalSolveCount: number, visibleSolveCount: number = totalSolveCount): string {
   if (visibleSolveCount === totalSolveCount) {
-    return `${totalSolveCount} ${totalSolveCount === 1 ? 'Loesung' : 'Loesungen'}`
+    return `${totalSolveCount} ${totalSolveCount === 1 ? 'Lösung' : 'Lösungen'}`
   }
 
-  return `${visibleSolveCount} von ${totalSolveCount} Loesungen`
+  return `${visibleSolveCount} von ${totalSolveCount} Lösungen`
 }

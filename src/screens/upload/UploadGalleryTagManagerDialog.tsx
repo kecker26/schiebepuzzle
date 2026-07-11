@@ -90,9 +90,9 @@ const TAG_CATEGORY_ICON_OPTIONS: Array<{ id: TagCategoryIconId; label: string }>
   { id: 'tags', label: 'Tags' },
   { id: 'shapes', label: 'Formen' },
   { id: 'palette', label: 'Palette' },
-  { id: 'activity', label: 'Aktivitaet' },
+  { id: 'activity', label: 'Aktivität' },
   { id: 'brush', label: 'Pinsel' },
-  { id: 'building', label: 'Gebaeude' },
+  { id: 'building', label: 'Gebäude' },
   { id: 'camera', label: 'Kamera' },
   { id: 'cpu', label: 'Technik' },
   { id: 'paw', label: 'Tier' },
@@ -119,7 +119,7 @@ const TAG_CATEGORY_ICON_MAP: Record<TagCategoryIconId, LucideIcon> = {
   utensils: Utensils,
 }
 const SORT_MODE_LABELS: Record<TagManagerSortMode, string> = {
-  frequency: 'Haeufigkeit',
+  frequency: 'Häufigkeit',
   'alpha-asc': 'A-Z',
   'alpha-desc': 'Z-A',
 }
@@ -133,7 +133,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'person',
       'people',
       'portrait',
-      'portraet',
+      'porträt',
       'gesicht',
       'face',
       'mann',
@@ -143,10 +143,10 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'familie',
       'gruppe',
       'baby',
-      'haende',
+      'hände',
       'hand',
       'haare',
-      'laecheln',
+      'lächeln',
       'figur',
     ],
   },
@@ -156,7 +156,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
     icon: PawPrint,
     keywords: [
       'tierportrait',
-      'tierportraet',
+      'tierporträt',
       'animalportrait',
       'tier',
       'animal',
@@ -176,7 +176,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'fisch',
       'fish',
       'biene',
-      'eichhoernchen',
+      'eichhörnchen',
       'insect',
       'insekt',
       'schmetterling',
@@ -197,7 +197,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'lavendel',
       'blatt',
       'leaf',
-      'fruehling',
+      'frühling',
       'spring',
       'garten',
       'garden',
@@ -273,16 +273,16 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
     keywords: [
       'architektur',
       'architecture',
-      'gebaeude',
+      'gebäude',
       'building',
       'haus',
       'home',
       'bauwerk',
       'stadt',
       'city',
-      'strasse',
+      'straße',
       'street',
-      'bruecke',
+      'brücke',
       'bridge',
       'turm',
       'tower',
@@ -293,7 +293,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'interior',
       'fenster',
       'window',
-      'tuer',
+      'tür',
       'door',
       'park',
       'dorf',
@@ -319,7 +319,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'art',
       'malen',
       'painting',
-      'gemaelde',
+      'gemälde',
       'illustration',
       'zeichnung',
       'drawing',
@@ -435,16 +435,16 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'ship',
       'hafen',
       'harbor',
-      'strasse',
+      'straße',
       'road',
     ],
   },
   {
     id: 'activities',
-    label: 'Aktivitaeten',
+    label: 'Aktivitäten',
     icon: Activity,
     keywords: [
-      'aktivitaet',
+      'aktivität',
       'activity',
       'sport',
       'spiel',
@@ -478,7 +478,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'meal',
       'obst',
       'fruit',
-      'gemuese',
+      'gemüse',
       'vegetable',
       'paprika',
       'lebensmittel',
@@ -487,11 +487,11 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'coffee',
       'tee',
       'tea',
-      'kueche',
+      'küche',
       'kitchen',
       'tisch',
       'table',
-      'getraenk',
+      'getränk',
       'drink',
       'alltag',
       'daily',
@@ -504,7 +504,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
     keywords: [
       'farbe',
       'color',
-      'gruen',
+      'grün',
       'green',
       'blau',
       'blue',
@@ -519,9 +519,9 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'lila',
       'purple',
       'gold',
-      'weiss',
+      'weiß',
       'white',
-      'schwarzweiss',
+      'schwarzweiß',
       'sepia',
       'retro',
       'schwarz',
@@ -582,7 +582,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'sneaker',
       'hut',
       'hat',
-      'muetze',
+      'mütze',
       'cap',
       'accessoire',
       'accessory',
@@ -601,7 +601,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'symbol',
       'schild',
       'beschilderung',
-      'hinweisschild',
+      'hinweißchild',
       'verkehrsschild',
       'information',
       'nummer',
@@ -635,7 +635,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'muster',
       'pattern',
       'keramik',
-      'gefaess',
+      'gefäß',
     ],
   },
   {
@@ -651,7 +651,7 @@ const TAG_CATEGORY_DEFINITIONS: GalleryTagCategoryDefinition[] = [
       'shape',
       'werkzeug',
       'tool',
-      'moebel',
+      'möbel',
       'furniture',
       'stuhl',
       'chair',
@@ -1096,7 +1096,7 @@ export default function UploadGalleryTagManagerDialog({
     }
 
     setFeedbackMessage(
-      `${activeMergeSuggestion.mergeSourceLabels.length} ${activeMergeSuggestion.mergeSourceLabels.length === 1 ? 'Tag' : 'Tags'} wurden zu #${activeMergeSuggestion.targetLabel} zusammengefuehrt.`
+      `${activeMergeSuggestion.mergeSourceLabels.length} ${activeMergeSuggestion.mergeSourceLabels.length === 1 ? 'Tag' : 'Tags'} wurden zu #${activeMergeSuggestion.targetLabel} zusammengeführt.`
     )
     setSelectedTagKey(activeMergeSuggestion.targetLabel.toLocaleLowerCase('de-DE'))
     setTargetLabel(activeMergeSuggestion.targetLabel)
@@ -1106,7 +1106,7 @@ export default function UploadGalleryTagManagerDialog({
   const handleAddManualTag = async () => {
     if (!normalizedManualTagLabel || selectedEntryIds.length === 0) return
     await onEditEntryTags(selectedEntryIds, [normalizedManualTagLabel], [])
-    setFeedbackMessage(`#${normalizedManualTagLabel} wurde ${formatTagCount(selectedEntryIds.length)} hinzugefuegt.`)
+    setFeedbackMessage(`#${normalizedManualTagLabel} wurde ${formatTagCount(selectedEntryIds.length)} hinzugefügt.`)
     setManualTagLabel('')
   }
 
@@ -1119,7 +1119,7 @@ export default function UploadGalleryTagManagerDialog({
     setFeedbackMessage(
       categoryId
         ? `#${selectedOption.label} wurde manuell eingeordnet.`
-        : `Manuelle Kategorie fuer #${selectedOption.label} wurde entfernt.`
+        : `Manuelle Kategorie für #${selectedOption.label} wurde entfernt.`
     )
   }
 
@@ -1141,16 +1141,16 @@ export default function UploadGalleryTagManagerDialog({
       await onClassifyUnknownTags(batchLabels)
       setFeedbackMessage(`${batchLabels.length} unbekannte Tags wurden mit der KI-Kategorisierung abgeglichen.`)
     } catch (error) {
-      setFeedbackMessage(`KI-Kategorisierung nicht verfuegbar: ${getTagManagerErrorMessage(error)}`)
+      setFeedbackMessage(`KI-Kategorisierung nicht verfügbar: ${getTagManagerErrorMessage(error)}`)
     }
   }
 
   const handleConfirmSuggestion = async (suggestion: TagCategorySuggestion) => {
     try {
       await onCreateTagCategory(suggestion.label, suggestion.iconId, suggestion.matchingTags)
-      setFeedbackMessage(`Kategorie ${suggestion.label} wurde bestaetigt.`)
+      setFeedbackMessage(`Kategorie ${suggestion.label} wurde bestätigt.`)
     } catch (error) {
-      setFeedbackMessage(`Vorschlag konnte nicht bestaetigt werden: ${getTagManagerErrorMessage(error)}`)
+      setFeedbackMessage(`Vorschlag konnte nicht bestätigt werden: ${getTagManagerErrorMessage(error)}`)
     }
   }
 
@@ -1174,7 +1174,7 @@ export default function UploadGalleryTagManagerDialog({
         </div>
         <p id="gallery-tag-manager-description">
           {tagOptions.length} {tagOptions.length === 1 ? 'Tag' : 'Tags'} in {formatTagCount(totalTaggedEntries)}.
-          Suche, bereinige und fuehre aehnliche Begriffe zusammen.
+          Suche, bereinige und führe ähnliche Begriffe zusammen.
         </p>
       </div>
 
@@ -1234,10 +1234,10 @@ export default function UploadGalleryTagManagerDialog({
           phase={[
             'Anfrage wird vorbereitet.',
             'Die KI ordnet Begriffe passenden Kategorien zu.',
-            'Ergebnisse werden geprueft und lokal gespeichert.',
+            'Ergebnisse werden geprüft und lokal gespeichert.',
           ][aiPhaseIndex]}
-          detail="Bereits geoeffnete Kategorien und die Suche bleiben nutzbar."
-          longWaitDetail="Die KI arbeitet noch. Bei vielen oder seltenen Begriffen kann die Zuordnung etwas laenger dauern."
+          detail="Bereits geöffnete Kategorien und die Suche bleiben nutzbar."
+          longWaitDetail="Die KI arbeitet noch. Bei vielen oder seltenen Begriffen kann die Zuordnung etwas länger dauern."
         />
       ) : null}
 
@@ -1259,7 +1259,7 @@ export default function UploadGalleryTagManagerDialog({
                 }}
                 disabled={isBusy}
               >
-                Kategorie bestaetigen
+                Kategorie bestätigen
               </button>
             </div>
           ))}
@@ -1300,8 +1300,8 @@ export default function UploadGalleryTagManagerDialog({
                       {selectedCount > 0 ? (
                         <span
                           className="gallery-tag-manager-category-selected-count"
-                          aria-label={`${selectedCount} ausgewaehlte Tags in ${group.category.label}`}
-                          data-app-tooltip={`${selectedCount} Tags in dieser Kategorie sind als Filter ausgewaehlt.`}
+                          aria-label={`${selectedCount} ausgewählte Tags in ${group.category.label}`}
+                          data-app-tooltip={`${selectedCount} Tags in dieser Kategorie sind als Filter ausgewählt.`}
                           data-app-tooltip-position="top"
                         >
                           {selectedCount}
@@ -1341,8 +1341,8 @@ export default function UploadGalleryTagManagerDialog({
                                 checked={isChecked}
                                 onChange={(event) => toggleTagFilter(option, event.target.checked)}
                                 disabled={isBusy}
-                                aria-label={`#${option.label} fuer Galerie-Filter auswaehlen`}
-                                data-app-tooltip={`#${option.label} ${isChecked ? 'aus Filter entfernen' : 'als Filter auswaehlen'}.`}
+                                aria-label={`#${option.label} für Galerie-Filter auswählen`}
+                                data-app-tooltip={`#${option.label} ${isChecked ? 'aus Filter entfernen' : 'als Filter auswählen'}.`}
                                 data-app-tooltip-position="right"
                               />
                             </label>
@@ -1385,7 +1385,7 @@ export default function UploadGalleryTagManagerDialog({
             })
           ) : (
             <div className="gallery-tag-manager-empty" role="status">
-              Keine Tags fuer diese Suche.
+              Keine Tags für diese Suche.
             </div>
           )}
         </section>
@@ -1396,7 +1396,7 @@ export default function UploadGalleryTagManagerDialog({
             className="secondary gallery-tag-manager-back-button"
             onClick={() => setIsMobileDetailOpen(false)}
             disabled={isBusy}
-            data-app-tooltip="Auf kleinen Bildschirmen zur Tag-Liste zurueckkehren."
+            data-app-tooltip="Auf kleinen Bildschirmen zur Tag-Liste zurückkehren."
             data-app-tooltip-position="top"
           >
             Zur Tag-Liste
@@ -1405,12 +1405,12 @@ export default function UploadGalleryTagManagerDialog({
           {selectedOption ? (
             <>
               <div className="gallery-tag-manager-detail-header">
-                <span className="saved-games-kicker">Ausgewaehlter Tag</span>
+                <span className="saved-games-kicker">Ausgewählter Tag</span>
                 <h4>#{selectedOption.label}</h4>
                 <p>Verwendet in {formatTagCount(selectedTagCount)}.</p>
               </div>
 
-              <div className="gallery-tag-manager-detail-frequency" aria-label="Tag-Haeufigkeit">
+              <div className="gallery-tag-manager-detail-frequency" aria-label="Tag-Häufigkeit">
                 <div>
                   <span>Anteil</span>
                   <strong>{selectedTagShare}%</strong>
@@ -1443,7 +1443,7 @@ export default function UploadGalleryTagManagerDialog({
                     selectedCategoryResolution.status === 'unresolved'
                       ? 'noch nicht zugeordnet'
                       : selectedCategoryResolution.source === 'manual'
-                        ? 'manuell bestaetigt'
+                        ? 'manuell bestätigt'
                         : selectedCategoryResolution.source === 'ai'
                           ? 'gelernter Cache'
                           : 'statische Taxonomie'
@@ -1472,7 +1472,7 @@ export default function UploadGalleryTagManagerDialog({
                       }}
                       disabled={isBusy}
                     >
-                      Eigene Kategorie loeschen
+                      Eigene Kategorie löschen
                     </button>
                   ) : null}
               </div>
@@ -1496,14 +1496,14 @@ export default function UploadGalleryTagManagerDialog({
 
               {activeMergeSuggestion ? (
                 <div className="gallery-tag-manager-detail-similar">
-                  <span className="saved-games-kicker">Aehnliche Tags</span>
+                  <span className="saved-games-kicker">Ähnliche Tags</span>
                   <strong>
-                    Zu #{activeMergeSuggestion.targetLabel} zusammenfuehren
+                    Zu #{activeMergeSuggestion.targetLabel} zusammenführen
                   </strong>
                   <p>
                     {activeMergeSuggestion.isSelectedTagRelated
-                      ? 'Diese Varianten gehoeren zum ausgewaehlten Tag.'
-                      : 'Naechster gefundener Vorschlag in deiner Tagliste.'}
+                      ? 'Diese Varianten gehören zum ausgewählten Tag.'
+                      : 'Nächster gefundener Vorschlag in deiner Tagliste.'}
                   </p>
                   <div>
                     {activeMergeSuggestion.mergeSourceLabels.map((source) => (
@@ -1517,10 +1517,10 @@ export default function UploadGalleryTagManagerDialog({
                       void handleMergeSimilar()
                     }}
                     disabled={isBusy}
-                    data-app-tooltip="Aehnliche Tag-Varianten zu einem Tag zusammenfuehren."
+                    data-app-tooltip="Ähnliche Tag-Varianten zu einem Tag zusammenführen."
                     data-app-tooltip-position="top"
                   >
-                    Zusammenfuehren
+                    Zusammenführen
                   </button>
                 </div>
               ) : null}
@@ -1537,7 +1537,7 @@ export default function UploadGalleryTagManagerDialog({
                         void handleRemove()
                       }}
                       disabled={isBusy}
-                      data-app-tooltip="Tag aus allen betroffenen Galerie-Eintraegen entfernen."
+                      data-app-tooltip="Tag aus allen betroffenen Galerie-Einträgen entfernen."
                       data-app-tooltip-position="top"
                     >
                       Ja, entfernen
@@ -1564,7 +1564,7 @@ export default function UploadGalleryTagManagerDialog({
                   disabled={!canRename || isClassifyingUnknownTags}
                   busy={isBusy && !isClassifyingUnknownTags}
                   busyLabel="Speichert ..."
-                  data-app-tooltip="Ausgewaehlten Tag auf den neuen Namen umbenennen."
+                  data-app-tooltip="Ausgewählten Tag auf den neuen Namen umbenennen."
                   data-app-tooltip-position="top"
                 >
                   Umbenennen
@@ -1573,7 +1573,7 @@ export default function UploadGalleryTagManagerDialog({
                   className="secondary"
                   onClick={() => setConfirmingRemove(true)}
                   disabled={isBusy}
-                  data-app-tooltip="Entfernen bestaetigen lassen."
+                  data-app-tooltip="Entfernen bestätigen lassen."
                   data-app-tooltip-position="top"
                 >
                   Entfernen
@@ -1589,7 +1589,7 @@ export default function UploadGalleryTagManagerDialog({
               >
                 <span className="saved-games-kicker">Manueller Batch-Tag</span>
                 <p>
-                  Fuegt einen eigenen Tag zu den Motiven hinzu, die links per Checkbox ausgewaehlt sind.
+                  Fügt einen eigenen Tag zu den Motiven hinzu, die links per Checkbox ausgewählt sind.
                 </p>
                 <input
                   value={manualTagLabel}
@@ -1603,13 +1603,13 @@ export default function UploadGalleryTagManagerDialog({
                   className="secondary"
                   disabled={isBusy || !normalizedManualTagLabel || selectedEntryIds.length === 0}
                 >
-                  Zu {formatTagCount(selectedEntryIds.length)} hinzufuegen
+                  Zu {formatTagCount(selectedEntryIds.length)} hinzufügen
                 </button>
               </form>
             </>
           ) : (
             <div className="gallery-tag-manager-empty" role="status">
-              Kein Tag ausgewaehlt.
+              Kein Tag ausgewählt.
             </div>
           )}
         </section>
@@ -1640,7 +1640,7 @@ export default function UploadGalleryTagManagerDialog({
           value={newCategoryIconId}
           onChange={(event) => setNewCategoryIconId(event.target.value as TagCategoryIconId)}
           disabled={isBusy}
-          aria-label="Icon fuer neue Kategorie"
+          aria-label="Icon für neue Kategorie"
         >
           {TAG_CATEGORY_ICON_OPTIONS.map((option) => (
             <option key={option.id} value={option.id}>{option.label}</option>
@@ -1657,16 +1657,16 @@ export default function UploadGalleryTagManagerDialog({
             className="secondary"
             onClick={handleResetTagFilters}
             disabled={isBusy || checkedTagKeys.size === 0}
-            data-app-tooltip="Alle im Tag-Manager ausgewaehlten Tag-Filter entfernen."
+            data-app-tooltip="Alle im Tag-Manager ausgewählten Tag-Filter entfernen."
             data-app-tooltip-position="top"
           >
-            Auswahl zuruecksetzen
+            Auswahl zurücksetzen
           </AnimatedButton>
           <AnimatedButton
             className="gallery-tag-manager-apply-filter"
             onClick={handleApplyTagFilters}
             disabled={isBusy}
-            data-app-tooltip="Ausgewaehlte Tags als UND-Filter auf die Galerie anwenden."
+            data-app-tooltip="Ausgewählte Tags als UND-Filter auf die Galerie anwenden."
             data-app-tooltip-position="top"
           >
             Filter anwenden ({checkedTagKeys.size})
@@ -1676,10 +1676,10 @@ export default function UploadGalleryTagManagerDialog({
           className="secondary"
           onClick={onClose}
           disabled={isBusy}
-          data-app-tooltip="Tag-Manager schliessen."
+          data-app-tooltip="Tag-Manager schließen."
           data-app-tooltip-position="top"
         >
-          Schliessen
+          Schließen
         </AnimatedButton>
       </div>
     </AnimatedDialog>

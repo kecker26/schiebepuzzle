@@ -157,7 +157,7 @@ export const MUSIC_STYLE_DEFINITIONS: MusicStyleDefinition[] = [
     id: 'reggae-sun',
     label: 'Reggae Sun',
     shortLabel: 'Reggae',
-    description: 'Entspanntes Offbeat-Gefuehl mit warmem Bass.',
+    description: 'Entspanntes Offbeat-Gefühl mit warmem Bass.',
     discoveryProfiles: [
       {
         order: 'popularity_total',
@@ -425,7 +425,7 @@ export const MUSIC_STYLE_DEFINITIONS: MusicStyleDefinition[] = [
     id: 'hard-rock-charge',
     label: 'Hard Rock Charge',
     shortLabel: 'Hard Rock',
-    description: 'Druckvoll, riffbetont und klar haerter angelegt.',
+    description: 'Druckvoll, riffbetont und klar härter angelegt.',
     discoveryProfiles: [
       {
         order: 'popularity_total',

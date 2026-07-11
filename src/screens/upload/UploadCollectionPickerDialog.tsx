@@ -61,7 +61,7 @@ export default function UploadCollectionPickerDialog({
 
   async function handleAddToCollection() {
     if (!selectedCollection) {
-      setLocalError('Waehle zuerst eine Sammlung aus.')
+      setLocalError('Wähle zuerst eine Sammlung aus.')
       return
     }
 
@@ -83,7 +83,7 @@ export default function UploadCollectionPickerDialog({
       overlayStyle={paletteStyle}
       initialFocusRef={initialFocusRef}
     >
-      <h3 id={titleId}>Zu Sammlung hinzufuegen</h3>
+      <h3 id={titleId}>Zu Sammlung hinzufügen</h3>
       <p id={descriptionId}>
         {imageLabel} wird als Galerie-Referenz gespeichert. Die Bilddaten bleiben in der Galerie.
       </p>
@@ -109,7 +109,7 @@ export default function UploadCollectionPickerDialog({
           disabled={!trimmedName}
           busy={isBusy}
           busyLabel="Speichere Sammlung ..."
-          data-app-tooltip="Sammlung erstellen und ausgewaehltes Motiv hinzufuegen."
+          data-app-tooltip="Sammlung erstellen und ausgewähltes Motiv hinzufügen."
           data-app-tooltip-position="top"
         >
           Neu anlegen
@@ -120,7 +120,7 @@ export default function UploadCollectionPickerDialog({
         <div className="collection-dialog-existing">
           <label
             className="collection-dialog-field"
-            data-app-tooltip="Bestehende Sammlung auswaehlen."
+            data-app-tooltip="Bestehende Sammlung auswählen."
             data-app-tooltip-align="start"
           >
             <span>Bestehende Sammlung</span>
@@ -140,11 +140,11 @@ export default function UploadCollectionPickerDialog({
             className="secondary"
             onClick={() => void handleAddToCollection()}
             busy={isBusy}
-            busyLabel="Fuege zur Sammlung hinzu ..."
-            data-app-tooltip="Motiv zur ausgewaehlten bestehenden Sammlung hinzufuegen."
+            busyLabel="Füge zur Sammlung hinzu ..."
+            data-app-tooltip="Motiv zur ausgewählten bestehenden Sammlung hinzufügen."
             data-app-tooltip-position="top"
           >
-            Auswahl hinzufuegen
+            Auswahl hinzufügen
           </AnimatedButton>
         </div>
       ) : null}
@@ -156,10 +156,10 @@ export default function UploadCollectionPickerDialog({
           className="secondary"
           onClick={onClose}
           disabled={isBusy}
-          data-app-tooltip="Sammlungsdialog schliessen."
+          data-app-tooltip="Sammlungsdialog schließen."
           data-app-tooltip-position="top"
         >
-          Schliessen
+          Schließen
         </AnimatedButton>
       </div>
     </AnimatedDialog>

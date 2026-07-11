@@ -682,7 +682,7 @@ export default function UploadScreen({
       await loadImageFile(clipboardImageFile)
     } catch (clipboardError) {
       setUploadClipboardPasteStatus('unavailable')
-      setTimedError(`Bild konnte nicht aus der Zwischenablage eingefuegt werden: ${getErrorMessage(clipboardError)}`)
+      setTimedError(`Bild konnte nicht aus der Zwischenablage eingefügt werden: ${getErrorMessage(clipboardError)}`)
     }
   }, [isSelectionImageRequestBusy, loadImageFile, setTimedError])
 
@@ -710,7 +710,7 @@ export default function UploadScreen({
         promptInput?.setSelectionRange(nextCursorPosition, nextCursorPosition)
       })
     } catch (clipboardError) {
-      setTimedError(`Prompt konnte nicht eingefuegt werden: ${getErrorMessage(clipboardError)}`)
+      setTimedError(`Prompt konnte nicht eingefügt werden: ${getErrorMessage(clipboardError)}`)
     }
   }, [clearError, isSelectionImageRequestBusy, promptImagePrompt, setTimedError])
 
@@ -719,7 +719,7 @@ export default function UploadScreen({
 
     const prompt = promptImagePrompt.trim()
     if (!prompt) {
-      setTimedError('Bitte gib zuerst einen Prompt fuer das KI-Bild ein.')
+      setTimedError('Bitte gib zuerst einen Prompt für das KI-Bild ein.')
       return
     }
 
@@ -924,12 +924,12 @@ export default function UploadScreen({
       const galleryMotifsDativeLabel = formatGalleryMotifDativeCount(galleryMotifsCount)
       setBackupStatusMessage(
         backup.alreadyCurrent
-          ? `Kein neues Backup angelegt: ${backup.fileName} ist bereits aktuell und enthaelt ${backup.savedGamesCount} Spielstaende, ${backup.totalSolved} Siege und ${galleryMotifsLabel}.`
+          ? `Kein neues Backup angelegt: ${backup.fileName} ist bereits aktuell und enthält ${backup.savedGamesCount} Spielstände, ${backup.totalSolved} Siege und ${galleryMotifsLabel}. Sammlungen, Tags und Bilddaten sind ebenfalls enthalten.`
           : backup.deletedBackupFileNames.length === 0
-            ? `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielstaenden, ${backup.totalSolved} Siegen und ${galleryMotifsDativeLabel}. Es werden maximal ${backup.retentionLimit} lokale Backups behalten.`
+            ? `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielständen, ${backup.totalSolved} Siegen und ${galleryMotifsDativeLabel}. Sammlungen, Tags und Bilddaten sind ebenfalls enthalten. Es werden maximal ${backup.retentionLimit} lokale Backups behalten.`
             : backup.deletedBackupFileNames.length === 1
-              ? `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielstaenden, ${backup.totalSolved} Siegen und ${galleryMotifsDativeLabel}. Das aelteste Backup ${deletedBackupsLabel} wurde automatisch entfernt. Es bleiben ${backup.retentionLimit} lokale Backups.`
-              : `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielstaenden, ${backup.totalSolved} Siegen und ${galleryMotifsDativeLabel}. ${backup.deletedBackupFileNames.length} alte Backups wurden automatisch entfernt (${deletedBackupsLabel}). Es bleiben ${backup.retentionLimit} lokale Backups.`
+              ? `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielständen, ${backup.totalSolved} Siegen und ${galleryMotifsDativeLabel}. Sammlungen, Tags und Bilddaten sind ebenfalls enthalten. Das älteste Backup ${deletedBackupsLabel} wurde automatisch entfernt. Es bleiben ${backup.retentionLimit} lokale Backups.`
+              : `Backup gespeichert: ${backup.fileName} mit ${backup.savedGamesCount} Spielständen, ${backup.totalSolved} Siegen und ${galleryMotifsDativeLabel}. Sammlungen, Tags und Bilddaten sind ebenfalls enthalten. ${backup.deletedBackupFileNames.length} alte Backups wurden automatisch entfernt (${deletedBackupsLabel}). Es bleiben ${backup.retentionLimit} lokale Backups.`
       )
     } catch (backupError) {
       setError(`Backup konnte nicht exportiert werden: ${getErrorMessage(backupError)}`)
@@ -1038,9 +1038,9 @@ export default function UploadScreen({
     try {
       await onDeleteBackupFile(backupFile.fileName)
       setAvailableBackupFiles((prev) => prev.filter((entry) => entry.fileName !== backupFile.fileName))
-      setBackupStatusMessage(`Backup geloescht: ${backupFile.fileName}.`)
+      setBackupStatusMessage(`Backup gelöscht: ${backupFile.fileName}.`)
     } catch (backupError) {
-      setError(`Backup konnte nicht geloescht werden: ${getErrorMessage(backupError)}`)
+      setError(`Backup konnte nicht gelöscht werden: ${getErrorMessage(backupError)}`)
     } finally {
       setDeletingBackupFileName(null)
     }
@@ -1081,7 +1081,7 @@ export default function UploadScreen({
       handleWindowChange('start')
       setHistoryFilter('all')
       setBackupStatusMessage(
-        `Backup importiert: ${pendingBackupImport.fileName} mit ${result.savedGames.length} Spielstaenden, ${result.stats.totalSolved} Siegen und ${galleryMotifsLabel}.`
+        `Backup importiert: ${pendingBackupImport.fileName} mit ${result.savedGames.length} Spielständen, ${result.stats.totalSolved} Siegen und ${galleryMotifsLabel}. Sammlungen, Tags und Bilddaten wurden ebenfalls wiederhergestellt.`
       )
     } catch (backupError) {
       setError(`Backup konnte nicht importiert werden: ${getErrorMessage(backupError)}`)
@@ -1210,24 +1210,24 @@ export default function UploadScreen({
       id: 'clean',
       label: 'Sauber',
       value: isLoadingStats ? '...' : `${stats?.cleanSolvedCount ?? 0}`,
-      detail: 'Ohne Hinweise oder Auto-Zuege, soweit erfasst',
-      helpText: 'Siege ohne Hilfen (Hinweise, Ghost, Heatmap, Auto-Zuege oder Solver-Unterstuetzung). Aeltere Laeufe ohne Profil koennen nicht sauber eingeordnet werden.',
+      detail: 'Ohne Hinweise oder Auto-Züge, soweit erfasst',
+      helpText: 'Siege ohne Hilfen (Hinweise, Ghost, Heatmap, Auto-Züge oder Solver-Unterstützung). Ältere Läufe ohne Profil können nicht sauber eingeordnet werden.',
       springValue: isLoadingStats ? null : stats?.cleanSolvedCount ?? 0,
     },
     {
       id: 'assisted',
-      label: 'Unterstuetzt',
+      label: 'Unterstützt',
       value: isLoadingStats ? '...' : `${stats?.assistedSolvedCount ?? 0}`,
-      detail: 'Mit Hilfen oder Auto-Zuegen, soweit erfasst',
-      helpText: 'Siege mit mindestens einem Hinweis, Auto-Zug oder Solver-Schritt. Gezahlt werden nur Laeufe mit auswertbarem Profil.',
+      detail: 'Mit Hilfen oder Auto-Zügen, soweit erfasst',
+      helpText: 'Siege mit mindestens einem Hinweis, Auto-Zug oder Solver-Schritt. Gezahlt werden nur Läufe mit auswertbarem Profil.',
       springValue: isLoadingStats ? null : stats?.assistedSolvedCount ?? 0,
     },
     {
       id: 'best-time',
       label: 'Bestzeit',
       value: isLoadingStats ? '...' : formatOptionalTime(stats?.bestTime ?? null),
-      detail: 'Ueber alle Stufen',
-      helpText: 'Schnellste gespeicherte Loesungszeit ueber alle Puzzle-Stufen hinweg.',
+      detail: 'Über alle Stufen',
+      helpText: 'Schnellste gespeicherte Lösungszeit über alle Puzzle-Stufen hinweg.',
       springValue: isLoadingStats ? null : stats?.bestTime ?? null,
       springFormatter: (value) => formatOptionalTime(Math.round(value)),
     },
@@ -1284,7 +1284,7 @@ export default function UploadScreen({
           {
             label: 'Zur Auswahl',
             icon: 'grid',
-            meta: 'Zurueck',
+            meta: 'Zurück',
             onClick: () => handleWindowChange('start'),
           } satisfies ContextMenuItem,
         ]
@@ -1313,11 +1313,11 @@ export default function UploadScreen({
             groupTitle: 'Prompt',
           } satisfies ContextMenuItem,
           {
-            label: 'Prompt einfuegen',
+            label: 'Prompt einfügen',
             icon: 'clipboard',
             meta:
               uploadClipboardPasteStatus === 'checking'
-                ? 'Prueft ...'
+                ? 'Prüft ...'
                 : uploadClipboardPasteStatus === 'ready'
                   ? 'Bild in Ablage'
                   : 'Text',
@@ -1349,11 +1349,11 @@ export default function UploadScreen({
     ...(contextMenuState?.scope === 'uploadCard'
       ? [
           {
-            label: 'Bild einfuegen',
+            label: 'Bild einfügen',
             icon: 'clipboard',
             meta:
               uploadClipboardPasteStatus === 'checking'
-                ? 'Prueft ...'
+                ? 'Prüft ...'
                 : 'Zwischenablage',
             onClick: () => {
               void handlePasteImageFromClipboard()
@@ -1363,9 +1363,9 @@ export default function UploadScreen({
         ]
       : []),
     {
-      label: 'Zufaelliges Bild',
+      label: 'Zufälliges Bild',
       icon: 'shuffle',
-      meta: isFetchingRandom ? 'Laedt ...' : 'Zufall',
+      meta: isFetchingRandom ? 'Lädt ...' : 'Zufall',
       onClick: handleFetchRandomFromSelection,
       disabled: isFetchingRandom,
     },
@@ -1373,27 +1373,27 @@ export default function UploadScreen({
       groupTitle: 'Bereiche',
     },
     {
-      label: 'Spielstaende',
+      label: 'Spielstände',
       icon: 'folder',
-      meta: isLoadingSavedGames ? 'Laedt ...' : `${savedGamesCount}`,
+      meta: isLoadingSavedGames ? 'Lädt ...' : `${savedGamesCount}`,
       onClick: handleOpenSavedGamesWindow,
     },
     {
       label: 'Statistik',
       icon: 'barChart2',
-      meta: isLoadingStats ? 'Laedt ...' : `${stats?.totalSolved ?? 0} Siege`,
+      meta: isLoadingStats ? 'Lädt ...' : `${stats?.totalSolved ?? 0} Siege`,
       onClick: handleOpenStatsWindow,
     },
     {
       label: 'Galerie',
       icon: 'image',
-      meta: isLoadingGallery ? 'Laedt ...' : `${galleryUniqueEntriesCount} Motive`,
+      meta: isLoadingGallery ? 'Lädt ...' : `${galleryUniqueEntriesCount} Motive`,
       onClick: handleOpenGalleryWindow,
     },
     {
       label: 'Sammlungen',
       icon: 'folder',
-      meta: isLoadingCollections ? 'Laedt ...' : `${imageCollectionsCount}`,
+      meta: isLoadingCollections ? 'Lädt ...' : `${imageCollectionsCount}`,
       onClick: handleOpenCollectionsWindow,
     },
     {
@@ -1411,7 +1411,7 @@ export default function UploadScreen({
     {
       label: 'Backup importieren',
       icon: 'uploadCloud',
-      meta: isLoadingBackupFiles ? 'Laedt ...' : 'Import',
+      meta: isLoadingBackupFiles ? 'Lädt ...' : 'Import',
       onClick: () => {
         void handleOpenBackupBrowser()
       },
@@ -1451,8 +1451,8 @@ export default function UploadScreen({
             Schiebepuzzle
           </h1>
           <p className="upload-subtitle">
-            Starte direkt mit einem neuen Motiv. Spielstaende, Statistik und Galerie liegen bewusst
-            in eigenen Fenstern, damit die Startseite ruhig, klar und schnell benutzbar bleibt.
+          Wähle ein eigenes, zufälliges oder KI-generiertes Motiv. Deine offenen Partien, Erfolge
+          und Sammlungen findest du direkt darunter.
           </p>
         </div>
 
@@ -1542,6 +1542,7 @@ export default function UploadScreen({
               savedGamesCount={savedGamesCount}
               totalSolved={stats?.totalSolved ?? 0}
               galleryMotifsCount={galleryUniqueEntriesCount}
+              collectionsCount={imageCollectionsCount}
               isExportingBackup={isExportingBackup}
               isLoadingBackupFiles={isLoadingBackupFiles}
               isImportingBackup={isImportingBackup}
@@ -1631,10 +1632,10 @@ export default function UploadScreen({
               description={
                 <p>
                   <span className="delete-confirm-name">{pendingBackupImport.fileName}</span>
-                  {pendingBackupImport.exportedAt ? ` vom ${formatDate(pendingBackupImport.exportedAt)}` : ''} enthaelt{' '}
-                  {pendingBackupImport.savedGamesCount} Spielstaende, {pendingBackupImport.totalSolved} Siege und{' '}
+                  {pendingBackupImport.exportedAt ? ` vom ${formatDate(pendingBackupImport.exportedAt)}` : ''} enthält{' '}
+                  {pendingBackupImport.savedGamesCount} Spielstände, {pendingBackupImport.totalSolved} Siege und{' '}
                   {pendingBackupImportMotifsLabel}.
-                  Der aktuelle Datenstand wird dabei komplett ersetzt.
+                  Sammlungen, Tags und Bilddaten sind ebenfalls enthalten. Der aktuelle Datenstand wird dabei komplett ersetzt.
                 </p>
               }
               confirmLabel="Importieren"
@@ -1657,15 +1658,15 @@ export default function UploadScreen({
             <UploadConfirmDialog
               key="delete-save-confirm"
               titleId="delete-confirm-title"
-              title="Spielstand loeschen?"
+              title="Spielstand löschen?"
               description={
                 <p>
-                  Moechtest du <span className="delete-confirm-name">{pendingDeleteSave.name}</span>{' '}
-                  wirklich entfernen? Dieser Schritt kann nicht rueckgaengig gemacht werden.
+                  Möchtest du <span className="delete-confirm-name">{pendingDeleteSave.name}</span>{' '}
+                  wirklich entfernen? Dieser Schritt kann nicht rückgängig gemacht werden.
                 </p>
               }
-              confirmLabel="Loeschen"
-              busyLabel="Loesche ..."
+              confirmLabel="Löschen"
+              busyLabel="Lösche ..."
               isBusy={deletingSaveId === pendingDeleteSave.id}
               onCancel={handleCancelDelete}
               onConfirm={() => {
@@ -1680,15 +1681,15 @@ export default function UploadScreen({
             <UploadConfirmDialog
               key="delete-all-saves-confirm"
               titleId="delete-all-saves-confirm-title"
-              title="Alle Spielstaende loeschen?"
+              title="Alle Spielstände löschen?"
               description={
                 <p>
-                  Alle {savedGamesCount} Spielstaende werden entfernt. Dieser Schritt kann nicht
-                  rueckgaengig gemacht werden.
+                  Alle {savedGamesCount} Spielstände werden entfernt. Dieser Schritt kann nicht
+                  rückgängig gemacht werden.
                 </p>
               }
-              confirmLabel="Alle loeschen"
-              busyLabel="Loesche alle ..."
+              confirmLabel="Alle löschen"
+              busyLabel="Lösche alle ..."
               isBusy={isDeletingAllSavedGames}
               onCancel={handleCancelDeleteAllSavedGames}
               onConfirm={() => {
@@ -1703,15 +1704,15 @@ export default function UploadScreen({
             <UploadConfirmDialog
               key="stats-reset-confirm"
               titleId="stats-reset-title"
-              title="Statistik loeschen?"
+              title="Statistik löschen?"
               description={
                 <p>
-                  Alle Bestzeiten, Siege und Verlaufsdaten werden entfernt. Spielstaende und Galerie
-                  bleiben erhalten, aber dieser Schritt kann nicht rueckgaengig gemacht werden.
+                  Alle Bestzeiten, Siege und Verlaufsdaten werden entfernt. Spielstände und Galerie
+                  bleiben erhalten, aber dieser Schritt kann nicht rückgängig gemacht werden.
                 </p>
               }
-              confirmLabel="Statistik loeschen"
-              busyLabel="Loesche ..."
+              confirmLabel="Statistik löschen"
+              busyLabel="Lösche ..."
               isBusy={isResettingStats}
               onCancel={handleCancelStatsReset}
               onConfirm={() => {
@@ -1726,16 +1727,16 @@ export default function UploadScreen({
             <UploadConfirmDialog
               key="gallery-reset-confirm"
               titleId="gallery-reset-title"
-              title="Galerie loeschen?"
+              title="Galerie löschen?"
               description={
                 <p>
-                  Alle Galerie-Bilder und Galerie-Eintraege werden entfernt. Statistik und
-                  Spielstaende bleiben erhalten, aber dieser Schritt kann nicht rueckgaengig gemacht
+                  Alle Galerie-Bilder und Galerie-Einträge werden entfernt. Statistik und
+                  Spielstände bleiben erhalten, aber dieser Schritt kann nicht rückgängig gemacht
                   werden.
                 </p>
               }
-              confirmLabel="Galerie loeschen"
-              busyLabel="Loesche ..."
+              confirmLabel="Galerie löschen"
+              busyLabel="Lösche ..."
               isBusy={isResettingGallery}
               onCancel={handleCancelGalleryReset}
               onConfirm={() => {

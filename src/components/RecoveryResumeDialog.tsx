@@ -60,7 +60,7 @@ export default function RecoveryResumeDialog({
     return [
       `${save.name}.`,
       `${save.config.rows} mal ${save.config.cols}.`,
-      `${save.moves} Zuege.`,
+      `${save.moves} Züge.`,
       `${formatDuration(save.elapsedTime)} Spielzeit.`,
       `${lastAutosaveLabel}.`,
       `${recoveryMetaLabel}.`,
@@ -142,13 +142,13 @@ export default function RecoveryResumeDialog({
       </div>
 
       <p id={descriptionId} className="recovery-resume-copy">
-        Die App wurde waehrend einer aktiven Runde geschlossen. Dein letzter Autosave ist noch da und kann direkt fortgesetzt werden.
+        Die App wurde während einer aktiven Runde geschlossen. Dein letzter Autosave ist noch da und kann direkt fortgesetzt werden.
       </p>
       <p id="recovery-resume-details" className="visually-hidden">
         {detailsDescription}
       </p>
       <p id="recovery-resume-keyboard-hint" className="visually-hidden">
-        Mit Pfeiltasten wechselst du zwischen Spaeter, Nicht fortsetzen und Spielstand fortsetzen. Pos1 springt zum ersten Button, Ende zum letzten.
+        Mit Pfeiltasten wechselst du zwischen Später, Nicht fortsetzen und Spielstand fortsetzen. Pos1 springt zum ersten Button, Ende zum letzten.
       </p>
 
       <div className="recovery-resume-card">
@@ -164,7 +164,7 @@ export default function RecoveryResumeDialog({
 
           <div className="recovery-resume-chips" aria-label="Spielstanddetails">
             <span className="recovery-resume-chip">{`${save.config.rows}x${save.config.cols}`}</span>
-            <span className="recovery-resume-chip">{`${save.moves} Zuege`}</span>
+            <span className="recovery-resume-chip">{`${save.moves} Züge`}</span>
             <span className="recovery-resume-chip">{formatDuration(save.elapsedTime)}</span>
             <span className="recovery-resume-chip">{lastAutosaveLabel}</span>
           </div>
@@ -177,10 +177,10 @@ export default function RecoveryResumeDialog({
           className="secondary"
           onClick={onDismiss}
           onKeyDown={handleActionKeyDown}
-          data-app-tooltip="Dialog schliessen und spaeter erneut entscheiden."
+          data-app-tooltip="Dialog schließen und später erneut entscheiden."
           data-app-tooltip-position="top"
         >
-          Spaeter
+          Später
         </AnimatedButton>
         <AnimatedButton
           className="secondary"

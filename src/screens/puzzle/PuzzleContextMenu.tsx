@@ -52,7 +52,7 @@ export default function PuzzleContextMenu({
   const canInteract = !isSolved && !isInteractionLocked
 
   const items: ContextMenuItem[] = [
-    { groupTitle: 'Zuege' },
+    { groupTitle: 'Züge' },
     { label: 'Hinweis zeigen', icon: 'helpCircle', meta: 'H', onClick: onShowHint, disabled: areGameAidsLocked || !canInteract },
     { label: 'Zug spielen', icon: 'skipForward', meta: 'Enter', onClick: onSuggestedMove, disabled: areGameAidsLocked || !canInteract },
     { groupTitle: 'Ansicht' },
@@ -61,7 +61,7 @@ export default function PuzzleContextMenu({
     { label: isHeatmapOverlayVisible ? 'Heatmap aus' : 'Heatmap ein', icon: 'activity', meta: 'M', onClick: onToggleHeatmapOverlay, disabled: areGameAidsLocked || isSolved },
     { label: 'Nummern zeigen', icon: 'hash', meta: 'N', onClick: onShowTileNumbers, disabled: areGameAidsLocked || isSolved },
     { groupTitle: 'Verlauf' },
-    { label: 'Zug zurueck', icon: 'cornerUpLeft', meta: 'Strg+Z', onClick: onUndo, disabled: areGameAidsLocked || !canUndo || isInteractionLocked },
+    { label: 'Zug zurück', icon: 'cornerUpLeft', meta: 'Strg+Z', onClick: onUndo, disabled: areGameAidsLocked || !canUndo || isInteractionLocked },
     { label: 'Zug vor', icon: 'cornerUpRight', meta: 'Strg+Y', onClick: onRedo, disabled: areGameAidsLocked || !canRedo || isInteractionLocked },
     { groupTitle: 'Hilfe' },
     { label: 'Shortcuts und Bedienung', icon: 'command', meta: 'F1', onClick: onOpenHelp },

@@ -59,12 +59,12 @@ const START_FEATURE_LIST = [
   },
   {
     title: 'Hinweise, Solver, Undo und Redo',
-    copy: 'Beim Knobeln helfen lassen, Zuege zuruecknehmen und sauber weiterdenken.',
+    copy: 'Beim Knobeln helfen lassen, Züge zurücknehmen und sauber weiterdenken.',
     icon: 'wandSparkles',
   },
   {
-    title: 'Spielstaende, Statistik und Galerie',
-    copy: 'Fortschritt sichern, geloeste Runden vergleichen und Motive wiederfinden.',
+    title: 'Spielstände, Statistik und Galerie',
+    copy: 'Fortschritt sichern, gelöste Runden vergleichen und Motive wiederfinden.',
     icon: 'barChart2',
   },
   {
@@ -94,7 +94,7 @@ function StartScreenFallbackIllustration() {
       xmlns="http://www.w3.org/2000/svg"
     >
       <title id="start-screen-visual-title">
-        Illustration aus Fotokarte, Puzzle-Teilen und leuchtender Spieloberflaeche
+        Illustration aus Fotokarte, Puzzle-Teilen und leuchtender Spieloberfläche
       </title>
       <defs>
         <linearGradient id="start-bg" x1="72" y1="48" x2="648" y2="712" gradientUnits="userSpaceOnUse">
@@ -210,7 +210,7 @@ export default function StartScreen({
       key: 'saved-games',
       value: savedGamesCount,
       displayValue: formatStatValue(savedGamesCount),
-      label: getCountLabel(savedGamesCount, 'Spiel', 'Spiele'),
+      label: getCountLabel(savedGamesCount, 'Offene Partie', 'Offene Partien'),
       icon: 'folderOpen' as const,
     },
     {
@@ -312,7 +312,7 @@ export default function StartScreen({
               </span>
               <h1 className="start-screen-title">Schiebepuzzle</h1>
               <p className="start-screen-lead">
-                Eigene Bilder oder Zufallsbild laden, frei zuschneiden und mit Spielstaenden,
+                Eigene Bilder oder Zufallsbild laden, frei zuschneiden und mit Spielständen,
                 Statistik und Galerie dranbleiben.
               </p>
             </div>
@@ -375,7 +375,7 @@ export default function StartScreen({
                 <AnimatedButton
                   className="start-screen-button start-screen-button-secondary"
                   onClick={onQuit}
-                  data-app-tooltip="App schliessen oder zurueck zur Umgebung wechseln."
+                  data-app-tooltip="App schließen oder zurück zur Umgebung wechseln."
                   data-app-tooltip-align="start"
                   reveal
                   revealLevel="subtle"
@@ -410,12 +410,12 @@ export default function StartScreen({
             </AnimatedStaggerGroup>
 
             {(hasMedalHuntAction || hasMedalCounts) && (
-              <section className="start-screen-medal-panel" aria-label="Medaillen-Jagd und Medaillenspiegel">
+              <section className="start-screen-medal-panel" aria-label="Medaillen und nächste Ziele">
                 {hasMedalHuntAction && medalHuntAction && (
                   <AnimatedButton
                     className="start-screen-medal-hunt-button"
                     onClick={onOpenMedalHuntRecommendation}
-                    data-app-tooltip="Oeffnet die Galerie gefiltert nach upgradefaehigen Motiven und sortiert nach Upgrade-Potenzial."
+                    data-app-tooltip="Öffnet die Galerie mit Motiven, bei denen die nächste Medaille erreichbar ist."
                     data-app-tooltip-align="start"
                     reveal
                     revealLevel="subtle"
@@ -424,18 +424,8 @@ export default function StartScreen({
                       {medalHuntAction.medal ? getChallengeMedalEmoji(medalHuntAction.medal) : '*'}
                     </span>
                     <span className="start-screen-medal-hunt-copy">
-                      <strong>Medaillen-Jagd</strong>
+                      <strong>Nächstes Medaillenziel</strong>
                       <span>{medalHuntAction.label}</span>
-                      {medalHuntAction.medalCounts && medalHuntAction.medalCounts.length > 0 && (
-                        <span className="start-screen-medal-hunt-breakdown" aria-label="Medaillen-Chancen nach Zielstufe">
-                          {medalHuntAction.medalCounts.map((item) => (
-                            <span key={item.medal} className={`start-screen-medal-hunt-chip is-${item.medal}`}>
-                              <span aria-hidden="true">{getChallengeMedalEmoji(item.medal)}</span>
-                              {formatChallengeMedalLabel(item.medal)} {item.count}
-                            </span>
-                          ))}
-                        </span>
-                      )}
                       <small>{medalHuntAction.detail}</small>
                     </span>
                   </AnimatedButton>
@@ -444,8 +434,8 @@ export default function StartScreen({
                 {hasMedalCounts && (
                   <div className="start-screen-medal-summary">
                     <span className="start-screen-medal-summary-copy">
-                      <strong>Medaillenspiegel</strong>
-                      <span>Beste Motiv-Stufen in deiner Galerie</span>
+                      <strong>Erreichte Medaillen</strong>
+                      <span>Beste Stufe pro Motiv</span>
                     </span>
                     <div className="start-screen-medal-row" aria-label="Challenge-Medaillen nach bester Motiv-Stufe">
                       {medalCounts.map((item) => {
@@ -457,7 +447,7 @@ export default function StartScreen({
                             className={`start-screen-medal-chip is-${item.medal}${item.count === 0 ? ' is-empty' : ''}`}
                             onClick={() => onOpenGalleryMedalFilter?.(item.medal)}
                             aria-label={`Galerie nach ${label} filtern: ${item.count} ${item.count === 1 ? 'Motiv' : 'Motive'}`}
-                            data-app-tooltip={`Galerie mit ${label}-Motiven oeffnen.`}
+                            data-app-tooltip={`Galerie mit ${label}-Motiven öffnen.`}
                             data-app-tooltip-align="start"
                           >
                             <span aria-hidden="true">{getChallengeMedalEmoji(item.medal)}</span>
@@ -475,11 +465,11 @@ export default function StartScreen({
             <div className="start-screen-shortcuts" aria-label="Shortcuts">
               <div className="start-screen-shortcut">
                 <StartScreenIcon name="helpCircle" className="start-screen-shortcut-icon" />
-                <span data-app-tooltip="Oeffnet die kontextbezogene Hilfe." data-app-tooltip-align="start"><kbd>F1</kbd> Hilfe & Shortcuts</span>
+                <span data-app-tooltip="Öffnet die kontextbezogene Hilfe." data-app-tooltip-align="start"><kbd>F1</kbd> Hilfe & Shortcuts</span>
               </div>
               <div className="start-screen-shortcut">
                 <StartScreenIcon name="keyboard" className="start-screen-shortcut-icon" />
-                <span data-app-tooltip="Oeffnet Direktaktionen fuer Navigation, Hilfe und Musik." data-app-tooltip-align="start"><kbd>{COMMAND_PALETTE_SHORTCUT_LABEL}</kbd> Schnellaktionen</span>
+                <span data-app-tooltip="Öffnet Direktaktionen für Navigation, Hilfe und Musik." data-app-tooltip-align="start"><kbd>{COMMAND_PALETTE_SHORTCUT_LABEL}</kbd> Schnellaktionen</span>
               </div>
             </div>
 

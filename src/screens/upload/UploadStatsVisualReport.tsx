@@ -106,7 +106,7 @@ function formatSeriesTimeDelta(delta: number): string {
 
 function formatSeriesMovesDelta(delta: number): string {
   if (delta === 0) return 'Gleich'
-  return `${Math.abs(delta)} Zuege ${delta < 0 ? 'weniger' : 'mehr'}`
+  return `${Math.abs(delta)} Züge ${delta < 0 ? 'weniger' : 'mehr'}`
 }
 
 interface AssistanceSummary {
@@ -319,7 +319,7 @@ const VISUAL_STATS_VIEWS: Array<{
   { id: 'overview', label: 'Dashboard', description: 'KPI-Karten, Laufarten und aktuelle Bestwerte anzeigen.', icon: LayoutDashboard },
   { id: 'history', label: 'Verlauf & Trends', description: 'Zeit und Aktionen als Verlauf und Verteilung vergleichen.', icon: LineChartIcon },
   { id: 'medals', label: 'Medaillen-Aufstiege', description: 'Challenge-Medaillen und echte Aufstiege pro Motiv anzeigen.', icon: Medal },
-  { id: 'raw', label: 'Rohdaten & Details', description: 'Tabellen, Rohdatenansichten und Exporte oeffnen.', icon: Table2 },
+  { id: 'raw', label: 'Rohdaten & Details', description: 'Tabellen, Rohdatenansichten und Exporte öffnen.', icon: Table2 },
 ]
 
 const TREND_METRICS: Array<{
@@ -330,12 +330,12 @@ const TREND_METRICS: Array<{
   {
     id: 'actions',
     label: 'Aktionen',
-    description: 'Gesamtaktionen ueber die Zeit, getrennt nach Schwierigkeit.',
+    description: 'Gesamtaktionen über die Zeit, getrennt nach Schwierigkeit.',
   },
   {
     id: 'time',
     label: 'Zeit',
-    description: 'Laufzeiten ueber die Zeit, getrennt nach Schwierigkeit.',
+    description: 'Laufzeiten über die Zeit, getrennt nach Schwierigkeit.',
   },
 ]
 
@@ -377,7 +377,7 @@ const RAW_STATS_VIEWS: Array<{
   {
     id: 'matrix',
     label: 'Vergleichsmatrix',
-    description: 'Pivot-Ansicht fuer Gesamtwerte, Stufen und Extremwerte.',
+    description: 'Pivot-Ansicht für Gesamtwerte, Stufen und Extremwerte.',
   },
 ]
 
@@ -550,21 +550,21 @@ function buildDifficultyCsv(difficultyRows: DifficultyReportRow[]): string {
       'Raster',
       'Siege',
       'Ohne Hilfe',
-      'Unterstuetzt',
+      'Unterstützt',
       'Auto-Zug',
       'Legacy',
       'Clean %',
-      'Datenqualitaet %',
+      'Datenqualität %',
       'Bestzeit',
       'Langsamste Zeit',
-      'Wenigste Netto-Zuege',
-      'Meiste Netto-Zuege',
+      'Wenigste Netto-Züge',
+      'Meiste Netto-Züge',
       'Medianzeit',
-      'Median-Zuege',
+      'Median-Züge',
       'Korrekturen Schnitt',
       'Letzter Sieg',
       'Letzte Zeit',
-      'Letzte Netto-Zuege',
+      'Letzte Netto-Züge',
       'Letzte Laufart',
     ],
     difficultyRows.map((row) => [
@@ -601,12 +601,12 @@ function buildHistoryCsv(entries: PuzzleCompletionRecord[]): string {
       'Stufe',
       'Raster',
       'Zeit',
-      'Netto-Zuege',
+      'Netto-Züge',
       'Aktionen',
       'Korrekturen',
       'Laufart',
       'Hinweise',
-      'Auto-Zuege',
+      'Auto-Züge',
       'Ghost-Aktivierungen',
       'Ghost-Sekunden',
       'Heatmap-Aktivierungen',
@@ -686,12 +686,12 @@ function buildMatrixCsv(
     ['Ohne Hilfe', ...columns.map((column) => formatPercent(column.cleanRate))],
     ['Bestzeit', ...columns.map((column) => formatOptionalDuration(column.bestTime))],
     ['Langsamste Zeit', ...columns.map((column) => formatOptionalDuration(column.worstTime))],
-    ['Wenigste Netto-Zuege', ...columns.map((column) => formatOptionalMoves(column.bestMoves))],
-    ['Meiste Netto-Zuege', ...columns.map((column) => formatOptionalMoves(column.worstMoves))],
+    ['Wenigste Netto-Züge', ...columns.map((column) => formatOptionalMoves(column.bestMoves))],
+    ['Meiste Netto-Züge', ...columns.map((column) => formatOptionalMoves(column.worstMoves))],
     ['Medianzeit', ...columns.map((column) => formatOptionalDuration(column.medianTime))],
-    ['Median-Zuege', ...columns.map((column) => formatOptionalMoves(column.medianMoves))],
+    ['Median-Züge', ...columns.map((column) => formatOptionalMoves(column.medianMoves))],
     ['Korrekturen', ...columns.map((column) => formatExtraMoves(column.averageExtraMoves))],
-    ['Datenqualitaet', ...columns.map((column) => formatPercent(column.profileCoverage))],
+    ['Datenqualität', ...columns.map((column) => formatPercent(column.profileCoverage))],
     ['Letzter Sieg', ...columns.map((column) => column.lastCompletedAt ? formatDate(column.lastCompletedAt) : '')],
   ]
 
@@ -830,7 +830,7 @@ function buildScoreBreakdownData(breakdown: ScoreBreakdown | null): ScoreBreakdo
       label: 'Score',
       value: breakdown.score,
       displayValue: `${breakdown.score}/100`,
-      detail: 'Verbleibende Punkte nach allen Abzuegen.',
+      detail: 'Verbleibende Punkte nach allen Abzügen.',
       color: SCORE_BREAKDOWN_COLORS.score,
     },
     {
@@ -851,10 +851,10 @@ function buildScoreBreakdownData(breakdown: ScoreBreakdown | null): ScoreBreakdo
     },
     {
       key: 'auto',
-      label: 'Auto-Zuege',
+      label: 'Auto-Züge',
       value: breakdown.autoPenalty,
       displayValue: breakdown.autoPenalty >= 36 ? '-36 max.' : formatPenaltyValue(breakdown.autoPenalty),
-      detail: `${formatAverageCount(breakdown.autoMoves)} Auto-Zuege, 12 Punkte Abzug je Auto-Zug, maximal 36.`,
+      detail: `${formatAverageCount(breakdown.autoMoves)} Auto-Züge, 12 Punkte Abzug je Auto-Zug, maximal 36.`,
       color: SCORE_BREAKDOWN_COLORS.auto,
     },
     {
@@ -889,7 +889,7 @@ function buildAverageScoreBreakdownData(
       case 'score':
         return {
           ...datum,
-          detail: `Durchschnitt aus ${profiledEntries.length} Laufprofilen mit ${totalActionMoves} Aktionen insgesamt (${totalNetMoves} Netto-Zuege).`,
+          detail: `Durchschnitt aus ${profiledEntries.length} Laufprofilen mit ${totalActionMoves} Aktionen insgesamt (${totalNetMoves} Netto-Züge).`,
         }
       case 'corrections':
         return {
@@ -904,12 +904,12 @@ function buildAverageScoreBreakdownData(
       case 'auto':
         return {
           ...datum,
-          detail: `${totalAutoMoves} Auto-Zuege bei ${totalActionMoves} Aktionen insgesamt (${formatShare(totalAutoMoves, totalActionMoves)}). Die Score-Strafe ist bei 36 Punkten gedeckelt.`,
+          detail: `${totalAutoMoves} Auto-Züge bei ${totalActionMoves} Aktionen insgesamt (${formatShare(totalAutoMoves, totalActionMoves)}). Die Score-Strafe ist bei 36 Punkten gedeckelt.`,
         }
       case 'assistance':
         return {
           ...datum,
-          detail: `${assistedRuns} von ${profiledEntries.length} Laufprofilen waren nicht clean. Dafuer fallen im Schnitt ${formatPenaltyValue(breakdown.assistancePenalty)} Punkte an.`,
+          detail: `${assistedRuns} von ${profiledEntries.length} Laufprofilen waren nicht clean. Dafür fallen im Schnitt ${formatPenaltyValue(breakdown.assistancePenalty)} Punkte an.`,
         }
       default:
         return datum
@@ -1437,10 +1437,10 @@ function getTrendAxisSummary(points: TrendPoint[]): string {
 
   if (dayCount === 1) {
     const dateLabel = points[0]?.label ?? 'diesem Tag'
-    return `X-Achse: ${points.length} Einzellaeufe am ${dateLabel}, als Lauf 1-${points.length} gezeigt.`
+    return `X-Achse: ${points.length} Einzelläufe am ${dateLabel}, als Lauf 1-${points.length} gezeigt.`
   }
 
-  return `X-Achse: ${points.length} Einzellaeufe ueber ${dayCount} Tage; Wiederholungen am selben Tag erscheinen als #2, #3 ...`
+  return `X-Achse: ${points.length} Einzelläufe über ${dayCount} Tage; Wiederholungen am selben Tag erscheinen als #2, #3 ...`
 }
 
 function getTrendReferenceStats(
@@ -1495,7 +1495,7 @@ function formatMergedTrendReferenceLabel(
 
   if (stats.best === stats.median) {
     const label = stats.worst === stats.best
-      ? 'Bestwert, Median & Hoechstwert'
+      ? 'Bestwert, Median & Höchstwert'
       : 'Bestwert & Median'
 
     return `${label} ${formatter(stats.best)}`
@@ -1510,7 +1510,7 @@ function formatMedianTrendReferenceLabel(
 ): string {
   if (stats.median === null) return ''
 
-  const label = stats.worst === stats.median ? 'Median & Hoechstwert' : 'Median'
+  const label = stats.worst === stats.median ? 'Median & Höchstwert' : 'Median'
   return `${label} ${formatter(stats.median)}`
 }
 
@@ -1591,7 +1591,7 @@ function buildKpiCards(
       label: 'Spiele',
       value: `${stats?.totalSolved ?? 0}`,
       detail: `${stats?.activeDays ?? 0} aktive Tage`,
-      helpText: 'Anzahl aller abgeschlossenen und gespeicherten Puzzle-Siege. Aktive Tage zaehlen Kalendertage mit mindestens einem Sieg.',
+      helpText: 'Anzahl aller abgeschlossenen und gespeicherten Puzzle-Siege. Aktive Tage zählen Kalendertage mit mindestens einem Sieg.',
       springValue: stats?.totalSolved ?? 0,
     },
     {
@@ -1599,7 +1599,7 @@ function buildKpiCards(
       label: 'Erfolgsrate',
       value: (stats?.totalSolved ?? 0) > 0 ? '100%' : '--',
       detail: 'Statistik erfasst abgeschlossene Siege.',
-      helpText: 'Aktuell werden nur geloeste Laeufe in den Stats gespeichert. Abgebrochene oder nicht gespeicherte Versuche zaehlen deshalb nicht in diese Quote.',
+      helpText: 'Aktuell werden nur gelöste Läufe in den Stats gespeichert. Abgebrochene oder nicht gespeicherte Versuche zählen deshalb nicht in diese Quote.',
       springValue: (stats?.totalSolved ?? 0) > 0 ? 100 : null,
       springFormatter: (value) => `${Math.round(value)}%`,
     },
@@ -1608,7 +1608,7 @@ function buildKpiCards(
       label: 'Beste Zeit',
       value: formatOptionalDuration(stats?.bestTime ?? null),
       detail: latestCompletion ? `Zuletzt ${formatDifficultyLabel(latestCompletion.config)}` : 'Noch kein Lauf',
-      helpText: 'Schnellste gespeicherte Loesungszeit ueber alle Puzzle-Stufen hinweg. Der Zusatz zeigt die Stufe des letzten Siegs.',
+      helpText: 'Schnellste gespeicherte Lösungszeit über alle Puzzle-Stufen hinweg. Der Zusatz zeigt die Stufe des letzten Siegs.',
       springValue: stats?.bestTime ?? null,
       springFormatter: (value) => formatOptionalDuration(Math.round(value)),
     },
@@ -1616,16 +1616,16 @@ function buildKpiCards(
       id: 'average-actions',
       label: 'Durchschn. Aktionen',
       value: averageActionMoves === null ? '--' : `${averageActionMoves}`,
-      detail: `${formatPercent(assistanceSummary.profileCoverage)} Datenqualitaet`,
-      helpText: 'Durchschnitt der gespeicherten Gesamtaktionen in Laeufen mit vollem Laufprofil. Aktionen enthalten auch Korrekturen und wiederholte Schritte.',
+      detail: `${formatPercent(assistanceSummary.profileCoverage)} Datenqualität`,
+      helpText: 'Durchschnitt der gespeicherten Gesamtaktionen in Läufen mit vollem Laufprofil. Aktionen enthalten auch Korrekturen und wiederholte Schritte.',
       springValue: averageActionMoves,
     },
     {
       id: 'average-corrections',
       label: 'Durchschn. Korrekturen (Undos)',
       value: formatAverageCount(averageCorrections),
-      detail: 'Aktionen minus Netto-Zuege.',
-      helpText: 'Durchschnittliche Differenz aus Gesamtaktionen und Netto-Zuegen. Sie zeigt, wie viele zusaetzliche Korrekturschritte ein Lauf typischerweise enthaelt.',
+      detail: 'Aktionen minus Netto-Züge.',
+      helpText: 'Durchschnittliche Differenz aus Gesamtaktionen und Netto-Zügen. Sie zeigt, wie viele zusätzliche Korrekturschritte ein Lauf typischerweise enthält.',
       springValue: averageCorrections,
       springFormatter: formatAverageCount,
     },
@@ -1633,8 +1633,8 @@ function buildKpiCards(
       id: 'clean-rate',
       label: 'Clean-Quote',
       value: formatPercent(assistanceSummary.cleanRate),
-      detail: `${assistanceSummary.cleanSolvedCount} clean geloest`,
-      helpText: 'Anteil der abgeschlossenen Laeufe ohne Hilfen (Hinweise, Ghost, Heatmap, Auto-Zuege oder Solver-Unterstuetzung). Aeltere Laeufe ohne Detailprofil koennen als Legacy erscheinen.',
+      detail: `${assistanceSummary.cleanSolvedCount} clean gelöst`,
+      helpText: 'Anteil der abgeschlossenen Läufe ohne Hilfen (Hinweise, Ghost, Heatmap, Auto-Züge oder Solver-Unterstützung). Ältere Läufe ohne Detailprofil können als Legacy erscheinen.',
       springValue: assistanceSummary.cleanRate,
       springFormatter: (value) => formatPercent(Math.round(value)),
     },
@@ -1643,7 +1643,7 @@ function buildKpiCards(
       label: 'Ghost-Nutzung',
       value: `${ghostRuns.length}`,
       detail: `${totalGhostSeconds}s Geisterbild`,
-      helpText: 'Laeufe mit aktivierter Geisteransicht und aufsummierte sichtbare Dauer. Dies wird separat von Hinweisen und Auto-Zuegen erfasst.',
+      helpText: 'Läufe mit aktivierter Geisteransicht und aufsummierte sichtbare Dauer. Dies wird separat von Hinweisen und Auto-Zügen erfasst.',
       springValue: ghostRuns.length,
     },
     {
@@ -1651,7 +1651,7 @@ function buildKpiCards(
       label: 'Heatmap-Nutzung',
       value: `${heatmapRuns.length}`,
       detail: `${totalHeatmapSeconds}s Heatmap`,
-      helpText: 'Laeufe mit aktivierter Heatmap und aufsummierte sichtbare Dauer. Dies wird separat von Hinweisen und Auto-Zuegen erfasst.',
+      helpText: 'Läufe mit aktivierter Heatmap und aufsummierte sichtbare Dauer. Dies wird separat von Hinweisen und Auto-Zügen erfasst.',
       springValue: heatmapRuns.length,
     },
   ]
@@ -1759,7 +1759,7 @@ function renderScoreBreakdownChart(data: ScoreBreakdownDatum[], label: string) {
         </div>
       </div>
       <p className="stats-score-breakdown-note">
-        100 Startpunkte minus Abzuege. Die Auto-Zug-Strafe ist bei 36 Punkten gedeckelt.
+        100 Startpunkte minus Abzüge. Die Auto-Zug-Strafe ist bei 36 Punkten gedeckelt.
       </p>
     </div>
   )
@@ -1779,7 +1779,7 @@ function renderFavoriteDifficultyTooltip({ active, payload }: ChartTooltipProps)
         <span>{datum.share}% Anteil an allen sichtbaren Siegen</span>
         <div className="stats-recharts-tooltip-list">
           <span>Medianzeit: {formatOptionalDuration(datum.medianTime)}</span>
-          <span>Median-Zuege: {formatOptionalMoves(datum.medianMoves)}</span>
+          <span>Median-Züge: {formatOptionalMoves(datum.medianMoves)}</span>
         </div>
         {datum.isFavorite ? <small>Aktuelle Lieblingsstufe nach Siegzahl.</small> : null}
       </div>
@@ -1792,7 +1792,7 @@ function renderFavoriteDifficultyChart(data: FavoriteDifficultyDatum[]) {
     return (
       <div className="stats-empty-state dashboard-empty-state">
         <span className="empty-icon" aria-hidden="true"><Activity /></span>
-        <p>Noch keine geloesten Stufen vorhanden.</p>
+        <p>Noch keine gelösten Stufen vorhanden.</p>
       </div>
     )
   }
@@ -1890,11 +1890,11 @@ function renderRechartsTooltip({ active, payload }: ChartTooltipProps, metric: T
           {movingAverage !== null ? (
             <span>5er-Trend: {formatTrendMovingAverage(movingAverage, metric)}</span>
           ) : null}
-          <span>Netto-Zuege: {formatOptionalMoves(point.moves)}</span>
+          <span>Netto-Züge: {formatOptionalMoves(point.moves)}</span>
           <span>Korrekturen: {formatExtraMoves(point.corrections)}</span>
         </div>
         <small>
-          {point.hints ?? 0} Hinweise, {point.autoMoves ?? 0} Auto-Zuege
+          {point.hints ?? 0} Hinweise, {point.autoMoves ?? 0} Auto-Züge
         </small>
       </div>
     </CursorTooltipPortal>
@@ -1935,20 +1935,20 @@ function renderSolveTimeHistogramTooltip(
     : bucket.maxSeconds <= overallMedian
       ? 'Dieser Bereich liegt unter dem Gesamtmedian.'
       : bucket.minSeconds >= overallMedian
-        ? 'Dieser Bereich liegt ueber dem Gesamtmedian.'
+        ? 'Dieser Bereich liegt über dem Gesamtmedian.'
         : 'Der Gesamtmedian liegt in diesem Bereich.'
 
   return (
     <CursorTooltipPortal active>
         <div className="stats-recharts-tooltip stats-histogram-tooltip">
           <strong>{bucket.label}</strong>
-          <span>{bucket.total} {bucket.total === 1 ? 'Lauf' : 'Laeufe'} · {percentage}% aller sichtbaren Laeufe</span>
+          <span>{bucket.total} {bucket.total === 1 ? 'Lauf' : 'Läufe'} · {percentage}% aller sichtbaren Läufe</span>
           <span>
             Intervallbreite: {metric === 'time'
               ? formatOptionalDuration(bucket.maxSeconds - bucket.minSeconds)
               : `${bucket.maxSeconds - bucket.minSeconds} Aktionen`}
           </span>
-          {bucket.isPeak ? <small className="stats-histogram-tooltip-highlight">Haeufigster Bereich</small> : null}
+          {bucket.isPeak ? <small className="stats-histogram-tooltip-highlight">Häufigster Bereich</small> : null}
         <div className="stats-recharts-tooltip-list stats-histogram-tooltip-summary">
           <span>
             Median im Bereich: {metric === 'time'
@@ -1961,9 +1961,9 @@ function renderSolveTimeHistogramTooltip(
               : formatOptionalMoves(bucket.averageActions)}
           </span>
           {metric === 'actions' ? <span>Durchschn. Zeit: {formatOptionalDuration(bucket.averageTime)}</span> : null}
-          <span>Durchschn. Netto-Zuege: {formatOptionalMoves(bucket.averageMoves)}</span>
+          <span>Durchschn. Netto-Züge: {formatOptionalMoves(bucket.averageMoves)}</span>
           <span>
-            Laufarten: {bucket.cleanCount} clean · {bucket.assistedCount} unterstuetzt
+            Laufarten: {bucket.cleanCount} clean · {bucket.assistedCount} unterstützt
             {legacyCount > 0 ? ` · ${legacyCount} Legacy` : ''}
           </span>
         </div>
@@ -1992,7 +1992,7 @@ function renderDonutTooltip({ active, payload }: ChartTooltipProps, total: numbe
     <CursorTooltipPortal active>
       <div className="stats-recharts-tooltip">
         <strong>{segment.label}</strong>
-        <span>{segment.value} Laeufe</span>
+        <span>{segment.value} Läufe</span>
         <span>{percentage}% der erfassten Siege</span>
       </div>
     </CursorTooltipPortal>
@@ -2012,7 +2012,7 @@ function renderMedalDonutTooltip({ active, payload }: ChartTooltipProps, total: 
         <strong>{segment.label}</strong>
         <span>{segment.value} {segment.value === 1 ? 'Motiv' : 'Motive'}</span>
         <span>{percentage}% der Motive mit Challenge-Medaille</span>
-        <small>Pro Motiv zaehlt ausschliesslich die beste erreichte Medaille.</small>
+        <small>Pro Motiv zählt ausschließlich die beste erreichte Medaille.</small>
       </div>
     </CursorTooltipPortal>
   )
@@ -2523,7 +2523,7 @@ export default function UploadStatsVisualReport({
 
   return (
     <section ref={reportRef} className="stats-visual-report" aria-label="Statistik visualisieren">
-      <div className="stats-visual-nav" role="tablist" aria-label="Statistikansicht waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+      <div className="stats-visual-nav" role="tablist" aria-label="Statistikansicht wählen" onKeyDown={handleDirectionalFocusNavigation}>
         {VISUAL_STATS_VIEWS.map((view) => {
           const Icon = view.icon
           const isActive = activeView === view.id
@@ -2573,7 +2573,7 @@ export default function UploadStatsVisualReport({
                       />
                     </strong>
                     <p className="stats-report-card-copy">
-                      Clean-Quote nach Laufprofilen und sichtbaren Schwierigkeitsstufen. Legacy-Laeufe bleiben sichtbar, werden aber nicht umgerechnet.
+                      Clean-Quote nach Laufprofilen und sichtbaren Schwierigkeitsstufen. Legacy-Läufe bleiben sichtbar, werden aber nicht umgerechnet.
                     </p>
                   </div>
                   {donutSegments.length === 0 ? (
@@ -2619,7 +2619,7 @@ export default function UploadStatsVisualReport({
                       />
                     </strong>
                     <p className="stats-report-card-copy">
-                      Verteilung der besten Challenge-Medaille pro Motiv. Niedrigere bereits erreichte Stufen werden nicht doppelt gezaehlt.
+                      Verteilung der besten Challenge-Medaille pro Motiv. Niedrigere bereits erreichte Stufen werden nicht doppelt gezählt.
                     </p>
                   </div>
                   {visibleMedalDistribution.length === 0 ? (
@@ -2665,14 +2665,14 @@ export default function UploadStatsVisualReport({
                     </strong>
                     <p className="stats-report-card-copy">
                       {latestCompletion
-                        ? `${formatDifficultyLabel(latestCompletion.config)}, ${formatOptionalDuration(latestCompletion.time)}, ${latestCompletion.moves} Netto-Zuege, ${formatAssistanceModeLabel(latestCompletion.assistanceMode)}.`
-                        : 'Nach dem naechsten Sieg erscheint hier die direkte Einordnung.'}
+                        ? `${formatDifficultyLabel(latestCompletion.config)}, ${formatOptionalDuration(latestCompletion.time)}, ${latestCompletion.moves} Netto-Züge, ${formatAssistanceModeLabel(latestCompletion.assistanceMode)}.`
+                        : 'Nach dem nächsten Sieg erscheint hier die direkte Einordnung.'}
                     </p>
                   </div>
                   <div className="stats-visual-card-visual">
                     {renderScoreBreakdownChart(
                       latestScoreBreakdownData,
-                      'Score-Aufschluesselung fuer den letzten Lauf'
+                      'Score-Aufschlüsselung für den letzten Lauf'
                     )}
                   </div>
                 </article>
@@ -2705,16 +2705,16 @@ export default function UploadStatsVisualReport({
                     </strong>
                     <p className="stats-report-card-copy">
                       {selectedOverviewDifficulty
-                        ? `Durchschnittlicher Score fuer ${selectedOverviewDifficulty.label} mit sichtbaren Abzuegen. Niedrige Abzuege bedeuten sauberere Laeufe.`
-                        : 'Durchschnittlicher Score ueber alle Schwierigkeitsstufen mit sichtbaren Abzuegen. Niedrige Abzuege bedeuten sauberere Laeufe.'}
+                        ? `Durchschnittlicher Score für ${selectedOverviewDifficulty.label} mit sichtbaren Abzügen. Niedrige Abzüge bedeuten sauberere Läufe.`
+                        : 'Durchschnittlicher Score über alle Schwierigkeitsstufen mit sichtbaren Abzügen. Niedrige Abzüge bedeuten sauberere Läufe.'}
                     </p>
                   </div>
                   <div className="stats-visual-card-visual">
                     {renderScoreBreakdownChart(
                       averageScoreBreakdownData,
                       selectedOverviewDifficulty
-                        ? `Durchschnittliche Score-Aufschluesselung fuer ${selectedOverviewDifficulty.label}`
-                        : 'Durchschnittliche Score-Aufschluesselung ueber alle Schwierigkeitsstufen'
+                        ? `Durchschnittliche Score-Aufschlüsselung für ${selectedOverviewDifficulty.label}`
+                        : 'Durchschnittliche Score-Aufschlüsselung über alle Schwierigkeitsstufen'
                     )}
                   </div>
                 </article>
@@ -2726,7 +2726,7 @@ export default function UploadStatsVisualReport({
             <>
               <article className="stats-report-card stats-visual-line-card">
                 <div className="stats-visual-toolbar stats-chart-toolbar stats-trend-toolbar">
-                  <div className="dashboard-filter-row stats-visual-segmented stats-trend-toolbar-metric" aria-label="Verlaufsmetrik waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                  <div className="dashboard-filter-row stats-visual-segmented stats-trend-toolbar-metric" aria-label="Verlaufsmetrik wählen" onKeyDown={handleDirectionalFocusNavigation}>
                     {TREND_METRICS.map((metric) => (
                       <AnimatedChipButton
                         key={metric.id}
@@ -2740,22 +2740,22 @@ export default function UploadStatsVisualReport({
                     ))}
                   </div>
 
-                  <div className="dashboard-filter-row stats-trend-toolbar-average" aria-label="Trendglaettung waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                  <div className="dashboard-filter-row stats-trend-toolbar-average" aria-label="Trendglättung wählen" onKeyDown={handleDirectionalFocusNavigation}>
                     <AnimatedChipButton
                       className={`dashboard-filter-chip${isMovingAverageVisible ? ' is-active' : ''}`}
                       onClick={() => setShowMovingAverage((current) => !current)}
                       disabled={!canShowMovingAverage}
                       aria-pressed={isMovingAverageVisible}
                       data-app-tooltip={canShowMovingAverage
-                        ? 'Gleitenden Durchschnitt aus jeweils 5 Laeufen derselben Stufe anzeigen.'
-                        : 'Der 5er-Trend braucht mindestens 5 Laeufe derselben Stufe im Ausschnitt.'}
+                        ? 'Gleitenden Durchschnitt aus jeweils 5 Läufen derselben Stufe anzeigen.'
+                        : 'Der 5er-Trend braucht mindestens 5 Läufe derselben Stufe im Ausschnitt.'}
                       data-app-tooltip-position="top"
                     >
                       5er-Trend
                     </AnimatedChipButton>
                   </div>
 
-                  <div className="dashboard-filter-row stats-trend-toolbar-range" aria-label="Verlaufszeitraum waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                  <div className="dashboard-filter-row stats-trend-toolbar-range" aria-label="Verlaufszeitraum wählen" onKeyDown={handleDirectionalFocusNavigation}>
                     {HISTORY_RANGES.map((range) => (
                       <AnimatedChipButton
                         key={range.id}
@@ -2777,7 +2777,7 @@ export default function UploadStatsVisualReport({
                   </span>
                   <span>
                     <strong>{trendChartPoints.length}</strong>
-                    <span> Laeufe im Ausschnitt</span>
+                    <span> Läufe im Ausschnitt</span>
                   </span>
                 </div>
 
@@ -2813,8 +2813,8 @@ export default function UploadStatsVisualReport({
                 {trendChartPoints.length === 0 || trendChartSeries.length === 0 || !hasTrendChartData ? (
                   <div className="stats-empty-state dashboard-empty-state">
                     <span className="empty-icon" aria-hidden="true"><Activity /></span>
-                    <p>Keine Werte fuer diese Visualisierung.</p>
-                    <p className="empty-hint">Waehle einen anderen Zeitraum oder spiele weitere Runden.</p>
+                    <p>Keine Werte für diese Visualisierung.</p>
+                    <p className="empty-hint">Wähle einen anderen Zeitraum oder spiele weitere Runden.</p>
                   </div>
                 ) : (
                   <div
@@ -2902,7 +2902,7 @@ export default function UploadStatsVisualReport({
                             stroke="var(--warning-color, #f59e0b)"
                             strokeDasharray="2 6"
                             label={{
-                              value: `Hoechstwert ${trendFormatter(focusedTrendStats.worst)}`,
+                              value: `Höchstwert ${trendFormatter(focusedTrendStats.worst)}`,
                               fill: 'var(--text-secondary)',
                               fontSize: 12,
                             }}
@@ -2983,13 +2983,13 @@ export default function UploadStatsVisualReport({
                 {renderTrendFocusControls()}
 
                 <div className="stats-visual-line-legend">
-                  <span>{completionHistory.length} Laeufe gesamt</span>
+                  <span>{completionHistory.length} Läufe gesamt</span>
                   <span>{trendChartSeries.length} von {trendSeriesOptions.length} Stufen sichtbar</span>
                   {medalTrendMarkers.length > 0 ? (
-                    <span>{medalTrendMarkers.length} {medalTrendMarkers.length === 1 ? 'Medaillenlauf' : 'Medaillenlaeufe'} im Diagramm markiert</span>
+                    <span>{medalTrendMarkers.length} {medalTrendMarkers.length === 1 ? 'Medaillenlauf' : 'Medaillenläufe'} im Diagramm markiert</span>
                   ) : null}
                   {trendAxisSummary ? <span>{trendAxisSummary}</span> : null}
-                  <span>{isMovingAverageVisible ? 'Rohlaeufe als Punkte, 5er-Trend als Linie' : 'Rohlaeufe mit geraden Verbindungen'}</span>
+                  <span>{isMovingAverageVisible ? 'Rohläufe als Punkte, 5er-Trend als Linie' : 'Rohläufe mit geraden Verbindungen'}</span>
                   <span>{focusedTrendSeries ? `Fokus: ${focusedTrendSeries.label}` : 'Alle sichtbaren Stufen gleichwertig'}</span>
                 </div>
                 <div className="stats-chart-footer-navigation" onKeyDown={handleDirectionalFocusNavigation}>
@@ -3007,7 +3007,7 @@ export default function UploadStatsVisualReport({
                     className="secondary stats-chart-footer-button"
                     interaction="chip"
                     onClick={onBackToStart}
-                    data-app-tooltip="Zur Auswahluebersicht zurueckkehren."
+                    data-app-tooltip="Zur Auswahlübersicht zurückkehren."
                     data-app-tooltip-position="top"
                   >
                     <Home size={16} aria-hidden="true" />
@@ -3018,7 +3018,7 @@ export default function UploadStatsVisualReport({
 
               <article className="stats-report-card stats-visual-line-card stats-visual-histogram-card">
                 <div className="stats-visual-toolbar stats-chart-toolbar">
-                  <div className="dashboard-filter-row stats-visual-segmented" aria-label="Verteilungsmetrik waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                  <div className="dashboard-filter-row stats-visual-segmented" aria-label="Verteilungsmetrik wählen" onKeyDown={handleDirectionalFocusNavigation}>
                     {TREND_METRICS.map((metric) => (
                       <AnimatedChipButton
                         key={metric.id}
@@ -3032,7 +3032,7 @@ export default function UploadStatsVisualReport({
                     ))}
                   </div>
 
-                  <div className="dashboard-filter-row" aria-label="Verteilungszeitraum waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                  <div className="dashboard-filter-row" aria-label="Verteilungszeitraum wählen" onKeyDown={handleDirectionalFocusNavigation}>
                     {HISTORY_RANGES.map((range) => (
                       <AnimatedChipButton
                         key={range.id}
@@ -3049,20 +3049,20 @@ export default function UploadStatsVisualReport({
 
                 <div className="stats-visual-line-head">
                   <span>
-                    <strong>Verteilung der {histogramMetric === 'time' ? 'Loesungszeiten' : 'Aktionen'}</strong>
-                    <span> Haeufigkeit je {histogramMetric === 'time' ? 'Zeitbereich' : 'Aktionsbereich'}, aufgeteilt nach Schwierigkeit.</span>
+                    <strong>Verteilung der {histogramMetric === 'time' ? 'Lösungszeiten' : 'Aktionen'}</strong>
+                    <span> Häufigkeit je {histogramMetric === 'time' ? 'Zeitbereich' : 'Aktionsbereich'}, aufgeteilt nach Schwierigkeit.</span>
                   </span>
                   <span>
                     <strong>{solveTimeHistogram.total}</strong>
-                    <span> sichtbare Laeufe</span>
+                    <span> sichtbare Läufe</span>
                   </span>
                 </div>
 
                 {solveTimeHistogram.data.length === 0 ? (
                   <div className="stats-empty-state dashboard-empty-state">
                     <span className="empty-icon" aria-hidden="true"><Activity /></span>
-                    <p>Keine {histogramMetric === 'time' ? 'Laufzeiten' : 'Aktionsdaten'} fuer diese Verteilung.</p>
-                    <p className="empty-hint">Waehle einen anderen Zeitraum oder blende weitere Stufen ein.</p>
+                    <p>Keine {histogramMetric === 'time' ? 'Laufzeiten' : 'Aktionsdaten'} für diese Verteilung.</p>
+                    <p className="empty-hint">Wähle einen anderen Zeitraum oder blende weitere Stufen ein.</p>
                   </div>
                 ) : (
                   <div
@@ -3139,11 +3139,11 @@ export default function UploadStatsVisualReport({
                       ? formatOptionalDuration(solveTimeHistogram.median)
                       : formatOptionalMoves(solveTimeHistogram.median)}
                   </span>
-                  <span>Haeufigster Bereich: {solveTimeHistogram.peakLabel ?? '--'}</span>
+                  <span>Häufigster Bereich: {solveTimeHistogram.peakLabel ?? '--'}</span>
                   <span>
                     Hauptbereich: {histogramMetric === 'time'
                       ? '15-Sekunden-Intervalle'
-                      : `${solveTimeHistogram.coreStep ?? '--'}-Aktions-Intervalle`}, danach zunehmend groesser
+                      : `${solveTimeHistogram.coreStep ?? '--'}-Aktions-Intervalle`}, danach zunehmend größer
                   </span>
                   <span>
                     {histogramMetric === 'time' ? 'Zeitleiste' : 'Aktionsskala'} bis: {histogramMetric === 'time'
@@ -3152,7 +3152,7 @@ export default function UploadStatsVisualReport({
                   </span>
                   {solveTimeHistogram.compressedGapCount > 0 ? (
                     <span>
-                      {solveTimeHistogram.compressedGapCount} {solveTimeHistogram.compressedGapCount === 1 ? 'Leerluecke' : 'Leerluecken'} als ... verdichtet
+                      {solveTimeHistogram.compressedGapCount} {solveTimeHistogram.compressedGapCount === 1 ? 'Leerlücke' : 'Leerlücken'} als ... verdichtet
                     </span>
                   ) : null}
                   <span>Farben entsprechen den Schwierigkeitsreihen oben</span>
@@ -3172,7 +3172,7 @@ export default function UploadStatsVisualReport({
                     className="secondary stats-chart-footer-button"
                     interaction="chip"
                     onClick={onBackToStart}
-                    data-app-tooltip="Zur Auswahluebersicht zurueckkehren."
+                    data-app-tooltip="Zur Auswahlübersicht zurückkehren."
                     data-app-tooltip-position="top"
                   >
                     <Home size={16} aria-hidden="true" />
@@ -3273,7 +3273,7 @@ export default function UploadStatsVisualReport({
                     <span className="empty-icon" aria-hidden="true"><Medal /></span>
                     <p>Keine Motive mit {formatChallengeMedalLabel(medalFilter as ChallengeMedal)} gefunden.</p>
                     <AnimatedButton className="secondary" onClick={() => setMedalFilter('all')}>
-                      Filter zuruecksetzen
+                      Filter zurücksetzen
                     </AnimatedButton>
                   </div>
                 ) : (
@@ -3301,15 +3301,15 @@ export default function UploadStatsVisualReport({
                           type="button"
                           className="stats-medal-motif-preview"
                           onClick={() => handleOpenMedalDetail(card.motifKey, card.bestEntryId)}
-                          aria-label={`Vollstaendige Detailkarte fuer das ${card.bestMedalLabel}-Motiv oeffnen`}
-                          data-app-tooltip="Vollstaendige Galerie-Detailkarte oeffnen."
+                          aria-label={`Vollständige Detailkarte für das ${card.bestMedalLabel}-Motiv öffnen`}
+                          data-app-tooltip="Vollständige Galerie-Detailkarte öffnen."
                           data-app-tooltip-position="top"
                         >
                           {card.previewImage ? <img src={card.previewImage} alt="" /> : <Medal />}
                         </button>
                         {activeSeries ? (
                           <>
-                            <div className="stats-medal-series-comparison" aria-label="Vergleich der ausgewaehlten Challenge-Serie">
+                            <div className="stats-medal-series-comparison" aria-label="Vergleich der ausgewählten Challenge-Serie">
                               <div className="stats-medal-series-metric is-target">
                                 <div className="stats-medal-series-primary">
                                   <small>Vorlage</small>
@@ -3322,7 +3322,7 @@ export default function UploadStatsVisualReport({
                                   </span>
                                   <span>
                                     <small>Netto</small>
-                                    <strong>{activeSeries.targetMoves !== null ? `${activeSeries.targetMoves} Zuege` : '--'}</strong>
+                                    <strong>{activeSeries.targetMoves !== null ? `${activeSeries.targetMoves} Züge` : '--'}</strong>
                                   </span>
                                 </div>
                               </div>
@@ -3338,7 +3338,7 @@ export default function UploadStatsVisualReport({
                                   </span>
                                   <span>
                                     <small>Netto</small>
-                                    <strong>{activeSeries.bestAttemptMoves} Zuege</strong>
+                                    <strong>{activeSeries.bestAttemptMoves} Züge</strong>
                                   </span>
                                 </div>
                               </div>
@@ -3362,12 +3362,12 @@ export default function UploadStatsVisualReport({
                             <div className="stats-medal-motif-facts">
                               <div className="stats-medal-series-toolbar">
                                 <span>
-                                  Ausgewaehlte Serie {activeSeriesIndex + 1} von {card.series.length}
+                                  Ausgewählte Serie {activeSeriesIndex + 1} von {card.series.length}
                                 </span>
                                 {card.series.length > 1 ? (
                                   <div
                                     className="stats-medal-series-switcher"
-                                    aria-label="Challenge-Serie dieses Motivs auswaehlen"
+                                    aria-label="Challenge-Serie dieses Motivs auswählen"
                                     onKeyDown={handleDirectionalFocusNavigation}
                                   >
                                     {card.series.map((series, index) => (
@@ -3387,7 +3387,7 @@ export default function UploadStatsVisualReport({
                                   </div>
                                 ) : null}
                               </div>
-                              <div className="stats-medal-series-progress" aria-label="Vergleich der Versuche mit der ausgewaehlten Vorlage">
+                              <div className="stats-medal-series-progress" aria-label="Vergleich der Versuche mit der ausgewählten Vorlage">
                                 <strong>
                                   {activeSeries.attemptCount} {activeSeries.attemptCount === 1 ? 'Versuch' : 'Versuche'} gegen diese Vorlage
                                 </strong>
@@ -3400,7 +3400,7 @@ export default function UploadStatsVisualReport({
                                   {' · '}
                                   {activeSeries.movesDeltaToTarget !== null
                                     ? formatSeriesMovesDelta(activeSeries.movesDeltaToTarget)
-                                    : 'Zuege nicht vergleichbar'}
+                                    : 'Züge nicht vergleichbar'}
                                 </span>
                               </div>
                             </div>
@@ -3438,7 +3438,7 @@ export default function UploadStatsVisualReport({
                     className="secondary stats-chart-footer-button"
                     interaction="chip"
                     onClick={onBackToStart}
-                    data-app-tooltip="Zur Auswahluebersicht zurueckkehren."
+                    data-app-tooltip="Zur Auswahlübersicht zurückkehren."
                     data-app-tooltip-position="top"
                   >
                     <Home size={16} aria-hidden="true" />
@@ -3452,7 +3452,7 @@ export default function UploadStatsVisualReport({
             <div className="stats-raw-explorer">
               <div className="stats-raw-explorer-head">
                 <div className="stats-raw-explorer-head-main">
-                  <div className="dashboard-filter-row" aria-label="Rohdatenansicht waehlen" onKeyDown={handleDirectionalFocusNavigation}>
+                  <div className="dashboard-filter-row" aria-label="Rohdatenansicht wählen" onKeyDown={handleDirectionalFocusNavigation}>
                     {RAW_STATS_VIEWS.map((view) => (
                       <AnimatedChipButton
                         key={view.id}

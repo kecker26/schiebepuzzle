@@ -8,7 +8,7 @@ import {
 import AnimatedButton from '../../motion/AnimatedButton.tsx'
 import AnimatedStateSwap from '../../motion/AnimatedStateSwap.tsx'
 import { ImageCollection, SolvedGallery, SolvedGalleryEntry } from '../../types/index'
-import { formatDifficultyLabel, formatPuzzleSize } from '../../utils/puzzleDifficulty.ts'
+import { formatDifficultyLabel } from '../../utils/puzzleDifficulty.ts'
 import UploadConfirmDialog from './UploadConfirmDialog.tsx'
 import UploadScreenIcon from '../../components/UploadScreenIcon.tsx'
 import {
@@ -389,7 +389,7 @@ export default function UploadCollectionsPanel({
               icon={'\u{1F5C2}'}
               iconName="folder"
               title="Noch keine Sammlung vorhanden."
-              detail="Fuege in der Galerie ein geloestes Motiv zu einer neuen Sammlung hinzu."
+              detail="Füge in der Galerie ein gelöstes Motiv zu einer neuen Sammlung hinzu."
             />
           ) : (
             <div className="collections-workspace-grid">
@@ -452,7 +452,7 @@ export default function UploadCollectionsPanel({
               </label>
               <label
                 className="collection-dialog-field"
-                data-app-tooltip="Optionale Notiz fuer diese Sammlung."
+                data-app-tooltip="Optionale Notiz für diese Sammlung."
                 data-app-tooltip-align="start"
               >
                 <span>Notiz</span>
@@ -479,15 +479,15 @@ export default function UploadCollectionsPanel({
       {pendingDeleteCollection ? (
         <UploadConfirmDialog
           titleId="collection-delete-title"
-          title="Sammlung loeschen?"
+          title="Sammlung löschen?"
           description={
             <p>
-              Moechtest du <span className="delete-confirm-name">{pendingDeleteCollection.name}</span> loeschen?
+              Möchtest du <span className="delete-confirm-name">{pendingDeleteCollection.name}</span> löschen?
               Die Galerie-Bilder bleiben erhalten.
             </p>
           }
-          confirmLabel="Loeschen"
-          busyLabel="Loesche ..."
+          confirmLabel="Löschen"
+          busyLabel="Lösche ..."
           isBusy={busyCollectionId === pendingDeleteCollection.id}
           onCancel={() => setPendingDeleteCollection(null)}
           onConfirm={() => void handleDeleteConfirm()}
@@ -539,7 +539,7 @@ function CollectionListButton({
       data-image-palette-source={activePalette?.source}
       onClick={onSelect}
       aria-current={isSelected ? 'true' : undefined}
-      data-app-tooltip={`Sammlung ${entry.collection.name} oeffnen.`}
+      data-app-tooltip={`Sammlung ${entry.collection.name} öffnen.`}
       data-app-tooltip-align="start"
     >
       <span className="collection-list-preview" aria-hidden="true">
@@ -685,11 +685,11 @@ function CollectionDetail({
             className="secondary"
             onClick={onDelete}
             disabled={isBusy}
-            data-app-tooltip="Sammlung loeschen. Die Galerie-Motive bleiben erhalten."
+            data-app-tooltip="Sammlung löschen. Die Galerie-Motive bleiben erhalten."
             data-app-tooltip-position="top"
           >
             <UploadScreenIcon name="trash" />
-            Loeschen
+            Löschen
           </AnimatedButton>
         </div>
       </div>
@@ -707,7 +707,7 @@ function CollectionDetail({
           icon={'\u{1F5BC}'}
           iconName="image"
           title="Diese Sammlung ist leer."
-          detail="Fuege in der Galerie wieder Motive hinzu oder loesche die Sammlung."
+          detail="Füge in der Galerie wieder Motive hinzu oder lösche die Sammlung."
           className="collection-detail-empty"
         />
       ) : (
@@ -727,7 +727,7 @@ function CollectionDetail({
           </div>
           <UploadPageNavigation
             activePage={activePage}
-            ariaLabel={`Sammlungsmotivseiten fuer ${entry.collection.name}`}
+            ariaLabel={`Sammlungsmotivseiten für ${entry.collection.name}`}
             isDisabled={isBusy}
             onPageChange={onPageChange}
             pageCount={pageCount}
@@ -776,13 +776,13 @@ function CollectionImageCard({
           onKeyDown={onActionKeyDown}
           disabled={isBusy}
           aria-label={`Details zu ${difficultyLabel} aus Sammlung anzeigen`}
-          data-app-tooltip="Galerie-Details zu diesem Motiv oeffnen."
+          data-app-tooltip="Galerie-Details zu diesem Motiv öffnen."
           data-app-tooltip-align="start"
         >
         {galleryEntry.previewImage ? (
           <img
             src={galleryEntry.previewImage}
-            alt={`Geloestes Puzzle ${difficultyLabel} vom ${formatDate(galleryEntry.completedAt)}`}
+            alt={`Gelöstes Puzzle ${difficultyLabel} vom ${formatDate(galleryEntry.completedAt)}`}
           />
         ) : (
           <span>Bild</span>
@@ -797,8 +797,8 @@ function CollectionImageCard({
       </button>
       <div className="collection-image-card-body">
         <strong>{difficultyLabel}</strong>
-        <span>{formatPuzzleSize(galleryEntry.config)}</span>
-        <span>{formatTime(galleryEntry.time)} - {galleryEntry.moves} Netto</span>
+        <span>{formatDate(galleryEntry.completedAt)}</span>
+        <span>{formatTime(galleryEntry.time)} · {galleryEntry.moves} Netto-Züge</span>
       </div>
       <div className="collection-image-actions">
         <AnimatedButton
@@ -808,7 +808,7 @@ function CollectionImageCard({
           onClick={() => onOpenDetails(galleryEntry)}
           onKeyDown={onActionKeyDown}
           disabled={isBusy}
-          data-app-tooltip="Galerie-Details zu diesem Motiv oeffnen."
+          data-app-tooltip="Galerie-Details zu diesem Motiv öffnen."
           data-app-tooltip-position="top"
         >
           Details

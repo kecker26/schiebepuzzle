@@ -32,9 +32,7 @@ export default function UploadGalleryMedalCollection({
         <div className="gallery-medal-collection-copy">
           <span className="saved-games-kicker">Challenge-Erfolge</span>
           <strong id="gallery-medal-collection-title">Deine Medaillen</strong>
-          <small>
-            {totalMedalMotifs === 1 ? 'Hat' : 'Haben'} bereits eine Challenge-Medaille.
-          </small>
+          <small>{totalMedalMotifs} {totalMedalMotifs === 1 ? 'Motiv mit' : 'Motive mit'} Challenge-Medaille</small>
         </div>
       </div>
 
@@ -43,22 +41,18 @@ export default function UploadGalleryMedalCollection({
           <span className="gallery-medal-collection-count">
             {totalMedalMotifs} {totalMedalMotifs === 1 ? 'Motiv' : 'Motive'}
           </span>
-          <button
-            type="button"
-            className={`dashboard-filter-chip gallery-medal-filter-clear${activeFilter === 'all' ? ' is-active' : ''}`}
-            aria-pressed={activeFilter === 'all'}
-            aria-label={hasActiveMedalFilter ? 'Alle Motive anzeigen' : 'Alle Motive werden bereits angezeigt'}
-            disabled={!hasActiveMedalFilter}
-            onClick={() => onFilterChange('all')}
-            data-app-tooltip={
-              hasActiveMedalFilter
-                ? 'Medaillenfilter deaktivieren und alle Galerie-Motive anzeigen.'
-                : 'Kein Medaillenfilter aktiv: Es werden bereits alle Galerie-Motive angezeigt.'
-            }
-            data-app-tooltip-position="top"
-          >
-            Alle Motive
-          </button>
+          {hasActiveMedalFilter ? (
+            <button
+              type="button"
+              className="dashboard-filter-chip gallery-medal-filter-clear"
+              aria-pressed="false"
+              onClick={() => onFilterChange('all')}
+              data-app-tooltip="Medaillenfilter deaktivieren und alle Galerie-Motive anzeigen."
+              data-app-tooltip-position="top"
+            >
+              Alle Motive
+            </button>
+          ) : null}
         </div>
 
         <div
