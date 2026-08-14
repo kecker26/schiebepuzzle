@@ -1,41 +1,66 @@
-**Comparison Target**
-- Source visual truth: `C:\Users\kerts\AppData\Local\Temp\codex-clipboard-5fb86a58-7092-46b9-812e-1ab388b0ff64.png`
-- Implementation screenshots: `C:\Users\kerts\AppData\Local\Temp\start-state-series-desktop-clean.png`, `C:\Users\kerts\AppData\Local\Temp\start-state-series-mobile-card.png`, `C:\Users\kerts\AppData\Local\Temp\start-state-series-mobile-lower.png`
-- Combined comparison: `C:\Users\kerts\AppData\Local\Temp\start-state-series-comparison.png`
-- Viewports: 1280x720 desktop and 480x840 responsive view
-- State: gallery detail for the city motif, two expanded neutral start-state series
+# Design QA: kompakte Kontextmenüs
 
-**Full-View Comparison Evidence**
-- The source shows the former repeated full-size run cards. The implementation groups each shared start board into one bordered series card with one preview and one practice action.
-- Series 1 and Series 2 remain visually distinct while using the same hierarchy as the existing challenge-series cards.
+## Vergleichsgrundlage
 
-**Focused Region Comparison Evidence**
-- The mobile header capture verifies the series title, run count, status badge, collapse control, shared board and single practice action.
-- The mobile lower capture verifies compact run rows for practice and origin, including time, net moves, assistance mode and series-best markers.
+- Source visual truth: `C:\Users\kerts\.codex\generated_images\01a0006e-ef12-7cf1-b945-0e3abfac1ea7\exec-ce976aa9-4ed0-4dba-9611-1065c89902e9.png`
+- Implementierungsaufnahme: `C:\Users\kerts\.codex\visualizations\2026\08\14\01a0006e-ef12-7cf1-b945-0e3abfac1ea7\context-menu-dark-final.png`
+- Gemeinsame Vergleichsansicht: `C:\Users\kerts\.codex\visualizations\2026\08\14\01a0006e-ef12-7cf1-b945-0e3abfac1ea7\context-menu-comparison-final.png`
+- Browser-Viewport: 1280 x 720 CSS-Pixel, `devicePixelRatio: 1`
+- Source: 809 x 1944 Pixel
+- Implementierungsaufnahme: 1265 x 712 Pixel; untersuchter Menüausschnitt: 263 x 643 Pixel
+- Dichtenormalisierung: Beide Menüausschnitte wurden proportional auf dieselbe Vergleichsbreite von 526 Pixel skaliert. Es wurde kein Geräte-Rahmen verglichen.
+- Zustand: Upload-Screen, Dunkelmodus, paletteabhängiger grüner Akzent, Kontextmenü geöffnet, Fokus-/Aktivzustand sichtbar.
 
-**Findings**
-- No actionable P0, P1 or P2 differences remain.
-- Fonts and typography: existing app families, weights and uppercase kickers are reused consistently.
-- Spacing and layout rhythm: the card, shared-start panel and run list keep the established challenge-card gaps, radii and padding at both checked viewports.
-- Colors and visual tokens: the existing yellow start-state relation color and image-theme tokens are preserved.
-- Image quality and asset fidelity: the real stored start-board preview and existing Lucide icons are reused without substitutes.
-- Copy and content: each series exposes one shared action and lists all associated runs below it; the action becomes `Vorlage herausfordern` as soon as a clean eligible run exists.
+## Geprüfte Interaktionen
 
-**Patches Made Since Previous QA Pass**
-- Replaced repeated per-run cards with one collapsible card per start-state series.
-- Added one shared practice replay in `practice` mode.
-- Promoted a later clean practice run to the shared challenge-template action.
-- Added compact best-value-sorted run rows and responsive styling.
-- Updated keyboard smoke coverage and project documentation.
+- Kontextmenü per Rechtsklick geöffnet.
+- Initialfokus und Navigation per Pfeiltaste geprüft.
+- Dynamische Verfügbarkeit von „Bild einfügen“ geprüft.
+- Hell- und Dunkelmodus visuell geprüft.
+- Browserkonsole geprüft: keine Fehler.
 
-**Implementation Checklist**
-- [x] One card per start-state series
-- [x] One shared start-board preview and practice action
-- [x] Compact associated-run rows
-- [x] Collapse interaction and accessible labels
-- [x] Desktop and mobile visual verification
+## Vergleichsevidenz
 
-**Follow-up Polish**
-- No blocking follow-up polish identified.
+### Gesamtansicht
+
+- Die drei Gruppen „Bild“, „Workspace“ und „App“ bilden dieselbe Hierarchie wie der Entwurf.
+- Die Überschriften sind inhaltsbreit, textbasiert, sanft gefüllt und mit eigenem Abstand von den Aktionsflächen getrennt.
+- Die Aktionsflächen sind dezent umrandet; der äußere Menürahmen bleibt als zurückhaltende Glasfläche mit Schatten im Hintergrund.
+- Die stärkere, volle Trennung vor den Backup-Aktionen ist sichtbar; normale Zeilentrenner beginnen an der Textschiene.
+- Die paletteabhängige Tönung bleibt erhalten und wird für Überschriften, Hover/Fokus und die stärkere Trennlinie verwendet.
+
+### Fokusbereich
+
+Der fokussierte Menüausschnitt wurde separat und auf identische Breite normalisiert verglichen, weil Typografie, Zeilenhöhe, Trennlinien und Badge-Abstände in der Gesamtaufnahme sonst zu klein wären. Icons bleiben als bestehende kuratierte App-Assets erhalten; es wurden keine Bild-Assets durch Platzhalter ersetzt.
+
+## Pflichtflächen
+
+- Typografie: Schriftfamilie und bestehende App-Gewichte bleiben konsistent. Überschriften sind kleiner, versal und stärker gesperrt; Aktionslabels und Badges besitzen weiterhin klare optische Gewichte und keine problematischen Umbrüche.
+- Abstand und Rhythmus: Gruppenabstand, Überschrift-zu-Panel-Abstand und 44-Pixel-Zeilenhöhe entsprechen der gewählten lockeren Richtung. Die Menüposition wird weiterhin an den Viewport angepasst.
+- Farben und Tokens: Akzente verwenden die extrahierte Bildpalette. Kontrast und Glasflächen funktionieren in Hell- und Dunkelmodus.
+- Bild- und Assettreue: Bestehende lokale Kontextmenü-Icons werden unverändert verwendet und bleiben scharf. Die Überschriften enthalten gemäß Entscheidung keine Icons.
+- Text und Inhalt: Deutsche Aktionsnamen, Kennzahlen und Shortcut-Badges bleiben erhalten. „Bild einfügen“ ist zusätzlich zum reduzierten Visual-Entwurf bewusst weiterhin vorhanden, da es eine bestehende Funktion des Upload-Menüs ist.
+
+## Vergleichshistorie
+
+1. P2: Die erste Implementierung war mit 40 Pixel hohen Zeilen sichtbar dichter als der normalisierte Entwurf.
+   - Fix: Mindesthöhe auf 44 Pixel und vertikales Padding auf 9 Pixel erhöht.
+   - Nachweis: Der finale Menüausschnitt misst 263 x 643 Pixel und entspricht damit bei gleicher Breite dem vertikalen Rhythmus des 809 x 1944 Pixel großen Entwurfs deutlich besser.
+   - Ergebnis nach erneutem Vergleich: keine verbleibende P0-, P1- oder P2-Abweichung.
+
+## Findings
+
+- Keine verbleibenden P0-, P1- oder P2-Findings.
+- Erwartete Abweichung: Die Implementierung zeigt „Bild einfügen“, während der reduzierte Entwurf diese bestehende Funktion nicht abbildet.
+
+## Implementierungscheckliste
+
+- [x] Gemeinsame Gruppenstruktur für alle Kontextmenüs
+- [x] Textbasierte, inhaltsbreite Überschriften
+- [x] Sanfte Füllung und paletteabhängige Akzente
+- [x] Dezent umrandete Aktionsblöcke
+- [x] Volle starke Backup-Trennung und eingerückte Standardtrenner
+- [x] Leicht getönter Hover-/Fokuszustand mit linker Akzentkante
+- [x] Browserkonsole, Tastatur, Hell-/Dunkelmodus, Build, Lint und Smoke-Test geprüft
 
 final result: passed

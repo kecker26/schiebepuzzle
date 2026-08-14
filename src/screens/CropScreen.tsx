@@ -609,7 +609,7 @@ export default function CropScreen({
 
   const cropActions: ContextMenuItem[] = [
     {
-      groupTitle: 'Navigation',
+      groupTitle: 'Aktionen',
     },
     {
       label: 'Spiel starten',
@@ -617,27 +617,6 @@ export default function CropScreen({
       meta: `${config.rows}x${config.cols}`,
       onClick: handleConfirm,
       disabled: !sourceImage || Boolean(isFetchingRandom),
-    },
-    {
-      label: 'Zurück',
-      icon: 'arrowLeft',
-      meta: 'Upload',
-      onClick: onBack,
-    },
-    {
-      label: 'Zur Startseite',
-      icon: 'home',
-      meta: 'Start',
-      onClick: onGoToStartScreen,
-    },
-    {
-      groupTitle: 'Hilfe',
-    },
-    {
-      label: 'Shortcuts und Bedienung',
-      icon: 'command',
-      meta: 'F1',
-      onClick: onOpenHelp,
     },
     {
       groupTitle: 'Bild',
@@ -658,9 +637,7 @@ export default function CropScreen({
     },
     ...(isRandomImage && onFetchNewRandomImage
       ? [
-          {
-            groupTitle: 'Zufallsbild',
-          } satisfies ContextMenuItem,
+          { separator: true } satisfies ContextMenuItem,
           {
             label: 'Anderes Bild laden',
             icon: 'refreshCw',
@@ -670,6 +647,27 @@ export default function CropScreen({
           } satisfies ContextMenuItem,
         ]
       : []),
+    {
+      groupTitle: 'App',
+    },
+    {
+      label: 'Zurück',
+      icon: 'arrowLeft',
+      meta: 'Upload',
+      onClick: onBack,
+    },
+    {
+      label: 'Zur Startseite',
+      icon: 'home',
+      meta: 'Start',
+      onClick: onGoToStartScreen,
+    },
+    {
+      label: 'Shortcuts und Bedienung',
+      icon: 'command',
+      meta: 'F1',
+      onClick: onOpenHelp,
+    },
   ]
 
   return (

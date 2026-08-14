@@ -1276,67 +1276,6 @@ export default function UploadScreen({
   }, [openContextWindow])
 
   const uploadContextActions: ContextMenuItem[] = [
-    ...(activeWindow !== 'start'
-      ? [
-          {
-            groupTitle: 'Navigation',
-          } satisfies ContextMenuItem,
-          {
-            label: 'Zur Auswahl',
-            icon: 'grid',
-            meta: 'Zurück',
-            onClick: () => handleWindowChange('start'),
-          } satisfies ContextMenuItem,
-        ]
-      : []),
-    {
-      groupTitle: 'Seite',
-    },
-    {
-      label: 'Zur Startseite',
-      icon: 'home',
-      meta: 'Start',
-      onClick: onGoToStartScreen,
-    },
-    {
-      groupTitle: 'Hilfe',
-    },
-    {
-      label: 'Shortcuts und Bedienung',
-      icon: 'command',
-      meta: 'F1',
-      onClick: onOpenHelp,
-    },
-    ...(contextMenuState?.scope === 'promptField'
-      ? [
-          {
-            groupTitle: 'Prompt',
-          } satisfies ContextMenuItem,
-          {
-            label: 'Prompt einfügen',
-            icon: 'clipboard',
-            meta:
-              uploadClipboardPasteStatus === 'checking'
-                ? 'Prüft ...'
-                : uploadClipboardPasteStatus === 'ready'
-                  ? 'Bild in Ablage'
-                  : 'Text',
-            onClick: () => {
-              void handlePastePromptFromClipboard()
-            },
-            disabled: uploadClipboardPasteStatus !== 'unavailable',
-          } satisfies ContextMenuItem,
-          {
-            label: 'Bild erstellen',
-            icon: 'play',
-            meta: 'Enter',
-            onClick: () => {
-              void handleGeneratePromptImage()
-            },
-            disabled: isGeneratingPromptImage,
-          } satisfies ContextMenuItem,
-        ]
-      : []),
     {
       groupTitle: 'Bild',
     },
@@ -1369,8 +1308,36 @@ export default function UploadScreen({
       onClick: handleFetchRandomFromSelection,
       disabled: isFetchingRandom,
     },
+    ...(contextMenuState?.scope === 'promptField'
+      ? [
+          { separator: true } satisfies ContextMenuItem,
+          {
+            label: 'Prompt einfügen',
+            icon: 'clipboard',
+            meta:
+              uploadClipboardPasteStatus === 'checking'
+                ? 'Prüft ...'
+                : uploadClipboardPasteStatus === 'ready'
+                  ? 'Bild in Ablage'
+                  : 'Text',
+            onClick: () => {
+              void handlePastePromptFromClipboard()
+            },
+            disabled: uploadClipboardPasteStatus !== 'unavailable',
+          } satisfies ContextMenuItem,
+          {
+            label: 'Bild erstellen',
+            icon: 'play',
+            meta: 'Enter',
+            onClick: () => {
+              void handleGeneratePromptImage()
+            },
+            disabled: isGeneratingPromptImage,
+          } satisfies ContextMenuItem,
+        ]
+      : []),
     {
-      groupTitle: 'Bereiche',
+      groupTitle: 'Workspace',
     },
     {
       label: 'Spielstände',
@@ -1396,9 +1363,7 @@ export default function UploadScreen({
       meta: isLoadingCollections ? 'Lädt ...' : `${imageCollectionsCount}`,
       onClick: handleOpenCollectionsWindow,
     },
-    {
-      groupTitle: 'Backups',
-    },
+    { separator: true, emphasis: 'strong' },
     {
       label: 'Backup exportieren',
       icon: 'downloadCloud',
@@ -1416,6 +1381,31 @@ export default function UploadScreen({
         void handleOpenBackupBrowser()
       },
       disabled: isLoadingBackupFiles || isImportingBackup || deletingBackupFileName !== null,
+    },
+    {
+      groupTitle: 'App',
+    },
+    ...(activeWindow !== 'start'
+      ? [
+          {
+            label: 'Zur Auswahl',
+            icon: 'grid',
+            meta: 'Zurück',
+            onClick: () => handleWindowChange('start'),
+          } satisfies ContextMenuItem,
+        ]
+      : []),
+    {
+      label: 'Zur Startseite',
+      icon: 'home',
+      meta: 'Start',
+      onClick: onGoToStartScreen,
+    },
+    {
+      label: 'Shortcuts und Bedienung',
+      icon: 'command',
+      meta: 'F1',
+      onClick: onOpenHelp,
     },
   ]
 
