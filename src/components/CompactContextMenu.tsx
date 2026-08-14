@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import ContextMenuIcon, { type ContextMenuIconName } from './ContextMenuIcon.tsx'
-import GlobalUiIcon, { type GlobalUiIconName } from './GlobalUiIcon.tsx'
 import { addUiLayer, isTopUiLayer, removeUiLayer } from '../motion/uiLayerStack.ts'
 import '../styles/components/context-menu.css'
 
@@ -22,12 +21,12 @@ interface ContextMenuActionItem {
 
 interface ContextMenuSeparatorItem {
   separator: true
+  emphasis?: 'strong'
   groupTitle?: never
 }
 
 interface ContextMenuGroupTitleItem {
   groupTitle: string
-  groupIcon?: GlobalUiIconName
   separator?: false
 }
 
@@ -50,39 +49,6 @@ function isContextMenuActionItem(item: ContextMenuItem): item is ContextMenuActi
   return !item.separator && !isContextMenuGroupTitleItem(item)
 }
 
-function getContextMenuGroupIcon(title: string, explicitIcon?: GlobalUiIconName): GlobalUiIconName {
-  if (explicitIcon) return explicitIcon
-
-  switch (title) {
-    case 'Aktionen':
-      return 'zap'
-    case 'App':
-      return 'command'
-    case 'Navigation':
-      return 'navigation'
-    case 'Seite':
-      return 'layout'
-    case 'Bild':
-      return 'image'
-    case 'Zufallsbild':
-      return 'refreshCw'
-    case 'Bereiche':
-      return 'grid'
-    case 'Backups':
-      return 'archive'
-    case 'Züge':
-      return 'move'
-    case 'Ansicht':
-      return 'eye'
-    case 'Verlauf':
-      return 'refreshCw'
-    case 'Hilfe':
-      return 'helpCircle'
-    default:
-      return 'command'
-  }
-}
-
 export default function CompactContextMenu({ position, items, onClose, paletteStyle }: CompactContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -94,6 +60,39 @@ export default function CompactContextMenu({ position, items, onClose, paletteSt
     }
     return indices
   }, []), [items])
+  const menuGroups = useMemo(() => {
+    const groups: Array<{
+      key: string
+      title: string | null
+      entries: Array<{ item: ContextMenuActionItem | ContextMenuSeparatorItem; index: number }>
+    }> = []
+    let activeGroup: (typeof groups)[number] | null = null
+
+    items.forEach((item, index) => {
+      if (isContextMenuGroupTitleItem(item)) {
+        activeGroup = {
+          key: `group-${item.groupTitle}-${index}`,
+          title: item.groupTitle,
+          entries: [],
+        }
+        groups.push(activeGroup)
+        return
+      }
+
+      if (!activeGroup) {
+        activeGroup = {
+          key: 'group-ungrouped',
+          title: null,
+          entries: [],
+        }
+        groups.push(activeGroup)
+      }
+
+      activeGroup.entries.push({ item, index })
+    })
+
+    return groups
+  }, [items])
   const [activeItemIndex, setActiveItemIndex] = useState<number>(() => enabledActionIndices[0] ?? -1)
 
   const focusIndex = useCallback((index: number) => {
@@ -294,63 +293,68 @@ export default function CompactContextMenu({ position, items, onClose, paletteSt
       tabIndex={-1}
       style={{ ...paletteStyle, left: position.x, top: position.y }}
     >
-      {items.map((item, index) => {
-        if (item.separator) {
-          return <div key={`sep-${index}`} className="puzzle-context-menu-separator" role="separator" />
-        }
-
-        if (isContextMenuGroupTitleItem(item)) {
-          const groupIcon = getContextMenuGroupIcon(item.groupTitle, item.groupIcon)
-
-          return (
-            <div
-              key={`group-${item.groupTitle}-${index}`}
-              className="puzzle-context-menu-group-title"
-              role="presentation"
-            >
-              <span className="puzzle-context-menu-group-icon-shell" aria-hidden="true">
-                <GlobalUiIcon name={groupIcon} className="puzzle-context-menu-group-icon" />
-              </span>
-              <span className="puzzle-context-menu-group-label">{item.groupTitle}</span>
-              <span className="puzzle-context-menu-group-line" aria-hidden="true" />
+      {menuGroups.map((group) => (
+        <div
+          key={group.key}
+          className="puzzle-context-menu-group"
+          role="group"
+          aria-label={group.title ?? undefined}
+        >
+          {group.title && (
+            <div className="puzzle-context-menu-group-title" role="presentation">
+              <span className="puzzle-context-menu-group-label">{group.title}</span>
             </div>
-          )
-        }
+          )}
+          <div className="puzzle-context-menu-group-panel" role="presentation">
+            {group.entries.map(({ item, index }) => {
+              if (item.separator) {
+                return (
+                  <div
+                    key={`sep-${index}`}
+                    className="puzzle-context-menu-separator"
+                    data-emphasis={item.emphasis}
+                    role="separator"
+                  />
+                )
+              }
 
-        return (
-          <button
-            key={`${item.label}-${item.meta ?? index}`}
-            type="button"
-            role="menuitem"
-            className="puzzle-context-menu-item"
-            data-active={activeItemIndex === index ? 'true' : undefined}
-            disabled={item.disabled}
-            tabIndex={item.disabled ? -1 : activeItemIndex === index ? 0 : -1}
-            ref={(element) => {
-              itemRefs.current[index] = element
-            }}
-            onFocus={() => {
-              if (!item.disabled) {
-                setActiveItemIndex(index)
-              }
-            }}
-            onMouseEnter={() => {
-              if (!item.disabled) {
-                setActiveItemIndex(index)
-              }
-            }}
-            onClick={() => handleItemClick(item.onClick)}
-            data-app-tooltip={item.meta ? `${item.label} (${item.meta}).` : item.label}
-            data-app-tooltip-align="start"
-          >
-            <span className="puzzle-context-menu-content">
-              <ContextMenuIcon name={item.icon} />
-              <span className="puzzle-context-menu-label">{item.label}</span>
-            </span>
-            {item.meta ? <kbd className="puzzle-context-menu-hotkey">{item.meta}</kbd> : null}
-          </button>
-        )
-      })}
+              return (
+                <button
+                  key={`${item.label}-${item.meta ?? index}`}
+                  type="button"
+                  role="menuitem"
+                  className="puzzle-context-menu-item"
+                  data-active={activeItemIndex === index ? 'true' : undefined}
+                  disabled={item.disabled}
+                  tabIndex={item.disabled ? -1 : activeItemIndex === index ? 0 : -1}
+                  ref={(element) => {
+                    itemRefs.current[index] = element
+                  }}
+                  onFocus={() => {
+                    if (!item.disabled) {
+                      setActiveItemIndex(index)
+                    }
+                  }}
+                  onMouseEnter={() => {
+                    if (!item.disabled) {
+                      setActiveItemIndex(index)
+                    }
+                  }}
+                  onClick={() => handleItemClick(item.onClick)}
+                  data-app-tooltip={item.meta ? `${item.label} (${item.meta}).` : item.label}
+                  data-app-tooltip-align="start"
+                >
+                  <span className="puzzle-context-menu-content">
+                    <ContextMenuIcon name={item.icon} />
+                    <span className="puzzle-context-menu-label">{item.label}</span>
+                  </span>
+                  {item.meta ? <kbd className="puzzle-context-menu-hotkey">{item.meta}</kbd> : null}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   )
 

@@ -52,20 +52,19 @@ export default function PuzzleContextMenu({
   const canInteract = !isSolved && !isInteractionLocked
 
   const items: ContextMenuItem[] = [
-    { groupTitle: 'Züge' },
+    { groupTitle: 'Spiel' },
     { label: 'Hinweis zeigen', icon: 'helpCircle', meta: 'H', onClick: onShowHint, disabled: areGameAidsLocked || !canInteract },
     { label: 'Zug spielen', icon: 'skipForward', meta: 'Enter', onClick: onSuggestedMove, disabled: areGameAidsLocked || !canInteract },
+    { separator: true },
+    { label: 'Zug zurück', icon: 'cornerUpLeft', meta: 'Strg+Z', onClick: onUndo, disabled: areGameAidsLocked || !canUndo || isInteractionLocked },
+    { label: 'Zug vor', icon: 'cornerUpRight', meta: 'Strg+Y', onClick: onRedo, disabled: areGameAidsLocked || !canRedo || isInteractionLocked },
     { groupTitle: 'Ansicht' },
     { label: isPreviewVisible ? 'Vorschau aus' : 'Vorschau ein', icon: 'eye', meta: 'Leertaste', onClick: onTogglePreview, disabled: areGameAidsLocked || isSolved },
     { label: isGhostPreviewVisible ? 'Geisterbild aus' : 'Geisterbild ein', icon: 'layers', meta: 'G', onClick: onToggleGhostPreview, disabled: areGameAidsLocked || isSolved },
     { label: isHeatmapOverlayVisible ? 'Heatmap aus' : 'Heatmap ein', icon: 'activity', meta: 'M', onClick: onToggleHeatmapOverlay, disabled: areGameAidsLocked || isSolved },
     { label: 'Nummern zeigen', icon: 'hash', meta: 'N', onClick: onShowTileNumbers, disabled: areGameAidsLocked || isSolved },
-    { groupTitle: 'Verlauf' },
-    { label: 'Zug zurück', icon: 'cornerUpLeft', meta: 'Strg+Z', onClick: onUndo, disabled: areGameAidsLocked || !canUndo || isInteractionLocked },
-    { label: 'Zug vor', icon: 'cornerUpRight', meta: 'Strg+Y', onClick: onRedo, disabled: areGameAidsLocked || !canRedo || isInteractionLocked },
-    { groupTitle: 'Hilfe' },
+    { groupTitle: 'App' },
     { label: 'Shortcuts und Bedienung', icon: 'command', meta: 'F1', onClick: onOpenHelp },
-    { groupTitle: 'Navigation' },
     { label: 'Zur Auswahl', icon: 'grid', meta: 'Auswahl', onClick: onGoToSelectionScreen },
     { label: 'Zur Startseite', icon: 'home', meta: 'Start', onClick: onGoToStartScreen },
   ]

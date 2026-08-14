@@ -262,7 +262,7 @@ export default function StartScreen({
 
   const startActions = useMemo<ContextMenuItem[]>(() => [
     {
-      groupTitle: 'Aktionen',
+      groupTitle: 'Spiel',
     },
     ...(hasResumeAction ? [{
       label: resumeActionLabel ?? 'Letzte Sitzung fortsetzen',
@@ -280,7 +280,7 @@ export default function StartScreen({
       groupTitle: 'App',
     },
     {
-      label: 'Hilfe und Shortcuts',
+      label: 'Shortcuts und Bedienung',
       icon: 'helpCircle',
       meta: 'F1',
       onClick: onOpenHelp,
