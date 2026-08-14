@@ -49,6 +49,7 @@
 - `scripts/generate-audio-assets.mjs`: Generierung lokaler Audio-Assets.
 
 ## Arbeitsregeln
+- Bei deutschen Texten sind IMMER die echten Umlaute ä, ö und ü zu verwenden; die Schreibweisen ae, oe und ue sind nicht zulässig.
 - Vor groesseren Aenderungen die betroffenen Datenfluesse lesen, nicht nur die UI-Datei.
 - Aenderungen an App-Flows immer gegen `src/App.tsx`, die betroffenen Hooks in `src/app/` und die jeweiligen Screen-Props pruefen.
 - Aenderungen an Spielmechanik immer gegen `PuzzleEngine`, `PuzzleStateService`, `PuzzleSolver`, `ExactPuzzleSolver`, Worker-Protokolle und betroffene Typen pruefen.
